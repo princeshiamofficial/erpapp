@@ -563,7 +563,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                   type="number"
                                   value={editingAmount}
                                   onChange={(e) => setEditingAmount(e.target.value)}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSavePaymentEdit(record.id); if (e.key === 'Escape') setEditingPaymentId(null); }}
                                   className="h-7 text-xs"
                                 />
                               ) : (
@@ -680,4 +679,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   );
 }
 
-```
+    
