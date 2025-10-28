@@ -563,7 +563,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                   value={editingAmount}
                                   onChange={(e) => setEditingAmount(e.target.value)}
                                   className="h-7 text-xs"
-                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePaymentEdit(record.id); } }}
                                 />
                               ) : (
                                 formatCurrencyBdt(record.amount)
