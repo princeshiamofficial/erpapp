@@ -19,7 +19,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -237,6 +237,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       prev.map(p => p.id === paymentId ? { ...p, amount: newAmount, paymentMethod: editingMethod } : p)
     );
     setEditingPaymentId(null);
+  };
+  
+  const handleCancelPaymentEdit = () => {
+    setEditingPaymentId(null);
+    // Optionally reset editingAmount and editingMethod here if needed
   };
 
 
@@ -558,11 +563,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                   type="number"
                                   value={editingAmount}
                                   onChange={(e) => setEditingAmount(e.target.value)}
-                                  onBlur={() => handleSavePaymentEdit(record.id)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSavePaymentEdit(record.id);
-                                    if (e.key === 'Escape') setEditingPaymentId(null);
-                                  }}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleSavePaymentEdit(record.id); if (e.key === 'Escape') setEditingPaymentId(null); }}
                                   className="h-7 text-xs"
                                 />
                               ) : (
@@ -586,9 +587,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                             <TableCell className="text-xs text-muted-foreground py-1.5">{record.notes || 'N/A'}</TableCell>
                             {isAdmin && (
                               <TableCell className="text-right py-1.5">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setPaymentToDelete(record)}>
-                                      <Trash2 className="h-4 w-4"/>
-                                  </Button>
+                                  {editingPaymentId === record.id ? (
+                                    <div className="flex gap-1 justify-end">
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:bg-green-100" onClick={() => handleSavePaymentEdit(record.id)}><Check className="h-4 w-4"/></Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-muted" onClick={handleCancelPaymentEdit}><X className="h-4 w-4"/></Button>
+                                    </div>
+                                  ) : (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setPaymentToDelete(record)}>
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                  )}
                               </TableCell>
                             )}
                           </TableRow>
@@ -672,3 +680,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   );
 }
 
+```
