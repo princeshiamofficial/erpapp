@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NextLink from 'next/link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -591,7 +591,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-muted" onClick={handleCancelPaymentEdit}><X className="h-4 w-4"/></Button>
                                   </div>
                                 ) : (
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setPaymentToDelete(record); }}>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+                                    onClick={(e) => { e.stopPropagation(); setPaymentToDelete(record); }}
+                                  >
                                     <Trash2 className="h-4 w-4"/>
                                   </Button>
                                 )}
@@ -678,3 +684,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   );
 }
 
+    
