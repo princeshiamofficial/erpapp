@@ -571,7 +571,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                             </TableCell>
                             <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
                               {editingPaymentId === record.id ? (
-                                <Select value={editingMethod} onValueChange={setEditingMethod}>
+                                <Select value={editingMethod} onValueChange={(value) => setEditingMethod(value)}>
                                   <SelectTrigger className="h-7 text-xs">
                                     <SelectValue />
                                   </SelectTrigger>
@@ -671,3 +671,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </>
   );
 }
+
