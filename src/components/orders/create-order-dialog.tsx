@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -168,7 +167,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     } else {
         resetForm();
     }
-  }, [isOpen, fetchOptions, allOrders, resetForm]);
+  }, [isOpen, fetchOptions, allOrders, resetForm, jobId]);
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
@@ -403,7 +402,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       ) &&
       !(isAdvancePaymentEntered && !advancePaymentMethod.trim()) &&
       !(isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
-      !(isAdvancePaymentEntered && isProofRequired && !selectedPaymentProof) && // Proof not required if cash
+      !(isProofRequired && !selectedPaymentProof) &&
       isAdvPaymentValid && isDiscountValid;
   }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal, selectedPaymentProof, isProofRequired]);
 
@@ -746,7 +745,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                          <span className="flex-1 text-left whitespace-nowrap">
                           {advancePaymentMethod
                             ? paymentMethodOptions.find((option) => option.name === advancePaymentMethod)?.name
-                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length===0?"No methods":"Select method..."))}
+                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
                          </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -800,28 +799,30 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     <Label htmlFor="newAdvancePaymentNotes">Reference/Notes</Label>
                     <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID"/>
                 </div>
-                 <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                  <Label htmlFor="payment-proof">
-                    Payment Proof {isProofRequired && <span className="text-destructive">*</span>}
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="payment-proof"
-                      type="file"
-                      ref={paymentProofRef}
-                      onChange={handleProofFileChange}
-                      className="flex-1"
-                      required={isProofRequired}
-                      accept="image/*"
-                    />
-                    {selectedPaymentProof && (
-                      <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile}>
-                        <XCircle className="h-4 w-4 text-destructive"/>
-                      </Button>
-                    )}
+                 {isProofRequired && (
+                  <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                    <Label htmlFor="payment-proof">
+                      Payment Proof <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="payment-proof"
+                        type="file"
+                        ref={paymentProofRef}
+                        onChange={handleProofFileChange}
+                        className="flex-1"
+                        required={isProofRequired}
+                        accept="image/*"
+                      />
+                      {selectedPaymentProof && (
+                        <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile}>
+                          <XCircle className="h-4 w-4 text-destructive"/>
+                        </Button>
+                      )}
+                    </div>
+                    {selectedPaymentProof && <p className="text-xs text-muted-foreground">File: {selectedPaymentProof.name}</p>}
                   </div>
-                  {selectedPaymentProof && <p className="text-xs text-muted-foreground">File: {selectedPaymentProof.name}</p>}
-                </div>
+                )}
                 </>
               )}
             </div>
@@ -866,3 +867,5 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
+    

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -308,7 +307,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !isLoadingOptions && orderItems.length > 0 && orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null) &&
       !(isNewAdvanceEntered && !newAdvancePaymentMethod.trim()) &&
       !(isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) &&
-      !(isNewAdvanceEntered && isProofRequired && !selectedPaymentProof) && // Proof not required if cash
+      !(isProofRequired && !selectedPaymentProof) &&
       isAdvPaymentValid && isDiscountValid;
   }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount, selectedPaymentProof, isProofRequired]);
 
@@ -503,27 +502,31 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                         {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                     </div>
                     <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
-                     <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                        <Label htmlFor="payment-proof-edit">Payment Proof {isProofRequired && <span className="text-destructive">*</span>}</Label>
+                     {isProofRequired && (
+                      <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                        <Label htmlFor="payment-proof-edit">
+                          Payment Proof <span className="text-destructive">*</span>
+                        </Label>
                         <div className="flex items-center gap-2">
-                            <Input
-                                id="payment-proof-edit"
-                                type="file"
-                                ref={paymentProofRef}
-                                onChange={handleProofFileChange}
-                                className="flex-1"
-                                required={isProofRequired}
-                                accept="image/*"
-                                disabled={isSubmitting || isUploadingProof}
-                            />
-                            {selectedPaymentProof && (
-                                <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile} disabled={isSubmitting}>
-                                    <XCircle className="h-4 w-4 text-destructive"/>
-                                </Button>
-                            )}
+                          <Input
+                            id="payment-proof-edit"
+                            type="file"
+                            ref={paymentProofRef}
+                            onChange={handleProofFileChange}
+                            className="flex-1"
+                            required={isProofRequired}
+                            accept="image/*"
+                            disabled={isSubmitting || isUploadingProof}
+                          />
+                          {selectedPaymentProof && (
+                            <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile} disabled={isSubmitting}>
+                              <XCircle className="h-4 w-4 text-destructive"/>
+                            </Button>
+                          )}
                         </div>
                         {selectedPaymentProof && <p className="text-xs text-muted-foreground">File: {selectedPaymentProof.name}</p>}
-                    </div>
+                      </div>
+                    )}
                 </>)}
               </div>
 
@@ -543,3 +546,5 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
+
+    
