@@ -403,7 +403,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       companyName: `${jobIdInput.trim()} • ${companyNameInput.trim()}`,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
-      createdAt: createdAt!.toISOString(),
+      createdAt: createdAt.toISOString(),
       specialClientDiscountString: specialClientDiscount.trim() || null,
       orderNotes: orderNotes.trim() || null,
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
@@ -655,4 +655,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </>
   );
 }
-```
