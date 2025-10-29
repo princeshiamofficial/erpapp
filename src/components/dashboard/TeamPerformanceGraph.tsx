@@ -30,7 +30,7 @@ import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/da
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
 import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { Label } from "@/components/ui/label";
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -473,7 +473,7 @@ export function TeamPerformanceGraph({
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
               <div className="flex items-baseline gap-2 text-right">
-                <div>
+                 <div className="text-center">
                   <span className="text-sm text-muted-foreground">Done / Target</span>
                   <p className="text-2xl font-bold text-foreground tabular-nums">
                     {totals.totalDone.toLocaleString()}{' '}
@@ -483,13 +483,13 @@ export function TeamPerformanceGraph({
                 {showLikelihoodChart && (
                   <>
                     <div className="h-8 w-px bg-border mx-2"></div>
-                    <div>
-                      <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5">
-                        <TrendingUp className="h-4 w-4"/>Likely
-                      </span>
-                      <p className="text-2xl font-bold text-foreground tabular-nums">
-                        {totals.totalLikelihood.toLocaleString()}
-                      </p>
+                    <div className="text-center p-2 rounded-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 shadow-inner">
+                        <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5 justify-center">
+                            <TrendingUp className="h-4 w-4"/>Likely
+                        </span>
+                        <p className="text-2xl font-bold text-foreground tabular-nums">
+                            {totals.totalLikelihood.toLocaleString()}
+                        </p>
                     </div>
                   </>
                 )}
@@ -721,5 +721,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
