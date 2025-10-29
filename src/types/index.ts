@@ -370,7 +370,7 @@ export interface Project {
 }
 
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
-export type CustomerType = 'WARM' | 'COLD';
+export type CustomerType = 'WARM' | 'COLD' | 'Deal Closed';
 
 export interface LeadActivity {
   id: string;
@@ -554,7 +554,7 @@ export interface Dr2oEntry {
     companyNumber?: string;
     paymentCompanyName?: string;
     paymentNumber?: string;
-    // DR Fields
+    // DR/CO Fields
     newCustomer1?: string;
     newCustomer2?: string;
     newCustomer3?: string;

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -33,7 +34,7 @@ interface AddEditLeadDialogProps {
 }
 
 const LEAD_SOURCES = ["Facebook", "WhatsApp", "Office Visit", "Phone Call", "Others"];
-const CUSTOMER_TYPES: CustomerType[] = ["WARM", "COLD"];
+const CUSTOMER_TYPES: CustomerType[] = ["WARM", "COLD", "Deal Closed"];
 
 export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, currentUser }: AddEditLeadDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -249,6 +250,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                 <SelectContent>
                   <SelectItem value="WARM">WARM</SelectItem>
                   <SelectItem value="COLD">COLD</SelectItem>
+                  <SelectItem value="Deal Closed">Deal Closed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
