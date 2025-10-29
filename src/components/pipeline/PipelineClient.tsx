@@ -50,6 +50,7 @@ import { LeadListView } from './LeadListView';
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
+  loading: () => <Skeleton className="h-20 w-full rounded-md" />
 });
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
 const ImportLeadsDialog = dynamic(() => import('@/components/pipeline/ImportLeadsDialog').then(mod => mod.ImportLeadsDialog));
@@ -412,13 +413,14 @@ export function PipelineClient() {
   if (!currentUser) return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
+    <DndContext 
+        sensors={sensors} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd} 
+        onDragCancel={handleDragCancel}
+        collisionDetection={closestCorners}
+    >
       <div className={cn("flex flex-col", viewMode !== 'list' ? 'h-[calc(100vh-theme(spacing.24))]' : '')}>
-        {/* Filter Section */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header px-4 sm:px-0">
-          <div><h1 className="page-title">Sales Pipeline</h1><p className="page-description">Track and manage potential sales leads and opportunities by category.</p></div>
-        </div>
-
         <div className="flex flex-col lg:flex-row gap-4 mb-4 px-4 sm:px-0">
           <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-card border-border/50 focus:border-primary lg:max-w-xs" />
           <div className="flex-grow flex flex-col sm:flex-row items-center gap-2">
@@ -552,5 +554,3 @@ export function PipelineClient() {
     </DndContext>
   );
 }
-
-    
