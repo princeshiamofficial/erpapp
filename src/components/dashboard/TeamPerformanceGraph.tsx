@@ -472,24 +472,21 @@ export function TeamPerformanceGraph({
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
-               <div className="flex items-baseline gap-2 text-right">
-                  <span className="text-sm text-muted-foreground">Done</span>
-                  <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
-                      {totals.totalDone.toLocaleString()}
+               <div className="flex items-baseline gap-4 text-right">
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm text-muted-foreground">Done / Target</span>
+                    <span className="text-2xl font-bold text-foreground tabular-nums">
+                        {totals.totalDone.toLocaleString()} / {totalPerformanceTarget.toLocaleString()}
+                    </span>
                   </div>
-                  <div className="text-muted-foreground">
-                      /
-                  </div>
-                  <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
-                      {totalPerformanceTarget.toLocaleString()}
-                  </div>
-                  <span className="text-sm text-muted-foreground">Target</span>
                   {showLikelihoodChart && (
                     <>
-                      <div className="text-muted-foreground mx-2">|</div>
-                      <span className="text-sm text-muted-foreground">Likely</span>
-                      <div className="text-xl sm:text-2xl font-bold text-purple-600 tabular-nums">
-                        {totals.totalLikelihood.toLocaleString()}
+                      <div className="h-8 w-px bg-border"></div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm text-muted-foreground">Likely</span>
+                         <span className="text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
+                          {totals.totalLikelihood.toLocaleString()}
+                        </span>
                       </div>
                     </>
                   )}
