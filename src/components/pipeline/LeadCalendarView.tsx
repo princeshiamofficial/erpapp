@@ -5,10 +5,12 @@ import React from 'react';
 import { Calendar2 as Calendar } from '@/components/ui/calendar2';
 import type { Lead } from '@/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { parseISO, format, isToday, isBefore, startOfDay } from 'date-fns';
+import { parseISO, format, isToday, isBefore, startOfDay, addMonths, subMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 
 interface LeadCalendarViewProps {
   leads: Lead[];
@@ -30,7 +32,8 @@ const getCategoryClass = (category: string) => {
 const DayWithEvents = ({ date, dayEvents, onViewLead }: { date: Date; dayEvents: Lead[]; onViewLead: (lead: Lead) => void; }) => {
     const isCurrentDay = isToday(date);
     const today = startOfDay(new Date());
-    const isPastDate = isBefore(date, today);
+    const isPastDate = isBefore(date, today) && !isToday(date);
+
 
     const cardBackgroundColor = () => {
         if (isPastDate && dayEvents.length > 0) {
@@ -109,10 +112,12 @@ const DayWithEvents = ({ date, dayEvents, onViewLead }: { date: Date; dayEvents:
 
 
 export function LeadCalendarView({ leads, onViewLead }: LeadCalendarViewProps) {
+  const [currentMonth, setCurrentMonth] = React.useState(new Date());
+
   const eventsByDate = React.useMemo(() => {
     const events: Record<string, Lead[]> = {};
     leads.forEach(lead => {
-      if (lead.schedule) { // Only process leads that have a schedule date
+      if (lead.schedule) {
         try {
             const dateKey = parseISO(lead.schedule).toDateString();
             if (!events[dateKey]) {
@@ -129,7 +134,25 @@ export function LeadCalendarView({ leads, onViewLead }: LeadCalendarViewProps) {
 
   return (
     <div className="p-0 sm:p-4 bg-card rounded-lg shadow-lg mt-4">
+       <div className="flex items-center justify-between px-3 pb-2">
+            <h2 className="text-lg font-semibold text-foreground">
+                {format(currentMonth, "MMMM yyyy")}
+            </h2>
+            <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                    <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCurrentMonth(new Date())}>
+                    Today
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
       <Calendar
+        month={currentMonth}
+        onMonthChange={setCurrentMonth}
         mode="single"
         className="w-full"
         components={{

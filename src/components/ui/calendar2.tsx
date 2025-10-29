@@ -21,12 +21,13 @@ function Calendar2({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-0", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-3 flex flex-col flex-grow",
         caption: "hidden", // We use a custom header outside the calendar
         caption_label: "text-base font-semibold",
+        nav: "hidden",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
@@ -43,8 +44,8 @@ function Calendar2({
         day: "h-full w-full",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside: "text-muted-foreground opacity-50",
+        day_today: "bg-accent text-accent-foreground font-semibold",
+        day_outside: "text-muted-foreground opacity-30",
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
@@ -73,4 +74,3 @@ function Calendar2({
 Calendar2.displayName = "Calendar"
 
 export { Calendar2 }
-
