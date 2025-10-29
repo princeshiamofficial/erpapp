@@ -434,7 +434,7 @@ export function TeamPerformanceGraph({
             <Line type="monotone" dataKey="totalDone" name="Tasks Done" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
             <Line type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" strokeWidth={2} strokeDasharray="5 5" dot={{r:4}} activeDot={{r:6}}/>
             {showLikelihoodChart && (
-              <Line type="monotone" dataKey="totalLikelihood" name="Likely Customers" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+              <Line type="monotone" dataKey="totalLikelihood" name="Assets" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
             )}
           </RechartsLineChart>
         );
@@ -451,7 +451,7 @@ export function TeamPerformanceGraph({
             <Bar dataKey="totalDone" name="Tasks Done" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
             <Bar dataKey="totalTarget" name="Target" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
             {showLikelihoodChart && (
-              <Bar dataKey="totalLikelihood" name="Likely Customers" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="totalLikelihood" name="Assets" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
             )}
           </RechartsBarChart>
         );
@@ -472,38 +472,40 @@ export function TeamPerformanceGraph({
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-background shadow-inner">
-                <div className="text-center">
-                  <span className="text-sm text-muted-foreground">Done / Target</span>
-                  <p className="text-2xl font-bold text-foreground tabular-nums">
-                    {totals.totalDone.toLocaleString()}{' '}
-                    <span className="text-muted-foreground">/ {totalPerformanceTarget.toLocaleString()}</span>
-                  </p>
-                </div>
-                {showLikelihoodChart && (
-                  <>
-                    <div className="h-8 w-px bg-border mx-2"></div>
-                    <div className="text-center p-2 rounded-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 shadow-inner">
-                        <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5 justify-center">
-                            <TrendingUp className="h-4 w-4"/>Likely
-                        </span>
+              <div className="p-2 rounded-lg bg-background shadow-inner">
+                <div className="flex items-baseline gap-2 text-right">
+                    <div>
+                        <span className="text-sm text-muted-foreground">Done / Target</span>
                         <p className="text-2xl font-bold text-foreground tabular-nums">
-                            {totals.totalLikelihood.toLocaleString()}
+                            {totals.totalDone.toLocaleString()}{' '}
+                            <span className="text-muted-foreground">/ {totalPerformanceTarget.toLocaleString()}</span>
                         </p>
                     </div>
-                  </>
-                )}
+                    {showLikelihoodChart && (
+                        <>
+                            <div className="h-8 w-px bg-border mx-2"></div>
+                            <div className="text-center rounded-lg shadow-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 p-2">
+                                <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5 justify-center">
+                                    <TrendingUp className="h-4 w-4" />Assets
+                                </span>
+                                <p className="text-2xl font-bold text-foreground tabular-nums">
+                                    {totals.totalLikelihood.toLocaleString()}
+                                </p>
+                            </div>
+                        </>
+                    )}
+                </div>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                    {isInputVisible && (
                       <div className="flex items-center gap-2 w-full sm:w-auto">
                           {canSubmitFirstLikelihood && (
                             <div className="relative">
-                               <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
+                               <Label htmlFor="likelihood-customers-input" className="sr-only">Assets</Label>
                                <Input
                                 id="likelihood-customers-input"
                                 type="number"
-                                placeholder="Likely Customers..."
+                                placeholder="Assets..."
                                 value={likelihoodCustomers}
                                 onChange={(e) => setLikelihoodCustomers(e.target.value)}
                                 className="h-10 w-full sm:w-40"
@@ -514,11 +516,11 @@ export function TeamPerformanceGraph({
                           {canSubmitSecondEntry && (
                             <>
                              <div className="relative">
-                               <Label htmlFor="likelihood-customers-input-2" className="sr-only">Likely Customers</Label>
+                               <Label htmlFor="likelihood-customers-input-2" className="sr-only">Assets</Label>
                                <Input
                                 id="likelihood-customers-input-2"
                                 type="number"
-                                placeholder="Likely Customers..."
+                                placeholder="Assets..."
                                 value={likelihoodCustomers}
                                 onChange={(e) => setLikelihoodCustomers(e.target.value)}
                                 className="h-10 w-full sm:w-40"
@@ -690,7 +692,7 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
                     {likelihoodPayload && likelihoodPayload.value > 0 && (
                         <div className="flex items-center gap-2">
                             <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: likelihoodPayload.color}}></div>
-                            <span className="text-sm text-muted-foreground">Likely Customers:</span>
+                            <span className="text-sm text-muted-foreground">Assets:</span>
                             <span className="text-sm font-medium ml-auto">{likelihoodPayload.value}</span>
                         </div>
                     )}
@@ -709,7 +711,7 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
                                         </Avatar>
                                         <span className="text-muted-foreground truncate flex-1">{user.name}</span>
                                         <span className="font-medium text-foreground">{done} tasks</span>
-                                        {likelihood > 0 && <span className="font-medium text-purple-600">({likelihood} likely)</span>}
+                                        {likelihood > 0 && <span className="font-medium text-purple-600">({likelihood} assets)</span>}
                                     </div>
                                 ))}
                             </div>
@@ -721,5 +723,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
