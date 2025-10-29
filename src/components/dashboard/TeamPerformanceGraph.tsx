@@ -472,7 +472,7 @@ export function TeamPerformanceGraph({
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
-               <div className="flex items-baseline gap-4 text-right">
+              <div className="flex items-center gap-4 text-right">
                   <div className="flex flex-col items-end">
                     <span className="text-sm text-muted-foreground">Done / Target</span>
                     <span className="text-2xl font-bold text-foreground tabular-nums">
@@ -482,9 +482,9 @@ export function TeamPerformanceGraph({
                   {showLikelihoodChart && (
                     <>
                       <div className="h-8 w-px bg-border"></div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-sm text-muted-foreground">Likely</span>
-                         <span className="text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
+                       <div className="flex flex-col items-end rounded-lg p-2 bg-gradient-to-tr from-purple-500/10 to-pink-500/10 border border-purple-200/50 dark:border-purple-800/50">
+                        <span className="text-sm text-purple-600 dark:text-purple-300 font-medium flex items-center gap-1.5"><TrendingUp className="h-4 w-4"/>Likely</span>
+                         <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 tabular-nums">
                           {totals.totalLikelihood.toLocaleString()}
                         </span>
                       </div>
@@ -718,3 +718,180 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+```
+- src/hooks/use-local-storage.ts:
+```ts
+
+import { useState, useEffect } from 'react';
+
+// A custom hook to use localStorage with SSR support
+export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
+  // State to store our value
+  // Pass initial state function to useState so logic is only executed once
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    // This part will only run on the client-side initially
+    if (typeof window === 'undefined') {
+      return initialValue;
+    }
+    try {
+      // Get from local storage by key
+      const item = window.localStorage.getItem(key);
+      // Parse stored json or if none return initialValue
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      // If error also return initialValue
+      console.error(error);
+      return initialValue;
+    }
+  });
+
+  // useEffect to update local storage when the state changes
+  useEffect(() => {
+    try {
+      // Allow value to be a function so we have same API as useState
+      const valueToStore = storedValue;
+      // Save state
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      // A more advanced implementation would handle the error case
+      console.error(error);
+    }
+  }, [key, storedValue]);
+  
+  const setValue = (value: T | ((val: T) => T)) => {
+    try {
+      // Allow value to be a function so we have the same API as useState
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      // Save state
+      setStoredValue(valueToStore);
+      // Save to local storage
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+
+  return [storedValue, setValue];
+}
+
+```
+- public/firebase-messaging-sw.js:
+```js
+// /public/firebase-messaging-sw.js
+
+// This file must be in the public directory
+
+// Import and initialize the Firebase SDK
+importScripts("https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
+  authDomain: "colorhut-57f5a.firebaseapp.com",
+  projectId: "colorhut-57f5a",
+  storageBucket: "colorhut-57f5a.firebasestorage.app",
+  messagingSenderId: "282903959856",
+  appId: "1:282903959856:web:287ace0c706eb0b11990f5",
+  measurementId: "G-57S6VYXE7H"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const messaging = firebase.messaging();
+
+// Optional: Handle background messages
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message:', payload);
+  
+  const notificationData = payload.data || {};
+  const fcmNotification = payload.notification || {};
+  
+  const notificationTitle = notificationData.title || fcmNotification.title || "New Message";
+  const notificationOptions = {
+    body: notificationData.body || fcmNotification.body || "You have a new update.",
+    icon: notificationData.iconUrl || notificationData.icon || fcmNotification.icon || '/icons/icon-192x192.png',
+    badge: notificationData.badgeUrl || notificationData.badge || '/icons/icon-72x72.png',
+    data: {
+      click_action: notificationData.click_action || notificationData.targetUrl || fcmNotification.click_action || self.location.origin
+    },
+    tag: notificationData.tag || fcmNotification.tag || 'colorhut-notif-' + Date.now(),
+    renotify: true,
+    requireInteraction: true,
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification click Received.', event.notification);
+
+  event.notification.close();
+
+  const urlToOpen = event.notification.data?.click_action || self.location.origin;
+
+  event.waitUntil(clients.matchAll({
+    type: "window"
+  }).then((clientList) => {
+    for (let i = 0; i < clientList.length; i++) {
+      const client = clientList[i];
+      if (client.url === '/' && 'focus' in client) {
+        return client.focus();
+      }
+    }
+    if (clients.openWindow) {
+      return clients.openWindow(urlToOpen);
+    }
+  }));
+});
+
+```
+- public/manifest.json:
+```json
+{
+  "theme_color": "#EF6C00",
+  "background_color": "#FFFFFF",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "name": "Color Hut",
+  "short_name": "Color Hut",
+  "description": "An AI-powered ERP system for Color Hut.",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
+
+```
+- public/sw.js:
+```js
+// This file is intentionally left empty.
+// The service worker logic is in firebase-messaging-sw.js
+
+```
