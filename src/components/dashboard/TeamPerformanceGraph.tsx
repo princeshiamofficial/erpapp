@@ -482,7 +482,7 @@ export function TeamPerformanceGraph({
                     {showLikelihoodChart && (
                         <>
                             <div className="h-8 w-px bg-border mx-2"></div>
-                             <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 border border-purple-200/50 dark:border-purple-800/50 shadow-lg shadow-purple-500/20">
+                            <div className="flex flex-col items-center justify-center p-2 rounded-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 border border-purple-200/50 dark:border-purple-800/50 shadow-lg shadow-purple-500/20">
                                 <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5">
                                     <TrendingUp className="h-4 w-4"/>Likely
                                 </span>
@@ -720,3 +720,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
