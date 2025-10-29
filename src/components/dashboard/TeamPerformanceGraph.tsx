@@ -35,8 +35,8 @@ import { Label } from "@/components/ui/label";
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
 import { useToast } from '@/hooks/use-toast';
 import { getTaskEntries, TaskEntry, getMonthlyTargetHistory, setMonthlyTargetHistory } from '@/lib/team-performance-service';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { ScrollArea } from '@/components/ui/scroll-area'; 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { GlobalSettings } from '@/types';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
@@ -83,26 +83,26 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ 
-    allTasks, 
-    monthlyTargetData: initialMonthlyTargetData, 
-    totalPerformanceTarget: initialTotalPerformanceTarget, 
-    selectedDateRange, 
-    userMap, 
-    globalSettings, 
-    onDateRangeChange, 
-    onTeamChange, 
+export function TeamPerformanceGraph({
+    allTasks,
+    monthlyTargetData: initialMonthlyTargetData,
+    totalPerformanceTarget: initialTotalPerformanceTarget,
+    selectedDateRange,
+    userMap,
+    globalSettings,
+    onDateRangeChange,
+    onTeamChange,
     onSpecificUserChange,
-    selectedTeam = 'all', 
+    selectedTeam = 'all',
     specificUserId = 'all',
-    isAdminView, 
+    isAdminView,
     refetchData,
     specificUserOptions = [],
 }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
-  const [isSubmitting, setIsSubmitting = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submissionsTodayCount, setSubmissionsTodayCount] = useState(0);
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -110,7 +110,7 @@ export function TeamPerformanceGraph({
 
   const [monthlyTargetData, setMonthlyTargetData] = useState(initialMonthlyTargetData);
   const [totalPerformanceTarget, setTotalPerformanceTarget] = useState(initialTotalPerformanceTarget);
-  
+
   const performanceTitle = useMemo(() => {
     if (!currentUser) return "Team Performance";
     const userRole = currentUser.role;
@@ -125,31 +125,31 @@ export function TeamPerformanceGraph({
     setMonthlyTargetData(initialMonthlyTargetData);
     setTotalPerformanceTarget(initialTotalPerformanceTarget);
   }, [initialMonthlyTargetData, initialTotalPerformanceTarget]);
-  
+
   useEffect(() => {
     if (!currentUser) return;
-    
+
     const today = new Date();
-    
+
     let count = 0;
     if (currentUser.role === 'LR') {
       // For LR role, it's a team submission, so count any LR entry as one for the day.
       count = allTasks.some(entry => entry.role === 'LR' && isSameDay(parseISO(entry.date), today)) ? 1 : 0;
     } else {
       // For other roles, count submissions by the current user for today.
-      count = allTasks.filter(entry => 
+      count = allTasks.filter(entry =>
         entry.userId === currentUser.id && isSameDay(parseISO(entry.date), today)
       ).length;
     }
     setSubmissionsTodayCount(count);
-    
+
   }, [currentUser, allTasks]);
 
 
   const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     onDateRangeChange(range, displayLabel, predefinedValue);
   };
-  
+
   const handleDoneClick = async () => {
     if (!currentUser) {
         toast({ title: "Error", description: "You must be logged in to submit tasks.", variant: "destructive" });
@@ -157,7 +157,7 @@ export function TeamPerformanceGraph({
     }
     const taskCount = parseInt(tasksDone, 10);
     const likelihoodCount = currentUser.role === 'CRM' ? parseInt(likelihoodCustomers, 10) : undefined;
-    
+
     const isCrmFirstSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 0;
     const isCrmSecondSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 1;
 
@@ -170,19 +170,19 @@ export function TeamPerformanceGraph({
         toast({ title: "Invalid Input", description: "Please enter valid numbers for both tasks and likely customers.", variant: "destructive" });
         return;
     }
-    
+
     if (currentUser.role !== 'CRM' && (isNaN(taskCount) || taskCount < 0)) {
         toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
         return;
     }
 
     setIsSubmitting(true);
-    
+
     // CRM submits likelihood first, then tasks + likelihood. Other roles submit tasks once.
     const finalTaskCount = isCrmFirstSubmission ? 0 : taskCount;
 
     const result = await addTaskEntryAction(currentUser, finalTaskCount, likelihoodCount);
-    
+
     if (result.success) {
         toast({ title: "Entry Submitted", description: `Your entry has been recorded.` });
         setTasksDone('');
@@ -194,28 +194,28 @@ export function TeamPerformanceGraph({
 
     setIsSubmitting(false);
   };
-  
+
   const isInputVisible = useMemo(() => {
     if (!currentUser) return false;
     const visibleRoles: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'LR', 'CO'];
     return visibleRoles.includes(currentUser.role);
   }, [currentUser]);
-  
+
   const inputLabel = useMemo(() => {
       if(currentUser?.role === 'LR') return "Team Tasks Done";
       return "My Tasks Done";
   }, [currentUser?.role]);
-  
+
   const hasCompletedDailySubmissions = useMemo(() => {
     if (currentUser?.role === 'CRM') {
-      return submissionsTodayCount >= 2; 
+      return submissionsTodayCount >= 2;
     }
     if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR' || currentUser.role === 'CO') {
       return submissionsTodayCount > 0;
     }
     return false;
   }, [currentUser, submissionsTodayCount]);
-  
+
   const canSubmitFirstLikelihood = useMemo(() => {
     return currentUser?.role === 'CRM' && submissionsTodayCount === 0;
   }, [currentUser, submissionsTodayCount]);
@@ -237,10 +237,10 @@ export function TeamPerformanceGraph({
     if (!monthlyTargetData || monthlyTargetData.length === 0) {
       return { totalDone: 0, totalLikelihood: 0 };
     }
-    
+
     let doneCount = 0;
     let likelihoodCount = 0;
-    
+
     if (isAdminView) {
       doneCount = monthlyTargetData.reduce((acc, day) => acc + day.totalDone, 0);
       likelihoodCount = monthlyTargetData.reduce((acc, day) => acc + day.totalLikelihood, 0);
@@ -269,18 +269,18 @@ export function TeamPerformanceGraph({
     }
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
-  
+
   const handlePrint = () => {
     if (!selectedDateRange?.from) {
       toast({ title: "Date Range Required", description: "Please select a date range before printing.", variant: "destructive" });
       return;
     }
-  
+
     const from = format(selectedDateRange.from, 'yyyy-MM-dd');
     const to = format(selectedDateRange.to || selectedDateRange.from, 'yyyy-MM-dd');
-  
+
     let url = `/tmphistory?from=${from}&to=${to}`;
-  
+
     if (specificUserId !== 'all') {
         // If a specific user is selected, that takes precedence
         const user = userMap.get(specificUserId);
@@ -293,7 +293,7 @@ export function TeamPerformanceGraph({
         toast({ title: "Selection Required", description: "Please select a specific team to print a report.", variant: "destructive" });
         return;
     }
-  
+
     window.open(url, '_blank');
   };
 
@@ -304,21 +304,21 @@ export function TeamPerformanceGraph({
     }
 
     const { teamReportData } = calculateTeamReportData();
-  
+
     if (!teamReportData) {
       toast({ title: "No Data", description: "No data available to export for the selected team and date range.", variant: "destructive" });
       return;
     }
-  
+
     const { users, data, totals } = teamReportData;
-  
+
     const headers = ["Date"];
     users.forEach(user => {
       const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
       const firstName = user.name.split(' ')[0];
       headers.push(`${firstName} (Target: ${userMonthlyTarget})`);
     });
-  
+
     const rows = data.map(row => {
       const rowData: Record<string, any> = { 'Date': format(parseISO(row.date), 'd-MMM-yy') };
       users.forEach(user => {
@@ -337,12 +337,12 @@ export function TeamPerformanceGraph({
         totalsRow[`${firstName} (Target: ${userTotal.monthlyTarget})`] = `tasks: ${userTotal.totalTasks} / Assets: ${userTotal.totalLikelihood}`;
     });
     rows.push(totalsRow);
-  
+
     const csv = Papa.unparse({
       fields: headers,
       data: rows,
     });
-  
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -353,18 +353,18 @@ export function TeamPerformanceGraph({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast({ title: "Export Successful", description: "Team performance data has been downloaded." });
   };
-  
+
   const calculateTeamReportData = () => {
     if (!allTasks || !selectedDateRange?.from || !globalSettings) {
       return { teamReportData: null };
     }
-  
+
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
-  
+
     let filteredTasks = allTasks.filter(task => {
       try {
         const taskDate = parseISO(task.date);
@@ -377,7 +377,7 @@ export function TeamPerformanceGraph({
     if (selectedTeam !== 'all') {
         filteredTasks = filteredTasks.filter(task => task.role === selectedTeam);
     }
-        
+
     const teamUsers = Array.from(new Set(filteredTasks.map(t => t.userId)))
         .map(id => userMap.get(id))
         .filter((u): u is UserType => !!u)
@@ -401,14 +401,14 @@ export function TeamPerformanceGraph({
     const pivotedData = Array.from(tasksByDate.entries())
         .map(([date, userTasks]) => ({ date, ...userTasks }))
         .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
+
     const userTotals = teamUsers.map(user => {
         const totalTasks = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
         const totalLikelihood = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.likelihood || 0), 0);
         const monthlyTarget = user.monthlyOrderTarget || globalSettings?.roleBasedTargets?.[user.role as keyof typeof globalSettings.roleBasedTargets] || 0;
         return { userId: user.id, totalTasks, totalLikelihood, monthlyTarget };
     });
-    
+
     return {
         teamReportData: {
             users: teamUsers,
@@ -472,9 +472,9 @@ export function TeamPerformanceGraph({
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
-              <div className="p-2 rounded-lg bg-background shadow-inner">
+              <div className="p-4 rounded-lg bg-background shadow-inner">
                 <div className="flex items-baseline gap-2 text-right">
-                    <div className="shadow-lg p-2 rounded-lg">
+                    <div>
                         <span className="text-sm text-muted-foreground">Done / Target</span>
                         <p className="text-2xl font-bold text-foreground tabular-nums">
                             {totals.totalDone.toLocaleString()}{' '}
@@ -484,7 +484,7 @@ export function TeamPerformanceGraph({
                     {showLikelihoodChart && (
                         <>
                             <div className="h-8 w-px bg-border mx-2"></div>
-                            <div className="text-center rounded-lg shadow-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 p-2">
+                            <div className="text-center rounded-lg shadow-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 p-2 drop-shadow-sm">
                                 <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5 justify-center">
                                     <TrendingUp className="h-4 w-4" />Assets
                                 </span>
@@ -527,24 +527,24 @@ export function TeamPerformanceGraph({
                                 min="0"
                                />
                              </div>
-                             <Input 
+                             <Input
                                 id="tasks-done-input"
-                                type="number" 
+                                type="number"
                                 placeholder={`${inputLabel}...`}
-                                value={tasksDone} 
-                                onChange={(e) => setTasksDone(e.target.value)} 
+                                value={tasksDone}
+                                onChange={(e) => setTasksDone(e.target.value)}
                                 className="h-10 w-full sm:w-32"
                                 min="0"
                              />
                             </>
                           )}
                           {canSubmitTasks && (
-                             <Input 
+                             <Input
                                 id="tasks-done-input-single"
-                                type="number" 
+                                type="number"
                                 placeholder={`${inputLabel}...`}
-                                value={tasksDone} 
-                                onChange={(e) => setTasksDone(e.target.value)} 
+                                value={tasksDone}
+                                onChange={(e) => setTasksDone(e.target.value)}
                                 className="h-10 w-full sm:w-32"
                                 min="0"
                              />
@@ -555,7 +555,7 @@ export function TeamPerformanceGraph({
                                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
                             </Button>
                           )}
-                          
+
                           {hasCompletedDailySubmissions &&
                             <Button asChild className="h-10 w-full sm:w-auto">
                               <Link href="/workflow">
@@ -615,14 +615,14 @@ export function TeamPerformanceGraph({
                           </PopoverContent>
                       </Popover>
                    )}
-                  {selectedDateRange && <DateRangePicker 
-                    initialRange={selectedDateRange} 
+                  {selectedDateRange && <DateRangePicker
+                    initialRange={selectedDateRange}
                     onDateRangeChange={handleDateChange}
                     className="w-full sm:w-auto h-10"
                   />}
                   {isAdminView && (
                     <>
-                      
+
                       <Button
                         variant="outline"
                         size="icon"
@@ -657,9 +657,9 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
         const targetPayload = payload.find((p: any) => p.dataKey === 'totalTarget');
         const likelihoodPayload = payload.find((p: any) => p.dataKey === 'totalLikelihood');
         const userData = donePayload?.payload?.userData || {};
-        
+
         let userBreakdown: { user: UserType, done: number, likelihood: number }[] = [];
-        
+
         if (currentUser) {
             if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') {
                 userBreakdown = Object.entries(userData)
@@ -674,7 +674,7 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
                     .sort((a,b) => b.done - a.done) as { user: UserType, done: number, likelihood: number }[];
             }
         }
-        
+
         return (
             <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
                 <div className="grid grid-cols-1 gap-1.5">
@@ -723,3 +723,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
