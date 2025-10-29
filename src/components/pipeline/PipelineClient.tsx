@@ -329,6 +329,7 @@ export function PipelineClient() {
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveLead(null);
     const { active, over } = event;
+  
     if (!over || !active.data.current?.lead) return;
     const lead = active.data.current.lead as Lead;
     const newCategory = over.id as LeadCategory;
@@ -412,7 +413,7 @@ export function PipelineClient() {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
-      <div className="flex flex-col h-[calc(100vh-theme(spacing.24))]">
+      <div className={cn("flex flex-col", viewMode !== 'list' ? 'h-[calc(100vh-theme(spacing.24))]' : '')}>
         {/* Filter Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header px-4 sm:px-0">
           <div><h1 className="page-title">Sales Pipeline</h1><p className="page-description">Track and manage potential sales leads and opportunities by category.</p></div>
@@ -551,3 +552,5 @@ export function PipelineClient() {
     </DndContext>
   );
 }
+
+    
