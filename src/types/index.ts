@@ -1,5 +1,4 @@
 
-
 export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN" | "VENDOR" | "LR" | "CO";
 
 export interface User {
@@ -370,7 +369,7 @@ export interface Project {
 }
 
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
-export type CustomerType = 'WARM' | 'COLD' | 'Deal Closed';
+export type CustomerType = 'WARM' | 'COLD' | 'Order Lock';
 
 export interface LeadActivity {
   id: string;
