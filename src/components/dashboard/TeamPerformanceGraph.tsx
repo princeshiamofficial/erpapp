@@ -472,8 +472,8 @@ export function TeamPerformanceGraph({
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
-              <div className="flex items-baseline gap-2 text-right">
-                 <div className="text-center">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-background shadow-inner">
+                <div className="text-center">
                   <span className="text-sm text-muted-foreground">Done / Target</span>
                   <p className="text-2xl font-bold text-foreground tabular-nums">
                     {totals.totalDone.toLocaleString()}{' '}
@@ -721,3 +721,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
