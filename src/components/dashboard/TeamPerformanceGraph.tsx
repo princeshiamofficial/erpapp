@@ -102,7 +102,7 @@ export function TeamPerformanceGraph({
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting = useState(false);
   const [submissionsTodayCount, setSubmissionsTodayCount] = useState(0);
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -325,7 +325,7 @@ export function TeamPerformanceGraph({
         const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
         const firstName = user.name.split(' ')[0];
         const userTasks = row[user.id] || { tasks: 0, likelihood: 0 };
-        rowData[`${firstName} (Target: ${userMonthlyTarget})`] = `tasks: ${userTasks.tasks} / Likely: ${userTasks.likelihood}`;
+        rowData[`${firstName} (Target: ${userMonthlyTarget})`] = `tasks: ${userTasks.tasks} / Assets: ${userTasks.likelihood}`;
       });
       return rowData;
     });
@@ -334,7 +334,7 @@ export function TeamPerformanceGraph({
     users.forEach(user => {
         const userTotal = totals.find(t => t.userId === user.id) || { totalTasks: 0, totalLikelihood: 0, monthlyTarget: 0 };
         const firstName = user.name.split(' ')[0];
-        totalsRow[`${firstName} (Target: ${userTotal.monthlyTarget})`] = `tasks: ${userTotal.totalTasks} / Likely: ${userTotal.totalLikelihood}`;
+        totalsRow[`${firstName} (Target: ${userTotal.monthlyTarget})`] = `tasks: ${userTotal.totalTasks} / Assets: ${userTotal.totalLikelihood}`;
     });
     rows.push(totalsRow);
   
@@ -474,7 +474,7 @@ export function TeamPerformanceGraph({
               </div>
               <div className="p-2 rounded-lg bg-background shadow-inner">
                 <div className="flex items-baseline gap-2 text-right">
-                    <div>
+                    <div className="shadow-lg p-2 rounded-lg">
                         <span className="text-sm text-muted-foreground">Done / Target</span>
                         <p className="text-2xl font-bold text-foreground tabular-nums">
                             {totals.totalDone.toLocaleString()}{' '}
