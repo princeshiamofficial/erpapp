@@ -235,21 +235,27 @@ export function TeamPerformanceGraph({
 
   const totals = useMemo(() => {
     if (!monthlyTargetData || monthlyTargetData.length === 0) {
-      return { totalDone: 0 };
+      return { totalDone: 0, totalLikelihood: 0 };
     }
     
     let doneCount = 0;
+    let likelihoodCount = 0;
     
     if (isAdminView) {
       doneCount = monthlyTargetData.reduce((acc, day) => acc + day.totalDone, 0);
+      likelihoodCount = monthlyTargetData.reduce((acc, day) => acc + day.totalLikelihood, 0);
     } else if (currentUser) {
       doneCount = monthlyTargetData.reduce((acc, day) => {
         const userDoneToday = day.userData[currentUser.id]?.done || 0;
         return acc + userDoneToday;
       }, 0);
+      likelihoodCount = monthlyTargetData.reduce((acc, day) => {
+        const userLikelihoodToday = day.userData[currentUser.id]?.likelihood || 0;
+        return acc + userLikelihoodToday;
+      }, 0);
     }
 
-    return { totalDone: doneCount };
+    return { totalDone: doneCount, totalLikelihood: likelihoodCount };
   }, [monthlyTargetData, isAdminView, currentUser]);
 
   const showLikelihoodChart = useMemo(() => {
@@ -478,6 +484,15 @@ export function TeamPerformanceGraph({
                       {totalPerformanceTarget.toLocaleString()}
                   </div>
                   <span className="text-sm text-muted-foreground">Target</span>
+                  {showLikelihoodChart && (
+                    <>
+                      <div className="text-muted-foreground mx-2">|</div>
+                      <span className="text-sm text-muted-foreground">Likely</span>
+                      <div className="text-xl sm:text-2xl font-bold text-purple-600 tabular-nums">
+                        {totals.totalLikelihood.toLocaleString()}
+                      </div>
+                    </>
+                  )}
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                    {isInputVisible && (
