@@ -30,7 +30,7 @@ import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/da
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
 import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from '@/hooks/use-auth';
 import { Label } from "@/components/ui/label";
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -102,7 +102,7 @@ export function TeamPerformanceGraph({
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionsTodayCount, setSubmissionsTodayCount] = useState(0);
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -472,29 +472,24 @@ export function TeamPerformanceGraph({
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
-              <div className="p-4 rounded-lg bg-background shadow-inner">
-                <div className="flex items-baseline gap-2 text-right">
-                    <div>
-                        <span className="text-sm text-muted-foreground">Done / Target</span>
+              <div className="flex items-center gap-4 text-right">
+                <div className="text-center rounded-lg shadow-lg bg-background p-3 drop-shadow-sm">
+                    <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5">Done / Target</span>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">
+                        {totals.totalDone.toLocaleString()}{' '}
+                        <span className="text-muted-foreground">/ {totalPerformanceTarget.toLocaleString()}</span>
+                    </p>
+                </div>
+                {showLikelihoodChart && (
+                    <div className="text-center rounded-lg shadow-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 p-3 drop-shadow-sm">
+                        <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5 justify-center">
+                            <TrendingUp className="h-4 w-4" />Assets
+                        </span>
                         <p className="text-2xl font-bold text-foreground tabular-nums">
-                            {totals.totalDone.toLocaleString()}{' '}
-                            <span className="text-muted-foreground">/ {totalPerformanceTarget.toLocaleString()}</span>
+                            {totals.totalLikelihood.toLocaleString()}
                         </p>
                     </div>
-                    {showLikelihoodChart && (
-                        <>
-                            <div className="h-8 w-px bg-border mx-2"></div>
-                            <div className="text-center rounded-lg shadow-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 p-2 drop-shadow-sm">
-                                <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5 justify-center">
-                                    <TrendingUp className="h-4 w-4" />Assets
-                                </span>
-                                <p className="text-2xl font-bold text-foreground tabular-nums">
-                                    {totals.totalLikelihood.toLocaleString()}
-                                </p>
-                            </div>
-                        </>
-                    )}
-                </div>
+                )}
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                    {isInputVisible && (
@@ -723,5 +718,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
