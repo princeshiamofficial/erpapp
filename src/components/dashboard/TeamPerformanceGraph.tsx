@@ -4,7 +4,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer, User as UserIcon, Download } from 'lucide-react';
+import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer, User as UserIcon, Download, CheckCircle } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { User as UserType, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
@@ -474,10 +474,15 @@ export function TeamPerformanceGraph({
               </div>
               <div className="flex items-baseline gap-2 text-right">
                 <div className="text-center rounded-lg shadow-lg bg-background p-3 drop-shadow-sm">
-                  <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5">Done / Target</span>
+                  <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" />Done</span>
                   <p className="text-2xl font-bold text-foreground tabular-nums">
-                      {totals.totalDone.toLocaleString()}{' '}
-                      <span className="text-muted-foreground">/ {totalPerformanceTarget.toLocaleString()}</span>
+                      {totals.totalDone.toLocaleString()}
+                  </p>
+                </div>
+                 <div className="text-center rounded-lg shadow-lg bg-background p-3 drop-shadow-sm">
+                  <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><Target className="h-4 w-4 text-yellow-500" />Target</span>
+                  <p className="text-2xl font-bold text-foreground tabular-nums">
+                      {totalPerformanceTarget.toLocaleString()}
                   </p>
                 </div>
                 {showLikelihoodChart && (
