@@ -55,7 +55,7 @@ export const orderSearchTool = ai.defineTool(
           companyName: order.companyName,
           currentStatus: order.currentStatus,
           createdAt: order.createdAt,
-          totalAmount: grandTotal,
+          totalAmount: netPayable,
           dueAmount: amountDue,
         };
       });

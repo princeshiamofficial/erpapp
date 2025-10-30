@@ -147,7 +147,7 @@ export default function InvoiceListPage() {
     const grandTotal = netPayable + shippingCharge;
     const amountDue = grandTotal - totalAdvancePaid;
 
-    return { totalAmount: grandTotal, paidAmount: totalAdvancePaid, dueAmount: amountDue };
+    return { netPayable, paidAmount: totalAdvancePaid, dueAmount: amountDue };
   }, []);
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
@@ -244,7 +244,7 @@ export default function InvoiceListPage() {
                     </TableHead>
                     <TableHead>Order ID</TableHead>
                     <TableHead>Company</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead>Net Payable</TableHead>
                     <TableHead>Paid</TableHead>
                     <TableHead>Due</TableHead>
                     <TableHead>Status</TableHead>
@@ -283,7 +283,7 @@ export default function InvoiceListPage() {
                             </Link>
                           </TableCell>
                           <TableCell className="text-card-foreground">{order.companyName}</TableCell>
-                          <TableCell className="text-card-foreground font-mono">{formatCurrency(financials.totalAmount)}</TableCell>
+                          <TableCell className="text-card-foreground font-mono">{formatCurrency(financials.netPayable)}</TableCell>
                           <TableCell className="text-green-600 font-mono">{formatCurrency(financials.paidAmount)}</TableCell>
                           <TableCell className="text-red-600 font-mono">{formatCurrency(financials.dueAmount)}</TableCell>
                           <TableCell>
