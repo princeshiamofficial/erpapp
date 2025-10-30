@@ -473,20 +473,20 @@ export function TeamPerformanceGraph({
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
               <div className="flex items-baseline gap-2 text-right">
-                <div className="text-center rounded-lg shadow-lg bg-background p-3 drop-shadow-sm">
+                <div className="text-center rounded-lg shadow-inner bg-background p-3">
                   <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" />Done</span>
                   <p className="text-2xl font-bold text-foreground tabular-nums">
                       {totals.totalDone.toLocaleString()}
                   </p>
                 </div>
-                 <div className="text-center rounded-lg shadow-lg bg-background p-3 drop-shadow-sm">
+                 <div className="text-center rounded-lg shadow-inner bg-background p-3">
                   <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><Target className="h-4 w-4 text-yellow-500" />Target</span>
                   <p className="text-2xl font-bold text-foreground tabular-nums">
                       {totalPerformanceTarget.toLocaleString()}
                   </p>
                 </div>
                 {showLikelihoodChart && (
-                  <div className="text-center rounded-lg shadow-lg bg-background p-3 drop-shadow-sm">
+                  <div className="text-center rounded-lg shadow-inner bg-background p-3">
                     <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5">
                       <TrendingUp className="h-4 w-4 text-purple-500" />Assets
                     </span>
