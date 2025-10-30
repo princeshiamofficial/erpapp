@@ -486,9 +486,9 @@ export function TeamPerformanceGraph({
                   </p>
                 </div>
                 {showLikelihoodChart && (
-                  <div className="text-center rounded-lg shadow-lg bg-gradient-to-tr from-purple-500/10 to-pink-500/10 p-3 drop-shadow-sm">
-                    <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 flex items-center gap-1.5 justify-center">
-                      <TrendingUp className="h-4 w-4" />Assets
+                  <div className="text-center rounded-lg shadow-lg bg-background p-3 drop-shadow-sm">
+                    <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5">
+                      <TrendingUp className="h-4 w-4 text-purple-500" />Assets
                     </span>
                     <p className="text-2xl font-bold text-foreground tabular-nums">
                       {totals.totalLikelihood.toLocaleString()}
