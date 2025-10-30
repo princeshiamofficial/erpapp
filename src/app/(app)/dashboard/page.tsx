@@ -41,7 +41,9 @@ import {
   MessageSquare, // For Feedback
   Star, // For Feedback stars
   Trash2, // For delete icon
-  ClipboardList
+  ClipboardList,
+  TrendingUp, // For Assets icon
+  Target // For Target icon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -547,7 +549,9 @@ function DashboardContent() {
         // Sales, Purchase, Due calculations based on orders *created* in the date range
         if (isWithinInterval(orderCreatedAt, interval)) {
             const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-            currentTotalSales += orderTotal;
+            const effectiveDiscount = order.specialClientDiscount || 0;
+            const netPayable = orderTotal - effectiveDiscount;
+            currentTotalSales += netPayable;
 
             if (Array.isArray(order.orderItems)) {
                 order.orderItems.forEach((item: OrderItem) => {
@@ -560,7 +564,7 @@ function DashboardContent() {
             
             const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0);
             currentTotalAdvance += orderAdvance;
-            const orderDue = orderTotal - orderAdvance;
+            const orderDue = netPayable - orderAdvance;
 
             if (orderDue > 0.01) {
                 currentOrdersWithDueCount++;
@@ -615,7 +619,7 @@ function DashboardContent() {
         if (order.createdAt) {
           try {
             const hour = getHours(parseISO(order.createdAt));
-            const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+            const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
             const existing = hourlyData.get(hour) || { sales: 0, orders: 0 };
             hourlyData.set(hour, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
           } catch (e) { /* ignore */ }
@@ -637,7 +641,7 @@ function DashboardContent() {
           try {
             const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
             if (dailyData.has(orderDateStr)) {
-              const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+              const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
               const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
               dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
             }
