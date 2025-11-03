@@ -26,13 +26,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-orange-500/10 via-red-500/5 to-background p-4 selection:bg-primary/20 selection:text-primary">
-      <div className="absolute inset-0 -z-10 h-full w-full bg-background">
-        {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,theme(colors.border/0.2)_1px,transparent_1px),linear-gradient(to_bottom,theme(colors.border/0.2)_1px,transparent_1px)] bg-[size:40px_40px] opacity-50 dark:opacity-20"></div>
-        {/* Radial gradient for depth */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,theme(colors.background)_90%)]"></div>
-      </div>
+    <div
+      className="flex min-h-screen flex-col items-center justify-center bg-cover bg-center p-4 selection:bg-primary/20 selection:text-primary"
+      style={{
+        backgroundImage: "url('https://i.ibb.co/G4rLgtfM/Gemini-Generated-Image-q7x9iiq7x9iiq7x9.png')",
+      }}
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm -z-10" />
       <LoginForm />
     </div>
   );
