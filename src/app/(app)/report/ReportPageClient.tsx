@@ -28,7 +28,7 @@ import { getGlobalSettings, setReportProductFilters } from '@/lib/settings-servi
 import { getUsers } from '@/lib/user-service';
 import { getTaskEntries } from '@/lib/team-performance-service';
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2, Download, LineChart as LineChartIcon } from 'lucide-react';
+import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2, Download, LineChart as LineChartIcon, ChevronsUpDown, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,15 +40,18 @@ import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/da
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear, format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import dynamic from 'next/dynamic';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddEditTaskDialog } from '@/components/report/AddEditTaskDialog';
 import { DeleteTaskDialog } from '@/components/report/DeleteTaskDialog';
-import { BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, Legend } from 'recharts';
+import { BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import Papa from 'papaparse';
+import { cn } from '@/lib/utils';
 
 
 const formatCurrency = (value: number) => {
@@ -230,6 +233,11 @@ export function ReportPageClient() {
   const [taskToDelete, setTaskToDelete] = useState<TaskEntry | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [productViewMode, setProductViewMode] = useState<'single' | 'category'>('single');
+  
+  const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
+  const [isCrmFilterOpen, setIsCrmFilterOpen] = useState(false);
+  const [crmSearchQuery, setCrmSearchQuery] = useState("");
+  const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM'), [allUsers]);
 
   const handleDateRangeChange = useCallback((range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -304,42 +312,52 @@ export function ReportPageClient() {
     setTaskToDelete(null);
   };
 
-
   const filteredOrdersByDate = useMemo(() => {
-    if (!selectedDateRange?.from) return orders;
+    let dateFiltered = orders;
+    if (selectedDateRange?.from) {
+      const startDate = startOfDay(selectedDateRange.from);
+      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
 
-    const startDate = startOfDay(selectedDateRange.from);
-    const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-
-    return orders.filter(order => {
-      if (!order.createdAt) return false;
-      try {
-        const orderDate = parseISO(order.createdAt);
-        return isWithinInterval(orderDate, { start: startDate, end: endDate });
-      } catch {
-        return false;
-      }
-    });
-  }, [orders, selectedDateRange]);
+      dateFiltered = orders.filter(order => {
+        if (!order.createdAt) return false;
+        try {
+          const orderDate = parseISO(order.createdAt);
+          return isWithinInterval(orderDate, { start: startDate, end: endDate });
+        } catch {
+          return false;
+        }
+      });
+    }
+    if (selectedCrmId !== 'all') {
+      return dateFiltered.filter(order => order.crmUserId === selectedCrmId);
+    }
+    return dateFiltered;
+  }, [orders, selectedDateRange, selectedCrmId]);
 
   const filteredTasksByDate = useMemo(() => {
-    if (!selectedDateRange?.from) return [];
-    const startDate = startOfDay(selectedDateRange.from);
-    const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-
-    let tasksToFilter = allTasks.filter(task => {
-        try {
-            const taskDate = parseISO(task.date);
-            return isWithinInterval(taskDate, { start: startDate, end: endDate });
-        } catch { return false; }
-    });
-
-    if(selectedTeam !== 'all') {
+    let tasksToFilter = allTasks;
+    
+    // Filter by date
+    if (selectedDateRange?.from) {
+        const startDate = startOfDay(selectedDateRange.from);
+        const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
+        tasksToFilter = tasksToFilter.filter(task => {
+            try {
+                const taskDate = parseISO(task.date);
+                return isWithinInterval(taskDate, { start: startDate, end: endDate });
+            } catch { return false; }
+        });
+    }
+    
+    // Filter by team/user
+    if (selectedCrmId !== 'all') {
+      tasksToFilter = tasksToFilter.filter(task => task.userId === selectedCrmId);
+    } else if (selectedTeam !== 'all') {
       tasksToFilter = tasksToFilter.filter(task => task.role === selectedTeam);
     }
 
     return tasksToFilter.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [allTasks, selectedDateRange, selectedTeam]);
+  }, [allTasks, selectedDateRange, selectedTeam, selectedCrmId]);
 
   const { totalTasksCount, totalLikelihood } = useMemo(() => {
     const totalTasks = filteredTasksByDate.reduce((sum, task) => sum + task.taskCount, 0);
@@ -418,31 +436,31 @@ export function ReportPageClient() {
         totalSales: salesByCrm[crm.id]?.totalSales || 0,
       }))
       .filter(data => data.totalSales > 0)
-      .sort((a, b) => b.totalSales - a.sales);
+      .sort((a, b) => b.totalSales - a.totalSales);
   
   }, [filteredOrdersByDate, allUsers]);
 
   const dailySalesData = useMemo(() => {
-    const salesByDate: { [date: string]: { [crmName: string]: { salesCount: number; totalSale: number } } } = {};
+    const salesByDayAndCrm: { [date: string]: { [crmName: string]: { salesCount: number; totalSale: number } } } = {};
   
     filteredOrdersByDate.forEach(order => {
       try {
         const dateKey = formatDateSafe(order.createdAt);
-        if (!salesByDate[dateKey]) {
-          salesByDate[dateKey] = {};
+        if (!salesByDayAndCrm[dateKey]) {
+          salesByDayAndCrm[dateKey] = {};
         }
         const crmName = order.crmUserName || 'Unknown CRM';
-        if (!salesByDate[dateKey][crmName]) {
-          salesByDate[dateKey][crmName] = { salesCount: 0, totalSale: 0 };
+        if (!salesByDayAndCrm[dateKey][crmName]) {
+          salesByDayAndCrm[dateKey][crmName] = { salesCount: 0, totalSale: 0 };
         }
-        salesByDate[dateKey][crmName].salesCount += 1;
-        salesByDate[dateKey][crmName].totalSale += order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        salesByDayAndCrm[dateKey][crmName].salesCount += 1;
+        salesByDayAndCrm[dateKey][crmName].totalSale += order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
       } catch (e) {
         // ignore invalid dates
       }
     });
   
-    const flattenedData = Object.entries(salesByDate).flatMap(([date, crmSales]) => 
+    const flattenedData = Object.entries(salesByDayAndCrm).flatMap(([date, crmSales]) => 
       Object.entries(crmSales).map(([crmName, data]) => ({
         date,
         crmName,
@@ -454,6 +472,19 @@ export function ReportPageClient() {
     return flattenedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredOrdersByDate]);
 
+  const selectedCrmName = useMemo(() => {
+    if (selectedCrmId === 'all') return 'All CRMs';
+    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CRM";
+  }, [selectedCrmId, allCrmUsers]);
+  
+  const filteredCrmUsersForDropdown = useMemo(() => {
+    const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
+    const baseUsers = [allCrmsOption, ...allCrmUsers];
+    if (!crmSearchQuery) return baseUsers;
+    return baseUsers.filter(user =>
+      user.name.toLowerCase().includes(crmSearchQuery.toLowerCase())
+    );
+  }, [allCrmUsers, crmSearchQuery]);
 
   return (
     <>
@@ -466,6 +497,32 @@ export function ReportPageClient() {
                   <TabsTrigger value="team_report">Team Report</TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-[180px] justify-between h-10">
+                        <span className="truncate">{selectedCrmName}</span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search CRM..." value={crmSearchQuery} onValueChange={setCrmSearchQuery} />
+                        <CommandList>
+                          <CommandEmpty>No CRM found.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredCrmUsersForDropdown.map(crm => (
+                              <CommandItem key={crm.id} value={crm.name} onSelect={() => { setSelectedCrmId(crm.id); setIsCrmFilterOpen(false); }}>
+                                <Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />
+                                {crm.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
                 <DateRangePicker 
                     initialRange={selectedDateRange} 
                     onDateRangeChange={handleDateRangeChange}
@@ -608,7 +665,7 @@ export function ReportPageClient() {
             <Card>
               <CardHeader>
                 <CardTitle>Daily Sales Log</CardTitle>
-                <CardDescription>A day-by-day summary of sales activity within the selected date range.</CardDescription>
+                <CardDescription>A day-by-day summary of sales activity by CRM within the selected date range.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
