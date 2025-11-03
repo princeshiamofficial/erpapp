@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -331,17 +330,7 @@ export default function LeaderboardPage() {
         <header className="relative z-10 flex items-center justify-center text-center py-4 px-4 sm:px-6 mb-4 sm:mb-6">
           <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
           <div className="absolute right-4 sm:right-6 flex items-center gap-2">
-              {isAdmin && (
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 w-9"
-                    title="Print Leaderboard"
-                    onClick={() => window.print()}
-                  >
-                    <Printer className="h-4 w-4" />
-                </Button>
-              )}
+              
               {selectedDateRange && (
                   <DateRangePicker 
                     initialRange={selectedDateRange} 
@@ -466,5 +455,3 @@ export default function LeaderboardPage() {
     </>
   );
 }
-
-    
