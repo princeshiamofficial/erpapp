@@ -224,4 +224,42 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
+  
+  .aurora-bg {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  .aurora-bg::before,
+  .aurora-bg::after {
+    content: '';
+    position: absolute;
+    width: 120vmax;
+    height: 120vmax;
+    border-radius: 50%;
+    animation: rotate 12s cubic-bezier(.5, .5, .5, .5) alternate infinite;
+    mix-blend-mode: screen;
+    filter: blur(80px);
+  }
+  .aurora-bg::before {
+    top: -50%;
+    left: -50%;
+    background: radial-gradient(circle, hsl(var(--primary) / 0.5), transparent 60%);
+    animation-direction: alternate-reverse;
+  }
+  .aurora-bg::after {
+    bottom: -50%;
+    right: -50%;
+    background: radial-gradient(circle, hsl(var(--chart-3) / 0.5), transparent 60%);
+  }
+
+  @keyframes rotate {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    100% {
+      transform: rotate(360deg) scale(1.2);
+    }
+  }
 }

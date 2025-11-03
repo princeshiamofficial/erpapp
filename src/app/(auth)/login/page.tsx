@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function LoginPage() {
   const { currentUser, isLoading } = useAuth();
@@ -33,6 +34,17 @@ export default function LoginPage() {
       }}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm -z-10" />
+      
+      {/* Animated background element */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.3 }}
+        transition={{ duration: 2, ease: "easeInOut" }}
+        className="absolute inset-0 -z-10 overflow-hidden"
+      >
+        <div className="aurora-bg"></div>
+      </motion.div>
+      
       <LoginForm />
     </div>
   );
