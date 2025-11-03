@@ -25,7 +25,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, isWithinInterval, endOfMonth } from 'date-fns';
+import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, isWithinInterval, endOfMonth, addDays } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
@@ -134,11 +134,13 @@ export function TeamPerformanceGraph({
     const previousMonthStartDate = subMonths(currentMonthStartDate, 1);
     const previousMonthEndDate = endOfMonth(previousMonthStartDate);
   
+    // Calculate previous month's total sales
     const previousMonthSales = allTasks.filter(task => {
       const taskDate = parseISO(task.date);
       return isWithinInterval(taskDate, { start: previousMonthStartDate, end: previousMonthEndDate });
     }).reduce((sum, task) => sum + task.taskCount, 0);
   
+    // New target is previous month's sales + 10
     const dynamicTarget = previousMonthSales + 10;
   
     const startDate = startOfDay(selectedDateRange.from);
@@ -540,29 +542,29 @@ export function TeamPerformanceGraph({
                   <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                   <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
               </div>
-              <div className="flex items-baseline gap-2 text-right">
-                <div className="text-center rounded-lg shadow-inner bg-background p-3">
-                  <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" />Done</span>
-                  <p className="text-2xl font-bold text-foreground tabular-nums">
-                      {totals.totalDone.toLocaleString()}
-                  </p>
-                </div>
-                 <div className="text-center rounded-lg shadow-inner bg-background p-3">
-                  <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><Target className="h-4 w-4 text-yellow-500" />Target</span>
-                  <p className="text-2xl font-bold text-foreground tabular-nums">
-                      {totalPerformanceTarget.toLocaleString()}
-                  </p>
-                </div>
-                {showLikelihoodChart && (
+               <div className="flex items-baseline gap-2 text-right">
                   <div className="text-center rounded-lg shadow-inner bg-background p-3">
-                    <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5">
-                      <TrendingUp className="h-4 w-4 text-purple-500" />Assets
-                    </span>
-                    <p className="text-2xl font-bold text-foreground tabular-nums">
-                      {totals.totalLikelihood.toLocaleString()}
-                    </p>
+                      <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" />Done</span>
+                      <p className="text-2xl font-bold text-foreground tabular-nums">
+                          {totals.totalDone.toLocaleString()}
+                      </p>
                   </div>
-                )}
+                   <div className="text-center rounded-lg shadow-inner bg-background p-3">
+                      <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><Target className="h-4 w-4 text-yellow-500" />Target</span>
+                      <p className="text-2xl font-bold text-foreground tabular-nums">
+                          {totalPerformanceTarget.toLocaleString()}
+                      </p>
+                  </div>
+                  {showLikelihoodChart && (
+                    <div className="text-center rounded-lg shadow-inner bg-background p-3">
+                      <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5">
+                        <TrendingUp className="h-4 w-4 text-purple-500" />Assets
+                      </span>
+                      <p className="text-2xl font-bold text-foreground tabular-nums">
+                        {totals.totalLikelihood.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                    {isInputVisible && (
@@ -790,3 +792,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
