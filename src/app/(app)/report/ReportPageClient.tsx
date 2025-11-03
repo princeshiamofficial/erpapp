@@ -423,19 +423,24 @@ export function ReportPageClient() {
   }, [filteredOrdersByDate, allUsers]);
 
   const dailySalesData = useMemo(() => {
-    const salesByDate: { date: string; user: string; company: string; }[] = [];
+    const salesByDate: { [date: string]: { salesCount: number; totalSale: number } } = {};
+
     filteredOrdersByDate.forEach(order => {
-        try {
-            salesByDate.push({
-                date: formatDateSafe(order.createdAt),
-                user: order.crmUserName,
-                company: order.companyName,
-            });
-        } catch (e) {
-            // ignore invalid dates
+      try {
+        const dateKey = formatDateSafe(order.createdAt);
+        if (!salesByDate[dateKey]) {
+          salesByDate[dateKey] = { salesCount: 0, totalSale: 0 };
         }
+        salesByDate[dateKey].salesCount += 1;
+        salesByDate[dateKey].totalSale += order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+      } catch (e) {
+        // ignore invalid dates
+      }
     });
-    return salesByDate.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return Object.entries(salesByDate)
+      .map(([date, data]) => ({ date, salesCount: data.salesCount, totalSale: data.totalSale }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredOrdersByDate]);
 
 
@@ -592,15 +597,15 @@ export function ReportPageClient() {
             <Card>
               <CardHeader>
                 <CardTitle>Daily Sales Log</CardTitle>
-                <CardDescription>A list of all sales transactions within the selected date range.</CardDescription>
+                <CardDescription>A summary of sales activity within the selected date range.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
-                      <TableHead>CRM Name</TableHead>
-                      <TableHead>Company</TableHead>
+                      <TableHead className="text-right">Total Sales Count</TableHead>
+                      <TableHead className="text-right">Total Sale</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -608,16 +613,16 @@ export function ReportPageClient() {
                       [...Array(5)].map((_, i) => (
                         <TableRow key={`daily-skel-${i}`}>
                           <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-5 w-20" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-5 w-28" /></TableCell>
                         </TableRow>
                       ))
                     ) : dailySalesData.length > 0 ? (
                       dailySalesData.map((sale, index) => (
                         <TableRow key={index}>
                           <TableCell>{sale.date}</TableCell>
-                          <TableCell>{sale.user}</TableCell>
-                          <TableCell>{sale.company}</TableCell>
+                          <TableCell className="text-right">{sale.salesCount}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(sale.totalSale)}</TableCell>
                         </TableRow>
                       ))
                     ) : (
@@ -766,3 +771,5 @@ export function ReportPageClient() {
     </>
   );
 }
+
+    
