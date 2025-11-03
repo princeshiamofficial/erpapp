@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -9,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays, subMonths } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -1261,7 +1260,7 @@ function DashboardContent() {
               totalPerformanceTarget={totalPerformanceTarget}
               onDateRangeChange={handleTeamPerformanceDateRangeChange}
               selectedDateRange={teamPerformanceDateRange}
-              userMap={userMap}
+              userMap={new Map(allUsers.map(u => [u.id, u]))}
               globalSettings={globalSettings}
               onTeamChange={handleTeamChange}
               onSpecificUserChange={handleSpecificUserChange}
@@ -1420,4 +1419,3 @@ function DashboardContent() {
     </>
   );
 }
-
