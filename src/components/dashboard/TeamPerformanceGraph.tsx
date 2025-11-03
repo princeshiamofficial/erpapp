@@ -59,20 +59,21 @@ interface DailyTargetData {
 }
 
 interface TeamPerformanceGraphProps {
-  allTasks: TaskEntry[]; // New prop
+  allTasks: TaskEntry[];
+  allUsers: UserType[]; // Added this prop
   monthlyTargetData: DailyTargetData[];
   totalPerformanceTarget: number;
   selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
   globalSettings: GlobalSettings | null;
   onDateRangeChange: (range: DateRange | undefined, label: string, predefinedValue: PredefinedRange | "custom" | null) => void;
-  onTeamChange?: (team: UserRole | 'all') => void; // Optional for admin
-  onSpecificUserChange?: (userId: string) => void; // New optional prop for specific user
-  selectedTeam?: UserRole | 'all'; // Optional for admin
-  specificUserId?: string; // New optional prop
-  isAdminView?: boolean; // To show the dropdown
+  onTeamChange?: (team: UserRole | 'all') => void;
+  onSpecificUserChange?: (userId: string) => void;
+  selectedTeam?: UserRole | 'all';
+  specificUserId?: string;
+  isAdminView?: boolean;
   refetchData: () => void;
-  specificUserOptions: UserType[]; // New prop
+  specificUserOptions: UserType[];
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -85,6 +86,7 @@ const getInitials = (name: string | undefined): string => {
 
 export function TeamPerformanceGraph({
     allTasks,
+    allUsers, // Accepting the new prop
     monthlyTargetData: initialMonthlyTargetData,
     totalPerformanceTarget: initialTotalPerformanceTarget,
     selectedDateRange,
@@ -122,7 +124,6 @@ export function TeamPerformanceGraph({
 
 
   useEffect(() => {
-    // New calculation logic goes here
     if (!allTasks || !selectedDateRange?.from || !globalSettings) {
       setMonthlyTargetData([]);
       setTotalPerformanceTarget(0);
@@ -133,13 +134,11 @@ export function TeamPerformanceGraph({
     const previousMonthStartDate = subMonths(currentMonthStartDate, 1);
     const previousMonthEndDate = endOfMonth(previousMonthStartDate);
   
-    // Calculate previous month's total sales
     const previousMonthSales = allTasks.filter(task => {
       const taskDate = parseISO(task.date);
       return isWithinInterval(taskDate, { start: previousMonthStartDate, end: previousMonthEndDate });
     }).reduce((sum, task) => sum + task.taskCount, 0);
   
-    // New dynamic target
     const dynamicTarget = previousMonthSales + 10;
   
     const startDate = startOfDay(selectedDateRange.from);
@@ -153,7 +152,7 @@ export function TeamPerformanceGraph({
         usersToInclude = usersToInclude.filter(u => u.role === selectedTeam);
       }
     } else if (currentUser) {
-      usersToInclude = usersToInclude.filter(u => u.role === currentUser.role);
+      usersToInclude = allUsers.filter(u => u.role === currentUser.role);
     }
   
     const dateMap = new Map<string, { totalDone: number; totalLikelihood: number; userData: { [userId: string]: { done: number; likelihood: number; role: UserRole } } }>();
@@ -195,7 +194,7 @@ export function TeamPerformanceGraph({
   
     setMonthlyTargetData(finalData);
     setTotalPerformanceTarget(Math.round(dailyTarget * numDaysInRange));
-  }, [allTasks, selectedDateRange, globalSettings, selectedTeam, specificUserId, currentUser, isAdminView, userMap]);
+  }, [allTasks, allUsers, selectedDateRange, globalSettings, selectedTeam, specificUserId, currentUser, isAdminView, userMap]);
   
 
 
@@ -206,10 +205,8 @@ export function TeamPerformanceGraph({
 
     let count = 0;
     if (currentUser.role === 'LR') {
-      // For LR role, it's a team submission, so count any LR entry as one for the day.
       count = allTasks.some(entry => entry.role === 'LR' && isSameDay(parseISO(entry.date), today)) ? 1 : 0;
     } else {
-      // For other roles, count submissions by the current user for today.
       count = allTasks.filter(entry =>
         entry.userId === currentUser.id && isSameDay(parseISO(entry.date), today)
       ).length;
@@ -251,7 +248,6 @@ export function TeamPerformanceGraph({
 
     setIsSubmitting(true);
 
-    // CRM submits likelihood first, then tasks + likelihood. Other roles submit tasks once.
     const finalTaskCount = isCrmFirstSubmission ? 0 : taskCount;
 
     const result = await addTaskEntryAction(currentUser, finalTaskCount, likelihoodCount);
@@ -260,7 +256,7 @@ export function TeamPerformanceGraph({
         toast({ title: "Entry Submitted", description: `Your entry has been recorded.` });
         setTasksDone('');
         setLikelihoodCustomers('');
-        refetchData(); // Call parent refetch
+        refetchData();
     } else {
         toast({ title: "Submission Failed", description: result.error, variant: "destructive" });
     }
@@ -355,10 +351,9 @@ export function TeamPerformanceGraph({
     let url = `/tmphistory?from=${from}&to=${to}`;
 
     if (specificUserId !== 'all') {
-        // If a specific user is selected, that takes precedence
         const user = userMap.get(specificUserId);
         if (user) {
-            url += `&team=${user.role}`; // We pass the team of the specific user
+            url += `&team=${user.role}`;
         }
     } else if (selectedTeam !== 'all') {
         url += `&team=${selectedTeam}`;

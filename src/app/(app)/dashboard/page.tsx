@@ -1244,6 +1244,7 @@ function DashboardContent() {
           <div className="lg:col-span-1">
             <TeamPerformanceGraph
               allTasks={allTasks}
+              allUsers={allUsers}
               monthlyTargetData={teamPerformanceData}
               totalPerformanceTarget={totalPerformanceTarget}
               onDateRangeChange={handleTeamPerformanceDateRangeChange}
