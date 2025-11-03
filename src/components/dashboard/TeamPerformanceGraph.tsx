@@ -122,9 +122,82 @@ export function TeamPerformanceGraph({
 
 
   useEffect(() => {
-    setMonthlyTargetData(initialMonthlyTargetData);
-    setTotalPerformanceTarget(initialTotalPerformanceTarget);
-  }, [initialMonthlyTargetData, initialTotalPerformanceTarget]);
+    // New calculation logic goes here
+    if (!allTasks || !selectedDateRange?.from || !globalSettings) {
+      setMonthlyTargetData([]);
+      setTotalPerformanceTarget(0);
+      return;
+    }
+  
+    const currentMonthStartDate = startOfMonth(selectedDateRange.from);
+    const previousMonthStartDate = subMonths(currentMonthStartDate, 1);
+    const previousMonthEndDate = endOfMonth(previousMonthStartDate);
+  
+    // Calculate previous month's total sales
+    const previousMonthSales = allTasks.filter(task => {
+      const taskDate = parseISO(task.date);
+      return isWithinInterval(taskDate, { start: previousMonthStartDate, end: previousMonthEndDate });
+    }).reduce((sum, task) => sum + task.taskCount, 0);
+  
+    // New dynamic target
+    const dynamicTarget = previousMonthSales + 10;
+  
+    const startDate = startOfDay(selectedDateRange.from);
+    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+  
+    let usersToInclude = allUsers.filter(u => userMap.has(u.id));
+    if (isAdminView) {
+      if (specificUserId !== 'all') {
+        usersToInclude = usersToInclude.filter(u => u.id === specificUserId);
+      } else if (selectedTeam !== 'all') {
+        usersToInclude = usersToInclude.filter(u => u.role === selectedTeam);
+      }
+    } else if (currentUser) {
+      usersToInclude = usersToInclude.filter(u => u.role === currentUser.role);
+    }
+  
+    const dateMap = new Map<string, { totalDone: number; totalLikelihood: number; userData: { [userId: string]: { done: number; likelihood: number; role: UserRole } } }>();
+  
+    let currentDate = startDate;
+    while (currentDate <= endDate) {
+      dateMap.set(format(currentDate, 'd MMM'), { totalDone: 0, totalLikelihood: 0, userData: {} });
+      currentDate = addDays(currentDate, 1);
+    }
+  
+    allTasks.forEach(entry => {
+      try {
+        const entryDate = parseISO(entry.date);
+        if (isWithinInterval(entryDate, { start: startDate, end: endDate }) && usersToInclude.some(u => u.id === entry.userId)) {
+          const dateKey = format(entryDate, 'd MMM');
+          const dayData = dateMap.get(dateKey);
+          if (dayData) {
+            dayData.totalDone += entry.taskCount;
+            dayData.totalLikelihood += entry.likelihood || 0;
+            if (!dayData.userData[entry.userId]) {
+              dayData.userData[entry.userId] = { done: 0, likelihood: 0, role: entry.role };
+            }
+            dayData.userData[entry.userId].done += entry.taskCount;
+            dayData.userData[entry.userId].likelihood += entry.likelihood || 0;
+          }
+        }
+      } catch (e) { /* ignore invalid dates */ }
+    });
+    
+    const numDaysInRange = differenceInDays(endDate, startDate) + 1;
+    const dailyTarget = Math.round(dynamicTarget / getDaysInMonth(startDate));
+
+  
+    const finalData = Array.from(dateMap.entries()).map(([date, data]) => ({
+      name: date,
+      ...data,
+      totalTarget: dailyTarget,
+    }));
+  
+    setMonthlyTargetData(finalData);
+    setTotalPerformanceTarget(Math.round(dailyTarget * numDaysInRange));
+  }, [allTasks, selectedDateRange, globalSettings, selectedTeam, specificUserId, currentUser, isAdminView, userMap]);
+  
+
 
   useEffect(() => {
     if (!currentUser) return;
@@ -622,7 +695,6 @@ export function TeamPerformanceGraph({
                   />}
                   {isAdminView && (
                     <>
-
                       <Button
                         variant="outline"
                         size="icon"
