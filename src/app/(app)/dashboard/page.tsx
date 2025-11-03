@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -1420,3 +1420,4 @@ function DashboardContent() {
     </>
   );
 }
+
