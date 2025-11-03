@@ -125,25 +125,15 @@ export function TeamPerformanceGraph({
 
 
   useEffect(() => {
-    if (!allTasks || !selectedDateRange?.from || !globalSettings) {
+    if (!allTasks || !selectedDateRange?.from || !globalSettings?.roleBasedTargets) {
       setMonthlyTargetData([]);
       setTotalPerformanceTarget(0);
       return;
     }
   
-    const currentMonthStartDate = startOfMonth(selectedDateRange.from);
-    const previousMonthStartDate = subMonths(currentMonthStartDate, 1);
-    const previousMonthEndDate = endOfMonth(previousMonthStartDate);
-  
-    const previousMonthSales = allTasks.filter(task => {
-      const taskDate = parseISO(task.date);
-      return isWithinInterval(taskDate, { start: previousMonthStartDate, end: previousMonthEndDate });
-    }).reduce((sum, task) => sum + task.taskCount, 0);
-  
-    const dynamicTarget = previousMonthSales + 10;
-  
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+    const roleBasedTargets = globalSettings.roleBasedTargets;
   
     let usersToInclude = allUsers.filter(u => userMap.has(u.id));
     if (isAdminView) {
@@ -153,9 +143,39 @@ export function TeamPerformanceGraph({
         usersToInclude = usersToInclude.filter(u => u.role === selectedTeam);
       }
     } else if (currentUser) {
-      // For non-admin view, filter users to only the current user's role
       usersToInclude = allUsers.filter(u => u.role === currentUser.role);
     }
+  
+    const numDaysInRange = differenceInDays(endDate, startDate) + 1;
+    const daysInSelectedMonth = getDaysInMonth(startDate);
+  
+    let monthlyTotalTarget = 0;
+    if (isAdminView) {
+      if (specificUserId !== 'all') {
+        const user = usersToInclude[0];
+        if (user) {
+          monthlyTotalTarget = roleBasedTargets[user.role as keyof typeof roleBasedTargets] || 0;
+        }
+      } else if (selectedTeam === 'all') {
+        monthlyTotalTarget = (allUsers.filter(u => u.role === 'CRM').length * roleBasedTargets.CRM) + 
+                           (allUsers.filter(u => u.role === 'DESIGNER_REPRESENTATIVE').length * roleBasedTargets.DESIGNER_REPRESENTATIVE) +
+                           roleBasedTargets.LR;
+      } else if (selectedTeam === 'LR') {
+        monthlyTotalTarget = roleBasedTargets.LR;
+      } else {
+        const countOfUsersInTeam = allUsers.filter(u => u.role === selectedTeam).length;
+        monthlyTotalTarget = countOfUsersInTeam * (roleBasedTargets[selectedTeam as keyof typeof roleBasedTargets] || 0);
+      }
+    } else if (currentUser) {
+      if (currentUser.role === 'LR') {
+        monthlyTotalTarget = roleBasedTargets.LR;
+      } else {
+        monthlyTotalTarget = roleBasedTargets[currentUser.role as keyof typeof roleBasedTargets] || 0;
+      }
+    }
+
+    const totalTargetForRange = Math.round((monthlyTotalTarget / daysInSelectedMonth) * numDaysInRange);
+    const dailyTarget = Math.round(totalTargetForRange / numDaysInRange);
   
     const dateMap = new Map<string, { totalDone: number; totalLikelihood: number; userData: { [userId: string]: { done: number; likelihood: number; role: UserRole } } }>();
   
@@ -183,10 +203,6 @@ export function TeamPerformanceGraph({
         }
       } catch (e) { /* ignore invalid dates */ }
     });
-    
-    const numDaysInRange = differenceInDays(endDate, startDate) + 1;
-    const dailyTarget = Math.round(dynamicTarget / getDaysInMonth(startDate));
-
   
     const finalData = Array.from(dateMap.entries()).map(([date, data]) => ({
       name: date,
@@ -195,7 +211,7 @@ export function TeamPerformanceGraph({
     }));
   
     setMonthlyTargetData(finalData);
-    setTotalPerformanceTarget(Math.round(dynamicTarget * numDaysInRange / getDaysInMonth(startDate)));
+    setTotalPerformanceTarget(totalTargetForRange);
   
   }, [allTasks, allUsers, selectedDateRange, globalSettings, selectedTeam, specificUserId, currentUser, isAdminView, userMap]);
   
@@ -793,3 +809,6 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+
+    
