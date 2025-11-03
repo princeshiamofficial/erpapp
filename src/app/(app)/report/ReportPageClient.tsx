@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -626,7 +627,7 @@ export function ReportPageClient() {
                             <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
                             <CardDescription>
                                 Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
-                                {selectedTeam === 'CRM' && `, Total Likely: ${totalLikelihood}`}
+                                {selectedTeam === 'CRM' && `, Total Assets: ${totalLikelihood}`}
                             </CardDescription>
                         </div>
                         <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
@@ -647,7 +648,7 @@ export function ReportPageClient() {
                                 <TableHead>User</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Date</TableHead>
-                                {selectedTeam === 'CRM' && <TableHead className="text-right">Likely</TableHead>}
+                                {selectedTeam === 'CRM' && <TableHead className="text-right">Assets</TableHead>}
                                 <TableHead className="text-right">Task Count</TableHead>
                                 {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                             </TableRow>
@@ -696,7 +697,7 @@ export function ReportPageClient() {
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={isAdmin ? (selectedTeam === 'CRM' ? 7 : 6) : (selectedTeam === 'CRM' ? 6 : 5)} className="h-24 text-center">
+                                    <TableCell colSpan={isAdmin ? (selectedTeam === 'CRM' ? 6 : 5) : (selectedTeam === 'CRM' ? 5 : 4)} className="h-24 text-center">
                                         <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                                         No task data for this period or team.
                                     </TableCell>
@@ -707,7 +708,7 @@ export function ReportPageClient() {
                             <TableRow>
                                 <TableCell colSpan={selectedTeam === 'CRM' ? 3 : 2}></TableCell>
                                 {selectedTeam === 'CRM' && (
-                                    <TableCell className="text-right font-bold">Total Likely:</TableCell>
+                                    <TableCell className="text-right font-bold">Total Assets:</TableCell>
                                 )}
                                 <TableCell className={`text-right font-bold ${selectedTeam !== 'CRM' ? 'col-span-2' : ''}`}>{selectedTeam === 'CRM' ? totalLikelihood : 'Total Tasks:'}</TableCell>
                                 <TableCell className="text-right font-bold">{totalTasksCount}</TableCell>
