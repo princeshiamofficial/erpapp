@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -23,25 +22,13 @@ interface SalesPerformanceClientProps {
 interface MonthlySalesData {
   name: string; // month name
   sales: number;
-  crmSales: { [crmId: string]: number };
+  orders: number; // New field for sales count
+  crmSales: { [crmId: string]: { sales: number; orders: number } };
 }
-
-interface MonthlyTargetData {
-    name: string; // month name
-    totalDone: number;
-    totalTarget: number;
-    crmData: {
-        [crmId: string]: {
-            done: number;
-            target: number;
-        };
-    };
-}
-
 
 const formatCurrencyBdt = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
-  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
 const getInitials = (name: string | undefined): string => {
@@ -85,6 +72,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
     const months: MonthlySalesData[] = Array.from({ length: 12 }, (_, i) => ({
       name: format(new Date(selectedYear, i), 'MMM'),
       sales: 0,
+      orders: 0,
       crmSales: {},
     }));
 
@@ -95,7 +83,13 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
           const monthIndex = getMonth(orderDate);
           const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
           months[monthIndex].sales += orderTotal;
-          months[monthIndex].crmSales[order.crmUserId] = (months[monthIndex].crmSales[order.crmUserId] || 0) + orderTotal;
+          months[monthIndex].orders += 1;
+
+          if (!months[monthIndex].crmSales[order.crmUserId]) {
+            months[monthIndex].crmSales[order.crmUserId] = { sales: 0, orders: 0 };
+          }
+          months[monthIndex].crmSales[order.crmUserId].sales += orderTotal;
+          months[monthIndex].crmSales[order.crmUserId].orders += 1;
         }
       } catch(e) {
           // Ignore invalid date formats
@@ -110,44 +104,48 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
       case 'line':
         return (
           <RechartsLineChart data={monthlySalesData}>
-            <Tooltip
-              cursor={{ strokeDasharray: '3 3', fill: 'hsl(var(--muted))' }}
-              content={({ active, payload, label }) => <ChartTooltipContentCustom active={active} payload={payload} label={label} userMap={userMap} />}
-            />
-            <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
+            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
+            <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
+            <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Legend />
+            <Line yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+            <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}}/>
           </RechartsLineChart>
         );
       case 'area':
-        return (
-          <RechartsAreaChart data={monthlySalesData}>
-            <defs>
-              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <Tooltip
-              cursor={{ fill: 'hsl(var(--muted))' }}
-              content={({ active, payload, label }) => <ChartTooltipContentCustom active={active} payload={payload} label={label} userMap={userMap} />}
-            />
-            <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorSales)" />
-             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
-          </RechartsAreaChart>
+         return (
+            <RechartsAreaChart data={monthlySalesData}>
+                 <defs>
+                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                     <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.7}/>
+                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
+                    </linearGradient>
+                </defs>
+                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+                <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
+                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                <Legend />
+                <Area yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" fill="url(#colorSales)" />
+                <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" fill="url(#colorOrders)" />
+            </RechartsAreaChart>
         );
       case 'bar':
       default:
         return (
           <RechartsBarChart data={monthlySalesData}>
-            <Tooltip
-              cursor={{ fill: 'hsl(var(--muted))' }}
-              content={({ active, payload, label }) => <ChartTooltipContentCustom active={active} payload={payload} label={label} userMap={userMap} />}
-            />
-            <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
+            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
+            <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
+            <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Legend />
+            <Bar yAxisId="left" dataKey="sales" name="Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <Bar yAxisId="right" dataKey="orders" name="Orders" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
           </RechartsBarChart>
         );
     }
@@ -197,21 +195,37 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
 const ChartTooltipContentCustom = ({ active, payload, label, userMap }: any) => {
     if (active && payload && payload.length) {
         const salesPayload = payload.find(p => p.dataKey === 'sales');
+        const ordersPayload = payload.find(p => p.dataKey === 'orders');
         const crmSalesData = salesPayload?.payload?.crmSales;
+        
         const crmBreakdown = crmSalesData ? Object.entries(crmSalesData)
-            .map(([crmId, sales]) => ({ crmId, sales: sales as number, user: userMap.get(crmId) }))
+            .map(([crmId, data]: [string, any]) => ({
+              crmId,
+              sales: data.sales as number,
+              orders: data.orders as number,
+              user: userMap.get(crmId),
+            }))
             .filter(item => item.user)
             .sort((a, b) => b.sales - a.sales) : [];
 
         return (
-            <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[200px]">
+            <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
                 <div className="grid grid-cols-1 gap-1.5">
                     <p className="font-semibold text-foreground">{label}</p>
-                    <div className="flex items-center gap-2">
-                        <div className="h-2.5 w-2.5 rounded-full bg-primary"></div>
-                        <span className="text-sm text-muted-foreground">Total Sales:</span>
-                        <span className="text-sm font-medium ml-auto">{formatCurrencyBdt(salesPayload?.value as number)}</span>
-                    </div>
+                    {salesPayload && (
+                        <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: salesPayload.color}}></div>
+                            <span className="text-sm text-muted-foreground">Total Sales:</span>
+                            <span className="text-sm font-medium ml-auto">{formatCurrencyBdt(salesPayload.value as number)}</span>
+                        </div>
+                    )}
+                    {ordersPayload && (
+                        <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: ordersPayload.color}}></div>
+                            <span className="text-sm text-muted-foreground">Total Orders:</span>
+                            <span className="text-sm font-medium ml-auto">{ordersPayload.value}</span>
+                        </div>
+                    )}
                     
                     {crmBreakdown.length > 0 && (
                         <>
@@ -219,14 +233,15 @@ const ChartTooltipContentCustom = ({ active, payload, label, userMap }: any) => 
                             <p className="font-semibold text-xs text-muted-foreground mt-1">Top Contributors:</p>
                             <ScrollArea className="max-h-28 pr-2">
                               <div className="space-y-1.5">
-                                {crmBreakdown.map(({ crmId, sales, user }) => (
+                                {crmBreakdown.map(({ crmId, sales, orders, user }) => (
                                     <div key={crmId} className="flex items-center gap-2 text-xs">
                                         <Avatar className="h-5 w-5 border">
                                             <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name} />
                                             <AvatarFallback className="text-[9px]">{getInitials(user?.name)}</AvatarFallback>
                                         </Avatar>
                                         <span className="text-muted-foreground truncate flex-1">{user?.name}</span>
-                                        <span className="font-medium">{formatCurrencyBdt(sales)}</span>
+                                        <span className="font-medium text-right">{orders} orders</span>
+                                        <span className="font-medium text-right">{formatCurrencyBdt(sales)}</span>
                                     </div>
                                 ))}
                               </div>
