@@ -1,4 +1,3 @@
-
 "use client";
 
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -33,14 +32,14 @@ export default function LoginPage() {
         backgroundImage: "url('https://i.ibb.co/VYYkxvH9/bg.png')",
       }}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm -z-10" />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       
       {/* Animated background element */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.3 }}
         transition={{ duration: 2, ease: "easeInOut" }}
-        className="absolute inset-0 -z-10 overflow-hidden"
+        className="absolute inset-0 z-0 overflow-hidden"
       >
         <div className="aurora-bg"></div>
       </motion.div>
