@@ -423,24 +423,19 @@ export function ReportPageClient() {
   }, [filteredOrdersByDate, allUsers]);
 
   const dailySalesData = useMemo(() => {
-    const salesByDate: Record<string, { salesCount: number }> = {};
+    const salesByDate: { date: string; user: string; company: string; }[] = [];
     filteredOrdersByDate.forEach(order => {
         try {
-            const dateKey = format(parseISO(order.createdAt), 'yyyy-MM-dd');
-            if (!salesByDate[dateKey]) {
-                salesByDate[dateKey] = { salesCount: 0 };
-            }
-            salesByDate[dateKey].salesCount += 1;
+            salesByDate.push({
+                date: formatDateSafe(order.createdAt),
+                user: order.crmUserName,
+                company: order.companyName,
+            });
         } catch (e) {
             // ignore invalid dates
         }
     });
-    return Object.entries(salesByDate)
-        .map(([date, data]) => ({
-            date: format(parseISO(date), 'd MMM'),
-            salesCount: data.salesCount
-        }))
-        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Ensure chronological order
+    return salesByDate.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredOrdersByDate]);
 
 
@@ -596,26 +591,44 @@ export function ReportPageClient() {
            <TabsContent value="daily_sales">
             <Card>
               <CardHeader>
-                <CardTitle>Daily Sales Count</CardTitle>
-                <CardDescription>Number of sales transactions per day.</CardDescription>
+                <CardTitle>Daily Sales Log</CardTitle>
+                <CardDescription>A list of all sales transactions within the selected date range.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px] w-full">
-                  {isLoading ? (
-                    <Skeleton className="h-full w-full" />
-                  ) : dailySalesData.length > 0 ? (
-                    <ChartContainer config={dailySalesChartConfig} className="w-full h-full">
-                      <RechartsBarChart data={dailySalesData}>
-                        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false}/>
-                        <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                        <Bar dataKey="salesCount" name="Sales Count" fill="var(--color-salesCount)" radius={[4, 4, 0, 0]} />
-                      </RechartsBarChart>
-                    </ChartContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">No sales data for this period.</div>
-                  )}
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>CRM Name</TableHead>
+                      <TableHead>Company</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      [...Array(5)].map((_, i) => (
+                        <TableRow key={`daily-skel-${i}`}>
+                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : dailySalesData.length > 0 ? (
+                      dailySalesData.map((sale, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{sale.date}</TableCell>
+                          <TableCell>{sale.user}</TableCell>
+                          <TableCell>{sale.company}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center">
+                          No sales data for this period.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
