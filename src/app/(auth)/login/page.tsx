@@ -29,7 +29,7 @@ export default function LoginPage() {
     <div
       className="flex min-h-screen flex-col items-center justify-center bg-cover bg-center p-4 selection:bg-primary/20 selection:text-primary"
       style={{
-        backgroundImage: "url('https://i.ibb.co/G4rLgtfM/Gemini-Generated-Image-q7x9iiq7x9iiq7x9.png')",
+        backgroundImage: "url('https://i.ibb.co/VYYkxvH9/bg.png')",
       }}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm -z-10" />
