@@ -41,8 +41,8 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl transform hover:scale-[1.01] transition-transform duration-300">
-      <CardHeader className="text-center pt-10 pb-6 bg-black rounded-t-xl">
-        <div className="mx-auto mb-6">
+      <CardHeader className="text-center pt-8 pb-4 bg-black rounded-t-xl">
+        <div className="mx-auto mb-4">
            <Image 
             src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" 
             alt="Color Hut Logo" 
