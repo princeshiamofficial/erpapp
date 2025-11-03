@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -423,24 +424,35 @@ export function ReportPageClient() {
   }, [filteredOrdersByDate, allUsers]);
 
   const dailySalesData = useMemo(() => {
-    const salesByDate: { [date: string]: { salesCount: number; totalSale: number } } = {};
-
+    const salesByDate: { [date: string]: { [crmName: string]: { salesCount: number; totalSale: number } } } = {};
+  
     filteredOrdersByDate.forEach(order => {
       try {
         const dateKey = formatDateSafe(order.createdAt);
         if (!salesByDate[dateKey]) {
-          salesByDate[dateKey] = { salesCount: 0, totalSale: 0 };
+          salesByDate[dateKey] = {};
         }
-        salesByDate[dateKey].salesCount += 1;
-        salesByDate[dateKey].totalSale += order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        const crmName = order.crmUserName || 'Unknown CRM';
+        if (!salesByDate[dateKey][crmName]) {
+          salesByDate[dateKey][crmName] = { salesCount: 0, totalSale: 0 };
+        }
+        salesByDate[dateKey][crmName].salesCount += 1;
+        salesByDate[dateKey][crmName].totalSale += order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
       } catch (e) {
         // ignore invalid dates
       }
     });
-
-    return Object.entries(salesByDate)
-      .map(([date, data]) => ({ date, salesCount: data.salesCount, totalSale: data.totalSale }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+    const flattenedData = Object.entries(salesByDate).flatMap(([date, crmSales]) => 
+      Object.entries(crmSales).map(([crmName, data]) => ({
+        date,
+        crmName,
+        salesCount: data.salesCount,
+        totalSale: data.totalSale,
+      }))
+    );
+  
+    return flattenedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredOrdersByDate]);
 
 
@@ -593,7 +605,7 @@ export function ReportPageClient() {
                 </Card>
             </div>
           </TabsContent>
-           <TabsContent value="daily_sales">
+          <TabsContent value="daily_sales">
             <Card>
               <CardHeader>
                 <CardTitle>Daily Sales Log</CardTitle>
@@ -603,31 +615,37 @@ export function ReportPageClient() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>SL</TableHead>
                       <TableHead>Date</TableHead>
+                      <TableHead>CR Name</TableHead>
                       <TableHead className="text-right">Total Sales Count</TableHead>
-                      <TableHead className="text-right">Total Sale</TableHead>
+                      <TableHead className="text-right">Sales Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       [...Array(5)].map((_, i) => (
                         <TableRow key={`daily-skel-${i}`}>
+                          <TableCell><Skeleton className="h-5 w-8" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-5 w-20" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-5 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
                         </TableRow>
                       ))
                     ) : dailySalesData.length > 0 ? (
                       dailySalesData.map((sale, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={`${sale.date}-${sale.crmName}`}>
+                          <TableCell>{index + 1}</TableCell>
                           <TableCell>{sale.date}</TableCell>
+                          <TableCell>{sale.crmName}</TableCell>
                           <TableCell className="text-right">{sale.salesCount}</TableCell>
                           <TableCell className="text-right">{formatCurrency(sale.totalSale)}</TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                           No sales data for this period.
                         </TableCell>
                       </TableRow>
@@ -772,4 +790,4 @@ export function ReportPageClient() {
   );
 }
 
-    
+```
