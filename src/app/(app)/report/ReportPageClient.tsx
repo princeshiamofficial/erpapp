@@ -28,7 +28,7 @@ import { getUsers } from '@/lib/user-service';
 import { getTaskEntries } from '@/lib/team-performance-service';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2, Download, LineChart as LineChartIcon } from 'lucide-react';
-import { useAuth } from '@/components/auth/auth-context';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
