@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -1418,4 +1419,77 @@ function DashboardContent() {
 
     </>
   );
+}
+
+const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser }: any) => {
+    if (active && payload && payload.length) {
+        const donePayload = payload.find((p: any) => p.dataKey === 'totalDone');
+        const targetPayload = payload.find((p: any) => p.dataKey === 'totalTarget');
+        const likelihoodPayload = payload.find((p: any) => p.dataKey === 'totalLikelihood');
+        const userData = donePayload?.payload?.userData || {};
+
+        let userBreakdown: { user: UserType, done: number, likelihood: number }[] = [];
+
+        if (currentUser) {
+            if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') {
+                userBreakdown = Object.entries(userData)
+                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
+                    .filter(item => item.user && (item.done >= 0 || item.likelihood >= 0))
+                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number, likelihood: number }[];
+            } else {
+                 userBreakdown = Object.entries(userData)
+                    .filter(([userId, data]: [string, any]) => data.role === currentUser.role && (data.done >= 0 || data.likelihood >= 0))
+                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
+                    .filter(item => item.user)
+                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number, likelihood: number }[];
+            }
+        }
+
+        return (
+            <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
+                <div className="grid grid-cols-1 gap-1.5">
+                    <p className="font-semibold text-foreground">{label}</p>
+                     {donePayload && <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: donePayload.color}}></div>
+                        <span className="text-sm text-muted-foreground">Tasks Done:</span>
+                        <span className="text-sm font-medium ml-auto">{donePayload.value}</span>
+                    </div>}
+                     {targetPayload && <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: targetPayload.color}}></div>
+                        <span className="text-sm text-muted-foreground">Target:</span>
+                        <span className="text-sm font-medium ml-auto">{targetPayload.value}</span>
+                    </div>}
+                    {likelihoodPayload && likelihoodPayload.value > 0 && (
+                        <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: likelihoodPayload.color}}></div>
+                            <span className="text-sm text-muted-foreground">Assets:</span>
+                            <span className="text-sm font-medium ml-auto">{likelihoodPayload.value}</span>
+                        </div>
+                    )}
+                </div>
+                 {userBreakdown.length > 0 && (
+                    <>
+                        <div className="border-t border-dashed my-1.5"></div>
+                        <p className="font-semibold text-xs text-muted-foreground mt-1">Contributors:</p>
+                        <ScrollArea className="pr-2 -mr-2">
+                            <div className="space-y-1.5 mt-1">
+                                {userBreakdown.map(({ user, done, likelihood }) => (
+                                    <div key={user.id} className="flex items-center gap-2 text-xs">
+                                        <Avatar className="h-5 w-5 border">
+                                            <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
+                                            <AvatarFallback className="text-[9px] bg-muted">{getInitials(user.name)}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-muted-foreground truncate flex-1">{user.name}</span>
+                                        <span className="font-medium text-foreground">{done} tasks</span>
+                                        {likelihood > 0 && <span className="font-medium text-purple-600">({likelihood} assets)</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </>
+                )}
+            </div>
+        )
+    }
+    return null;
 }
