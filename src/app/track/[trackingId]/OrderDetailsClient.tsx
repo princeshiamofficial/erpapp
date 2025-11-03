@@ -414,7 +414,7 @@ export function OrderDetailsClient({
               <PopoverAnchor asChild>
                 <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-0 sm:pl-1">
                   <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
-                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Current user avatar" data-ai-hint={currentUser?.avatarUrl ? "user uploaded avatar" : (clientReactorId ? "client avatar" : "user initials avatar")} />
+                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Your avatar" data-ai-hint={currentUser?.avatarUrl ? "user uploaded avatar" : (clientReactorId ? "client avatar" : "user initials avatar")} />
                     <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || (clientReactorId ? (order.companyName || "Client") : "U"))}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -515,7 +515,7 @@ export function OrderDetailsClient({
               <div className="mt-4 pt-4 border-t border-border/30">
                 <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
                   <Truck className="h-7 w-7 mr-2 text-primary/80"/>
-                  Courier Status (Packzy)
+                  Current Status (SteadFast)
                 </h3>
                 <div className="ml-[40px] sm:ml-[44px]">
                 {isLoadingPackzyStatus ? (
