@@ -135,13 +135,11 @@ export function TeamPerformanceGraph({
     const previousMonthStartDate = subMonths(currentMonthStartDate, 1);
     const previousMonthEndDate = endOfMonth(previousMonthStartDate);
   
-    // Calculate previous month's total sales
     const previousMonthSales = allTasks.filter(task => {
       const taskDate = parseISO(task.date);
       return isWithinInterval(taskDate, { start: previousMonthStartDate, end: previousMonthEndDate });
     }).reduce((sum, task) => sum + task.taskCount, 0);
   
-    // New target is previous month's sales + 10
     const dynamicTarget = previousMonthSales + 10;
   
     const startDate = startOfDay(selectedDateRange.from);
@@ -155,6 +153,7 @@ export function TeamPerformanceGraph({
         usersToInclude = usersToInclude.filter(u => u.role === selectedTeam);
       }
     } else if (currentUser) {
+      // For non-admin view, filter users to only the current user's role
       usersToInclude = allUsers.filter(u => u.role === currentUser.role);
     }
   
