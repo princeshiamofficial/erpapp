@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -161,7 +161,7 @@ interface SummaryCardProps {
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading }) => {
   if (isLoading) {
     return (
-      <Card className="bg-card p-4 shadow-md">
+      <Card className="bg-card p-4 shadow-md rounded-lg">
         <div className="flex items-center space-x-4">
           <Skeleton className="h-12 w-12 rounded-full" />
           <div className="space-y-1.5">
@@ -173,7 +173,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
     );
   }
   return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4">
+    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
       <div className="flex items-center space-x-4">
         <div className={`p-3 rounded-full ${circleBgClass}`}>
           <Icon className={`h-6 w-6 ${iconColorClass}`} />
@@ -706,6 +706,19 @@ function DashboardContent() {
     }
   
     const numDaysInRange = differenceInDays(endDate, startDate) + 1;
+    const currentMonthStartDate = startOfMonth(startDate);
+    const previousMonthStartDate = subMonths(currentMonthStartDate, 1);
+    const previousMonthEndDate = endOfMonth(previousMonthStartDate);
+  
+    // Calculate previous month's total sales
+    const previousMonthSales = allTasks.filter(task => {
+      const taskDate = parseISO(task.date);
+      return isWithinInterval(taskDate, { start: previousMonthStartDate, end: previousMonthEndDate });
+    }).reduce((sum, task) => sum + task.taskCount, 0);
+  
+    // New target is previous month's sales + 10
+    const dynamicTarget = previousMonthSales + 10;
+  
     let totalTarget = 0;
   
     if (isAdminView) {
@@ -765,10 +778,10 @@ function DashboardContent() {
     const finalData = Array.from(dateMap.entries()).map(([date, data]) => ({
       name: date,
       ...data,
-      totalTarget: Math.round(totalTarget / numDaysInRange), // Distribute target evenly for graph
+      totalTarget: Math.round(dynamicTarget / numDaysInRange), // Distribute target evenly for graph
     }));
   
-    return { teamPerformanceData: finalData, totalPerformanceTarget: totalTarget };
+    return { teamPerformanceData: finalData, totalPerformanceTarget: Math.round(dynamicTarget * numDaysInRange / getDaysInMonth(startDate)) };
   
   }, [allTasks, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam, specificUserId, currentUser, isAdminView]);
 
@@ -1007,7 +1020,7 @@ function DashboardContent() {
         {!isDesignerRepOrLrOrCo && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
-              <Card className="shadow-sm bg-card">
+              <Card className="shadow-sm bg-card rounded-lg">
                 <CardContent className="p-3 sm:p-4 flex items-center justify-between">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Users className="h-5 w-5 mr-2 text-primary/80" />
@@ -1038,7 +1051,7 @@ function DashboardContent() {
                   )}
                 </CardContent>
               </Card>
-              <Card className="shadow-sm bg-card">
+              <Card className="shadow-sm bg-card rounded-lg">
                 <CardContent className="p-3 sm:p-4 flex items-center justify-between">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
@@ -1068,7 +1081,7 @@ function DashboardContent() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
-              <Card className="shadow-xl bg-card lg:col-span-3">
+              <Card className="shadow-xl bg-card lg:col-span-3 rounded-lg">
                 <CardHeader className="border-b">
                   <CardTitle className="flex items-center text-xl text-foreground">
                     <BarChartBig className="mr-2 h-6 w-6 text-primary" />
@@ -1151,7 +1164,7 @@ function DashboardContent() {
               </Card>
 
               <div className="lg:col-span-2 grid grid-cols-1 gap-6">
-                  <Card className="shadow-xl bg-card">
+                  <Card className="shadow-xl bg-card rounded-lg">
                       <CardHeader>
                       <CardTitle className="flex items-center text-xl text-foreground">
                           <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
@@ -1185,7 +1198,7 @@ function DashboardContent() {
                       </CardContent>
                   </Card>
                   {canSeeAdminCharts && (
-                    <Card className="shadow-xl bg-card">
+                    <Card className="shadow-xl bg-card rounded-lg">
                         <CardHeader>
                         <CardTitle className="flex items-center text-xl text-foreground">
                             <Landmark className="mr-2 h-6 w-6 text-primary" />
@@ -1244,7 +1257,6 @@ function DashboardContent() {
           <div className="lg:col-span-1">
             <TeamPerformanceGraph
               allTasks={allTasks}
-              allUsers={allUsers}
               monthlyTargetData={teamPerformanceData}
               totalPerformanceTarget={totalPerformanceTarget}
               onDateRangeChange={handleTeamPerformanceDateRangeChange}
@@ -1257,6 +1269,7 @@ function DashboardContent() {
               specificUserId={specificUserId}
               isAdminView={isAdminView}
               refetchData={refetch}
+              allUsers={allUsers}
               specificUserOptions={specificUserOptions}
             />
           </div>
@@ -1274,7 +1287,7 @@ function DashboardContent() {
         )}
         <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLrOrCo ? "lg:grid-cols-2" : "")}>
            {!isDesignerRepOrLrOrCo && (
-              <Card className="shadow-xl bg-card">
+              <Card className="shadow-xl bg-card rounded-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center text-xl text-foreground">
                     <MessageSquare className="mr-2 h-6 w-6 text-primary" />
@@ -1340,7 +1353,7 @@ function DashboardContent() {
         {!isDesignerRepOrLrOrCo && (
           <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
             
-            <Card className="shadow-xl bg-card">
+            <Card className="shadow-xl bg-card rounded-lg">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl text-foreground">
                   <Briefcase className="mr-2 h-6 w-6 text-primary" />
@@ -1359,7 +1372,7 @@ function DashboardContent() {
             </Card>
             
             {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
-              <Card className="shadow-xl bg-card">
+              <Card className="shadow-xl bg-card rounded-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center text-xl text-foreground">
                     <Users className="mr-2 h-6 w-6 text-primary" />

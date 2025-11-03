@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -154,7 +155,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
 
   return (
     <>
-      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl">
+      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl rounded-lg">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
               <div>

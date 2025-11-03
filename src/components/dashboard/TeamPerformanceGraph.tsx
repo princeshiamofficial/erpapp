@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -25,7 +26,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, isWithinInterval, endOfMonth, addDays } from 'date-fns';
+import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, isWithinInterval, addDays, endOfMonth } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
@@ -195,7 +196,8 @@ export function TeamPerformanceGraph({
     }));
   
     setMonthlyTargetData(finalData);
-    setTotalPerformanceTarget(Math.round(dailyTarget * numDaysInRange));
+    setTotalPerformanceTarget(Math.round(dynamicTarget * numDaysInRange / getDaysInMonth(startDate)));
+  
   }, [allTasks, allUsers, selectedDateRange, globalSettings, selectedTeam, specificUserId, currentUser, isAdminView, userMap]);
   
 
@@ -535,7 +537,7 @@ export function TeamPerformanceGraph({
 
   return (
     <>
-      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl print-container">
+      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl print-container rounded-lg">
         <CardHeader className="print-hide">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -792,5 +794,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
