@@ -52,7 +52,7 @@ export function LoginForm() {
             className="object-contain"
            />
         </div>
-        <CardDescription className="text-muted-foreground text-md pt-1">Sign in to your workspace.</CardDescription>
+        <CardDescription className="text-black text-md pt-1">Sign in to your workspace.</CardDescription>
       </CardHeader>
       <CardContent className="py-6 px-8">
         <form onSubmit={handleSubmit} className="space-y-6">
