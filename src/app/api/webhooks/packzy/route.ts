@@ -1,3 +1,4 @@
+
 // /src/app/api/webhooks/packzy/route.ts
 
 import { NextResponse } from 'next/server';
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
 
       console.log(`[Packzy Webhook] Order ${order.id} is delivered. Triggering auto-settlement.`);
       
-      const settlementReason = `Order delivered. Status updated via Packzy webhook. Consignment ID: ${consignment_id || 'N/A'}.`;
+      const settlementReason = `Order delivered. Status updated via SteadFast webhook. Consignment ID: ${consignment_id || 'N/A'}.`;
       
       const success = await autoSettleOrderIfDelivered(
         order.id, 

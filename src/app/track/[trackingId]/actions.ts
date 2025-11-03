@@ -1,5 +1,6 @@
 
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -210,8 +211,8 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
     const responseData = await response.json();
 
     if (responseData.status !== 200) {
-      console.error('Packzy API Error:', responseData);
-      return { error: responseData.message || 'Failed to fetch delivery status from Packzy.' };
+      console.error('Steadfast API Error:', responseData);
+      return { error: responseData.message || 'Failed to fetch delivery status from Steadfast.' };
     }
 
     if (responseData.status === 200 && responseData.delivery_status === 'delivered') {
@@ -220,7 +221,7 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
         if (order) {
           // Trigger settlement if the conditions are met (due amount > 0 or status not yet Delivered)
           await autoSettleOrderIfDelivered(
-            order.id,
+            order.id, 
             "System auto-settled: Courier confirmed delivery.",
             { id: order.crmUserId, name: order.crmUserName }
           );

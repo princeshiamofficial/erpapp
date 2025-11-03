@@ -80,7 +80,7 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                 if (data.status === 200 && data.delivery_status === 'delivered') {
                     console.log(`[SettleAction] Courier confirmed delivery for order ${shippedOrder.orderId}. Triggering settlement.`);
                     
-                    const settlementReason = `Order delivered. Status updated via Packzy webhook. Consignment ID: ${data.consignment_id || 'N/A'}.`;
+                    const settlementReason = `Order delivered. Status updated via SteadFast webhook. Consignment ID: ${data.consignment_id || 'N/A'}.`;
                     const settlementSuccess = await autoSettleOrderIfDelivered(shippedOrder.orderId, settlementReason, actingUser);
 
                     if (settlementSuccess) {

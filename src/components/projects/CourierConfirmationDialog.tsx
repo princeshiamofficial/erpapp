@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -122,7 +123,7 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
               </div>
            ) : orderDetails ? (
             <AlertDialogDescription>
-                This will create a consignment in <span className="font-semibold text-foreground">Steadfast</span> for order <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{project?.projectIdDisplay}</span>. Please confirm the details below.
+                This will create a consignment in <span className="font-semibold text-foreground">SteadFast</span> for order <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{project?.projectIdDisplay}</span>. Please confirm the details below.
             </AlertDialogDescription>
            ) : (
                 <AlertDialogDescription className="text-destructive">
