@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -105,45 +106,17 @@ export default function LeaderboardPage() {
     const periodEnd = endOfDay(dateRange.to);
     
     const roleFilteredUsers = users.filter(user => user.role === roleToCalculate && !user.isBanned);
-    
-    const jobFirstSeenDate = new Map<string, Date>();
-    [...orders].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-        .forEach(order => {
-            const companyNameParts = (order.companyName || '').split('•');
-            const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim().toLowerCase() : null;
-            if (jobId && !jobFirstSeenDate.has(jobId)) {
-                jobFirstSeenDate.set(jobId, new Date(order.createdAt));
-            }
-        });
 
     const performanceDataList = roleFilteredUsers.map(user => {
-      let newSalesCount = 0;
-      let reorderCount = 0;
+      let ordersCompleted = 0;
       let designsAssigned = 0;
       let designsDone = 0;
 
       if (roleToCalculate === 'CRM') {
-        const userOrdersInPeriod = orders.filter(order => 
+        ordersCompleted = orders.filter(order => 
             order.crmUserId === user.id &&
             isWithinInterval(new Date(order.createdAt), { start: periodStart, end: periodEnd })
-        );
-
-        userOrdersInPeriod.forEach(order => {
-          const companyNameParts = (order.companyName || '').split('•');
-          const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim().toLowerCase() : null;
-          const orderDate = new Date(order.createdAt);
-          
-          if (jobId) {
-            const firstSeen = jobFirstSeenDate.get(jobId);
-            if (firstSeen && orderDate.getTime() > firstSeen.getTime()) {
-                reorderCount++;
-            } else {
-                newSalesCount++;
-            }
-          } else {
-             newSalesCount++;
-          }
-        });
+        ).length;
 
       } else if (roleToCalculate === 'DESIGNER_REPRESENTATIVE') {
           designsAssigned = orders.filter(order =>
@@ -173,8 +146,8 @@ export default function LeaderboardPage() {
         userId: user.id,
         userName: user.name,
         userAvatar: user.avatarUrl || undefined,
-        ordersCompleted: newSalesCount,
-        reorderCount: reorderCount,
+        ordersCompleted: ordersCompleted,
+        reorderCount: 0, // This is no longer used for calculation
         designsAssigned,
         designsDone,
         target: target,
@@ -187,8 +160,8 @@ export default function LeaderboardPage() {
     const sortKey = roleToCalculate === 'DESIGNER_REPRESENTATIVE' ? 'designsDone' : 'ordersCompleted';
 
     performanceDataList.sort((a, b) => {
-        const aTotal = (a[sortKey] ?? 0) + (a.reorderCount ?? 0);
-        const bTotal = (b[sortKey] ?? 0) + (b.reorderCount ?? 0);
+        const aTotal = (a[sortKey] ?? 0);
+        const bTotal = (b[sortKey] ?? 0);
         return bTotal - aTotal || a.userName.localeCompare(b.userName);
     });
     performanceDataList.forEach((user, index) => {
@@ -249,8 +222,8 @@ export default function LeaderboardPage() {
     const prevCrMap = new Map(prevCrData.map(d => [d.userId, d]));
     crData = crData.map(currentData => {
         const prevData = prevCrMap.get(currentData.userId);
-        const prevPoints = (prevData?.ordersCompleted || 0) + (prevData?.reorderCount || 0);
-        const currentPoints = currentData.ordersCompleted + currentData.reorderCount;
+        const prevPoints = (prevData?.ordersCompleted || 0);
+        const currentPoints = currentData.ordersCompleted;
         const pointChange = currentPoints - prevPoints;
         return {
             ...currentData,
@@ -426,22 +399,18 @@ export default function LeaderboardPage() {
                       <TableHead>Name</TableHead>
                       <TableHead className="text-center">Sales</TableHead>
                       <TableHead className="text-center">Target</TableHead>
-                      <TableHead className="text-center">ROD</TableHead>
-                      <TableHead className="text-center">Total</TableHead>
                       <TableHead className="text-center">Trend</TableHead>
                   </TableRow>
               </TableHeader>
               <TableBody>
                   {performanceData.map(user => {
-                    const totalPoints = user.ordersCompleted + user.reorderCount;
+                    const totalPoints = user.ordersCompleted;
                     return (
                       <TableRow key={`print-cr-${user.userId}`}>
                           <TableCell className="font-bold text-lg">{user.rank}</TableCell>
                           <TableCell>{user.userName}</TableCell>
-                          <TableCell className="text-center font-mono">{user.ordersCompleted}</TableCell>
-                          <TableCell className="text-center font-mono">{user.target}</TableCell>
-                          <TableCell className="text-center font-mono">{user.reorderCount}</TableCell>
                           <TableCell className="text-center font-mono">{totalPoints}</TableCell>
+                          <TableCell className="text-center font-mono">{user.target}</TableCell>
                           <TableCell className={cn(
                             "text-center font-semibold flex items-center justify-center gap-1",
                             user.trend === 'up' && 'text-green-600',
@@ -497,3 +466,5 @@ export default function LeaderboardPage() {
     </>
   );
 }
+
+    
