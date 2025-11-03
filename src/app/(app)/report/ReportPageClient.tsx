@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -609,7 +608,7 @@ export function ReportPageClient() {
             <Card>
               <CardHeader>
                 <CardTitle>Daily Sales Log</CardTitle>
-                <CardDescription>A summary of sales activity within the selected date range.</CardDescription>
+                <CardDescription>A day-by-day summary of sales activity within the selected date range.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -789,5 +788,3 @@ export function ReportPageClient() {
     </>
   );
 }
-
-```
