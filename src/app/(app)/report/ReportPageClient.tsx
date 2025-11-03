@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -28,8 +27,8 @@ import { getGlobalSettings, setReportProductFilters } from '@/lib/settings-servi
 import { getUsers } from '@/lib/user-service';
 import { getTaskEntries } from '@/lib/team-performance-service';
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2, Download } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
+import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2, Download, LineChart as LineChartIcon } from 'lucide-react';
+import { useAuth } from '@/components/auth/auth-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -86,6 +85,13 @@ const salesBreakdownChartConfig = {
   totalSales: {
     label: "Total Sales",
     color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
+
+const dailySalesChartConfig = {
+  salesCount: {
+    label: "Sales Count",
+    color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig;
 
@@ -411,9 +417,31 @@ export function ReportPageClient() {
         totalSales: salesByCrm[crm.id]?.totalSales || 0,
       }))
       .filter(data => data.totalSales > 0)
-      .sort((a, b) => b.totalSales - a.totalSales);
+      .sort((a, b) => b.totalSales - a.sales);
   
   }, [filteredOrdersByDate, allUsers]);
+
+  const dailySalesData = useMemo(() => {
+    const salesByDate: Record<string, { salesCount: number }> = {};
+    filteredOrdersByDate.forEach(order => {
+        try {
+            const dateKey = format(parseISO(order.createdAt), 'yyyy-MM-dd');
+            if (!salesByDate[dateKey]) {
+                salesByDate[dateKey] = { salesCount: 0 };
+            }
+            salesByDate[dateKey].salesCount += 1;
+        } catch (e) {
+            // ignore invalid dates
+        }
+    });
+    return Object.entries(salesByDate)
+        .map(([date, data]) => ({
+            date: format(parseISO(date), 'd MMM'),
+            salesCount: data.salesCount
+        }))
+        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Ensure chronological order
+  }, [filteredOrdersByDate]);
+
 
   return (
     <>
@@ -422,6 +450,7 @@ export function ReportPageClient() {
           <div className="flex justify-between items-center mb-4">
               <TabsList>
                   <TabsTrigger value="sales_report">Sales Report</TabsTrigger>
+                  <TabsTrigger value="daily_sales">Daily Sales</TabsTrigger>
                   <TabsTrigger value="team_report">Team Report</TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-2">
@@ -562,6 +591,32 @@ export function ReportPageClient() {
                   </CardContent>
                 </Card>
             </div>
+          </TabsContent>
+           <TabsContent value="daily_sales">
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Sales Count</CardTitle>
+                <CardDescription>Number of sales transactions per day.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px] w-full">
+                  {isLoading ? (
+                    <Skeleton className="h-full w-full" />
+                  ) : dailySalesData.length > 0 ? (
+                    <ChartContainer config={dailySalesChartConfig} className="w-full h-full">
+                      <RechartsBarChart data={dailySalesData}>
+                        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false}/>
+                        <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                        <Bar dataKey="salesCount" name="Sales Count" fill="var(--color-salesCount)" radius={[4, 4, 0, 0]} />
+                      </RechartsBarChart>
+                    </ChartContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">No sales data for this period.</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="team_report">
             <Card>
