@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check, UploadCloud, Paperclip, XCircle, ImagePlus } from 'lucide-react';
+import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check, UploadCloud, Paperclip, XCircle, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces, ShoppingBag, SendHorizonal } from 'lucide-react';
 import { format } from 'date-fns';
 import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,18 @@ interface AddTransactionDialogProps {
   dialogMode: DialogMode;
   allUsersForDropdown?: User[];
 }
+
+export const expenseCategories = [
+    { value: "Office Rent", label: "Office Rent", icon: Home },
+    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
+    { value: "Transportation", label: "Transportation", icon: Car },
+    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
+    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
+    { value: "Marketing", label: "Marketing", icon: Megaphone },
+    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
+    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+    { value: "Salaries", label: "Salaries", icon: Landmark },
+];
 
 export function AddTransactionDialog({
   currentUser,
@@ -305,12 +317,6 @@ export function AddTransactionDialog({
     }
   };
 
-  const getCategoryPlaceholder = () => {
-    if (type === 'income') return "e.g., Salary, Sales";
-    if (type === 'purchase') return "e.g., Inventory, Supplies, Groceries";
-    return "e.g., Utilities, Rent";
-  };
-
   const dialogTitleText = useMemo(() => {
     if (dialogMode === 'sendMoney') return "Record Payment to User";
     if (dialogMode === 'addIncome') return "Add New Income";
@@ -393,11 +399,30 @@ export function AddTransactionDialog({
               <Input id="transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required />
             </div>
 
-            {dialogMode !== 'sendMoney' && (
+            {dialogMode !== 'sendMoney' ? (
               <div className="space-y-1">
                 <Label htmlFor="transaction-category">Category *</Label>
-                <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required />
+                <Select value={category} onValueChange={setCategory} required>
+                  <SelectTrigger id="transaction-category">
+                      <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {expenseCategories.map(cat => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                              <div className="flex items-center gap-2">
+                                  <cat.icon className="h-4 w-4 text-muted-foreground" />
+                                  <span>{cat.label}</span>
+                              </div>
+                          </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
+            ) : (
+                 <div className="space-y-1">
+                    <Label htmlFor="transaction-category-disabled">Category *</Label>
+                    <Input id="transaction-category-disabled" value={category} disabled readOnly />
+                </div>
             )}
 
             {dialogMode === 'sendMoney' && (
@@ -541,3 +566,5 @@ export function AddTransactionDialog({
     </Dialog>
   );
 }
+
+```
