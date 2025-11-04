@@ -138,8 +138,7 @@ export function AddTransactionDialog({
   }, [availableTransactionTypes, type]);
 
   const isDocumentRequired = useMemo(() => {
-    // Document is not required if the current user is a SYSTEM_ADMIN
-    if (currentUser?.role === 'SYSTEM_ADMIN') {
+    if (currentUser?.role === 'SYSTEM_ADMIN' && dialogMode !== 'sendMoney') {
       return false;
     }
     return (type === 'expense' || type === 'purchase') && dialogMode !== 'sendMoney' && dialogMode !== 'addIncome';
