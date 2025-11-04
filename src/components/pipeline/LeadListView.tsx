@@ -16,7 +16,7 @@ import {
     DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { Edit, Trash2, Users, MoreVertical, Briefcase, FolderEdit, Eye, Check } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isBefore, startOfDay, isToday } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -119,6 +119,9 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                     ) : leads.length > 0 ? (
                         leads.map(lead => {
                             const crmUser = allCrmUsers.find(u => u.id === lead.crmId);
+                            const scheduleDate = lead.schedule ? parseISO(lead.schedule) : null;
+                            const isPast = scheduleDate ? isBefore(scheduleDate, startOfDay(new Date())) && !isToday(scheduleDate) : false;
+                            
                             return (
                                 <TableRow key={lead.id} className="hover:bg-muted/50" data-state={selectedLeadIds.has(lead.id) ? "selected" : ""}>
                                     {isSelectionMode && (
@@ -148,8 +151,12 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                     </TableCell>
                                     <TableCell>{formatDateSafe(lead.date)}</TableCell>
                                     <TableCell>
-                                        {lead.schedule ? (
-                                            <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50">
+                                        {scheduleDate ? (
+                                            <Badge variant="outline" className={cn(
+                                                isPast 
+                                                ? 'border-red-300 text-red-800 bg-red-50' 
+                                                : 'border-green-300 text-green-800 bg-green-50'
+                                            )}>
                                                 {formatDateSafe(lead.schedule)}
                                             </Badge>
                                         ) : (
