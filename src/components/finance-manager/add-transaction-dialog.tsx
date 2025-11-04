@@ -43,8 +43,8 @@ export const expenseCategories = [
     { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
     { value: "Marketing", label: "Marketing", icon: Megaphone },
     { value: "Purchase", label: "Purchase", icon: ShoppingBag },
+    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
     { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
-    { value: "Salaries", label: "Salaries", icon: Landmark },
 ];
 
 export function AddTransactionDialog({

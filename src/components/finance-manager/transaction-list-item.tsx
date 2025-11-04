@@ -4,7 +4,7 @@
 import React from 'react';
 import type { Transaction, User } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download, Paperclip } from 'lucide-react';
+import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download, Paperclip, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Link from 'next/link'; // Added Link for document
@@ -21,11 +21,21 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
+const categoryIcons: Record<string, React.ElementType> = {
+    "Office Rent": Home,
+    "Utilities": Lightbulb,
+    "Transportation": Car,
+    "Office Supplies": ClipboardIcon,
+    "Food & Drinks": Utensils,
+    "Marketing": Megaphone,
+    "Purchase": ShoppingBag,
+    "Sent Money": SendHorizonal,
+    "Miscellaneous": Braces,
+};
+
 export function TransactionListItem({ transaction, currentUser, onDelete, onEdit, userName }: TransactionListItemProps) {
   const isIncome = transaction.type === 'income';
-  const isPurchase = transaction.type === 'purchase';
-  const isExpense = transaction.type === 'expense';
-
+  
   let finalCanModify = false;
   if (currentUser?.role === 'SYSTEM_ADMIN') {
     finalCanModify = true;
@@ -40,7 +50,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   let iconColorClass;
   let amountPrefix = '';
   let amountColorClass = '';
-
+  
   if (isIncome) {
     if (transaction.receivedFromUserId) { // Money Received from a transfer
       IconComponent = Download;
@@ -51,23 +61,13 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     }
     amountPrefix = '+';
     amountColorClass = "text-green-600";
-  } else if (isExpense) {
-    if (transaction.sentToUserId) { // Money Sent via transfer
-      IconComponent = SendHorizonal;
-      iconColorClass = "bg-blue-500/10 text-blue-600"; // Distinct color for sent funds
-    } else { // Regular expense
-      IconComponent = TrendingDown;
-      iconColorClass = "bg-red-500/10 text-red-600";
-    }
+  } else { // Expense or Purchase
+    const categoryKey = Object.keys(categoryIcons).find(key => transaction.category.includes(key)) || "Miscellaneous";
+    IconComponent = categoryIcons[categoryKey];
+    iconColorClass = transaction.type === 'purchase' ? "bg-sky-500/10 text-sky-600" : "bg-red-500/10 text-red-600";
     amountPrefix = '-';
-    amountColorClass = "text-red-600";
-  } else { // Purchase
-    IconComponent = ShoppingBag;
-    iconColorClass = "bg-sky-500/10 text-sky-600";
-    amountPrefix = '-';
-    amountColorClass = "text-sky-600";
+    amountColorClass = transaction.type === 'purchase' ? "text-sky-600" : "text-red-600";
   }
-
 
   return (
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
@@ -138,4 +138,3 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
-
