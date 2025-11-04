@@ -38,7 +38,7 @@ interface LeadListViewProps {
 }
 
 const formatDateSafe = (dateString?: string) => {
-  if (!dateString) return 'No Date';
+  if (!dateString) return null; // Return null for blank output
   try {
     return format(parseISO(dateString), 'd MMM, yyyy');
   } catch (e) {
@@ -153,7 +153,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                                 {formatDateSafe(lead.schedule)}
                                             </Badge>
                                         ) : (
-                                            'No Date'
+                                            null
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right">
