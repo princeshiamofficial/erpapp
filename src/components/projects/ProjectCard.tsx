@@ -286,7 +286,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             )}
           </div>
           
-          <div className="min-w-0">
+          <div className="min-w-0 overflow-hidden">
             <p className="text-xs font-medium text-muted-foreground truncate" title={project.name}>{project.name}</p>
           </div>
 
