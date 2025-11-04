@@ -12,8 +12,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown } from 'lucide-react'; 
-import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Download, Paperclip } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,13 +46,12 @@ import {
   getTransactionsForUserAction,
   getAllTransactionsAction,
 } from './actions';
-import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays } from "date-fns";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 import { Check } from 'lucide-react';
 import {
   ChartContainer,
@@ -68,11 +66,12 @@ import {
   PieChart as RechartsPieChart,
   Cell,
 } from "recharts"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Link from 'next/link';
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
-const CalculatorDialog = dynamic(() => import('@/components/layout/CalculatorDialog').then(mod => mod.CalculatorDialog));
-
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -410,6 +409,36 @@ export default function FinanceManagerPage() {
     return allUsersForFilter.find(u => u.id === selectedUserIdFilter)?.name || 'Select User';
   }, [selectedUserIdFilter, allUsersForFilter]);
 
+  const getTransactionIcon = (t: Transaction) => {
+    if (t.type === 'income') {
+        if (t.receivedFromUserId) return <Download className="h-5 w-5" />;
+        return <TrendingUp className="h-5 w-5" />;
+    }
+    if (t.type === 'expense') {
+        if (t.sentToUserId) return <SendHorizonal className="h-5 w-5" />;
+        return <TrendingDown className="h-5 w-5" />;
+    }
+    return <ShoppingBag className="h-5 w-5" />;
+  }
+
+  const getTransactionIconColor = (t: Transaction) => {
+    if (t.type === 'income') {
+        if (t.receivedFromUserId) return "bg-purple-500/10 text-purple-600";
+        return "bg-green-500/10 text-green-600";
+    }
+    if (t.type === 'expense') {
+        if (t.sentToUserId) return "bg-blue-500/10 text-blue-600";
+        return "bg-red-500/10 text-red-600";
+    }
+    return "bg-sky-500/10 text-sky-600";
+  }
+
+  const getAmountColor = (t: Transaction) => {
+    if (t.type === 'income') return "text-green-600";
+    if (t.type === 'expense') return "text-red-600";
+    return "text-sky-600";
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header bg-card rounded-lg p-4 shadow-xl">
@@ -462,15 +491,15 @@ export default function FinanceManagerPage() {
           </Tabs>
         )}
         {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && (
-           <DropdownMenu open={isUserFilterPopoverOpen} onOpenChange={setIsUserFilterPopoverOpen}>
-              <DropdownMenuTrigger asChild>
+           <Popover open={isUserFilterPopoverOpen} onOpenChange={setIsUserFilterPopoverOpen}>
+              <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto order-2 sm:order-none flex-shrink-0 h-10">
                   <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                   <span className="truncate">{selectedUserNameForFilter}</span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-80 overflow-y-auto">
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] max-h-80 overflow-y-auto p-0">
                  <Command>
                     <CommandInput placeholder="Search user..." />
                     <CommandList>
@@ -489,8 +518,8 @@ export default function FinanceManagerPage() {
                       </CommandGroup>
                     </CommandList>
                   </Command>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </PopoverContent>
+            </Popover>
         )}
         <div className="w-full sm:w-auto grow sm:grow-0 order-3 sm:order-none sm:min-w-[200px] md:min-w-[240px]">
           <Label htmlFor="transaction-type-filter" className="sr-only">Filter by type</Label>
@@ -573,40 +602,90 @@ export default function FinanceManagerPage() {
                 </div>
             </div>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            {isLoadingContent ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
-              </div>
-            ) : filteredTransactions.length > 0 ? (
-              <div className="space-y-3 sm:space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                {filteredTransactions.map(t => (
-                  <TransactionListItem
-                    key={t.id}
-                    transaction={t}
-                    currentUser={currentUser}
-                    onDelete={() => handleDeleteRequest(t)}
-                    onEdit={() => handleOpenEditDialog(t)}
-                    userName={(viewMode === 'global' && userMap.get(t.userId)) || undefined}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-10 text-muted-foreground">
-                <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
-                <p className="text-lg font-medium">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' || selectedUserIdFilter !== 'all' || (selectedDateRange)
-                    ? "No transactions match your filters."
-                    : "No transactions yet."}
-                </p>
-                <p className="text-sm">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' || selectedUserIdFilter !== 'all' || (selectedDateRange)
-                    ? "Try adjusting your search or filters."
-                    : (canUserAddExpense || currentUser?.role === 'SYSTEM_ADMIN' ? "Add your first transaction to get started!" : "Transaction logging may be restricted for your role.")
-                  }
-                </p>
-              </div>
-            )}
+          <CardContent className="p-0">
+             <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
+                  <TableRow>
+                    <TableHead className="pl-6">Transaction</TableHead>
+                    {viewMode === 'global' && <TableHead>User</TableHead>}
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="pr-6 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                {isLoadingContent ? (
+                  [...Array(5)].map((_, i) => (
+                    <TableRow key={`skel-${i}`}>
+                      <TableCell colSpan={viewMode === 'global' ? 5 : 4} className="p-0">
+                        <Skeleton className="h-16 w-full" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredTransactions.length > 0 ? (
+                  filteredTransactions.map(t => {
+                    const user = viewMode === 'global' ? allUsers.find(u => u.id === t.userId) : null;
+                    return (
+                      <TableRow key={t.id} className="hover:bg-muted/30">
+                        <TableCell className="pl-6">
+                           <div className="flex items-center space-x-3">
+                              <div className={cn("p-2 rounded-full", getTransactionIconColor(t))}>
+                                  {getTransactionIcon(t)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold truncate" title={t.category}>{t.category}</p>
+                                <p className="text-xs text-muted-foreground truncate" title={t.description || undefined}>{t.description || 'No description'}</p>
+                              </div>
+                           </div>
+                        </TableCell>
+                         {viewMode === 'global' && (
+                          <TableCell>
+                            {user ? (
+                               <div className="flex items-center gap-2">
+                                  <Avatar className="h-7 w-7 border">
+                                    <AvatarImage src={user.avatarUrl || undefined} alt={user.name}/>
+                                    <AvatarFallback className="text-xs">{user.name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs text-muted-foreground">{user.name}</span>
+                               </div>
+                            ): ( <span className="text-xs text-muted-foreground italic">Unknown User</span> )}
+                          </TableCell>
+                        )}
+                        <TableCell className="text-xs text-muted-foreground">{format(parseISO(t.date), "d MMM, yyyy")}</TableCell>
+                        <TableCell className={cn("text-right font-semibold", getAmountColor(t))}>{t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}</TableCell>
+                        <TableCell className="pr-6 text-right">
+                           <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(t)} disabled={isSubmitting || isUploadingDocument || (t.type === 'income' && !!t.receivedFromUserId) || (t.type === 'expense' && !!t.sentToUserId && currentUser.id !== t.userId)} className="cursor-pointer">
+                                  <Edit2 className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleDeleteRequest(t)} className="cursor-pointer text-destructive focus:text-destructive" disabled={isDeleting}>
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                     <TableCell colSpan={viewMode === 'global' ? 5 : 4} className="h-48 text-center text-muted-foreground">
+                        <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
+                        <p className="text-lg font-medium">No transactions found.</p>
+                        <p className="text-sm">Try adjusting your filters.</p>
+                      </TableCell>
+                  </TableRow>
+                )}
+                </TableBody>
+              </Table>
+             </div>
           </CardContent>
         </Card>
 
@@ -670,7 +749,7 @@ export default function FinanceManagerPage() {
                           {expenseChartData.map((entry, index) => (
                               <Cell
                               key={`cell-${index}`}
-                              fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
+                              fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color || COLORS[index % COLORS.length]}
                               className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                               />
                           ))}
@@ -738,4 +817,5 @@ export default function FinanceManagerPage() {
     
 
     
+
 
