@@ -7,7 +7,7 @@ import { format, parseISO } from 'date-fns';
 import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download, Paperclip, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import Link from 'next/link'; // Added Link for document
+import Link from 'next/link';
 
 interface TransactionListItemProps {
   transaction: Transaction;
@@ -21,17 +21,23 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const categoryIcons: Record<string, React.ElementType> = {
-    "Office Rent": Home,
-    "Utilities": Lightbulb,
-    "Transportation": Car,
-    "Office Supplies": ClipboardIcon,
-    "Food & Drinks": Utensils,
-    "Marketing": Megaphone,
-    "Purchase": ShoppingBag,
-    "Sent Money": SendHorizonal,
-    "Miscellaneous": Braces,
+const expenseCategories = [
+    { value: "Office Rent", label: "Office Rent", icon: Home },
+    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
+    { value: "Transportation", label: "Transportation", icon: Car },
+    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
+    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
+    { value: "Marketing", label: "Marketing", icon: Megaphone },
+    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
+    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
+    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+];
+
+const getCategoryIcon = (category: string) => {
+    const matchedCategory = expenseCategories.find(c => c.value === category);
+    return matchedCategory ? matchedCategory.icon : TrendingDown; // Fallback icon
 };
+
 
 export function TransactionListItem({ transaction, currentUser, onDelete, onEdit, userName }: TransactionListItemProps) {
   const isIncome = transaction.type === 'income';
@@ -62,8 +68,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     amountPrefix = '+';
     amountColorClass = "text-green-600";
   } else { // Expense or Purchase
-    const categoryKey = Object.keys(categoryIcons).find(key => transaction.category.includes(key)) || "Miscellaneous";
-    IconComponent = categoryIcons[categoryKey];
+    IconComponent = getCategoryIcon(transaction.category);
     iconColorClass = transaction.type === 'purchase' ? "bg-sky-500/10 text-sky-600" : "bg-red-500/10 text-red-600";
     amountPrefix = '-';
     amountColorClass = transaction.type === 'purchase' ? "text-sky-600" : "text-red-600";
