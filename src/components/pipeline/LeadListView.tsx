@@ -96,6 +96,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                         <TableHead>Category</TableHead>
                         <TableHead>Assigned CRM</TableHead>
                         <TableHead>Date</TableHead>
+                        <TableHead>Schedule</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -110,6 +111,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                                 <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                                 <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
+                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
                             </TableRow>
@@ -145,6 +147,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                         </div>
                                     </TableCell>
                                     <TableCell>{formatDateSafe(lead.date)}</TableCell>
+                                    <TableCell>{formatDateSafe(lead.schedule)}</TableCell>
                                     <TableCell className="text-right">
                                          <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -186,7 +189,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                         })
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={isSelectionMode ? 9 : 8} className="h-48 text-center text-muted-foreground">
+                            <TableCell colSpan={isSelectionMode ? 10 : 9} className="h-48 text-center text-muted-foreground">
                                 <div className="flex flex-col items-center gap-2">
                                     <Briefcase className="h-10 w-10 opacity-50" />
                                     <span>No leads found.</span>
