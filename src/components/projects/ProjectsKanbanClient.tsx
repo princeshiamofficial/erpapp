@@ -475,15 +475,18 @@ export function ProjectsKanbanClient() {
           </Select>
         </div>
         
-        {currentUser?.isLeader && (
-            <div className="px-4 sm:px-0">
-                <Tabs value={projectOwnerFilter} onValueChange={(value) => setProjectOwnerFilter(value as 'my' | 'all')} className="w-auto">
-                    <TabsList>
-                        <TabsTrigger value="my">My Projects</TabsTrigger>
-                        <TabsTrigger value="all">All Projects</TabsTrigger>
-                    </TabsList>
-                </Tabs>
-            </div>
+        {currentUser?.isLeader && currentUser?.role === 'CRM' && (
+          <div className="px-4 sm:px-0">
+            <Select value={projectOwnerFilter} onValueChange={(value) => setProjectOwnerFilter(value as 'my' | 'all')}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Select view..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="my">My Projects</SelectItem>
+                <SelectItem value="all">All Projects</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
         {/* Kanban Board Section */}
@@ -640,5 +643,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
-    
