@@ -35,7 +35,7 @@ const expenseCategories = [
 
 const getCategoryIcon = (category: string) => {
     const matchedCategory = expenseCategories.find(c => c.value === category);
-    return matchedCategory ? matchedCategory.icon : TrendingDown; // Fallback icon
+    return matchedCategory ? matchedCategory.icon : TrendingDown;
 };
 
 
@@ -58,20 +58,30 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   let amountColorClass = '';
   
   if (isIncome) {
-    if (transaction.receivedFromUserId) { // Money Received from a transfer
+    if (transaction.receivedFromUserId) {
       IconComponent = Download;
       iconColorClass = "bg-purple-500/10 text-purple-600";
-    } else { // Regular income
+    } else {
       IconComponent = TrendingUp;
       iconColorClass = "bg-green-500/10 text-green-600";
     }
     amountPrefix = '+';
     amountColorClass = "text-green-600";
   } else { // Expense or Purchase
-    IconComponent = getCategoryIcon(transaction.category);
-    iconColorClass = transaction.type === 'purchase' ? "bg-sky-500/10 text-sky-600" : "bg-red-500/10 text-red-600";
+    if (transaction.category === 'Purchase') {
+        IconComponent = ShoppingBag;
+        iconColorClass = "bg-sky-500/10 text-sky-600";
+        amountColorClass = "text-sky-600";
+    } else if (transaction.category.startsWith('Sent Money')) {
+        IconComponent = SendHorizonal;
+        iconColorClass = "bg-blue-500/10 text-blue-600";
+        amountColorClass = "text-blue-600";
+    } else {
+        IconComponent = getCategoryIcon(transaction.category);
+        iconColorClass = "bg-red-500/10 text-red-600";
+        amountColorClass = "text-red-600";
+    }
     amountPrefix = '-';
-    amountColorClass = transaction.type === 'purchase' ? "text-sky-600" : "text-red-600";
   }
 
 
