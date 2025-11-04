@@ -271,7 +271,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
       >
         <CardContent className="p-3 space-y-2.5">
           <div className="flex justify-between items-start">
-            <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
+            <span className="text-sm font-semibold text-foreground truncate">{project.projectIdDisplay}</span>
             {!isOverlay && (
                  <Link
                     href={`/track/${project.id}`}
@@ -286,7 +286,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             )}
           </div>
           
-          <div className="min-w-0">
+          <div className="flex min-w-0">
             <p className="text-xs font-medium text-muted-foreground truncate" title={project.name}>{project.name}</p>
           </div>
 
