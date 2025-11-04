@@ -49,6 +49,7 @@ import { KanbanColumn } from './KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -124,6 +125,8 @@ export function ProjectsKanbanClient() {
   const [paymentValidationError, setPaymentValidationError] = useState<string | null>(null);
   const [projectForDocsComplete, setProjectForDocsComplete] = useState<Project | null>(null);
   const [isDocsCompleteDialogOpen, setIsDocsCompleteDialogOpen] = useState(false);
+  
+  const [projectOwnerFilter, setProjectOwnerFilter] = useState<'my' | 'all'>('my');
 
 
   const sensors = useSensors(
@@ -183,13 +186,17 @@ export function ProjectsKanbanClient() {
     let roleFilteredProjects = projects;
     
     if (currentUser?.role === 'CRM') {
-      if (currentUser.isLeader) {
-        // CRM Leaders can see ALL projects from ALL users across ALL stages
-        roleFilteredProjects = projects;
-      } else {
-        // Regular CRMs only see projects assigned to them
-        roleFilteredProjects = projects.filter(project => project.assigneeId === currentUser.id);
-      }
+        if (currentUser.isLeader) {
+            if (projectOwnerFilter === 'my') {
+                roleFilteredProjects = projects.filter(project => project.assigneeId === currentUser.id);
+            } else {
+                // 'all' filter, so they see everything
+                roleFilteredProjects = projects;
+            }
+        } else {
+            // Regular CRMs only see their own projects
+            roleFilteredProjects = projects.filter(project => project.assigneeId === currentUser.id);
+        }
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
       roleFilteredProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
     }
@@ -222,7 +229,7 @@ export function ProjectsKanbanClient() {
       }
       return matchesSearchTerm && matchesCategory && matchesEndDate;
     });
-  }, [projects, debouncedSearchTerm, categoryFilter, endDateFilter, currentUser]);
+  }, [projects, debouncedSearchTerm, categoryFilter, endDateFilter, currentUser, projectOwnerFilter]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
@@ -440,7 +447,7 @@ export function ProjectsKanbanClient() {
         onDragCancel={handleDragCancel}
         collisionDetection={closestCorners}
     >
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full space-y-4">
         {/* Filter Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
           <Input
@@ -467,9 +474,20 @@ export function ProjectsKanbanClient() {
             </SelectContent>
           </Select>
         </div>
+        
+        {currentUser?.isLeader && (
+            <div className="px-4 sm:px-0">
+                <Tabs value={projectOwnerFilter} onValueChange={(value) => setProjectOwnerFilter(value as 'my' | 'all')} className="w-auto">
+                    <TabsList>
+                        <TabsTrigger value="my">My Projects</TabsTrigger>
+                        <TabsTrigger value="all">All Projects</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </div>
+        )}
 
         {/* Kanban Board Section */}
-        <div className="flex-1 mt-4 overflow-x-auto pb-4 custom-scrollbar-hidden">
+        <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
           <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
             {visibleKanbanColumns.map((col) => (
               <KanbanColumn
@@ -622,3 +640,5 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
+
+    
