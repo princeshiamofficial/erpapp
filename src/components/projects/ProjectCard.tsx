@@ -221,7 +221,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     if (!name) return '??';
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
-    return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+    return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
   };
   
   const [progressInfo, setProgressInfo] = useState<ProgressInfo>(() => 
@@ -236,6 +236,10 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     const intervalId = setInterval(updateInfo, 5000); 
     return () => clearInterval(intervalId); 
   }, [project]);
+  
+  const truncatedProjectName = project.name.length > 35 
+    ? `${project.name.substring(0, 35)}...` 
+    : project.name;
 
   const canAssignDrPermission = (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM');
   const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design' || project.status === 'CO Clearance');
@@ -287,7 +291,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           </div>
           
           <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground truncate" title={project.name}>{project.name}</p>
+            <p className="text-xs font-medium text-muted-foreground" title={project.name}>{truncatedProjectName}</p>
           </div>
 
           <Link
