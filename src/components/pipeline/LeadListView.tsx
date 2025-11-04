@@ -147,7 +147,15 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                         </div>
                                     </TableCell>
                                     <TableCell>{formatDateSafe(lead.date)}</TableCell>
-                                    <TableCell>{formatDateSafe(lead.schedule)}</TableCell>
+                                    <TableCell>
+                                        {lead.schedule ? (
+                                            <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50">
+                                                {formatDateSafe(lead.schedule)}
+                                            </Badge>
+                                        ) : (
+                                            'No Date'
+                                        )}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                          <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
