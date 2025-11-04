@@ -217,7 +217,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     transform: CSS.Translate.toString(transform),
   } : undefined;
 
-  const getInitials = (name: string | undefined) => {
+  const getInitials = (name: string | undefined): string => {
     if (!name) return '??';
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
@@ -286,7 +286,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             )}
           </div>
           
-          <div className="flex min-w-0">
+          <div className="min-w-0">
             <p className="text-xs font-medium text-muted-foreground truncate" title={project.name}>{project.name}</p>
           </div>
 
