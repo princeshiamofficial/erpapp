@@ -54,7 +54,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   if (isIncome) {
     if (transaction.receivedFromUserId) { // Money Received from a transfer
       IconComponent = Download;
-      iconColorClass = "bg-purple-500/10 text-purple-600"; // Distinct color for received funds
+      iconColorClass = "bg-purple-500/10 text-purple-600";
     } else { // Regular income
       IconComponent = TrendingUp;
       iconColorClass = "bg-green-500/10 text-green-600";
@@ -68,6 +68,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     amountPrefix = '-';
     amountColorClass = transaction.type === 'purchase' ? "text-sky-600" : "text-red-600";
   }
+
 
   return (
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
