@@ -120,6 +120,7 @@ export default function FinanceManagerPage() {
 
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [isEditDialogVisible, setIsEditDialogVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
   const fetchFinancialData = useCallback(async () => {
@@ -663,7 +664,7 @@ export default function FinanceManagerPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(t)} disabled={isSubmitting || isUploadingDocument || (t.type === 'income' && !!t.receivedFromUserId) || (t.type === 'expense' && !!t.sentToUserId && currentUser.id !== t.userId)} className="cursor-pointer">
+                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(t)} disabled={isSubmitting || (t.type === 'income' && !!t.receivedFromUserId) || (t.type === 'expense' && !!t.sentToUserId && currentUser.id !== t.userId)} className="cursor-pointer">
                                   <Edit2 className="mr-2 h-4 w-4" /> Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => handleDeleteRequest(t)} className="cursor-pointer text-destructive focus:text-destructive" disabled={isDeleting}>
@@ -821,5 +822,7 @@ export default function FinanceManagerPage() {
 
 
 
+
+    
 
     
