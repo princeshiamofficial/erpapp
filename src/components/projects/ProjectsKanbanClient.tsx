@@ -184,11 +184,10 @@ export function ProjectsKanbanClient() {
     
     if (currentUser?.role === 'CRM') {
       if (currentUser.isLeader) {
-        const leaderVisibleStages: ProjectStatusType[] = ['Logistics', 'Courier', 'Delivered', 'Cancel'];
-        roleFilteredProjects = projects.filter(project => 
-          (project.assigneeId === currentUser.id) || leaderVisibleStages.includes(project.status)
-        );
+        // CRM Leaders can see ALL projects from ALL users across ALL stages
+        roleFilteredProjects = projects;
       } else {
+        // Regular CRMs only see projects assigned to them
         roleFilteredProjects = projects.filter(project => project.assigneeId === currentUser.id);
       }
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
@@ -254,24 +253,10 @@ export function ProjectsKanbanClient() {
     if (!currentUser || !globalSettings?.projectStageAccess) {
       return [];
     }
-    if (currentUser.role === 'SYSTEM_ADMIN') {
+    if (currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'CRM' && currentUser.isLeader)) {
       return KANBAN_COLUMNS_CONFIG;
     }
     
-    // For CRM Leader, show specific columns plus their own permitted columns
-    if (currentUser.role === 'CRM' && currentUser.isLeader) {
-      const leaderColumns: ProjectStatusType[] = ['Logistics', 'Courier', 'Delivered', 'Cancel'];
-      const userPermissions = globalSettings.projectStageAccess;
-      const permittedColumnsForRole = KANBAN_COLUMNS_CONFIG.filter(column => 
-        userPermissions[column.status]?.includes(currentUser.role)
-      );
-      const leaderSpecificColumns = KANBAN_COLUMNS_CONFIG.filter(column =>
-        leaderColumns.includes(column.status) && !permittedColumnsForRole.some(pc => pc.status === column.status)
-      );
-      return [...permittedColumnsForRole, ...leaderSpecificColumns];
-    }
-    
-    // For other users, filter based on their direct permissions
     const userPermissions = globalSettings.projectStageAccess;
     return KANBAN_COLUMNS_CONFIG.filter(column => 
       userPermissions[column.status]?.includes(currentUser.role)
@@ -637,5 +622,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
-    
