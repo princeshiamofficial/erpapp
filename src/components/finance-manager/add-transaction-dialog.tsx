@@ -138,8 +138,12 @@ export function AddTransactionDialog({
   }, [availableTransactionTypes, type]);
 
   const isDocumentRequired = useMemo(() => {
+    // Document is not required if the current user is a SYSTEM_ADMIN
+    if (currentUser?.role === 'SYSTEM_ADMIN') {
+      return false;
+    }
     return (type === 'expense' || type === 'purchase') && dialogMode !== 'sendMoney' && dialogMode !== 'addIncome';
-  }, [type, dialogMode]);
+  }, [type, dialogMode, currentUser]);
   
   const processFile = useCallback((file: File | null) => {
     if (file) {
@@ -238,11 +242,10 @@ export function AddTransactionDialog({
     }
 
     let uploadedDocumentUrl: string | null = null;
-    if (isDocumentRequired) { 
-      if (!selectedDocumentFile) {
-        toast({ title: "Validation Error", description: "A document attachment is required for expenses and purchases.", variant: "destructive" });
-        return;
-      }
+    
+    // Upload if a file is selected, regardless of whether it's required.
+    // If it's required but no file is selected, the canSubmit check will already prevent this handler from being called.
+    if (selectedDocumentFile) { 
       setIsUploadingDocument(true);
       const formData = new FormData();
       formData.append('file', selectedDocumentFile);
@@ -348,7 +351,7 @@ export function AddTransactionDialog({
     }
 
     if (dialogMode === 'sendMoney') {
-      return baseValid && selectedSentToUserId && docValid;
+      return baseValid && selectedSentToUserId;
     } else {
       return baseValid && category.trim() && docValid;
     }
@@ -482,9 +485,9 @@ export function AddTransactionDialog({
               <Input id="transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={dialogMode === 'sendMoney' ? "e.g., Advance salary payment" : "e.g., Weekly supermarket run"} />
             </div>
 
-            {isDocumentRequired && (
+            {(type === 'expense' || type === 'purchase') && dialogMode !== 'addIncome' && (
               <div className="space-y-1">
-                <Label htmlFor="transaction-document">Document Attachment *</Label>
+                <Label htmlFor="transaction-document">Document Attachment {isDocumentRequired ? "*" : "(Optional)"}</Label>
                 <div 
                   ref={dropZoneRef}
                   className={cn(
