@@ -28,7 +28,6 @@ import {
     Search,
     Eye
 } from "lucide-react";
-import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -230,8 +229,8 @@ export default function StockManagementPage() {
             return;
         }
         
-        if (itemStockCount.trim() === '') {
-            toast({ title: "Validation Error", description: "Stock count is required for stock items.", variant: "destructive"});
+        if (!itemStockCount.trim() && !editingItem) {
+            toast({ title: "Validation Error", description: "Initial Stock count is required for new stock items.", variant: "destructive"});
             return;
         }
 
@@ -327,16 +326,16 @@ export default function StockManagementPage() {
         return <div className="p-8 text-center">Access Denied.</div>;
     }
     
-    const { winningProduct, totalSold, activeProducts, totalValue } = useMemo(() => {
+    const { winningProduct, totalSold, activeProducts, totalValue, soldCounts } = useMemo(() => {
         let active = 0;
         let value = 0;
         let sold = 0;
         let topSeller = { name: "N/A", quantity: 0 };
-        const soldCounts = new Map<string, number>();
+        const sCounts = new Map<string, number>();
         
         allOrders.forEach(order => {
             order.orderItems.forEach(item => {
-                soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
+                sCounts.set(item.model, (sCounts.get(item.model) || 0) + item.quantity);
             });
         });
         
@@ -348,7 +347,7 @@ export default function StockManagementPage() {
                     value += (item.buyingPrice ?? 0) * currentStock;
                 }
             }
-            const quantitySold = soldCounts.get(item.name) || 0;
+            const quantitySold = sCounts.get(item.name) || 0;
             sold += quantitySold;
             if (quantitySold > topSeller.quantity) {
                 topSeller = { name: item.name, quantity: quantitySold };
@@ -360,6 +359,7 @@ export default function StockManagementPage() {
             totalValue: value,
             totalSold: sold,
             winningProduct: topSeller.quantity > 0 ? topSeller.name : "N/A",
+            soldCounts: sCounts,
         };
     }, [stockItems, allOrders]);
 
@@ -373,7 +373,7 @@ export default function StockManagementPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 min-h-full space-y-6 bg-transparent">
+        <div className="p-4 sm:p-6 min-h-full space-y-6">
             <Card className="shadow-lg rounded-xl">
                 <CardContent className="p-2">
                     <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
@@ -415,7 +415,7 @@ export default function StockManagementPage() {
                                     <p className="text-xs text-gray-500 mb-1">Performance</p>
                                     <p className={`font-semibold ${getPerformanceColor('Good')}`}>Good</p>
                                     <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                        <div className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {formatNumber(allOrders.flatMap(o => o.orderItems).filter(i => i.model === product.name).reduce((sum, i) => sum + i.quantity, 0))}</div>
+                                        <div className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {formatNumber(soldCounts.get(product.name) || 0)}</div>
                                         <div className="flex items-center gap-1"><Eye className="h-3 w-3" /> {formatNumber(994)}</div>
                                     </div>
                                 </div>
