@@ -35,7 +35,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import type { ServiceModelItem, TrackingLink } from '@/types';
 import { getStockItems } from '@/lib/stock-service'; 
-import { getOrders } from '@/lib/order-service';
+import { getSoldHistory } from '@/lib/sold-history-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -93,7 +93,7 @@ export default function StockManagementPage() {
 
     const [activeTab, setActiveTab] = useState("stock");
     const [stockItems, setStockItems] = useState<ServiceModelItem[]>([]);
-    const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+    const [soldHistory, setSoldHistory] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -116,15 +116,15 @@ export default function StockManagementPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [fetchedItems, fetchedOrders] = await Promise.all([
+            const [fetchedItems, fetchedSoldHistory] = await Promise.all([
                 getStockItems(),
-                getOrders(),
+                getSoldHistory(),
             ]);
             setStockItems(fetchedItems);
-            setAllOrders(fetchedOrders);
+            setSoldHistory(fetchedSoldHistory);
         } catch (error) {
-            console.error("Error fetching stock items or orders:", error);
-            toast({ title: "Error", description: "Could not load stock items or order data.", variant: "destructive" });
+            console.error("Error fetching stock items or sold history:", error);
+            toast({ title: "Error", description: "Could not load stock data.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -313,10 +313,8 @@ export default function StockManagementPage() {
         let topSeller = { name: "N/A", quantity: 0 };
         const sCounts = new Map<string, number>();
         
-        allOrders.forEach(order => {
-            order.orderItems.forEach(item => {
-                sCounts.set(item.model, (sCounts.get(item.model) || 0) + item.quantity);
-            });
+        soldHistory.forEach(item => {
+            sCounts.set(item.productName, (sCounts.get(item.productName) || 0) + item.quantity);
         });
         
         stockItems.forEach(item => {
@@ -326,9 +324,7 @@ export default function StockManagementPage() {
                 value += (item.buyingPrice ?? 0) * currentStock;
             }
             
-            const quantitySold = Array.from(sCounts.entries())
-                .filter(([modelName, _]) => modelName.toLowerCase() === item.name.toLowerCase())
-                .reduce((total, [_, quantity]) => total + quantity, 0);
+            const quantitySold = sCounts.get(item.name) || 0;
 
             sold += quantitySold;
             if (quantitySold > topSeller.quantity) {
@@ -342,21 +338,11 @@ export default function StockManagementPage() {
             totalSold: sold,
             winningProduct: topSeller.quantity > 0 ? topSeller.name : "N/A",
         };
-    }, [stockItems, allOrders]);
+    }, [stockItems, soldHistory]);
     
     const soldHistoryData = useMemo(() => {
-        return allOrders
-            .flatMap(order => 
-                order.orderItems.map(item => ({
-                    orderId: order.id,
-                    saleDate: order.createdAt,
-                    productName: item.model,
-                    quantity: item.quantity,
-                    totalPrice: item.lineItemTotalPrice
-                }))
-            )
-            .sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
-    }, [allOrders]);
+        return [...soldHistory].sort((a,b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
+    }, [soldHistory]);
 
     const stockContent = (
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
@@ -390,15 +376,16 @@ export default function StockManagementPage() {
                           <TableHead>Buying Price</TableHead>
                           <TableHead>Selling Price</TableHead>
                           <TableHead className="text-center">Stock</TableHead>
+                          <TableHead className="text-center">Sold</TableHead>
                           <TableHead className="pr-4 text-right">Actions</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
                    {isLoading ? (
-                      [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-16 w-full rounded-md" /></TableCell></TableRow>)
+                      [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-16 w-full rounded-md" /></TableCell></TableRow>)
                     ) : filteredModels.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="p-6 text-center text-muted-foreground">
+                        <TableCell colSpan={8} className="p-6 text-center text-muted-foreground">
                           <Package className="mx-auto h-10 w-10 opacity-50 mb-2" />
                           No {modelSearchTerm ? `products found for "${modelSearchTerm}"` : `products found.`}
                         </TableCell>
@@ -431,6 +418,11 @@ export default function StockManagementPage() {
                                     <Box className="h-4 w-4" />
                                     {item.stockCount ?? 0}
                                 </span>
+                          </TableCell>
+                           <TableCell className="text-center">
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                {item.totalSold || 0}
+                              </div>
                           </TableCell>
                           <TableCell className="pr-4 text-right">
                              <div className="flex items-center justify-end gap-2">
