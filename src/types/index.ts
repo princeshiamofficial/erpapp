@@ -1,4 +1,5 @@
 
+
 export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN" | "VENDOR" | "LR" | "CO";
 
 export interface User {
@@ -646,4 +647,13 @@ export interface DailyRoutine {
 
   createdAt?: string; // ISO string, for sorting headers
   updatedAt: string; // ISO string
+}
+
+export interface SoldHistoryEntry {
+  id: string;
+  orderId: string;
+  productName: string;
+  quantity: number;
+  totalPrice: number;
+  saleDate: string; // ISO Date string
 }
