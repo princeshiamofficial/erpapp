@@ -44,7 +44,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { addStockItemAction, updateStockItemAction, deleteStockItemAction } from './actions';
+import { addStockItem as addStockItemAction, updateStockItem as updateStockItemAction, deleteStockItem as deleteStockItemAction } from '@/lib/stock-service';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseISO, format } from 'date-fns';
 import Link from 'next/link';
@@ -99,6 +99,7 @@ export default function StockManagementPage() {
     const [activeTab, setActiveTab] = useState("stock");
     const [stockItems, setStockItems] = useState<ServiceModelItem[]>([]);
     const [soldHistory, setSoldHistory] = useState<SoldHistoryEntry[]>([]);
+    const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); // New state for orders
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -109,7 +110,7 @@ export default function StockManagementPage() {
     const [itemName, setItemName] = useState('');
     const [itemBuyingPrice, setItemBuyingPrice] = useState('0');
     const [itemSellingPrice, setItemSellingPrice] = useState('0');
-    const [itemStockCount, setItemStockCount] = useState('0');
+    const [itemStockCount, setItemStockCount] = useState('');
 
     const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
     const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
@@ -127,12 +128,14 @@ export default function StockManagementPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [fetchedItems, fetchedSoldHistory] = await Promise.all([
+            const [fetchedItems, fetchedSoldHistory, fetchedOrders] = await Promise.all([
                 getStockItems(),
                 getSoldHistory(),
+                getOrders(), // Fetch orders
             ]);
             setStockItems(fetchedItems);
             setSoldHistory(fetchedSoldHistory);
+            setAllOrders(fetchedOrders); // Set orders state
         } catch (error) {
             console.error("Error fetching stock data:", error);
             toast({ title: "Error", description: "Could not load stock data.", variant: "destructive" });
@@ -179,7 +182,7 @@ export default function StockManagementPage() {
         setItemName(item.name);
         setItemBuyingPrice((item.buyingPrice ?? 0).toString());
         setItemSellingPrice((item.sellingPrice ?? 0).toString());
-        setItemStockCount((item.stockCount ?? 0).toString());
+        setItemStockCount(''); // Input for change, not new total
         setSelectedImageFile(null);
         setImagePreviewUrl(item.imageUrl || null);
         setIsAddEditDialogOpen(true);
@@ -243,11 +246,6 @@ export default function StockManagementPage() {
             return;
         }
         
-        if (!itemStockCount.trim()) {
-            toast({ title: "Validation Error", description: "Stock count is required.", variant: "destructive"});
-            return;
-        }
-
         const buyingPriceValue = parseFloat(itemBuyingPrice);
         const sellingPriceValue = parseFloat(itemSellingPrice);
         const stockCountValue = parseInt(itemStockCount || "0", 10);
@@ -301,7 +299,7 @@ export default function StockManagementPage() {
 
         let result;
         if (editingItem) { 
-            const stockChange = stockCountValue - (editingItem.stockCount || 0);
+            const stockChange = stockCountValue; // In edit mode, the input is the CHANGE
             result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, true, stockChange);
             if (result.success) {
                 toast({ title: "Success", description: `Item "${itemName.trim()}" updated.` });
@@ -585,6 +583,7 @@ export default function StockManagementPage() {
                     onSave={fetchData}
                     entryToEdit={soldEntryToEdit}
                     stockItems={stockItems}
+                    allOrders={allOrders}
                 />
                 
                 {soldEntryToDelete && (
@@ -629,7 +628,7 @@ export default function StockManagementPage() {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="itemStockCount">Stock Count *</Label>
+                                <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
                                 <Input 
                                     id="itemStockCount"
                                     type="number"
@@ -637,10 +636,10 @@ export default function StockManagementPage() {
                                     onChange={(e) => setItemStockCount(e.target.value)}
                                     required
                                     disabled={isSubmitting}
-                                    placeholder={editingItem ? "Enter the new total stock count" : "e.g., 100"}
+                                    placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"}
                                     step="1"
                                 />
-                                <p className="text-xs text-muted-foreground">{editingItem ? 'Enter the new total stock quantity. The change will be calculated automatically.' : 'Required for new stock items.'}</p>
+                                 <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new stock items.'}</p>
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
@@ -676,3 +675,5 @@ export default function StockManagementPage() {
         </>
     );
 }
+
+    
