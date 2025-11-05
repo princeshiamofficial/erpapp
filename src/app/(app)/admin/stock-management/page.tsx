@@ -4,13 +4,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { 
     Package, 
     TrendingUp, 
     Star, 
-    Eye, 
     BarChart, 
     ChevronLeft, 
     ChevronRight, 
@@ -26,7 +25,8 @@ import {
     AlertTriangle,
     Layers,
     RefreshCw,
-    Search
+    Search,
+    Eye
 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import {
@@ -123,7 +123,7 @@ export default function StockManagementPage() {
     const [itemName, setItemName] = useState('');
     const [itemBuyingPrice, setItemBuyingPrice] = useState('0');
     const [itemSellingPrice, setItemSellingPrice] = useState('0');
-    const [itemIsReadyMade, setItemIsReadyMade] = useState(false);
+    const [itemIsReadyMade, setItemIsReadyMade] = useState(true); // Always true now
     const [itemStockCount, setItemStockCount] = useState('0');
 
     const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
@@ -166,7 +166,7 @@ export default function StockManagementPage() {
         setItemName('');
         setItemBuyingPrice('0');
         setItemSellingPrice('0');
-        setItemIsReadyMade(true); // Default to ready-made for this page
+        setItemIsReadyMade(true);
         setItemStockCount('0');
         setSelectedImageFile(null);
         setImagePreviewUrl(null);
@@ -180,13 +180,13 @@ export default function StockManagementPage() {
           buyingPrice: (item.buyingPrice ?? 0).toString(),
           sellingPrice: (item.sellingPrice ?? 0).toString(),
           imageUrl: item.imageUrl,
-          isReadyMade: item.isReadyMade ?? false,
+          isReadyMade: item.isReadyMade ?? true,
           stockCount: item.stockCount ?? 0,
         });
         setItemName(item.name);
         setItemBuyingPrice((item.buyingPrice ?? 0).toString());
         setItemSellingPrice((item.sellingPrice ?? 0).toString());
-        setItemIsReadyMade(item.isReadyMade ?? false);
+        setItemIsReadyMade(item.isReadyMade ?? true);
         setItemStockCount('');
         setSelectedImageFile(null);
         setImagePreviewUrl(item.imageUrl || null);
@@ -226,15 +226,15 @@ export default function StockManagementPage() {
             toast({ title: "Validation Error", description: "Name cannot be empty.", variant: "destructive" });
             return;
         }
-        const buyingPriceValue = parseFloat(itemBuyingPrice);
-        const sellingPriceValue = parseFloat(itemSellingPrice);
         
-        if (itemIsReadyMade && itemStockCount.trim() === '') {
-            toast({ title: "Validation Error", description: "Stock count is required for ready-made items.", variant: "destructive"});
+        if (itemStockCount.trim() === '') {
+            toast({ title: "Validation Error", description: "Stock count is required for stock items.", variant: "destructive"});
             return;
         }
 
-        const stockCountValue = itemIsReadyMade ? parseInt(itemStockCount || "0", 10) : 0;
+        const buyingPriceValue = parseFloat(itemBuyingPrice);
+        const sellingPriceValue = parseFloat(itemSellingPrice);
+        const stockCountValue = parseInt(itemStockCount || "0", 10);
 
         if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
             toast({ title: "Validation Error", description: "Buying Price must be a non-negative number.", variant: "destructive" });
@@ -244,8 +244,8 @@ export default function StockManagementPage() {
             toast({ title: "Validation Error", description: "Selling Price must be a non-negative number.", variant: "destructive" });
             return;
         }
-        if (itemIsReadyMade && isNaN(stockCountValue)) {
-            toast({ title: "Validation Error", description: "Stock count must be a valid integer for ready-made items.", variant: "destructive"});
+        if (isNaN(stockCountValue)) {
+            toast({ title: "Validation Error", description: "Stock count must be a valid integer.", variant: "destructive"});
             return;
         }
 
@@ -285,12 +285,12 @@ export default function StockManagementPage() {
 
         let result;
         if (editingItem) { 
-            result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
+            result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, true, stockCountValue);
             if (result.success) {
                 toast({ title: "Success", description: `Item "${itemName.trim()}" updated.` });
             }
         } else { 
-            result = await addStockItemAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
+            result = await addStockItemAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, true, stockCountValue);
             if (result.success) {
                 toast({ title: "Success", description: `Item "${itemName.trim()}" added.` });
             }
@@ -462,18 +462,19 @@ export default function StockManagementPage() {
                                 <Input id="itemSellingPrice" type="number" value={itemSellingPrice} onChange={(e) => setItemSellingPrice(e.target.value)} required disabled={isSubmitting} placeholder="e.g., 1500.00" min="0" step="0.01" />
                             </div>
                         </div>
-                        <div className="space-y-4">
-                            <div className="flex items-center space-x-2">
-                                <Switch id="isReadyMade" checked={itemIsReadyMade} onCheckedChange={setItemIsReadyMade} disabled={isSubmitting}/>
-                                <Label htmlFor="isReadyMade">This is a ready-made item</Label>
-                            </div>
-                            {itemIsReadyMade && (
-                                <div className="space-y-1 pl-4 border-l-2 border-primary">
-                                    <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
-                                    <Input id="itemStockCount" type="number" value={itemStockCount} onChange={(e) => setItemStockCount(e.target.value)} required={itemIsReadyMade} disabled={isSubmitting} placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"} step="1" />
-                                     <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new ready-made items.'}</p>
-                                </div>
-                            )}
+                        <div className="space-y-1">
+                            <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
+                            <Input 
+                                id="itemStockCount"
+                                type="number"
+                                value={itemStockCount}
+                                onChange={(e) => setItemStockCount(e.target.value)}
+                                required
+                                disabled={isSubmitting}
+                                placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"}
+                                step="1"
+                            />
+                            <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new ready-made items.'}</p>
                         </div>
                         <div className="space-y-1">
                             <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
@@ -508,7 +509,3 @@ export default function StockManagementPage() {
         </div>
     );
 }
-
-    
-
-    
