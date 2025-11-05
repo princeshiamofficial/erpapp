@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -178,22 +177,30 @@ export default function PayrollPage() {
       
       results = results.filter(employee => {
         try {
-          const joiningDate = new Date(employee.joiningDate);
+          // Always include active employees whose joining date is before the end of the selected month
           if (employee.status === 'Active') {
-            return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
+            const joiningDate = new Date(employee.joiningDate);
+            return !isAfter(joiningDate, endOfMonth(selectedDate));
           }
           
+          // For inactive employees, only include them if they have an unpaid salary for the selected month or a previous month.
           if (employee.status === 'Inactive') {
             const paidSlips = salarySheetData.filter(p => p.employeeId === employee.employeeId && p.paymentStatus === 'Paid');
-
+            
+            // If they were never paid, they are eligible to be on the sheet until paid.
             if (paidSlips.length === 0) {
-              return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
+              const joiningDate = new Date(employee.joiningDate);
+              return !isAfter(joiningDate, endOfMonth(selectedDate));
             }
             
+            // If they have been paid, find the last month they were paid.
             const lastPaidMonthStr = paidSlips.sort((a, b) => b.id.localeCompare(a.id))[0].id;
             const lastPaidMonth = parse(lastPaidMonthStr, 'yyyy-MM', new Date());
 
-            return !isAfter(selectedMonthStart, lastPaidMonth);
+            // They should appear on the sheet if the selected month is on or after their last paid month.
+            // This allows viewing past paid records for inactive employees but prevents them from appearing on future sheets.
+            // An admin might need to pay an inactive employee for their last working month.
+            return !isAfter(startOfMonth(selectedMonthStart), endOfMonth(lastPaidMonth));
           }
 
           return false;
@@ -732,7 +739,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -835,4 +842,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
