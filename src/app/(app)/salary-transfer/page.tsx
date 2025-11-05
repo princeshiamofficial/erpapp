@@ -9,8 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
-import type { Employee, Payslip } from '@/types';
-import { format, subMonths, getDaysInMonth, getDay } from 'date-fns';
+import type { Employee, Payslip, AttendanceRecord } from '@/types';
+import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth } from 'date-fns';
 import { Printer } from 'lucide-react';
 import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
@@ -70,24 +70,25 @@ export default function SalaryTransferPage() {
     }
 
     return employees
+      .filter(employee => employee.status === 'Active') // Filter for active employees
       .map(employee => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
         const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
         
         // If a saved payslip exists, use its data.
         if (payslip) {
-          if(payslip.paymentStatus === 'Unpaid'){
+          if(payslip.paymentStatus === 'Unpaid' && payslip.payableAmount > 0){
             return {
               ...employee,
               payableAmount: payslip.payableAmount,
             };
           }
-          return null; // Skip if paid
+          return null; // Skip if paid or zero
         }
 
         // If no saved payslip, calculate from attendance.
         const userAttendanceInRange = attendanceData.filter(att => 
-            att.employeeId === employee.userId && new Date(att.date).getMonth() === selectedDate.getMonth()
+            att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
         );
         
         const presentDays = userAttendanceInRange.length;
