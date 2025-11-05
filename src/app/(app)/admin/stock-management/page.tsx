@@ -39,8 +39,9 @@ import { RadialChart } from '@/components/ui/radial-chart';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import type { ServiceModelItem } from '@/types';
+import type { ServiceModelItem, TrackingLink } from '@/types';
 import { getStockItems } from '@/lib/stock-service'; // Use new stock service
+import { getOrders } from '@/lib/order-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -62,13 +63,13 @@ const formatCurrency = (value?: number) => {
 };
 
 
-const StatCard = ({ title, value, unit, icon: Icon, iconBg, children }: { title: string, value: string, unit: string, icon?: React.ElementType, iconBg?: string, children?: React.ReactNode }) => (
+const StatCard = ({ title, value, unit, icon: Icon, iconBg, children }: { title: string, value: string, unit?: string, icon?: React.ElementType, iconBg?: string, children?: React.ReactNode }) => (
     <div className="flex-1 p-4">
         <p className="text-sm text-gray-500">{title}</p>
         <div className="flex items-center gap-2 mt-1">
             {Icon && <div className={`p-1.5 rounded-md ${iconBg}`}><Icon className="h-4 w-4 text-white"/></div>}
             <span className="text-xl font-bold text-gray-800">{value}</span>
-            {children ? children : <span className="text-sm text-gray-500">{unit}</span>}
+            {children ? children : (unit && <span className="text-sm text-gray-500">{unit}</span>)}
         </div>
     </div>
 );
@@ -113,6 +114,7 @@ export default function StockManagementPage() {
     const { toast } = useToast();
 
     const [stockItems, setStockItems] = useState<ServiceModelItem[]>([]);
+    const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -123,7 +125,6 @@ export default function StockManagementPage() {
     const [itemName, setItemName] = useState('');
     const [itemBuyingPrice, setItemBuyingPrice] = useState('0');
     const [itemSellingPrice, setItemSellingPrice] = useState('0');
-    const [itemIsReadyMade, setItemIsReadyMade] = useState(true); // Always true now
     const [itemStockCount, setItemStockCount] = useState('0');
 
     const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
@@ -136,11 +137,15 @@ export default function StockManagementPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const fetchedItems = await getStockItems();
+            const [fetchedItems, fetchedOrders] = await Promise.all([
+                getStockItems(),
+                getOrders(),
+            ]);
             setStockItems(fetchedItems);
+            setAllOrders(fetchedOrders);
         } catch (error) {
-            console.error("Error fetching stock items:", error);
-            toast({ title: "Error", description: "Could not load stock items.", variant: "destructive" });
+            console.error("Error fetching stock items or orders:", error);
+            toast({ title: "Error", description: "Could not load stock items or order data.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -166,7 +171,6 @@ export default function StockManagementPage() {
         setItemName('');
         setItemBuyingPrice('0');
         setItemSellingPrice('0');
-        setItemIsReadyMade(true);
         setItemStockCount('0');
         setSelectedImageFile(null);
         setImagePreviewUrl(null);
@@ -186,7 +190,6 @@ export default function StockManagementPage() {
         setItemName(item.name);
         setItemBuyingPrice((item.buyingPrice ?? 0).toString());
         setItemSellingPrice((item.sellingPrice ?? 0).toString());
-        setItemIsReadyMade(item.isReadyMade ?? true);
         setItemStockCount('');
         setSelectedImageFile(null);
         setImagePreviewUrl(item.imageUrl || null);
@@ -323,12 +326,42 @@ export default function StockManagementPage() {
     if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
         return <div className="p-8 text-center">Access Denied.</div>;
     }
+    
+    const { winningProduct, totalSold, activeProducts, totalValue } = useMemo(() => {
+        let active = 0;
+        let value = 0;
+        let sold = 0;
+        let topSeller = { name: "N/A", quantity: 0 };
+        const soldCounts = new Map<string, number>();
+        
+        allOrders.forEach(order => {
+            order.orderItems.forEach(item => {
+                soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
+            });
+        });
+        
+        stockItems.forEach(item => {
+            if (item.isReadyMade) {
+                const currentStock = item.stockCount ?? 0;
+                if (currentStock > 0) {
+                    active++;
+                    value += (item.buyingPrice ?? 0) * currentStock;
+                }
+            }
+            const quantitySold = soldCounts.get(item.name) || 0;
+            sold += quantitySold;
+            if (quantitySold > topSeller.quantity) {
+                topSeller = { name: item.name, quantity: quantitySold };
+            }
+        });
 
-    const { activeProducts, totalValue } = useMemo(() => {
-        const active = stockItems.filter(p => p.isReadyMade && (p.stockCount ?? 0) > 0);
-        const value = active.reduce((sum, p) => sum + ((p.buyingPrice ?? 0) * (p.stockCount ?? 0)), 0);
-        return { activeProducts: active.length, totalValue: value };
-    }, [stockItems]);
+        return {
+            activeProducts: active,
+            totalValue: value,
+            totalSold: sold,
+            winningProduct: topSeller.quantity > 0 ? topSeller.name : "N/A",
+        };
+    }, [stockItems, allOrders]);
 
     const getPerformanceColor = (performance: string) => {
         switch (performance.toLowerCase()) {
@@ -340,14 +373,14 @@ export default function StockManagementPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 min-h-full space-y-6">
+        <div className="p-4 sm:p-6 min-h-full space-y-6 bg-transparent">
             <Card className="shadow-lg rounded-xl">
                 <CardContent className="p-2">
                     <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
                         <StatCard title="Active Product" value={activeProducts.toString()} unit="Products" icon={Package} iconBg="bg-green-500" />
                         <StatCard title="Total Inventory Value" value={formatCurrency(totalValue)} unit="BDT" icon={BarChart} iconBg="bg-blue-500" />
-                        <StatCard title="Winning Product" value="3 Seater ..." unit="" icon={Star} iconBg="bg-orange-400" />
-                        <StatCard title="Product Sold" value="12,340" unit="Items" icon={ShoppingCart} iconBg="bg-purple-500"/>
+                        <StatCard title="Winning Product" value={winningProduct} icon={Star} iconBg="bg-orange-400" />
+                        <StatCard title="Product Sold" value={totalSold.toLocaleString()} unit="Items" icon={ShoppingCart} iconBg="bg-purple-500"/>
                         <div className="flex-1 p-4 flex items-center justify-center">
                              <Button className="w-full h-12" onClick={openAddDialog}>
                                 <PlusCircle className="mr-2 h-5 w-5" />
@@ -382,7 +415,7 @@ export default function StockManagementPage() {
                                     <p className="text-xs text-gray-500 mb-1">Performance</p>
                                     <p className={`font-semibold ${getPerformanceColor('Good')}`}>Good</p>
                                     <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                        <div className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {formatNumber(product.totalSold || 0)}</div>
+                                        <div className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {formatNumber(allOrders.flatMap(o => o.orderItems).filter(i => i.model === product.name).reduce((sum, i) => sum + i.quantity, 0))}</div>
                                         <div className="flex items-center gap-1"><Eye className="h-3 w-3" /> {formatNumber(994)}</div>
                                     </div>
                                 </div>
@@ -395,7 +428,7 @@ export default function StockManagementPage() {
                                     <p className="text-xs text-gray-500">Stock</p>
                                     <div className="flex items-center gap-1 font-semibold text-gray-800">
                                         <Box className="h-4 w-4 text-gray-400"/>
-                                        {product.isReadyMade ? (product.stockCount ?? 0) : "N/A"}
+                                        {(product.stockCount ?? 0)}
                                     </div>
                                 </div>
 
