@@ -172,6 +172,13 @@ export default function PayrollPage() {
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = employees;
 
+    if (activeTab === 'employee_list') {
+        // No status filter for employee list
+    } else {
+        // For salary sheet and summary, only show active employees
+        results = results.filter(employee => employee.status === 'Active');
+    }
+
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
       results = results.filter(employee =>
@@ -802,3 +809,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    

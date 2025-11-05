@@ -59,6 +59,7 @@ export default function SalaryTransferPage() {
   }, [fetchData]);
   
   const unpaidEmployeesData = useMemo(() => {
+    const activeEmployees = employees.filter(e => e.status === 'Active');
     const daysInMonth = getDaysInMonth(selectedDate);
     const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
     let totalWorkingDays = 0;
@@ -69,45 +70,42 @@ export default function SalaryTransferPage() {
         }
     }
 
-    return employees
+    return activeEmployees
       .map(employee => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
         const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
         
-        // If a saved payslip exists, use its data.
+        let payableAmount;
+
         if (payslip) {
-          if(payslip.paymentStatus === 'Unpaid' && payslip.payableAmount > 0){
-            return {
-              ...employee,
-              payableAmount: payslip.payableAmount,
-            };
-          }
-          return null; // Skip if paid or zero
+            if (payslip.paymentStatus === 'Unpaid' && payslip.payableAmount > 0) {
+                payableAmount = payslip.payableAmount;
+            } else {
+                return null;
+            }
+        } else {
+            const userAttendanceInRange = attendanceData.filter(att => 
+                att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
+            );
+            
+            const presentDays = userAttendanceInRange.length;
+            const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
+            
+            const relevantHistory = (employee.salaryHistory || [])
+                .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+            
+            const perDaySalaryForFine = effectiveSalary / 30;
+            const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
+            
+            const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
+            const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
+            const providentFund = effectiveSalary * 0.07;
+            
+            payableAmount = salaryForDaysWorked - automaticFine - providentFund;
         }
 
-        // If no saved payslip, calculate from attendance.
-        const userAttendanceInRange = attendanceData.filter(att => 
-            att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
-        );
-        
-        const presentDays = userAttendanceInRange.length;
-        const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
-        
-        const relevantHistory = (employee.salaryHistory || [])
-            .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
-        
-        const perDaySalaryForFine = effectiveSalary / 30;
-        const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
-        
-        const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-        const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
-        const providentFund = effectiveSalary * 0.07;
-        
-        const payableAmount = salaryForDaysWorked - automaticFine - providentFund;
-
-        // Only include if there's a payable amount
         if (payableAmount > 0) {
             return {
                 ...employee,
@@ -232,3 +230,5 @@ export default function SalaryTransferPage() {
     </div>
   );
 }
+
+    
