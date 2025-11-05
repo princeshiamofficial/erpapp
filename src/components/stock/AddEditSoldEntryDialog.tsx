@@ -50,7 +50,7 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
     if (isOpen) {
       if (isEditMode && entryToEdit) {
         setOrderId(entryToEdit.orderId);
-        const order = allOrders.find(o => o.id === entryToEdit.orderId);
+        const order = allOrders?.find(o => o.id === entryToEdit.orderId);
         setCompanyName(order?.companyName.split('•').pop()?.trim() || '');
         setProductName(entryToEdit.productName);
         setQuantity(entryToEdit.quantity.toString());
@@ -68,9 +68,13 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
   }, [isOpen, entryToEdit, isEditMode, allOrders]);
 
   useEffect(() => {
-    const matchingOrder = allOrders.find(o => o.id.toLowerCase() === orderId.toLowerCase());
-    if (matchingOrder) {
-      setCompanyName(matchingOrder.companyName.split('•').pop()?.trim() || matchingOrder.companyName);
+    if (allOrders && orderId) {
+      const matchingOrder = allOrders.find(o => o.id.toLowerCase() === orderId.toLowerCase());
+      if (matchingOrder) {
+        setCompanyName(matchingOrder.companyName.split('•').pop()?.trim() || matchingOrder.companyName);
+      } else {
+        setCompanyName('');
+      }
     } else {
       setCompanyName('');
     }
