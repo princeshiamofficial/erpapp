@@ -51,11 +51,11 @@ const formatNumber = (num: number) => {
     return num.toString();
 };
 
-const StatCard = ({ title, value, unit, icon, iconBg, children }: { title: string, value: string, unit: string, icon?: React.ElementType, iconBg?: string, children?: React.ReactNode }) => (
+const StatCard = ({ title, value, unit, icon: Icon, iconBg, children }: { title: string, value: string, unit: string, icon?: React.ElementType, iconBg?: string, children?: React.ReactNode }) => (
     <div className="flex-1 p-4">
         <p className="text-sm text-gray-500">{title}</p>
         <div className="flex items-center gap-2 mt-1">
-            {icon && <div className={`p-1.5 rounded-md ${iconBg}`}><icon className="h-4 w-4 text-white"/></div>}
+            {Icon && <div className={`p-1.5 rounded-md ${iconBg}`}><Icon className="h-4 w-4 text-white"/></div>}
             <span className="text-xl font-bold text-gray-800">{value}</span>
             {children ? children : <span className="text-sm text-gray-500">{unit}</span>}
         </div>
