@@ -366,7 +366,7 @@ export default function StockManagementPage() {
                                 {[...Array(5)].map((_,i) => <Skeleton key={i} className="h-16 w-full" />)}
                             </div>
                          ) : filteredModels.map((product, index) => (
-                            <div key={product.id} className={`grid grid-cols-12 items-center gap-4 px-4 py-3 ${index < filteredModels.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                            <div key={product.id} className={`grid grid-cols-11 items-center gap-4 px-4 py-3 ${index < filteredModels.length - 1 ? 'border-b border-gray-100' : ''}`}>
                                 <div className="col-span-12 md:col-span-3 flex items-center gap-4">
                                     <NextImage src={product.imageUrl || `https://placehold.co/64x64/F2F2F2/333333?text=${product.name.charAt(0)}`} alt={product.name} width={48} height={48} className="rounded-lg bg-gray-100 object-cover" unoptimized={!product.imageUrl?.startsWith('https://colorhutbd.xyz')} />
                                     <div>
@@ -406,12 +406,7 @@ export default function StockManagementPage() {
                                     </p>
                                 </div>
 
-                                <div className="col-span-6 md:col-span-1">
-                                     <p className="text-xs text-gray-500 mb-1">Visibility</p>
-                                    <Switch checked={true} />
-                                </div>
-
-                                <div className="col-span-6 md:col-span-2 flex items-center justify-end gap-2">
+                                <div className="col-span-12 md:col-span-2 flex items-center justify-end gap-2">
                                      <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-200" onClick={() => openEditDialog(product)}>
                                         <Edit className="h-4 w-4"/>
                                      </Button>
@@ -513,5 +508,7 @@ export default function StockManagementPage() {
         </div>
     );
 }
+
+    
 
     
