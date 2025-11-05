@@ -391,7 +391,9 @@ export default function StockManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredModels.map((item, index) => (
+                      filteredModels.map((item, index) => {
+                        const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
+                        return (
                         <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
                           <TableCell className="pl-4 font-mono text-muted-foreground">{String(index + 1).padStart(2, '0')}</TableCell>
                           <TableCell>
@@ -420,8 +422,8 @@ export default function StockManagementPage() {
                                 </span>
                           </TableCell>
                            <TableCell className="text-center">
-                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                {item.totalSold || 0}
+                              <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mt-1">
+                                {quantitySold}
                               </div>
                           </TableCell>
                           <TableCell className="pr-4 text-right">
@@ -441,7 +443,7 @@ export default function StockManagementPage() {
                               </div>
                           </TableCell>
                         </TableRow>
-                      ))
+                      )})
                     )}
                   </TableBody>
               </Table>
@@ -453,8 +455,11 @@ export default function StockManagementPage() {
     const soldHistoryContent = (
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
+          <div className="flex justify-between items-center">
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-primary"/>Sold History</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">A log of all products sold across all orders.</CardDescription>
+            <Button>Sold</Button>
+          </div>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">A log of all products sold across all orders.</CardDescription>
         </CardHeader>
         <CardContent className="p-0 max-h-[calc(100vh-450px)] overflow-y-auto">
             <Table>
@@ -546,7 +551,7 @@ export default function StockManagementPage() {
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <Label htmlFor="itemStockCount">{editingItem ? 'Update Stock Count' : 'Initial Stock'} *</Label>
+                            <Label htmlFor="itemStockCount">Stock Count *</Label>
                             <Input 
                                 id="itemStockCount"
                                 type="number"
@@ -592,3 +597,4 @@ export default function StockManagementPage() {
         </div>
     );
 }
+
