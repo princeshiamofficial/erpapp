@@ -62,6 +62,23 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
     }
   }, [isOpen, entryToEdit, isEditMode]);
 
+  useEffect(() => {
+    if (productName && quantity) {
+      const product = stockItems.find(item => item.name === productName);
+      const numericQuantity = parseInt(quantity, 10);
+
+      if (product && typeof product.sellingPrice === 'number' && !isNaN(numericQuantity) && numericQuantity > 0) {
+        const calculatedPrice = product.sellingPrice * numericQuantity;
+        setTotalPrice(calculatedPrice.toString());
+      } else {
+        setTotalPrice(''); // Reset if quantity is invalid or product has no price
+      }
+    } else {
+      setTotalPrice(''); // Reset if no product or quantity
+    }
+  }, [productName, quantity, stockItems]);
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderId || !productName || !quantity || !totalPrice || !saleDate) {
@@ -164,7 +181,7 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
             </div>
             <div className="space-y-1">
               <Label htmlFor="totalPrice">Total Price</Label>
-              <Input id="totalPrice" type="number" value={totalPrice} onChange={e => setTotalPrice(e.target.value)} required min="0" />
+              <Input id="totalPrice" type="number" value={totalPrice} required min="0" readOnly disabled className="bg-muted/50 cursor-not-allowed"/>
             </div>
           </div>
           <div className="space-y-1">
@@ -193,3 +210,4 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
   );
 }
 
+export default AddEditSoldEntryDialog;
