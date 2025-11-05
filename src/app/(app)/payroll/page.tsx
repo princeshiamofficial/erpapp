@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -43,6 +41,7 @@ import { getWeekendSettings } from '@/lib/weekend-service';
 import Image from 'next/image';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
@@ -171,7 +170,11 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
-    let results = employees.filter(employee => employee.status === 'Active');
+    let results = employees;
+
+    if (activeTab === 'salary_sheet' || activeTab === 'summary' || activeTab === 'employee_list') {
+      results = results.filter(employee => employee.status === 'Active');
+    }
 
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
@@ -272,7 +275,7 @@ export default function PayrollPage() {
       totalPayableAmount: payableTotal
     };
 
-  }, [employees, searchTerm, selectedDate, salarySheetData, attendanceData, weekendDays]);
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -700,7 +703,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="space-y-6 bg-transparent">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
