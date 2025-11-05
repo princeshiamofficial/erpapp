@@ -19,7 +19,8 @@ import {
     ShoppingCart,
     TrendingDown,
     ShieldCheck,
-    Gauge
+    Gauge,
+    PlusCircle
 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import {
@@ -107,7 +108,12 @@ export default function StockManagementPage() {
                             <Gauge className="h-8 w-8 text-green-500 ml-2" />
                         </StatCard>
                         <StatCard title="Product Sold" value="12,340" unit="Items" />
-                        <StatCard title="Product Returned" value="420" unit="Items" />
+                        <div className="flex-1 p-4 flex items-center justify-center">
+                            <Button className="w-full h-12">
+                                <PlusCircle className="mr-2 h-5 w-5" />
+                                Add Products
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
