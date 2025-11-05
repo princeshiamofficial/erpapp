@@ -30,7 +30,7 @@ interface AddEditSoldEntryDialogProps {
   onSave: () => void;
   entryToEdit?: SoldHistoryEntry | null;
   stockItems: ServiceModelItem[];
-  allOrders: TrackingLink[]; // New prop to get all orders
+  allOrders?: TrackingLink[]; // Make optional and handle undefined case
 }
 
 export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEdit, stockItems, allOrders }: AddEditSoldEntryDialogProps) {
@@ -50,6 +50,7 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
     if (isOpen) {
       if (isEditMode && entryToEdit) {
         setOrderId(entryToEdit.orderId);
+        // Find company name from allOrders if available
         const order = allOrders?.find(o => o.id === entryToEdit.orderId);
         setCompanyName(order?.companyName.split('•').pop()?.trim() || '');
         setProductName(entryToEdit.productName);
@@ -68,7 +69,8 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
   }, [isOpen, entryToEdit, isEditMode, allOrders]);
 
   useEffect(() => {
-    if (allOrders && orderId) {
+    // Ensure allOrders is an array before trying to use .find()
+    if (allOrders && Array.isArray(allOrders) && orderId) {
       const matchingOrder = allOrders.find(o => o.id.toLowerCase() === orderId.toLowerCase());
       if (matchingOrder) {
         setCompanyName(matchingOrder.companyName.split('•').pop()?.trim() || matchingOrder.companyName);
@@ -154,16 +156,17 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
           <DialogDescription>Manually record a product sale.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-1">
-            <Label htmlFor="orderId">Job ID</Label>
-            <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
-          </div>
-          {companyName && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="orderId">Job ID</Label>
+              <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
+            </div>
              <div className="space-y-1">
                 <Label>Company Name</Label>
-                <Input value={companyName} readOnly disabled className="bg-muted/50" />
+                <Input value={companyName} readOnly disabled placeholder="Auto-filled" className="bg-muted/50" />
              </div>
-          )}
+          </div>
+          
           <div className="space-y-1">
             <Label htmlFor="productName">Product</Label>
             <Popover open={isProductPopoverOpen} onOpenChange={setIsProductPopoverOpen}>
