@@ -1,192 +1,208 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Archive, RefreshCw, PackageCheck, PackageX } from "lucide-react";
-import { useAuth } from "@/contexts/auth-context";
-import { useRouter } from "next/navigation";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getModels } from '@/lib/service-options-service';
-import { getOrders } from '@/lib/order-service'; // Import getOrders
-import type { ServiceModelItem, TrackingLink } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import { 
+    Package, 
+    TrendingUp, 
+    Star, 
+    Eye, 
+    BarChart, 
+    ChevronLeft, 
+    ChevronRight, 
+    MoreVertical, 
+    Edit,
+    Box,
+    ShoppingCart,
+    TrendingDown,
+    ShieldCheck,
+    Gauge
+} from "lucide-react";
+import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import NextImage from 'next/image';
+import { RadialChart } from '@/components/ui/radial-chart';
 import { cn } from '@/lib/utils';
 
-export default function StockManagementPage() {
-  const { currentUser } = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
+// Mock Data based on the image
+const products = [
+  { id: 1, name: '4 Tier Shelving', review: 4.5, performance: 'Excellent', views: 994, sales: 12400, stock: 92, price: 'Custom', visible: true, performanceValue: 95 },
+  { id: 2, name: 'Insence Holder', review: 4.5, performance: 'Good', views: 123, sales: 12400, stock: 594, price: 66.00, visible: true, performanceValue: 65 },
+  { id: 3, name: 'Ashtray', review: 4.5, performance: 'Good', views: 637, sales: 12400, stock: 362, price: 81.00, visible: false, performanceValue: 70 },
+  { id: 4, name: 'Coffee Table', review: 4.5, performance: 'Excellent', views: 148, sales: 12400, stock: 746, price: 'Custom', visible: true, performanceValue: 90 },
+  { id: 5, name: '3 Seater Sofa', review: 4.5, performance: 'Bad', views: 817, sales: 12400, stock: 909, price: 'Custom', visible: false, performanceValue: 25 },
+  { id: 6, name: 'Candle Holder', review: 4.5, performance: 'Bad', views: 926, sales: 12400, stock: 333, price: 50.00, visible: true, performanceValue: 30 },
+  { id: 7, name: 'Table Lamp', review: 4.5, performance: 'Good', views: 71, sales: 12400, stock: 530, price: 318.00, visible: true, performanceValue: 75 },
+];
 
-  const [allModels, setAllModels] = useState<ServiceModelItem[]>([]);
-  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); // State for orders
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [models, orders] = await Promise.all([
-          getModels(),
-          getOrders() // Fetch orders
-      ]);
-      setAllModels(models);
-      setAllOrders(orders);
-    } catch (error) {
-      toast({ title: "Error", description: "Could not load model or order data.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
+const formatNumber = (num: number) => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
     }
-  }, [toast]);
+    return num.toString();
+};
 
-  useEffect(() => {
-    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
-      fetchData();
-    }
-  }, [currentUser, fetchData]);
-
-
-  const stockItems = useMemo(() => {
-    const readyMadeItems = allModels.filter(model => model.isReadyMade);
-    if (readyMadeItems.length === 0) return [];
-    
-    // Calculate sold counts
-    const soldCounts = new Map<string, number>();
-    allOrders.forEach(order => {
-        order.orderItems.forEach(item => {
-            soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
-        });
-    });
-
-    let items = readyMadeItems.map(item => ({
-        ...item,
-        soldCount: soldCounts.get(item.name) || 0,
-    }));
-
-    if (searchTerm) {
-      items = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    return items.sort((a,b) => (a.stockCount ?? 0) - (b.stockCount ?? 0)); // Sort by remaining stock, lowest first
-  }, [allModels, allOrders, searchTerm]);
-
-
-  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
-    return <div className="p-8 text-center">Access Denied. You must be an Administrator to view this page.</div>;
-  }
-
-  return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-        <div>
-          <h1 className="page-title flex items-center gap-3"><Archive className="h-8 w-8" /> Stock Management</h1>
-          <p className="page-description">Monitor and manage stock levels for ready-made products.</p>
+const StatCard = ({ title, value, unit, icon, iconBg, children }: { title: string, value: string, unit: string, icon?: React.ElementType, iconBg?: string, children?: React.ReactNode }) => (
+    <div className="flex-1 p-4">
+        <p className="text-sm text-gray-500">{title}</p>
+        <div className="flex items-center gap-2 mt-1">
+            {icon && <div className={`p-1.5 rounded-md ${iconBg}`}><icon className="h-4 w-4 text-white"/></div>}
+            <span className="text-xl font-bold text-gray-800">{value}</span>
+            {children ? children : <span className="text-sm text-gray-500">{unit}</span>}
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-           <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-              <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md">
-            <PlusCircle className="mr-2 h-5 w-5" />
-            Adjust Stock
-          </Button>
-        </div>
-      </div>
-
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="text-card-foreground text-xl">Product Stock Levels</CardTitle>
-            <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background h-10 rounded-md w-full"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6 w-[80px]">Image</TableHead>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead className="text-center">Sold</TableHead>
-                  <TableHead className="text-center">Remaining Stock</TableHead>
-                  <TableHead className="pr-6 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={`skel-stock-${i}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-12 w-12 rounded-md" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
-                      <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : stockItems.length > 0 ? (
-                    stockItems.map(item => (
-                       <TableRow key={item.id}>
-                         <TableCell className="pl-6">
-                           <NextImage 
-                              src={item.imageUrl || `https://placehold.co/64x64.png`}
-                              alt={item.name}
-                              width={48}
-                              height={48}
-                              className="rounded-md object-cover bg-muted border"
-                           />
-                         </TableCell>
-                         <TableCell className="font-medium">{item.name}</TableCell>
-                         <TableCell className="text-center font-mono text-blue-600 font-medium">
-                            {item.soldCount}
-                         </TableCell>
-                         <TableCell className="text-center">
-                            <span className={cn(
-                                "font-bold text-lg",
-                                (item.stockCount ?? 0) <= 0 ? "text-destructive" : ((item.stockCount ?? 0) <= 10 ? "text-yellow-600" : "text-green-600")
-                            )}>
-                                {item.stockCount ?? 0}
-                            </span>
-                         </TableCell>
-                         <TableCell className="pr-6 text-right">
-                           <Button variant="outline" size="sm" className="h-9">Adjust</Button>
-                         </TableCell>
-                       </TableRow>
-                    ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
-                      {searchTerm ? (
-                         <div className="flex flex-col items-center gap-3">
-                            <PackageX className="h-12 w-12 opacity-50" />
-                            <p className="font-semibold">No products found for "{searchTerm}"</p>
-                            <p className="text-sm">Try a different search term.</p>
-                         </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-3">
-                            <Archive className="mx-auto h-12 w-12 opacity-50" />
-                            <p className="font-semibold">No ready-made products found.</p>
-                            <p className="text-sm">Go to Model Management to mark items as "ready-made" to track stock.</p>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
-  );
+);
+
+
+const PerformanceGauge = ({ value }: { value: number }) => {
+    const data = [
+        { name: 'performance', value: value, fill: 'hsl(var(--primary))' }
+    ];
+    return (
+        <div className="w-20 h-10">
+             <RadialChart
+                data={data}
+                startAngle={180}
+                endAngle={0}
+                innerRadius={30}
+                outerRadius={40}
+                cy="40px"
+             />
+        </div>
+    )
 }
+
+export default function StockManagementPage() {
+    const [visibility, setVisibility] = useState(products.reduce((acc, p) => ({ ...acc, [p.id]: p.visible }), {} as Record<number, boolean>));
+
+    const handleVisibilityChange = (id: number, checked: boolean) => {
+        setVisibility(prev => ({ ...prev, [id]: checked }));
+    };
+    
+    const getPerformanceColor = (performance: string) => {
+        switch (performance.toLowerCase()) {
+            case 'excellent': return 'text-green-500';
+            case 'good': return 'text-yellow-500';
+            case 'bad': return 'text-red-500';
+            default: return 'text-gray-500';
+        }
+    };
+
+    return (
+        <div className="p-4 sm:p-6 bg-gray-50 min-h-full">
+            <Card className="shadow-lg rounded-xl">
+                <CardContent className="p-2">
+                    <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
+                        <StatCard title="Active Product" value="352" unit="Product" />
+                        <StatCard title="Winning Product" value="3 Seater ..." unit="" icon={Package} iconBg="bg-orange-400" />
+                        <StatCard title="Average Performance" value="Good!" unit="" >
+                            <Gauge className="h-8 w-8 text-green-500 ml-2" />
+                        </StatCard>
+                        <StatCard title="Product Sold" value="12,340" unit="Items" />
+                        <StatCard title="Product Returned" value="420" unit="Items" />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="mt-6 bg-white rounded-xl shadow-lg">
+                <div className="overflow-x-auto">
+                    <div className="min-w-full">
+                         {products.map((product, index) => (
+                            <div key={product.id} className={`grid grid-cols-12 items-center gap-4 px-4 py-3 ${index < products.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                                {/* Product Info */}
+                                <div className="col-span-12 md:col-span-3 flex items-center gap-4">
+                                    <NextImage src={`https://placehold.co/64x64/F2F2F2/333333?text=${product.name.charAt(0)}`} alt={product.name} width={48} height={48} className="rounded-lg bg-gray-100" />
+                                    <div>
+                                        <p className="font-semibold text-gray-800">{product.name}</p>
+                                        <div className="flex items-center gap-1 text-sm text-gray-500">
+                                            <span>Review: {product.review}</span>
+                                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Performance */}
+                                <div className="col-span-6 md:col-span-2">
+                                    <p className="text-xs text-gray-500 mb-1">Performance</p>
+                                    <p className={`font-semibold ${getPerformanceColor(product.performance)}`}>{product.performance}</p>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                        <div className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {product.views}</div>
+                                        <div className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> {formatNumber(product.sales)}</div>
+                                    </div>
+                                </div>
+
+                                {/* Gauge */}
+                                <div className="col-span-6 md:col-span-1 flex items-center justify-center">
+                                    <PerformanceGauge value={product.performanceValue} />
+                                </div>
+
+                                {/* Stock */}
+                                <div className="col-span-6 md:col-span-1">
+                                    <p className="text-xs text-gray-500">Stock</p>
+                                    <div className="flex items-center gap-1 font-semibold text-gray-800">
+                                        <Box className="h-4 w-4 text-gray-400"/>
+                                        {product.stock}
+                                    </div>
+                                </div>
+
+                                {/* Price */}
+                                <div className="col-span-6 md:col-span-2">
+                                    <p className="text-xs text-gray-500">Product Price</p>
+                                    <p className="font-semibold text-gray-800">
+                                        {product.price === 'Custom' ? '$ Custom' : `$ ${Number(product.price).toFixed(2)} USD`}
+                                    </p>
+                                </div>
+
+                                {/* Visibility */}
+                                <div className="col-span-6 md:col-span-1">
+                                     <p className="text-xs text-gray-500 mb-1">Visibility</p>
+                                    <Switch checked={visibility[product.id]} onCheckedChange={(checked) => handleVisibilityChange(product.id, checked)} />
+                                </div>
+
+                                {/* Actions */}
+                                <div className="col-span-6 md:col-span-2 flex items-center justify-end gap-2">
+                                     <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-200">
+                                        <Edit className="h-4 w-4"/>
+                                     </Button>
+                                      <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-200">
+                                        <Eye className="h-4 w-4"/>
+                                     </Button>
+                                     <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-200">
+                                                <MoreVertical className="h-4 w-4"/>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem>Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                     </DropdownMenu>
+                                </div>
+                            </div>
+                         ))}
+                    </div>
+                </div>
+                 <div className="flex items-center justify-between p-4">
+                    <Button variant="outline">
+                        <ChevronLeft className="h-4 w-4 mr-2" />
+                        Previous
+                    </Button>
+                    <span className="text-sm text-gray-500">Page 1 of 10</span>
+                    <Button variant="outline">
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
