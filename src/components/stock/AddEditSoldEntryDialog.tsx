@@ -30,7 +30,7 @@ interface AddEditSoldEntryDialogProps {
   onSave: () => void;
   entryToEdit?: SoldHistoryEntry | null;
   stockItems: ServiceModelItem[];
-  allOrders?: TrackingLink[]; // Make optional and handle undefined case
+  allOrders: TrackingLink[];
 }
 
 export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEdit, stockItems, allOrders }: AddEditSoldEntryDialogProps) {
@@ -51,8 +51,14 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
       if (isEditMode && entryToEdit) {
         setOrderId(entryToEdit.orderId);
         // Find company name from allOrders if available
-        const order = allOrders?.find(o => o.id === entryToEdit.orderId);
-        setCompanyName(order?.companyName.split('•').pop()?.trim() || '');
+        if(allOrders && Array.isArray(allOrders)) {
+            const order = allOrders.find(o => o.id === entryToEdit.orderId);
+            const nameParts = (order?.companyName || '').split(' • ');
+            const actualBusinessName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : order?.companyName;
+            setCompanyName(actualBusinessName || '');
+        } else {
+             setCompanyName('');
+        }
         setProductName(entryToEdit.productName);
         setQuantity(entryToEdit.quantity.toString());
         setTotalPrice(entryToEdit.totalPrice.toString());
@@ -69,11 +75,17 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
   }, [isOpen, entryToEdit, isEditMode, allOrders]);
 
   useEffect(() => {
-    // Ensure allOrders is an array before trying to use .find()
     if (allOrders && Array.isArray(allOrders) && orderId) {
-      const matchingOrder = allOrders.find(o => o.id.toLowerCase() === orderId.toLowerCase());
-      if (matchingOrder) {
-        setCompanyName(matchingOrder.companyName.split('•').pop()?.trim() || matchingOrder.companyName);
+      const trimmedJobId = orderId.trim();
+      const existingOrder = allOrders.find(order => {
+        const orderJobId = (order.companyName || '').split(' • ')[0].trim();
+        return orderJobId.toLowerCase() === trimmedJobId.toLowerCase();
+      });
+
+      if (existingOrder) {
+          const nameParts = (existingOrder.companyName || '').split(' • ');
+          const actualBusinessName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : existingOrder.companyName;
+          setCompanyName(actualBusinessName);
       } else {
         setCompanyName('');
       }
@@ -156,7 +168,7 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
           <DialogDescription>Manually record a product sale.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="orderId">Job ID</Label>
               <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
