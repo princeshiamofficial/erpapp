@@ -1,7 +1,8 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -20,7 +21,14 @@ import {
     TrendingDown,
     ShieldCheck,
     Gauge,
-    PlusCircle
+    PlusCircle,
+    UploadCloud,
+    ImageIcon,
+    PackageCheck,
+    AlertTriangle,
+    Layers,
+    RefreshCw,
+    Search
 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import {
@@ -29,20 +37,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import NextImage from 'next/image';
 import { RadialChart } from '@/components/ui/radial-chart';
 import { cn } from '@/lib/utils';
-
-// Mock Data based on the image
-const products = [
-  { id: 1, name: '4 Tier Shelving', review: 4.5, performance: 'Excellent', views: 994, sales: 12400, stock: 92, price: 'Custom', visible: true, performanceValue: 95 },
-  { id: 2, name: 'Insence Holder', review: 4.5, performance: 'Good', views: 123, sales: 12400, stock: 594, price: 66.00, visible: true, performanceValue: 65 },
-  { id: 3, name: 'Ashtray', review: 4.5, performance: 'Good', views: 637, sales: 12400, stock: 362, price: 81.00, visible: false, performanceValue: 70 },
-  { id: 4, name: 'Coffee Table', review: 4.5, performance: 'Excellent', views: 148, sales: 12400, stock: 746, price: 'Custom', visible: true, performanceValue: 90 },
-  { id: 5, name: '3 Seater Sofa', review: 4.5, performance: 'Bad', views: 817, sales: 12400, stock: 909, price: 'Custom', visible: false, performanceValue: 25 },
-  { id: 6, name: 'Candle Holder', review: 4.5, performance: 'Bad', views: 926, sales: 12400, stock: 333, price: 50.00, visible: true, performanceValue: 30 },
-  { id: 7, name: 'Table Lamp', review: 4.5, performance: 'Good', views: 71, sales: 12400, stock: 530, price: 318.00, visible: true, performanceValue: 75 },
-];
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
+import type { ServiceModelItem } from '@/types';
+import { getModels } from '@/lib/service-options-service';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { addModelAction, updateModelAction, deleteModelAction } from '../service-management/actions';
 
 const formatNumber = (num: number) => {
     if (num >= 1000) {
@@ -50,6 +57,12 @@ const formatNumber = (num: number) => {
     }
     return num.toString();
 };
+
+const formatCurrency = (value?: number) => {
+    if (value === undefined || value === null) return 'N/A';
+    return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
 
 const StatCard = ({ title, value, unit, icon: Icon, iconBg, children }: { title: string, value: string, unit: string, icon?: React.ElementType, iconBg?: string, children?: React.ReactNode }) => (
     <div className="flex-1 p-4">
@@ -81,13 +94,238 @@ const PerformanceGauge = ({ value }: { value: number }) => {
     )
 }
 
-export default function StockManagementPage() {
-    const [visibility, setVisibility] = useState(products.reduce((acc, p) => ({ ...acc, [p.id]: p.visible }), {} as Record<number, boolean>));
+interface ItemToEdit {
+  id: string;
+  name: string;
+  buyingPrice: string;
+  sellingPrice: string;
+  imageUrl?: string | null;
+  isReadyMade?: boolean;
+  stockCount?: number;
+}
+interface ItemToDelete {
+  id: string;
+  name: string;
+}
 
-    const handleVisibilityChange = (id: number, checked: boolean) => {
-        setVisibility(prev => ({ ...prev, [id]: checked }));
-    };
+
+export default function StockManagementPage() {
+    const { currentUser } = useAuth();
+    const router = useRouter();
+    const { toast } = useToast();
+
+    const [models, setModels] = useState<ServiceModelItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [modelSearchTerm, setModelSearchTerm] = useState('');
+
+    const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     
+    const [itemName, setItemName] = useState('');
+    const [itemBuyingPrice, setItemBuyingPrice] = useState('0');
+    const [itemSellingPrice, setItemSellingPrice] = useState('0');
+    const [itemIsReadyMade, setItemIsReadyMade] = useState(false);
+    const [itemStockCount, setItemStockCount] = useState('0');
+
+    const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
+
+    const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+    const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const fetchData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const fetchedModels = await getModels();
+            setModels(fetchedModels);
+        } catch (error) {
+            console.error("Error fetching models:", error);
+            toast({ title: "Error", description: "Could not load models.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+            fetchData();
+        } else if (currentUser) {
+            router.replace('/dashboard');
+        }
+    }, [currentUser, router, fetchData]);
+    
+    const filteredModels = useMemo(() => {
+        if (!modelSearchTerm) return models;
+        return models.filter(model =>
+            model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
+        );
+    }, [models, modelSearchTerm]);
+    
+    const openAddDialog = () => {
+        setEditingItem(null);
+        setItemName('');
+        setItemBuyingPrice('0');
+        setItemSellingPrice('0');
+        setItemIsReadyMade(false);
+        setItemStockCount('0');
+        setSelectedImageFile(null);
+        setImagePreviewUrl(null);
+        setIsAddEditDialogOpen(true);
+    };
+
+    const openEditDialog = (item: ServiceModelItem) => {
+        setEditingItem({ 
+          id: item.id, 
+          name: item.name, 
+          buyingPrice: (item.buyingPrice ?? 0).toString(),
+          sellingPrice: (item.sellingPrice ?? 0).toString(),
+          imageUrl: item.imageUrl,
+          isReadyMade: item.isReadyMade ?? false,
+          stockCount: item.stockCount ?? 0,
+        });
+        setItemName(item.name);
+        setItemBuyingPrice((item.buyingPrice ?? 0).toString());
+        setItemSellingPrice((item.sellingPrice ?? 0).toString());
+        setItemIsReadyMade(item.isReadyMade ?? false);
+        setItemStockCount('');
+        setSelectedImageFile(null);
+        setImagePreviewUrl(item.imageUrl || null);
+        setIsAddEditDialogOpen(true);
+    };
+
+    const openDeleteDialog = (item: ServiceModelItem) => {
+        setItemToDelete({ id: item.id, name: item.name });
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                toast({ title: "File too large", description: "Please select an image smaller than 2MB.", variant: "destructive" });
+                return;
+            }
+            if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+                toast({ title: "Invalid file type", description: "Please select a JPG, PNG, or GIF image.", variant: "destructive" });
+                return;
+            }
+            setSelectedImageFile(file);
+            setImagePreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setSelectedImageFile(null);
+        setImagePreviewUrl(null);
+        if(fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const handleAddEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!itemName.trim()) {
+            toast({ title: "Validation Error", description: "Name cannot be empty.", variant: "destructive" });
+            return;
+        }
+        const buyingPriceValue = parseFloat(itemBuyingPrice);
+        const sellingPriceValue = parseFloat(itemSellingPrice);
+        const stockCountValue = itemIsReadyMade ? parseInt(itemStockCount || "0", 10) : 0;
+
+        if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
+            toast({ title: "Validation Error", description: "Buying Price must be a non-negative number.", variant: "destructive" });
+            return;
+        }
+        if (isNaN(sellingPriceValue) || sellingPriceValue < 0) {
+            toast({ title: "Validation Error", description: "Selling Price must be a non-negative number.", variant: "destructive" });
+            return;
+        }
+        if (itemIsReadyMade && isNaN(stockCountValue)) {
+            toast({ title: "Validation Error", description: "Stock count must be a valid integer for ready-made items.", variant: "destructive"});
+            return;
+        }
+
+        setIsSubmitting(true);
+        let finalImageUrl: string | null = editingItem?.imageUrl || null;
+
+        if (selectedImageFile) {
+            const formData = new FormData();
+            formData.append('file', selectedImageFile);
+            try {
+                const response = await fetch('https://colorhutbd.xyz/model-image/index.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed with status: ${response.status}. Response: ${errorText}`);
+                }
+                const result = await response.json();
+                if (result.success && result.file_url) {
+                    finalImageUrl = result.file_url;
+                } else {
+                    toast({ title: "Image Upload Failed", description: result.message || "Could not save the image.", variant: "destructive" });
+                    setIsSubmitting(false);
+                    return;
+                }
+            } catch (uploadError) {
+                console.error("Image upload error:", uploadError);
+                toast({ title: "Upload Error", description: uploadError instanceof Error ? uploadError.message : "An error occurred while uploading the image.", variant: "destructive" });
+                setIsSubmitting(false);
+                return;
+            }
+        } else if (imagePreviewUrl === null && editingItem?.imageUrl) {
+            finalImageUrl = null;
+        }
+
+        let result;
+        if (editingItem) { 
+            result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
+            if (result.success) {
+                toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
+            }
+        } else { 
+            result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
+            if (result.success) {
+                toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
+            }
+        }
+
+        if (result && result.success) {
+            setIsAddEditDialogOpen(false);
+            await fetchData();
+        } else if (result) {
+            toast({ title: "Error", description: result.error || `Could not save model.`, variant: "destructive" });
+        }
+        setIsSubmitting(false);
+    };
+
+    const handleDeleteSubmit = async () => {
+        if (!itemToDelete) return;
+        setIsSubmitting(true);
+        const result = await deleteModelAction(itemToDelete.id);
+        if (result.success) {
+            toast({ title: "Success", description: `Model "${itemToDelete.name}" deleted.` });
+            setIsDeleteDialogOpen(false);
+            setItemToDelete(null);
+            await fetchData();
+        } else {
+            toast({ title: "Error", description: result.error || `Could not delete model. It might be in use.`, variant: "destructive" });
+        }
+        setIsSubmitting(false);
+    };
+
+    if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
+        return <div className="p-8 text-center">Access Denied.</div>;
+    }
+
+    const { activeProducts, totalValue } = useMemo(() => {
+        const active = models.filter(p => p.isReadyMade && (p.stockCount ?? 0) > 0);
+        const value = active.reduce((sum, p) => sum + ((p.buyingPrice ?? 0) * (p.stockCount ?? 0)), 0);
+        return { activeProducts: active.length, totalValue: value };
+    }, [models]);
+
     const getPerformanceColor = (performance: string) => {
         switch (performance.toLowerCase()) {
             case 'excellent': return 'text-green-500';
@@ -102,14 +340,12 @@ export default function StockManagementPage() {
             <Card className="shadow-lg rounded-xl">
                 <CardContent className="p-2">
                     <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
-                        <StatCard title="Active Product" value="352" unit="Product" />
-                        <StatCard title="Winning Product" value="3 Seater ..." unit="" icon={Package} iconBg="bg-orange-400" />
-                        <StatCard title="Average Performance" value="Good!" unit="" >
-                            <Gauge className="h-8 w-8 text-green-500 ml-2" />
-                        </StatCard>
-                        <StatCard title="Product Sold" value="12,340" unit="Items" />
+                        <StatCard title="Active Product" value={activeProducts.toString()} unit="Products" icon={Package} iconBg="bg-green-500" />
+                        <StatCard title="Total Inventory Value" value={formatCurrency(totalValue)} unit="BDT" icon={BarChart} iconBg="bg-blue-500" />
+                        <StatCard title="Winning Product" value="3 Seater ..." unit="" icon={Star} iconBg="bg-orange-400" />
+                        <StatCard title="Product Sold" value="12,340" unit="Items" icon={ShoppingCart} iconBg="bg-purple-500"/>
                         <div className="flex-1 p-4 flex items-center justify-center">
-                            <Button className="w-full h-12">
+                             <Button className="w-full h-12" onClick={openAddDialog}>
                                 <PlusCircle className="mr-2 h-5 w-5" />
                                 Add Products
                             </Button>
@@ -121,61 +357,58 @@ export default function StockManagementPage() {
             <div className="mt-6 bg-white rounded-xl shadow-lg">
                 <div className="overflow-x-auto">
                     <div className="min-w-full">
-                         {products.map((product, index) => (
-                            <div key={product.id} className={`grid grid-cols-12 items-center gap-4 px-4 py-3 ${index < products.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                                {/* Product Info */}
+                         {isLoading ? (
+                            <div className="p-4 space-y-2">
+                                {[...Array(5)].map((_,i) => <Skeleton key={i} className="h-16 w-full" />)}
+                            </div>
+                         ) : filteredModels.map((product, index) => (
+                            <div key={product.id} className={`grid grid-cols-12 items-center gap-4 px-4 py-3 ${index < filteredModels.length - 1 ? 'border-b border-gray-100' : ''}`}>
                                 <div className="col-span-12 md:col-span-3 flex items-center gap-4">
-                                    <NextImage src={`https://placehold.co/64x64/F2F2F2/333333?text=${product.name.charAt(0)}`} alt={product.name} width={48} height={48} className="rounded-lg bg-gray-100" />
+                                    <NextImage src={product.imageUrl || `https://placehold.co/64x64/F2F2F2/333333?text=${product.name.charAt(0)}`} alt={product.name} width={48} height={48} className="rounded-lg bg-gray-100 object-cover" unoptimized={!product.imageUrl?.startsWith('https://colorhutbd.xyz')} />
                                     <div>
                                         <p className="font-semibold text-gray-800">{product.name}</p>
                                         <div className="flex items-center gap-1 text-sm text-gray-500">
-                                            <span>Review: {product.review}</span>
+                                            <span>Review: 4.5</span>
                                             <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
                                         </div>
                                     </div>
                                 </div>
                                 
-                                {/* Performance */}
                                 <div className="col-span-6 md:col-span-2">
                                     <p className="text-xs text-gray-500 mb-1">Performance</p>
-                                    <p className={`font-semibold ${getPerformanceColor(product.performance)}`}>{product.performance}</p>
+                                    <p className={`font-semibold ${getPerformanceColor('Good')}`}>Good</p>
                                     <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                        <div className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {product.views}</div>
-                                        <div className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> {formatNumber(product.sales)}</div>
+                                        <div className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {formatNumber(product.totalSold || 0)}</div>
+                                        <div className="flex items-center gap-1"><Eye className="h-3 w-3" /> {formatNumber(994)}</div>
                                     </div>
                                 </div>
 
-                                {/* Gauge */}
                                 <div className="col-span-6 md:col-span-1 flex items-center justify-center">
-                                    <PerformanceGauge value={product.performanceValue} />
+                                    <PerformanceGauge value={75} />
                                 </div>
 
-                                {/* Stock */}
                                 <div className="col-span-6 md:col-span-1">
                                     <p className="text-xs text-gray-500">Stock</p>
                                     <div className="flex items-center gap-1 font-semibold text-gray-800">
                                         <Box className="h-4 w-4 text-gray-400"/>
-                                        {product.stock}
+                                        {product.isReadyMade ? (product.stockCount ?? 0) : "N/A"}
                                     </div>
                                 </div>
 
-                                {/* Price */}
                                 <div className="col-span-6 md:col-span-2">
                                     <p className="text-xs text-gray-500">Product Price</p>
                                     <p className="font-semibold text-gray-800">
-                                        {product.price === 'Custom' ? '$ Custom' : `$ ${Number(product.price).toFixed(2)} USD`}
+                                        {formatCurrency(product.sellingPrice)}
                                     </p>
                                 </div>
 
-                                {/* Visibility */}
                                 <div className="col-span-6 md:col-span-1">
                                      <p className="text-xs text-gray-500 mb-1">Visibility</p>
-                                    <Switch checked={visibility[product.id]} onCheckedChange={(checked) => handleVisibilityChange(product.id, checked)} />
+                                    <Switch checked={true} />
                                 </div>
 
-                                {/* Actions */}
                                 <div className="col-span-6 md:col-span-2 flex items-center justify-end gap-2">
-                                     <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-200">
+                                     <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-200" onClick={() => openEditDialog(product)}>
                                         <Edit className="h-4 w-4"/>
                                      </Button>
                                       <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-200">
@@ -188,7 +421,7 @@ export default function StockManagementPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem>Delete</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => openDeleteDialog(product)}>Delete</DropdownMenuItem>
                                         </DropdownMenuContent>
                                      </DropdownMenu>
                                 </div>
@@ -208,6 +441,71 @@ export default function StockManagementPage() {
                     </Button>
                 </div>
             </div>
+
+            <Dialog open={isAddEditDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsAddEditDialogOpen(open); }}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Product</DialogTitle>
+                        <DialogDescription>{editingItem ? 'Update the details of this product.' : 'Enter details for the new product.'}</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
+                        <div className="space-y-1">
+                            <Label htmlFor="itemName">Name</Label>
+                            <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
+                                <Input id="itemBuyingPrice" type="number" value={itemBuyingPrice} onChange={(e) => setItemBuyingPrice(e.target.value)} required disabled={isSubmitting} placeholder="e.g., 1000.00" min="0" step="0.01" />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
+                                <Input id="itemSellingPrice" type="number" value={itemSellingPrice} onChange={(e) => setItemSellingPrice(e.target.value)} required disabled={isSubmitting} placeholder="e.g., 1500.00" min="0" step="0.01" />
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                                <Switch id="isReadyMade" checked={itemIsReadyMade} onCheckedChange={setItemIsReadyMade} disabled={isSubmitting}/>
+                                <Label htmlFor="isReadyMade">This is a ready-made item</Label>
+                            </div>
+                            {itemIsReadyMade && (
+                                <div className="space-y-1 pl-4 border-l-2 border-primary">
+                                    <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
+                                    <Input id="itemStockCount" type="number" value={itemStockCount} onChange={(e) => setItemStockCount(e.target.value)} required={itemIsReadyMade} disabled={isSubmitting} placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"} step="1" />
+                                     <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new ready-made items.'}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
+                            <div className="flex items-center gap-4 mt-1">
+                                {imagePreviewUrl ? <NextImage src={imagePreviewUrl} alt="Product preview" width={80} height={80} className="rounded-md object-cover border bg-muted" unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')} onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`; (e.target as HTMLImageElement).alt = 'Error loading image'; }} /> : <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
+                                <div className="flex flex-col gap-2">
+                                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}><UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}</Button>
+                                    {imagePreviewUrl && <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}><Trash2 className="mr-1 h-3 w-3" /> Remove Image</Button>}
+                                </div>
+                            </div>
+                            <Input id="modelImageFile" type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/jpeg,image/png,image/gif" />
+                        </div>
+                        <DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : (editingItem ? "Save Changes" : "Add Product")}</Button></DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {itemToDelete && (
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>This action cannot be undone. This will permanently delete the product "<span className="font-semibold">{itemToDelete.name}</span>".</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setItemToDelete(null)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSubmit} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmitting}>{isSubmitting ? "Deleting..." : `Yes, delete product`}</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
         </div>
     );
 }
