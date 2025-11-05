@@ -172,46 +172,6 @@ export default function PayrollPage() {
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      const selectedMonthStart = startOfMonth(selectedDate);
-      
-      results = results.filter(employee => {
-        try {
-          // Always include active employees whose joining date is before the end of the selected month
-          if (employee.status === 'Active') {
-            const joiningDate = new Date(employee.joiningDate);
-            return !isAfter(joiningDate, endOfMonth(selectedDate));
-          }
-          
-          // For inactive employees, only include them if they have an unpaid salary for the selected month or a previous month.
-          if (employee.status === 'Inactive') {
-            const paidSlips = salarySheetData.filter(p => p.employeeId === employee.employeeId && p.paymentStatus === 'Paid');
-            
-            // If they were never paid, they are eligible to be on the sheet until paid.
-            if (paidSlips.length === 0) {
-              const joiningDate = new Date(employee.joiningDate);
-              return !isAfter(joiningDate, endOfMonth(selectedDate));
-            }
-            
-            // If they have been paid, find the last month they were paid.
-            const lastPaidMonthStr = paidSlips.sort((a, b) => b.id.localeCompare(a.id))[0].id;
-            const lastPaidMonth = parse(lastPaidMonthStr, 'yyyy-MM', new Date());
-
-            // They should appear on the sheet if the selected month is on or after their last paid month.
-            // This allows viewing past paid records for inactive employees but prevents them from appearing on future sheets.
-            // An admin might need to pay an inactive employee for their last working month.
-            return !isAfter(startOfMonth(selectedMonthStart), endOfMonth(lastPaidMonth));
-          }
-
-          return false;
-
-        } catch (e) {
-          console.error(`Error processing filter for employee ${employee.id}`, e);
-          return false;
-        }
-      });
-    }
-
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
       results = results.filter(employee =>

@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import type { Employee, Payslip, AttendanceRecord } from '@/types';
-import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth } from 'date-fns';
+import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth, isAfter, startOfMonth } from 'date-fns';
 import { Printer } from 'lucide-react';
 import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
@@ -70,7 +70,6 @@ export default function SalaryTransferPage() {
     }
 
     return employees
-      .filter(employee => employee.status === 'Active') // Filter for active employees
       .map(employee => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
         const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
@@ -94,7 +93,11 @@ export default function SalaryTransferPage() {
         const presentDays = userAttendanceInRange.length;
         const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
         
-        const effectiveSalary = employee.salary || 0;
+        const relevantHistory = (employee.salaryHistory || [])
+            .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+        
         const perDaySalaryForFine = effectiveSalary / 30;
         const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
         
