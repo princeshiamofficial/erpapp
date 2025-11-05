@@ -175,7 +175,7 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
             </div>
              <div className="space-y-1">
                 <Label>Company Name</Label>
-                <Input value={companyName} readOnly disabled placeholder="Auto-filled" className="bg-muted/50" />
+                <Input value={companyName} readOnly disabled placeholder="Auto-filled from Order" className="bg-muted/50" />
              </div>
           </div>
           
