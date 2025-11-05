@@ -18,9 +18,7 @@ import {
     Edit,
     Box,
     ShoppingCart,
-    TrendingDown,
-    ShieldCheck,
-    Gauge,
+    Trash2,
     PlusCircle,
     UploadCloud,
     ImageIcon,
@@ -42,14 +40,14 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import type { ServiceModelItem } from '@/types';
-import { getModels } from '@/lib/service-options-service';
+import { getStockItems } from '@/lib/stock-service'; // Use new stock service
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { addModelAction, updateModelAction, deleteModelAction } from '../service-management/actions';
+import { addStockItemAction, updateStockItemAction, deleteStockItemAction } from './actions'; // Use new stock actions
 
 const formatNumber = (num: number) => {
     if (num >= 1000) {
@@ -114,7 +112,7 @@ export default function StockManagementPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const [models, setModels] = useState<ServiceModelItem[]>([]);
+    const [stockItems, setStockItems] = useState<ServiceModelItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -138,11 +136,11 @@ export default function StockManagementPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const fetchedModels = await getModels();
-            setModels(fetchedModels);
+            const fetchedItems = await getStockItems();
+            setStockItems(fetchedItems);
         } catch (error) {
-            console.error("Error fetching models:", error);
-            toast({ title: "Error", description: "Could not load models.", variant: "destructive" });
+            console.error("Error fetching stock items:", error);
+            toast({ title: "Error", description: "Could not load stock items.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -157,18 +155,18 @@ export default function StockManagementPage() {
     }, [currentUser, router, fetchData]);
     
     const filteredModels = useMemo(() => {
-        if (!modelSearchTerm) return models;
-        return models.filter(model =>
-            model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
+        if (!modelSearchTerm) return stockItems;
+        return stockItems.filter(item =>
+            item.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
         );
-    }, [models, modelSearchTerm]);
+    }, [stockItems, modelSearchTerm]);
     
     const openAddDialog = () => {
         setEditingItem(null);
         setItemName('');
         setItemBuyingPrice('0');
         setItemSellingPrice('0');
-        setItemIsReadyMade(false);
+        setItemIsReadyMade(true); // Default to ready-made for this page
         setItemStockCount('0');
         setSelectedImageFile(null);
         setImagePreviewUrl(null);
@@ -281,14 +279,14 @@ export default function StockManagementPage() {
 
         let result;
         if (editingItem) { 
-            result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
+            result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
             if (result.success) {
-                toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
+                toast({ title: "Success", description: `Item "${itemName.trim()}" updated.` });
             }
         } else { 
-            result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
+            result = await addStockItemAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
             if (result.success) {
-                toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
+                toast({ title: "Success", description: `Item "${itemName.trim()}" added.` });
             }
         }
 
@@ -296,7 +294,7 @@ export default function StockManagementPage() {
             setIsAddEditDialogOpen(false);
             await fetchData();
         } else if (result) {
-            toast({ title: "Error", description: result.error || `Could not save model.`, variant: "destructive" });
+            toast({ title: "Error", description: result.error || `Could not save item.`, variant: "destructive" });
         }
         setIsSubmitting(false);
     };
@@ -304,14 +302,14 @@ export default function StockManagementPage() {
     const handleDeleteSubmit = async () => {
         if (!itemToDelete) return;
         setIsSubmitting(true);
-        const result = await deleteModelAction(itemToDelete.id);
+        const result = await deleteStockItemAction(itemToDelete.id);
         if (result.success) {
-            toast({ title: "Success", description: `Model "${itemToDelete.name}" deleted.` });
+            toast({ title: "Success", description: `Item "${itemToDelete.name}" deleted.` });
             setIsDeleteDialogOpen(false);
             setItemToDelete(null);
             await fetchData();
         } else {
-            toast({ title: "Error", description: result.error || `Could not delete model. It might be in use.`, variant: "destructive" });
+            toast({ title: "Error", description: result.error || `Could not delete item. It might be in use.`, variant: "destructive" });
         }
         setIsSubmitting(false);
     };
@@ -321,10 +319,10 @@ export default function StockManagementPage() {
     }
 
     const { activeProducts, totalValue } = useMemo(() => {
-        const active = models.filter(p => p.isReadyMade && (p.stockCount ?? 0) > 0);
+        const active = stockItems.filter(p => p.isReadyMade && (p.stockCount ?? 0) > 0);
         const value = active.reduce((sum, p) => sum + ((p.buyingPrice ?? 0) * (p.stockCount ?? 0)), 0);
         return { activeProducts: active.length, totalValue: value };
-    }, [models]);
+    }, [stockItems]);
 
     const getPerformanceColor = (performance: string) => {
         switch (performance.toLowerCase()) {
@@ -336,7 +334,7 @@ export default function StockManagementPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 min-h-full">
+        <div className="p-4 sm:p-6 min-h-full space-y-6">
             <Card className="shadow-lg rounded-xl">
                 <CardContent className="p-2">
                     <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
@@ -354,7 +352,7 @@ export default function StockManagementPage() {
                 </CardContent>
             </Card>
 
-            <div className="mt-6 bg-white rounded-xl shadow-lg">
+            <div className="bg-white rounded-xl shadow-lg">
                 <div className="overflow-x-auto">
                     <div className="min-w-full">
                          {isLoading ? (
