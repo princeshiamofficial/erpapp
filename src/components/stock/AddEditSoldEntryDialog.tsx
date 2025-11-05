@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
-import type { SoldHistoryEntry, ServiceModelItem } from '@/types';
+import type { SoldHistoryEntry, ServiceModelItem, TrackingLink } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { addSoldHistoryEntry, updateSoldHistoryEntry } from '@/lib/sold-history-service';
 import { updateModelStock } from '@/lib/service-options-service';
@@ -30,10 +30,12 @@ interface AddEditSoldEntryDialogProps {
   onSave: () => void;
   entryToEdit?: SoldHistoryEntry | null;
   stockItems: ServiceModelItem[];
+  allOrders: TrackingLink[]; // New prop to get all orders
 }
 
-export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEdit, stockItems }: AddEditSoldEntryDialogProps) {
+export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEdit, stockItems, allOrders }: AddEditSoldEntryDialogProps) {
   const [orderId, setOrderId] = useState('');
+  const [companyName, setCompanyName] = useState(''); // State for company name
   const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
@@ -48,19 +50,31 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
     if (isOpen) {
       if (isEditMode && entryToEdit) {
         setOrderId(entryToEdit.orderId);
+        const order = allOrders.find(o => o.id === entryToEdit.orderId);
+        setCompanyName(order?.companyName.split('•').pop()?.trim() || '');
         setProductName(entryToEdit.productName);
         setQuantity(entryToEdit.quantity.toString());
         setTotalPrice(entryToEdit.totalPrice.toString());
         setSaleDate(parseISO(entryToEdit.saleDate));
       } else {
         setOrderId('');
+        setCompanyName('');
         setProductName('');
         setQuantity('');
         setTotalPrice('');
         setSaleDate(new Date());
       }
     }
-  }, [isOpen, entryToEdit, isEditMode]);
+  }, [isOpen, entryToEdit, isEditMode, allOrders]);
+
+  useEffect(() => {
+    const matchingOrder = allOrders.find(o => o.id.toLowerCase() === orderId.toLowerCase());
+    if (matchingOrder) {
+      setCompanyName(matchingOrder.companyName.split('•').pop()?.trim() || matchingOrder.companyName);
+    } else {
+      setCompanyName('');
+    }
+  }, [orderId, allOrders]);
 
   useEffect(() => {
     if (productName && quantity) {
@@ -137,9 +151,15 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-1">
-            <Label htmlFor="orderId">Order ID</Label>
+            <Label htmlFor="orderId">Job ID</Label>
             <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
           </div>
+          {companyName && (
+             <div className="space-y-1">
+                <Label>Company Name</Label>
+                <Input value={companyName} readOnly disabled className="bg-muted/50" />
+             </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="productName">Product</Label>
             <Popover open={isProductPopoverOpen} onOpenChange={setIsProductPopoverOpen}>
