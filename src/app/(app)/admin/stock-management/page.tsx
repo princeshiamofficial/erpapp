@@ -189,7 +189,7 @@ export default function StockManagementPage() {
         setItemName(item.name);
         setItemBuyingPrice((item.buyingPrice ?? 0).toString());
         setItemSellingPrice((item.sellingPrice ?? 0).toString());
-        setItemStockCount('');
+        setItemStockCount((item.stockCount ?? 0).toString());
         setSelectedImageFile(null);
         setImagePreviewUrl(item.imageUrl || null);
         setIsAddEditDialogOpen(true);
@@ -229,8 +229,8 @@ export default function StockManagementPage() {
             return;
         }
         
-        if (!itemStockCount.trim() && !editingItem) {
-            toast({ title: "Validation Error", description: "Initial Stock count is required for new stock items.", variant: "destructive"});
+        if (!itemStockCount.trim()) {
+            toast({ title: "Validation Error", description: "Stock count is required for stock items.", variant: "destructive"});
             return;
         }
 
@@ -287,7 +287,8 @@ export default function StockManagementPage() {
 
         let result;
         if (editingItem) { 
-            result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, true, stockCountValue);
+            const stockChange = stockCountValue - (editingItem.stockCount || 0);
+            result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, true, stockChange);
             if (result.success) {
                 toast({ title: "Success", description: `Item "${itemName.trim()}" updated.` });
             }
@@ -340,14 +341,16 @@ export default function StockManagementPage() {
         });
         
         stockItems.forEach(item => {
-            if (item.isReadyMade) {
-                const currentStock = item.stockCount ?? 0;
-                if (currentStock > 0) {
-                    active++;
-                    value += (item.buyingPrice ?? 0) * currentStock;
-                }
+            const currentStock = item.stockCount ?? 0;
+            if (currentStock > 0) {
+                active++;
+                value += (item.buyingPrice ?? 0) * currentStock;
             }
-            const quantitySold = sCounts.get(item.name) || 0;
+            
+            const quantitySold = Array.from(sCounts.entries())
+                .filter(([modelName, _]) => modelName.toLowerCase() === item.name.toLowerCase())
+                .reduce((total, [_, quantity]) => total + quantity, 0);
+
             sold += quantitySold;
             if (quantitySold > topSeller.quantity) {
                 topSeller = { name: item.name, quantity: quantitySold };
@@ -496,7 +499,7 @@ export default function StockManagementPage() {
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
+                            <Label htmlFor="itemStockCount">{editingItem ? 'Update Stock Count' : 'Initial Stock'} *</Label>
                             <Input 
                                 id="itemStockCount"
                                 type="number"
@@ -504,10 +507,10 @@ export default function StockManagementPage() {
                                 onChange={(e) => setItemStockCount(e.target.value)}
                                 required
                                 disabled={isSubmitting}
-                                placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"}
+                                placeholder={editingItem ? "Enter the new total stock count" : "e.g., 100"}
                                 step="1"
                             />
-                            <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new ready-made items.'}</p>
+                            <p className="text-xs text-muted-foreground">{editingItem ? 'Enter the new total stock quantity. The change will be calculated automatically.' : 'Required for new stock items.'}</p>
                         </div>
                         <div className="space-y-1">
                             <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
