@@ -98,7 +98,7 @@ export default function StockManagementPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 bg-gray-50 min-h-full">
+        <div className="p-4 sm:p-6 min-h-full">
             <Card className="shadow-lg rounded-xl">
                 <CardContent className="p-2">
                     <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
@@ -211,4 +211,3 @@ export default function StockManagementPage() {
         </div>
     );
 }
-
