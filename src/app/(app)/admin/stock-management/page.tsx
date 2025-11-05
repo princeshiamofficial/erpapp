@@ -38,13 +38,14 @@ import { useRouter } from 'next/navigation';
 import type { ServiceModelItem, TrackingLink, SoldHistoryEntry } from '@/types';
 import { getStockItems } from '@/lib/stock-service'; 
 import { getSoldHistory, deleteSoldHistoryEntry } from '@/lib/sold-history-service';
+import { getOrders } from '@/lib/order-service'; // Import getOrders
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { addStockItem as addStockItemAction, updateStockItem as updateStockItemAction, deleteStockItem as deleteStockItemAction } from '@/lib/stock-service';
+import { addStockItemAction, updateStockItemAction, deleteStockItemAction } from './actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseISO, format } from 'date-fns';
 import Link from 'next/link';
@@ -299,8 +300,7 @@ export default function StockManagementPage() {
 
         let result;
         if (editingItem) { 
-            const stockChange = stockCountValue; // In edit mode, the input is the CHANGE
-            result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, true, stockChange);
+            result = await updateStockItemAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, true, stockCountValue);
             if (result.success) {
                 toast({ title: "Success", description: `Item "${itemName.trim()}" updated.` });
             }
@@ -675,5 +675,7 @@ export default function StockManagementPage() {
         </>
     );
 }
+
+    
 
     
