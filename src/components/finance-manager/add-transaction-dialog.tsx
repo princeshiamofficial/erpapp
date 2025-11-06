@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check, UploadCloud, Paperclip, XCircle, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces, ShoppingBag, SendHorizonal } from 'lucide-react';
+import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check, UploadCloud, Paperclip, XCircle, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces, ShoppingBag, SendHorizonal, Banknote, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,8 @@ export const expenseCategories = [
     { value: "Marketing", label: "Marketing", icon: Megaphone },
     { value: "Purchase", label: "Purchase", icon: ShoppingBag },
     { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
+    { value: "Withdraw", label: "Withdraw", icon: Banknote },
+    { value: "Official Expend", label: "Official Expend", icon: Briefcase },
     { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
 ];
 
@@ -565,3 +567,5 @@ export function AddTransactionDialog({
     </Dialog>
   );
 }
+
+    
