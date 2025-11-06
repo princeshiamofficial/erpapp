@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -55,7 +56,7 @@ const ITEMS_PER_PAGE = 50;
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
-  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 };
 
 interface SummaryCardProps {
@@ -172,7 +173,7 @@ export default function PayrollPage() {
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'salary_sheet' || activeTab === 'summary' || activeTab === 'employee_list') {
+    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
       results = results.filter(employee => employee.status === 'Active');
     }
 
@@ -703,7 +704,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 bg-transparent">
+    <div className="space-y-6 bg-gray-50 p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -806,3 +807,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
