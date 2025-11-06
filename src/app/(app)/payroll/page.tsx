@@ -174,7 +174,7 @@ export default function PayrollPage() {
     let results = employees;
 
     if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      results = results.filter(employee => employee.status === 'Active');
+      // No change needed here, we want all employees for the list, and will filter for salary sheet display
     }
 
     if (searchTerm) {
@@ -199,7 +199,7 @@ export default function PayrollPage() {
         }
     }
     
-    const calculatedData = results.map(employee => {
+    const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
       
@@ -704,7 +704,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 bg-gray-50 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -807,5 +807,6 @@ export default function PayrollPage() {
     </div>
   );
 }
+
 
     
