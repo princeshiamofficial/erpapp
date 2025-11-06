@@ -486,18 +486,6 @@ export default function FinanceManagerPage() {
                 </Button>
              </AddTransactionDialog>
           )}
-          {currentUser.role === 'SYSTEM_ADMIN' && (
-            <AddTransactionDialog
-                currentUser={currentUser}
-                onTransactionAdded={fetchFinancialData}
-                dialogMode="sendMoney"
-                allUsersForDropdown={allUsers}
-            >
-            <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
-              <Send className="mr-2 h-5 w-5" /> Send Money
-            </Button>
-          </AddTransactionDialog>
-          )}
         </div>
       </div>
 
