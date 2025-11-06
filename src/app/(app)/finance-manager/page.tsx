@@ -455,6 +455,13 @@ export default function FinanceManagerPage() {
     return "text-sky-600";
   }
 
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header bg-card rounded-lg p-4 shadow-xl">
@@ -718,7 +725,7 @@ export default function FinanceManagerPage() {
                   })
                 ) : (
                   <TableRow>
-                     <TableCell colSpan={viewMode === 'global' ? 7 : 6} className="h-48 text-center text-muted-foreground">
+                     <TableCell colSpan={viewMode === 'global' ? 6 : 5} className="h-48 text-center text-muted-foreground">
                         <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                         <p className="text-lg font-medium">No transactions found.</p>
                         <p className="text-sm">Try adjusting your filters.</p>
@@ -850,6 +857,8 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
+    
+
     
 
     
