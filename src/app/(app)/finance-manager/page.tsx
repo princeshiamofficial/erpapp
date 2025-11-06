@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -69,6 +70,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import NextLink from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { motion } from 'framer-motion';
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
@@ -188,7 +190,7 @@ export default function FinanceManagerPage() {
         setAllUsersForFilter(permittedUsers);
         setAllUsers(fetchedUsers);
       } else {
-        setUserMap(new Map());
+        setUserMap(new Map([[currentUser.id, currentUser.name]])); // Add self to map for personal view
         setAllUsersForFilter([]);
         setAllUsers([]);
       }
@@ -279,6 +281,8 @@ export default function FinanceManagerPage() {
     
     if (viewMode === 'global' && selectedUserIdFilter !== 'all') {
       results = results.filter(t => t.userId === selectedUserIdFilter);
+    } else if (viewMode === 'personal' && currentUser) {
+      results = results.filter(t => t.userId === currentUser.id);
     }
 
     if (selectedDateRange?.from && selectedDateRange?.to) {
@@ -312,7 +316,7 @@ export default function FinanceManagerPage() {
     if (transactionSearchTerm.trim()) {
       const lowerSearchTerm = transactionSearchTerm.toLowerCase();
       results = results.filter(t => {
-        const userName = viewMode === 'global' ? userMap.get(t.userId)?.toLowerCase() : '';
+        const userName = userMap.get(t.userId)?.toLowerCase() || '';
         const matchesSearch = (
           t.category.toLowerCase().includes(lowerSearchTerm) ||
           (t.description && t.description.toLowerCase().includes(lowerSearchTerm)) ||
@@ -326,7 +330,7 @@ export default function FinanceManagerPage() {
       });
     }
     return results;
-  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange, selectedUserIdFilter]);
+  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange, selectedUserIdFilter, currentUser]);
 
   const { totalIncome, totalExpenses, availableBalance, expenseChartData } = useMemo(() => {
     let income = 0;
@@ -622,7 +626,7 @@ export default function FinanceManagerPage() {
                 <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
                   <TableRow>
                     <TableHead className="pl-6">Transaction</TableHead>
-                    {viewMode === 'global' && <TableHead>User</TableHead>}
+                    {viewMode === 'global' && <TableHead>Recorded By</TableHead>}
                     <TableHead>Date</TableHead>
                     <TableHead>Document</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
@@ -645,15 +649,23 @@ export default function FinanceManagerPage() {
                     return (
                       <TableRow key={t.id} className="hover:bg-muted/30">
                         <TableCell className="pl-6">
-                           <div className="flex items-center space-x-3">
-                              <div className={cn("p-2 rounded-full", colorClass.replace('text-', 'bg-').replace('-600', '-100'))}>
+                           <motion.div 
+                              className="flex items-center space-x-3"
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ duration: 0.3 }}
+                           >
+                              <div className={cn(
+                                "p-2 rounded-full transition-transform hover:scale-110",
+                                iconColorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20')
+                              )}>
                                   <IconComponent className={cn("h-5 w-5", colorClass)} />
                               </div>
                               <div className="min-w-0">
                                 <p className="font-semibold truncate" title={t.category}>{t.category}</p>
                                 <p className="text-xs text-muted-foreground truncate" title={t.description || undefined}>{t.description || 'No description'}</p>
                               </div>
-                           </div>
+                           </motion.div>
                         </TableCell>
                          {viewMode === 'global' && (
                           <TableCell>
@@ -858,3 +870,6 @@ export default function FinanceManagerPage() {
     
 
 
+
+
+    
