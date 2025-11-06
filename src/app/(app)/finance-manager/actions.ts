@@ -47,7 +47,8 @@ export async function addTransactionAction(
   if (transactionData.amount <= 0) {
     return { success: false, error: "Amount must be a positive number." };
   }
-  if ((transactionData.type === 'expense' || transactionData.type === 'purchase') && !transactionData.documentUrl && !transactionData.sentToUserId) { // Don't require doc for sent money
+  // Allow admins to skip document uploads, but not regular users for these types
+  if (currentUser.role !== 'SYSTEM_ADMIN' && (transactionData.type === 'expense' || transactionData.type === 'purchase') && !transactionData.documentUrl && !transactionData.sentToUserId) { // Don't require doc for sent money
     return { success: false, error: "Document is required for expenses and purchases." };
   }
 
