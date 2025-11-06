@@ -11,7 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIcon, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Banknote, Briefcase, Megaphone, Braces, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIcon, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Banknote, Briefcase, Megaphone, Braces, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Check } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +50,6 @@ import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, format } from "date-fns";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { Check } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -464,14 +463,6 @@ export default function FinanceManagerPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header bg-card rounded-lg p-4 shadow-xl">
-        <div>
-          <h1 className="page-title">Finance Manager</h1>
-          <p className="page-description">
-            {pageDescription}
-          </p>
-        </div>
-      </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center flex-wrap">
         {currentUser.role === 'SYSTEM_ADMIN' && (
@@ -606,8 +597,8 @@ export default function FinanceManagerPage() {
                   )}
                   {canUserAddExpense && (
                      <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
-                        <Button size="sm" variant="outline">
-                            <Minus className="mr-2 h-4 w-4" /> Add Expense
+                        <Button size="sm">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Expense/Purchase
                         </Button>
                      </AddTransactionDialog>
                   )}
@@ -653,7 +644,7 @@ export default function FinanceManagerPage() {
                                 whileHover={{ scale: 1.1, rotate: -5 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
                                 className={cn(
-                                  "p-2 rounded-full transition-transform hover:scale-110",
+                                  "p-2 rounded-full transition-transform",
                                   colorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20')
                                 )}
                               >
