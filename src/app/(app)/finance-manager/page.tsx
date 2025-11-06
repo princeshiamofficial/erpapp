@@ -146,9 +146,11 @@ export default function FinanceManagerPage() {
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
 
-  const fetchFinancialData = useCallback(async () => {
+  const fetchFinancialData = useCallback(async (isBackgroundRefresh = false) => {
     if (!currentUser) return;
-    setIsLoading(true);
+    if (!isBackgroundRefresh) {
+      setIsLoading(true);
+    }
     try {
       let fetchedTransactions: Transaction[];
       let fetchedUsers: User[] = [];
@@ -201,16 +203,23 @@ export default function FinanceManagerPage() {
       setAllUsers([]);
       setGlobalAppSettings(null);
     } finally {
-      setIsLoading(false);
+      if (!isBackgroundRefresh) {
+        setIsLoading(false);
+      }
     }
   }, [currentUser, toast]);
 
   useEffect(() => {
     if (currentUser) {
-      fetchFinancialData();
+      fetchFinancialData(false); // Initial fetch with loading state
+
+      const intervalId = setInterval(() => {
+        fetchFinancialData(true); // Background refresh without loading state
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(intervalId); // Cleanup on unmount
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser, fetchFinancialData]);
 
   useEffect(() => {
     setSelectedUserIdFilter('all');
@@ -453,9 +462,6 @@ export default function FinanceManagerPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
-           <Button variant="outline" size="icon" onClick={fetchFinancialData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-              <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
           {currentUser.role === 'SYSTEM_ADMIN' && (
             <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addIncome">
               <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
@@ -850,4 +856,5 @@ export default function FinanceManagerPage() {
 
 
     
+
 
