@@ -11,7 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Banknote, Briefcase, Megaphone, Braces, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIcon, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Banknote, Briefcase, Megaphone, Braces, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -471,22 +471,6 @@ export default function FinanceManagerPage() {
             {pageDescription}
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
-          {currentUser.role === 'SYSTEM_ADMIN' && (
-            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addIncome">
-              <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
-                <PlusCircle className="mr-2 h-5 w-5" /> Add Income
-              </Button>
-            </AddTransactionDialog>
-          )}
-          {canUserAddExpense && (
-             <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
-                <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
-                    <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase
-                </Button>
-             </AddTransactionDialog>
-          )}
-        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center flex-wrap">
@@ -601,7 +585,7 @@ export default function FinanceManagerPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="shadow-xl border bg-card rounded-lg lg:col-span-2">
-          <CardHeader className="border-b p-5">
+        <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
@@ -611,6 +595,22 @@ export default function FinanceManagerPage() {
                      "Your latest income, expense and purchase entries."}
                     {transactionTypeFilter !== 'all' && ` (Filtered by: ${displayableTransactionTypeFilters.find(f=>f.value === transactionTypeFilter)?.label})`}
                   </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
+                  {currentUser.role === 'SYSTEM_ADMIN' && (
+                    <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addIncome">
+                      <Button size="sm" variant="outline">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Income
+                      </Button>
+                    </AddTransactionDialog>
+                  )}
+                  {canUserAddExpense && (
+                     <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
+                        <Button size="sm" variant="outline">
+                            <Minus className="mr-2 h-4 w-4" /> Add Expense
+                        </Button>
+                     </AddTransactionDialog>
+                  )}
                 </div>
             </div>
           </CardHeader>
@@ -850,3 +850,4 @@ export default function FinanceManagerPage() {
     
 
     
+
