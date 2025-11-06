@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -89,22 +88,25 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8" ];
 
 const expenseCategories = [
-    { value: "Office Rent", label: "Office Rent", icon: Home },
-    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
-    { value: "Transportation", label: "Transportation", icon: Car },
-    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
-    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
-    { value: "Marketing", label: "Marketing", icon: Megaphone },
-    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
-    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
-    { value: "Withdraw", label: "Withdraw", icon: Banknote },
-    { value: "Official Expend", label: "Official Expend", icon: Briefcase },
-    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+    { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
+    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb, colorClass: "text-yellow-600" },
+    { value: "Transportation", label: "Transportation", icon: Car, colorClass: "text-blue-600" },
+    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon, colorClass: "text-indigo-600" },
+    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils, colorClass: "text-orange-600" },
+    { value: "Marketing", label: "Marketing", icon: Megaphone, colorClass: "text-pink-600" },
+    { value: "Purchase", label: "Purchase", icon: ShoppingBag, colorClass: "text-sky-600" },
+    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal, colorClass: "text-teal-600" },
+    { value: "Withdraw", label: "Withdraw", icon: Banknote, colorClass: "text-rose-600" },
+    { value: "Official Expend", label: "Official Expend", icon: Briefcase, colorClass: "text-gray-600" },
+    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces, colorClass: "text-purple-600" },
 ];
 
-const getCategoryIcon = (category: string) => {
+const getCategoryDetails = (category: string) => {
     const matchedCategory = expenseCategories.find(c => c.value === category);
-    return matchedCategory ? matchedCategory.icon : TrendingDown;
+    return {
+        icon: matchedCategory ? matchedCategory.icon : TrendingDown,
+        colorClass: matchedCategory ? matchedCategory.colorClass : "text-red-600"
+    };
 };
 
 
@@ -432,7 +434,10 @@ export default function FinanceManagerPage() {
   
   const getAmountColor = (t: Transaction) => {
     if (t.type === 'income') return "text-green-600";
-    if (t.type === 'expense') return "text-red-600";
+    if (t.type === 'expense') {
+        if(t.category.startsWith('Sent Money')) return "text-blue-600";
+        return "text-red-600";
+    }
     return "text-sky-600";
   }
 
@@ -628,13 +633,13 @@ export default function FinanceManagerPage() {
                 ) : filteredTransactions.length > 0 ? (
                   filteredTransactions.map(t => {
                     const user = viewMode === 'global' ? allUsers.find(u => u.id === t.userId) : null;
-                    const IconComponent = getCategoryIcon(t.category);
+                    const { icon: IconComponent, colorClass } = getCategoryDetails(t.category);
                     return (
                       <TableRow key={t.id} className="hover:bg-muted/30">
                         <TableCell className="pl-6">
                            <div className="flex items-center space-x-3">
-                              <div className="p-2 rounded-full bg-muted/50">
-                                  <IconComponent className="h-5 w-5 text-muted-foreground"/>
+                              <div className={cn("p-2 rounded-full bg-muted/50", colorClass.replace('text-', 'bg-').replace('-600', '-100'))}>
+                                  <IconComponent className={cn("h-5 w-5", colorClass)} />
                               </div>
                               <div className="min-w-0">
                                 <p className="font-semibold truncate" title={t.category}>{t.category}</p>
@@ -841,3 +846,5 @@ export default function FinanceManagerPage() {
 
 
 
+
+    
