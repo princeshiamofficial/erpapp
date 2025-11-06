@@ -10,7 +10,7 @@ const GIFTS_COLLECTION = 'clientGifts';
 export const getGifts = async (): Promise<Gift[]> => {
   try {
     await ensureCollectionExistsV3(GIFTS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents?limit=9999&orderBy=createdAt&direction=desc`);
+    const response = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents?limit=4444&orderBy=createdAt&direction=desc`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,

@@ -57,7 +57,7 @@ async function fetchTransactionsFromMonths(userId: string | null, monthsToFetch:
         try {
             await ensureCollectionExistsV3(collectionName);
             
-            let endpoint = `collections/${collectionName}/documents?limit=9999&orderBy=date&direction=desc`;
+            let endpoint = `collections/${collectionName}/documents?limit=4444&orderBy=date&direction=desc`;
             if (userId) {
                 // The V3 API helper doesn't support filters this way. We'll filter client-side.
             }
@@ -205,7 +205,7 @@ export async function getPersonalNotesForUser(userId: string): Promise<PersonalN
   if (!userId) return [];
   try {
     await ensureCollectionExistsV3(NOTES_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=updatedAt&direction=desc&limit=9999`);
+    const response = await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=updatedAt&direction=desc&limit=4444`);
     if (response && Array.isArray(response.documents)) {
       return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as PersonalNote));
     }

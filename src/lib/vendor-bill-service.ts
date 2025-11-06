@@ -10,7 +10,7 @@ const COLLECTION_NAME = 'vendorBills';
 export const getVendorBills = async (): Promise<VendorBill[]> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999&orderBy=billDate&direction=desc`);
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444&orderBy=billDate&direction=desc`);
     if (response && Array.isArray(response.documents)) {
       return response.documents.map((doc: { id: string, data: any }) => ({
         id: doc.id,
@@ -49,7 +49,7 @@ export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<V
     const datePrefix = `INV-${format(currentDate, 'yyyyMMdd')}-`;
     
     // Fetch all bills to determine the next sequence number for the day
-    const allBillsResponse = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
+    const allBillsResponse = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444`);
     let newSequence = 1;
     if (allBillsResponse && Array.isArray(allBillsResponse.documents)) {
         const sameDayBills = allBillsResponse.documents.filter((doc: { id: string, data: any }) => doc.id.startsWith(datePrefix));

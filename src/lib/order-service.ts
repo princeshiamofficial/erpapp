@@ -14,8 +14,8 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
     await ensureCollectionExistsV3(ORDERS_COLLECTION);
     
-    // Fetch the most recent 200 orders to prevent server overload issues (like 500 errors).
-    const limit = 9999;
+    // Fetch the most recent orders to prevent server overload issues (like 500 errors).
+    const limit = 4444;
     // The V3 API seems to handle ordering differently. Let's adapt to fetch and sort client-side for now.
     // The API might not support `orderBy` and `direction` in the same way.
     const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=${limit}`);
@@ -64,7 +64,7 @@ export const getOrderByTrackingCode = async (trackingCode: string): Promise<Trac
   try {
     // V3 API uses a 'search' param instead of structured filters.
     await ensureCollectionExistsV3(ORDERS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?search=${trackingCode}&limit=9999`);
+    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?search=${trackingCode}&limit=4444`);
     if (response && Array.isArray(response.documents)) {
       // We must filter client-side as 'search' is broad.
       const foundOrder = response.documents.find((doc: { id: string, data: any }) => doc.data.packzyTrackingCode === trackingCode);
@@ -84,7 +84,7 @@ export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue
     await ensureCollectionExistsV3(ORDERS_COLLECTION);
     
     // Fetch all potentially relevant orders and filter client-side, as V3 search is not ideal for this.
-    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=9999`);
+    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=4444`);
     if (response && Array.isArray(response.documents)) {
       let orders = response.documents
         .map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as TrackingLink))
@@ -144,7 +144,7 @@ export const addOrder = async (orderData: {
     const datePrefix = `ORD-${format(currentDate, 'yyyyMMdd')}`;
     
     // Fetch all orders to find the latest sequence number for the day
-    const allOrdersResponse = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=9999`);
+    const allOrdersResponse = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=4444`);
     let newSequence = 1;
     if (allOrdersResponse && Array.isArray(allOrdersResponse.documents)) {
         const sameDayOrders = allOrdersResponse.documents.filter((doc: any) => doc.id.startsWith(datePrefix));

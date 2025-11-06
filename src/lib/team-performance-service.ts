@@ -34,7 +34,7 @@ export interface MonthlyTargetHistory {
 export const getTaskEntries = async (): Promise<TaskEntry[]> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
@@ -140,7 +140,7 @@ export async function deleteTaskEntry(taskId: string): Promise<boolean> {
 export const getMonthlyTargetHistory = async (team: UserRole | 'all'): Promise<MonthlyTargetHistory[]> => {
     try {
         await ensureCollectionExistsV3(MONTHLY_TARGET_COLLECTION_NAME);
-        const response = await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents?limit=9999`);
+        const response = await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents?limit=4444`);
         if (response && Array.isArray(response.documents)) {
             return response.documents
                 .map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as MonthlyTargetHistory))

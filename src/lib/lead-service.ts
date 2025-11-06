@@ -12,7 +12,7 @@ export const getLeads = async (): Promise<Lead[]> => {
     
     const allLeads: Lead[] = [];
     let offset = 0;
-    const limit = 9999; // Fetch in batches of 9999
+    const limit = 4444; // Fetch in batches
     let hasMore = true;
 
     while (hasMore) {

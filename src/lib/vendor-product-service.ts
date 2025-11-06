@@ -8,7 +8,7 @@ const COLLECTION_NAME = 'vendorProducts';
 export const getVendorProducts = async (): Promise<VendorProduct[]> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999&orderBy=name&direction=asc`);
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
       return response.documents.map((doc: { id: string, data: any }) => ({
         id: doc.id,

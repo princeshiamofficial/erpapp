@@ -73,7 +73,7 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
 export const getStatuses = async (): Promise<CustomStatus[]> => {
   try {
     await ensureCollectionExistsV3(STATUSES_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents?limit=9999`);
+    const response = await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents?limit=4444`);
     
     if (response && Array.isArray(response.documents)) {
       if (response.documents.length === 0) {
@@ -268,5 +268,3 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#FFFFFF'; // Default to white on any error
   }
 };
-
-

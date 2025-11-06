@@ -55,7 +55,7 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
   try {
     await ensureCollectionExistsV3(MODELS_COLLECTION);
     const [modelsResponse, allOrders] = await Promise.all([
-        fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`),
+        fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`),
         getOrders()
     ]);
 
@@ -230,7 +230,7 @@ const seedDefaultLaminations = async (): Promise<ServiceLaminationItem[]> => {
 export const getLaminations = async (): Promise<ServiceLaminationItem[]> => {
   try {
     await ensureCollectionExistsV3(LAMINATIONS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`);
+    const response = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
       if (response.documents.length === 0) {
         console.log("No service laminations found, seeding defaults via API v3.");
@@ -326,7 +326,7 @@ const seedDefaultPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> 
 export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
   try {
     await ensureCollectionExistsV3(PAYMENT_METHODS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`);
+    const response = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
         if (response.documents.length === 0) {
             console.log("No payment methods found, seeding defaults via API v3.");
@@ -431,7 +431,7 @@ const seedDefaultGifts = async (): Promise<ServiceGiftItem[]> => {
 export const getGifts = async (): Promise<ServiceGiftItem[]> => {
   try {
     await ensureCollectionExistsV3(GIFTS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`);
+    const response = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
       if (response.documents.length === 0) {
         console.log("No gifts found, seeding defaults via API v3.");

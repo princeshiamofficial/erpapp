@@ -16,7 +16,7 @@ export const getAttendanceForMonth = async (date: Date): Promise<AttendanceRecor
   const collectionName = getCollectionNameForDate(date);
   try {
     await ensureCollectionExistsV3(collectionName);
-    const response = await fetchFromApiV3(`collections/${collectionName}/documents?limit=9999&orderBy=checkInTime&direction=desc`);
+    const response = await fetchFromApiV3(`collections/${collectionName}/documents?limit=4444&orderBy=checkInTime&direction=desc`);
     if (response && Array.isArray(response.documents)) {
       return response.documents.map((doc: { id: string, data: any }) => ({
         id: doc.id,
