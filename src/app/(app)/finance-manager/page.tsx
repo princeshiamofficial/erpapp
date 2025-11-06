@@ -115,7 +115,6 @@ export default function FinanceManagerPage() {
   const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allUsersForFilter, setAllUsersForFilter] = useState<User[]>([]); 
@@ -221,10 +220,6 @@ export default function FinanceManagerPage() {
     }
   }, [currentUser, fetchFinancialData]);
 
-  useEffect(() => {
-    setSelectedUserIdFilter('all');
-  }, [viewMode]);
-
   const displayableTransactionTypeFilters = useMemo(() => {
     if (currentUser?.role === 'SYSTEM_ADMIN') {
       return TRANSACTION_TYPES_FOR_FILTER;
@@ -277,9 +272,13 @@ export default function FinanceManagerPage() {
   const filteredTransactions = useMemo(() => {
     let results = transactions;
     
-    if (viewMode === 'global' && selectedUserIdFilter !== 'all') {
-      results = results.filter(t => t.userId === selectedUserIdFilter);
-    } else if (viewMode === 'personal' && currentUser) {
+    // For System Admin, default to global view unless a specific user is filtered.
+    // For other roles, it's always their personal view.
+    if (currentUser?.role === 'SYSTEM_ADMIN') {
+        if (selectedUserIdFilter !== 'all') {
+            results = results.filter(t => t.userId === selectedUserIdFilter);
+        }
+    } else if (currentUser) {
       results = results.filter(t => t.userId === currentUser.id);
     }
 
@@ -328,7 +327,7 @@ export default function FinanceManagerPage() {
       });
     }
     return results;
-  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange, selectedUserIdFilter, currentUser]);
+  }, [transactions, transactionSearchTerm, userMap, transactionTypeFilter, selectedDateRange, selectedUserIdFilter, currentUser]);
 
   const { totalIncome, totalExpenses, availableBalance, expenseChartData } = useMemo(() => {
     let income = 0;
@@ -372,21 +371,6 @@ export default function FinanceManagerPage() {
     };
     return config;
   }, [expenseChartData]);
-
-  const pageDescription = useMemo(() => {
-    if (!currentUser) return "Manage your finances.";
-    if (currentUser.role === 'SYSTEM_ADMIN') {
-        const selectedUserName = allUsersForFilter.find(u => u.id === selectedUserIdFilter)?.name;
-        if (viewMode === 'global' && selectedUserIdFilter !== 'all' && selectedUserName) {
-            return `Viewing transactions for ${selectedUserName}.`;
-        }
-        return viewMode === 'global'
-            ? "View and manage all user financial transactions."
-            : "Track your personal income, expenses, and send money to staff.";
-    }
-    return `Track your personal income, expenses, and purchases.`;
-  }, [currentUser, viewMode, selectedUserIdFilter, allUsersForFilter]);
-
 
   const canUserAddExpense = useMemo(() => {
     if (!currentUser || !globalAppSettings?.expenseLoggingPermissions) return false;
@@ -466,14 +450,6 @@ export default function FinanceManagerPage() {
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center flex-wrap">
         {currentUser.role === 'SYSTEM_ADMIN' && (
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'personal' | 'global')} className="w-full sm:w-auto order-1 sm:order-none">
-            <TabsList className="grid w-full grid-cols-2 sm:max-w-xs">
-              <TabsTrigger value="personal">Personal View</TabsTrigger>
-              <TabsTrigger value="global">Global View</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
-        {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && (
            <Popover open={isUserFilterPopoverOpen} onOpenChange={setIsUserFilterPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto order-2 sm:order-none flex-shrink-0 h-10">
@@ -581,8 +557,8 @@ export default function FinanceManagerPage() {
                 <div>
                   <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
                   <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                    {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && selectedUserIdFilter === 'all' ? "Latest transactions from all users." : 
-                     currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && selectedUserIdFilter !== 'all' ? `Latest transactions for selected user.` : 
+                    {currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter === 'all' ? "Latest transactions from all users." : 
+                     currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter !== 'all' ? `Latest transactions for selected user.` : 
                      "Your latest income, expense and purchase entries."}
                     {transactionTypeFilter !== 'all' && ` (Filtered by: ${displayableTransactionTypeFilters.find(f=>f.value === transactionTypeFilter)?.label})`}
                   </CardDescription>
@@ -598,7 +574,7 @@ export default function FinanceManagerPage() {
                   {canUserAddExpense && (
                      <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
                         <Button size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Expense/Purchase
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Entry
                         </Button>
                      </AddTransactionDialog>
                   )}
@@ -611,7 +587,7 @@ export default function FinanceManagerPage() {
                 <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
                   <TableRow>
                     <TableHead className="pl-6">Transaction</TableHead>
-                    {viewMode === 'global' && <TableHead>Recorded By</TableHead>}
+                    {currentUser.role === 'SYSTEM_ADMIN' && <TableHead>Recorded By</TableHead>}
                     <TableHead>Date</TableHead>
                     <TableHead>Document</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
@@ -622,14 +598,14 @@ export default function FinanceManagerPage() {
                 {isLoadingContent ? (
                   [...Array(5)].map((_, i) => (
                     <TableRow key={`skel-${i}`}>
-                      <TableCell colSpan={viewMode === 'global' ? 6 : 5} className="p-0">
+                      <TableCell colSpan={currentUser.role === 'SYSTEM_ADMIN' ? 6 : 5} className="p-0">
                         <Skeleton className="h-16 w-full" />
                       </TableCell>
                     </TableRow>
                   ))
                 ) : filteredTransactions.length > 0 ? (
                   filteredTransactions.map(t => {
-                    const user = viewMode === 'global' ? allUsers.find(u => u.id === t.userId) : null;
+                    const user = currentUser.role === 'SYSTEM_ADMIN' ? allUsers.find(u => u.id === t.userId) : null;
                     const { icon: IconComponent, colorClass } = getCategoryDetails(t.category);
                     return (
                       <TableRow key={t.id} className="hover:bg-muted/30">
@@ -656,7 +632,7 @@ export default function FinanceManagerPage() {
                               </div>
                            </motion.div>
                         </TableCell>
-                         {viewMode === 'global' && (
+                         {currentUser.role === 'SYSTEM_ADMIN' && (
                           <TableCell>
                             {user ? (
                                <div className="flex items-center gap-2">
@@ -704,7 +680,7 @@ export default function FinanceManagerPage() {
                   })
                 ) : (
                   <TableRow>
-                     <TableCell colSpan={viewMode === 'global' ? 6 : 5} className="h-48 text-center text-muted-foreground">
+                     <TableCell colSpan={currentUser.role === 'SYSTEM_ADMIN' ? 6 : 5} className="h-48 text-center text-muted-foreground">
                         <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                         <p className="text-lg font-medium">No transactions found.</p>
                         <p className="text-sm">Try adjusting your filters.</p>
@@ -842,3 +818,6 @@ export default function FinanceManagerPage() {
 
     
 
+
+
+    
