@@ -12,7 +12,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Download, Paperclip, MoreVertical } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Download, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Braces, Banknote, Briefcase } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,7 +46,6 @@ import {
   getTransactionsForUserAction,
   getAllTransactionsAction,
 } from './actions';
-import { Banknote } from 'lucide-react';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, format } from "date-fns";
@@ -88,6 +87,25 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
 ];
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8" ];
+
+const expenseCategories = [
+    { value: "Office Rent", label: "Office Rent", icon: Home },
+    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
+    { value: "Transportation", label: "Transportation", icon: Car },
+    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
+    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
+    { value: "Marketing", label: "Marketing", icon: Megaphone },
+    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
+    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
+    { value: "Withdraw", label: "Withdraw", icon: Banknote },
+    { value: "Official Expend", label: "Official Expend", icon: Briefcase },
+    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+];
+
+const getCategoryIcon = (category: string) => {
+    const matchedCategory = expenseCategories.find(c => c.value === category);
+    return matchedCategory ? matchedCategory.icon : TrendingDown;
+};
 
 
 export default function FinanceManagerPage() {
@@ -411,31 +429,7 @@ export default function FinanceManagerPage() {
     if (selectedUserIdFilter === 'all') return 'All Users';
     return allUsersForFilter.find(u => u.id === selectedUserIdFilter)?.name || 'Select User';
   }, [selectedUserIdFilter, allUsersForFilter]);
-
-  const getTransactionIcon = (t: Transaction) => {
-    if (t.type === 'income') {
-        if (t.receivedFromUserId) return <Download className="h-5 w-5" />;
-        return <TrendingUp className="h-5 w-5" />;
-    }
-    if (t.type === 'expense') {
-        if (t.sentToUserId) return <SendHorizonal className="h-5 w-5" />;
-        return <TrendingDown className="h-5 w-5" />;
-    }
-    return <ShoppingBag className="h-5 w-5" />;
-  }
-
-  const getTransactionIconColor = (t: Transaction) => {
-    if (t.type === 'income') {
-        if (t.receivedFromUserId) return "bg-purple-500/10 text-purple-600";
-        return "bg-green-500/10 text-green-600";
-    }
-    if (t.type === 'expense') {
-        if (t.sentToUserId) return "bg-blue-500/10 text-blue-600";
-        return "bg-red-500/10 text-red-600";
-    }
-    return "bg-sky-500/10 text-sky-600";
-  }
-
+  
   const getAmountColor = (t: Transaction) => {
     if (t.type === 'income') return "text-green-600";
     if (t.type === 'expense') return "text-red-600";
@@ -504,7 +498,7 @@ export default function FinanceManagerPage() {
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] max-h-80 overflow-y-auto p-0">
                  <Command>
-                    <CommandInput placeholder="Search user..." />
+                    <CommandInput placeholder="Search user..." value={userSearchQuery} onValueChange={setUserSearchQuery} />
                     <CommandList>
                       <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
@@ -630,12 +624,13 @@ export default function FinanceManagerPage() {
                 ) : filteredTransactions.length > 0 ? (
                   filteredTransactions.map(t => {
                     const user = viewMode === 'global' ? allUsers.find(u => u.id === t.userId) : null;
+                    const IconComponent = getCategoryIcon(t.category);
                     return (
                       <TableRow key={t.id} className="hover:bg-muted/30">
                         <TableCell className="pl-6">
                            <div className="flex items-center space-x-3">
-                              <div className={cn("p-2 rounded-full", getTransactionIconColor(t))}>
-                                  {getTransactionIcon(t)}
+                              <div className="p-2 rounded-full bg-muted/50">
+                                  <IconComponent className="h-5 w-5 text-muted-foreground"/>
                               </div>
                               <div className="min-w-0">
                                 <p className="font-semibold truncate" title={t.category}>{t.category}</p>
@@ -657,13 +652,12 @@ export default function FinanceManagerPage() {
                           </TableCell>
                         )}
                         <TableCell className="text-xs text-muted-foreground">{format(parseISO(t.date), "d MMM, yyyy")}</TableCell>
-                        <TableCell>
+                         <TableCell>
                           {t.documentUrl ? (
-                            <Button asChild variant="outline" size="sm" className="h-8">
-                               <Link href={t.documentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
-                                  <Paperclip className="h-3.5 w-3.5"/>
-                                  View
-                               </Link>
+                            <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                               <NextLink href={t.documentUrl} target="_blank" rel="noopener noreferrer" title="View Document">
+                                  <Paperclip className="h-4 w-4"/>
+                               </NextLink>
                             </Button>
                           ) : (
                             <span className="text-xs text-muted-foreground/60">-</span>
