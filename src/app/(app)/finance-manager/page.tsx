@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -655,12 +654,16 @@ export default function FinanceManagerPage() {
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ duration: 0.3 }}
                            >
-                              <div className={cn(
-                                "p-2 rounded-full transition-transform hover:scale-110",
-                                iconColorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20')
-                              )}>
+                              <motion.div
+                                whileHover={{ scale: 1.1, rotate: -5 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                className={cn(
+                                  "p-2 rounded-full transition-transform hover:scale-110",
+                                  colorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20')
+                                )}
+                              >
                                   <IconComponent className={cn("h-5 w-5", colorClass)} />
-                              </div>
+                              </motion.div>
                               <div className="min-w-0">
                                 <p className="font-semibold truncate" title={t.category}>{t.category}</p>
                                 <p className="text-xs text-muted-foreground truncate" title={t.description || undefined}>{t.description || 'No description'}</p>
@@ -715,7 +718,7 @@ export default function FinanceManagerPage() {
                   })
                 ) : (
                   <TableRow>
-                     <TableCell colSpan={viewMode === 'global' ? 6 : 5} className="h-48 text-center text-muted-foreground">
+                     <TableCell colSpan={viewMode === 'global' ? 7 : 6} className="h-48 text-center text-muted-foreground">
                         <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                         <p className="text-lg font-medium">No transactions found.</p>
                         <p className="text-sm">Try adjusting your filters.</p>
@@ -848,28 +851,5 @@ export default function FinanceManagerPage() {
   );
 }
     
-
-    
-
-
-
-    
-
-    
-
-
-
-
-    
-
-    
-
-
-
-
-    
-
-
-
 
     
