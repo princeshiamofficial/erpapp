@@ -12,7 +12,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Download, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Braces, Banknote, Briefcase } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Download, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Braces, Banknote, Briefcase, Megaphone } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -498,7 +498,11 @@ export default function FinanceManagerPage() {
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] max-h-80 overflow-y-auto p-0">
                  <Command>
-                    <CommandInput placeholder="Search user..." value={userSearchQuery} onValueChange={setUserSearchQuery} />
+                    <CommandInput
+                      placeholder="Search user..."
+                      value={userSearchQuery}
+                      onValueChange={setUserSearchQuery}
+                    />
                     <CommandList>
                       <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
@@ -834,4 +838,5 @@ export default function FinanceManagerPage() {
     
 
     
+
 
