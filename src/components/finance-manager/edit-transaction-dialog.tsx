@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -20,11 +19,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { Transaction, TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Paperclip, UploadCloud, XCircle, Link as LinkIcon } from 'lucide-react';
+import { Loader2, CalendarIcon, Paperclip, UploadCloud, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces, ShoppingBag, SendHorizonal, Banknote, Briefcase } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import NextLink from 'next/link';
 import { cn } from "@/lib/utils";
-
 
 interface EditTransactionDialogProps {
   currentUser: User;
@@ -33,6 +31,20 @@ interface EditTransactionDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onTransactionUpdated: () => void;
 }
+
+const expenseCategories = [
+    { value: "Office Rent", label: "Office Rent", icon: Home },
+    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
+    { value: "Transportation", label: "Transportation", icon: Car },
+    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
+    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
+    { value: "Marketing", label: "Marketing", icon: Megaphone },
+    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
+    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
+    { value: "Withdraw", label: "Withdraw", icon: Banknote },
+    { value: "Official Expend", label: "Official Expend", icon: Briefcase },
+    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+];
 
 export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpenChange, onTransactionUpdated }: EditTransactionDialogProps) {
   const [type, setType] = useState<TransactionType>(transaction.type);
@@ -247,9 +259,23 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
               <Label htmlFor="edit-transaction-amount">Amount (BDT) *</Label>
               <Input id="edit-transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required disabled={isSubmitting || isUploadingDocument} />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="edit-transaction-category">Category *</Label>
-              <Input id="edit-transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) } />
+             <div className="space-y-1">
+              <Label htmlFor="transaction-category">Category *</Label>
+              <Select value={category} onValueChange={setCategory} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) }>
+                <SelectTrigger id="transaction-category">
+                    <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                    {expenseCategories.map(cat => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                            <div className="flex items-center gap-2">
+                                <cat.icon className="h-4 w-4 text-muted-foreground" />
+                                <span>{cat.label}</span>
+                            </div>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
                {(type === 'expense' && !!transaction.sentToUserId) && 
                 <p className="text-xs text-muted-foreground">Category is auto-set for 'Sent Money' transactions.</p>
               }
