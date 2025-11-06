@@ -8,10 +8,10 @@ import 'leaflet/dist/leaflet.css';
 export const metadata: Metadata = {
   title: 'Color Hut',
   description: 'Seamless Order Tracking and Management',
-  manifest: '/manifest.json',
-  icons: {
-    icon: 'https://colorhutbd.xyz/favicon.ico',
-  },
+  // manifest: '/manifest.json', // Removed this line
+  // icons: { // Removing specific icon links that are 404ing
+  //   icon: 'https://colorhutbd.xyz/favicon.ico',
+  // },
 };
 
 export const viewport: Viewport = {
