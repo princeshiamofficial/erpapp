@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -612,6 +613,7 @@ export default function FinanceManagerPage() {
                     <TableHead className="pl-6">Transaction</TableHead>
                     {viewMode === 'global' && <TableHead>User</TableHead>}
                     <TableHead>Date</TableHead>
+                    <TableHead>Document</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
@@ -620,7 +622,7 @@ export default function FinanceManagerPage() {
                 {isLoadingContent ? (
                   [...Array(5)].map((_, i) => (
                     <TableRow key={`skel-${i}`}>
-                      <TableCell colSpan={viewMode === 'global' ? 5 : 4} className="p-0">
+                      <TableCell colSpan={viewMode === 'global' ? 6 : 5} className="p-0">
                         <Skeleton className="h-16 w-full" />
                       </TableCell>
                     </TableRow>
@@ -655,6 +657,18 @@ export default function FinanceManagerPage() {
                           </TableCell>
                         )}
                         <TableCell className="text-xs text-muted-foreground">{format(parseISO(t.date), "d MMM, yyyy")}</TableCell>
+                        <TableCell>
+                          {t.documentUrl ? (
+                            <Button asChild variant="outline" size="sm" className="h-8">
+                               <Link href={t.documentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
+                                  <Paperclip className="h-3.5 w-3.5"/>
+                                  View
+                               </Link>
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/60">-</span>
+                          )}
+                        </TableCell>
                         <TableCell className={cn("text-right font-semibold", getAmountColor(t))}>{t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}</TableCell>
                         <TableCell className="pr-6 text-right">
                            <DropdownMenu>
@@ -678,7 +692,7 @@ export default function FinanceManagerPage() {
                   })
                 ) : (
                   <TableRow>
-                     <TableCell colSpan={viewMode === 'global' ? 5 : 4} className="h-48 text-center text-muted-foreground">
+                     <TableCell colSpan={viewMode === 'global' ? 6 : 5} className="h-48 text-center text-muted-foreground">
                         <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                         <p className="text-lg font-medium">No transactions found.</p>
                         <p className="text-sm">Try adjusting your filters.</p>
@@ -826,3 +840,4 @@ export default function FinanceManagerPage() {
     
 
     
+
