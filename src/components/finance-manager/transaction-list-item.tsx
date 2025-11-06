@@ -8,6 +8,7 @@ import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendH
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 interface TransactionListItemProps {
   transaction: Transaction;
@@ -82,6 +83,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     } else {
         IconComponent = categoryDetails.icon;
     }
+    amountPrefix = '-';
     amountColorClass = categoryDetails.colorClass;
     iconColorClass = categoryDetails.colorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20');
   }
@@ -90,12 +92,18 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   return (
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
       <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-        <div className={cn(
-          "p-2 rounded-full transition-all duration-300 ease-in-out transform group-hover:scale-110",
-          iconColorClass
-        )}>
-          <IconComponent className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", amountColorClass)} />
-        </div>
+        <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            whileHover={{ scale: 1.1, rotate: -5 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+            className={cn(
+              "p-2 rounded-full",
+              iconColorClass
+            )}
+        >
+          <IconComponent className={cn("h-5 w-5 sm:h-6 sm:w-6", amountColorClass)} />
+        </motion.div>
         <div className="flex-1 min-w-0">
           <p className="text-sm sm:text-md font-semibold text-foreground truncate" title={transaction.category}>
             {transaction.category}
