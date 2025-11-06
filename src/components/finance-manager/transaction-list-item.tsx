@@ -22,20 +22,25 @@ const formatCurrency = (value: number): string => {
 };
 
 const expenseCategories = [
-    { value: "Office Rent", label: "Office Rent", icon: Home },
-    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
-    { value: "Transportation", label: "Transportation", icon: Car },
-    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
-    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
-    { value: "Marketing", label: "Marketing", icon: Megaphone },
-    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
-    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
-    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+    { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
+    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb, colorClass: "text-yellow-600" },
+    { value: "Transportation", label: "Transportation", icon: Car, colorClass: "text-blue-600" },
+    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon, colorClass: "text-indigo-600" },
+    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils, colorClass: "text-orange-600" },
+    { value: "Marketing", label: "Marketing", icon: Megaphone, colorClass: "text-pink-600" },
+    { value: "Purchase", label: "Purchase", icon: ShoppingBag, colorClass: "text-sky-600" },
+    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal, colorClass: "text-teal-600" },
+    { value: "Withdraw", label: "Withdraw", icon: Banknote, colorClass: "text-rose-600" },
+    { value: "Official Expend", label: "Official Expend", icon: Briefcase, colorClass: "text-gray-600" },
+    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces, colorClass: "text-purple-600" },
 ];
 
-const getCategoryIcon = (category: string) => {
+const getCategoryDetails = (category: string) => {
     const matchedCategory = expenseCategories.find(c => c.value === category);
-    return matchedCategory ? matchedCategory.icon : TrendingDown;
+    return {
+        icon: matchedCategory?.icon || TrendingDown,
+        colorClass: matchedCategory?.colorClass || "text-red-600"
+    };
 };
 
 
@@ -57,6 +62,8 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   let amountPrefix = '';
   let amountColorClass = '';
   
+  const categoryDetails = getCategoryDetails(transaction.category);
+
   if (isIncome) {
     if (transaction.receivedFromUserId) {
       IconComponent = Download;
@@ -70,26 +77,24 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   } else { // Expense or Purchase
     if (transaction.category === 'Purchase') {
         IconComponent = ShoppingBag;
-        iconColorClass = "bg-sky-500/10 text-sky-600";
-        amountColorClass = "text-sky-600";
     } else if (transaction.category.startsWith('Sent Money')) {
         IconComponent = SendHorizonal;
-        iconColorClass = "bg-blue-500/10 text-blue-600";
-        amountColorClass = "text-blue-600";
     } else {
-        IconComponent = getCategoryIcon(transaction.category);
-        iconColorClass = "bg-red-500/10 text-red-600";
-        amountColorClass = "text-red-600";
+        IconComponent = categoryDetails.icon;
     }
-    amountPrefix = '-';
+    amountColorClass = categoryDetails.colorClass;
+    iconColorClass = categoryDetails.colorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20');
   }
 
 
   return (
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
       <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-        <div className={cn("p-2 rounded-full", iconColorClass)}>
-          <IconComponent className="h-5 w-5 sm:h-6 sm:w-6" />
+        <div className={cn(
+          "p-2 rounded-full transition-all duration-300 ease-in-out transform group-hover:scale-110",
+          iconColorClass
+        )}>
+          <IconComponent className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", amountColorClass)} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm sm:text-md font-semibold text-foreground truncate" title={transaction.category}>
@@ -111,7 +116,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
                 href={transaction.documentUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center text-primary hover:underline hover:text-primary/80 min-w-0" // Added min-w-0
+                className="inline-flex items-center gap-1.5 text-primary hover:underline hover:text-primary/80 min-w-0" // Added min-w-0
                 title={transaction.documentUrl.split('/').pop() || "View Document"}
               >
                 <Paperclip className="h-3 w-3 mr-0.5 shrink-0" /> {/* Added shrink-0 */}
