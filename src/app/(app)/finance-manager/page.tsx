@@ -104,8 +104,8 @@ const expenseCategories = [
 const getCategoryDetails = (category: string) => {
     const matchedCategory = expenseCategories.find(c => c.value === category);
     return {
-        icon: matchedCategory ? matchedCategory.icon : TrendingDown,
-        colorClass: matchedCategory ? matchedCategory.colorClass : "text-red-600"
+        icon: matchedCategory?.icon || TrendingDown,
+        colorClass: matchedCategory?.colorClass || "text-red-600"
     };
 };
 
@@ -142,6 +142,8 @@ export default function FinanceManagerPage() {
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [isEditDialogVisible, setIsEditDialogVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [userSearchQuery, setUserSearchQuery] = useState("");
 
 
   const fetchFinancialData = useCallback(async () => {
@@ -638,7 +640,7 @@ export default function FinanceManagerPage() {
                       <TableRow key={t.id} className="hover:bg-muted/30">
                         <TableCell className="pl-6">
                            <div className="flex items-center space-x-3">
-                              <div className={cn("p-2 rounded-full bg-muted/50", colorClass.replace('text-', 'bg-').replace('-600', '-100'))}>
+                              <div className={cn("p-2 rounded-full", colorClass.replace('text-', 'bg-').replace('-600', '-100'))}>
                                   <IconComponent className={cn("h-5 w-5", colorClass)} />
                               </div>
                               <div className="min-w-0">
@@ -653,7 +655,7 @@ export default function FinanceManagerPage() {
                                <div className="flex items-center gap-2">
                                   <Avatar className="h-7 w-7 border">
                                     <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
-                                    <AvatarFallback className="text-xs">{user.name.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                                   </Avatar>
                                   <span className="text-xs text-muted-foreground">{user.name}</span>
                                </div>
@@ -848,3 +850,4 @@ export default function FinanceManagerPage() {
 
 
     
+
