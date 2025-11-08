@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction } from './actions';
-import { format, addDays, startOfWeek, subDays, parse, differenceInMinutes, parseISO } from 'date-fns';
+import { format, addDays, startOfWeek, subDays, parse, differenceInMinutes, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,7 +47,7 @@ export default function MyDailyRoutinePage() {
   const [routinesData, setRoutinesData] = useState<Record<string, DailyRoutine>>({});
   const [routineHeaders, setRoutineHeaders] = useState<DailyRoutine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 })); // Monday
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [routineToEdit, setRoutineToEdit] = useState<DailyRoutine | null>(null);
@@ -150,9 +150,15 @@ export default function MyDailyRoutinePage() {
     }
   };
   
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
-  }, [currentWeekStart]);
+  const monthDays = useMemo(() => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    const days = [];
+    for (let i = 0; i <= differenceInMinutes(end, start) / (60 * 24); i++) {
+        days.push(addDays(start, i));
+    }
+    return days;
+  }, [currentMonth]);
 
   const handleRoutineSaved = () => {
     toast({ title: "Success", description: "Your routine list has been updated." });
@@ -193,14 +199,14 @@ export default function MyDailyRoutinePage() {
     <>
       <div className="space-y-4 p-1 sm:p-4">
         <div className="flex justify-between items-center bg-card p-2 rounded-md">
-          <Button onClick={() => setCurrentWeekStart(subDays(currentWeekStart, 7))} variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Previous Week
+          <Button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Previous Month
           </Button>
           <h2 className="text-lg font-semibold text-center">
-            {format(currentWeekStart, "MMMM d")} - {format(addDays(currentWeekStart, 6), "MMMM d, yyyy")}
+            {format(currentMonth, "MMMM yyyy")}
           </h2>
-          <Button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} variant="outline">
-            Next Week <ArrowRight className="h-4 w-4 ml-2" />
+          <Button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} variant="outline">
+            Next Month <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
 
@@ -240,7 +246,7 @@ export default function MyDailyRoutinePage() {
                     </tr>
                 </thead>
                 <tbody>
-                    {weekDays.map(date => {
+                    {monthDays.map(date => {
                         const dateKey = format(date, 'yyyy-MM-dd');
                         const dayRoutine = routinesData[dateKey];
                         return (
