@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { approveOrderAction, requestChangesAction } from './actions';
 import type { TrackingLink } from '@/types';
-import { CheckCircle, Edit, Loader2, FileText, StickyNote } from 'lucide-react';
+import { CheckCircle, Edit, Loader2, FileText, StickyNote, Percent } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 interface ApprovalClientProps {
   order: TrackingLink;
@@ -34,6 +35,13 @@ export function ApprovalClient({ order }: ApprovalClientProps) {
   const { toast } = useToast();
   
   const orderSubtotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+  const effectiveDiscount = order.specialClientDiscount || 0;
+  const netPayable = orderSubtotal - effectiveDiscount;
+  const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+  const shippingCharge = order.shippingCharge || 0;
+  const grandTotal = netPayable + shippingCharge;
+  const amountDue = grandTotal - totalAdvancePaid;
+
 
   const handleApprove = async () => {
     setIsSubmitting(true);
@@ -135,16 +143,26 @@ export function ApprovalClient({ order }: ApprovalClientProps) {
             )}
             
             <div className="flex justify-end pt-4">
-                <div className="w-full max-w-xs space-y-2">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span>{formatCurrency(orderSubtotal)}</span></div>
-                    {order.specialClientDiscount && (
-                        <div className="flex justify-between text-destructive"><span className="">Discount:</span><span>- {formatCurrency(order.specialClientDiscount)}</span></div>
-                    )}
-                    <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                        <span>Net Total:</span>
-                        <span>{formatCurrency(orderSubtotal - (order.specialClientDiscount || 0))}</span>
-                    </div>
-                </div>
+              <div className="w-full max-w-xs space-y-2">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Order Items Total:</span><span>{formatCurrency(orderSubtotal)}</span></div>
+                  {effectiveDiscount > 0 && (
+                      <div className="flex justify-between text-destructive"><span className="">Discount:</span><span>- {formatCurrency(effectiveDiscount)}</span></div>
+                  )}
+                  <div className="flex justify-between font-semibold border-t pt-2 mt-2">
+                      <span>Net Payable:</span>
+                      <span>{formatCurrency(netPayable)}</span>
+                  </div>
+                  {shippingCharge <= 0 && (
+                      <p className="text-xs text-muted-foreground text-right">(Excluding delivery charge)</p>
+                  )}
+                  {totalAdvancePaid > 0 && (
+                      <div className="flex justify-between text-green-600"><span className="">Total Advance Paid:</span><span>- {formatCurrency(totalAdvancePaid)}</span></div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2 text-primary">
+                      <span>Amount Due:</span>
+                      <span>{formatCurrency(amountDue)}</span>
+                  </div>
+              </div>
             </div>
 
             <div className="pt-4 border-t space-y-2">
@@ -157,6 +175,7 @@ export function ApprovalClient({ order }: ApprovalClientProps) {
                 rows={4}
                 className="bg-background"
                 disabled={isSubmitting}
+                suppressHydrationWarning
               />
             </div>
         </CardContent>
