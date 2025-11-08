@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -336,8 +335,8 @@ export default function MyDailyRoutinePage() {
             margin: 0.5cm;
           }
           body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .printable-area {
             padding: 0 !important;
@@ -357,6 +356,18 @@ export default function MyDailyRoutinePage() {
           }
           button {
             display: none;
+          }
+          /* Force checkbox appearance for printing */
+          [data-state="checked"] {
+            background-color: hsl(var(--primary)) !important;
+            border-color: hsl(var(--primary)) !important;
+          }
+          [data-state="checked"] svg {
+            color: hsl(var(--primary-foreground)) !important;
+          }
+          [type="checkbox"] {
+            border-color: hsl(var(--primary)) !important;
+            color: hsl(var(--primary)) !important; /* For the checkmark */
           }
         }
       `}</style>
