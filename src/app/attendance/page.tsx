@@ -7,7 +7,7 @@ import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDow
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds, parseISO, isToday } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -31,30 +31,40 @@ const ATTENDANCE_STORAGE_KEY = 'colorHutAttendanceMark';
 const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean, disabledReason: string }) => {
     const [unlocked, setUnlocked] = useState(false);
     const x = useMotionValue(0);
+    const springX = useSpring(x, { stiffness: 300, damping: 40 });
     const sliderRef = React.useRef<HTMLDivElement>(null);
     const [sliderWidth, setSliderWidth] = useState(0);
-    const handleSize = 64; // Corresponds to h-16, w-16
-    
+    const handleSize = 64; 
+
+    const textOpacity = useTransform(x, [0, sliderWidth / 3], [1, 0]);
+    const textX = useTransform(x, [0, sliderWidth / 3], [0, 20]);
+
+
     useEffect(() => {
-        if (sliderRef.current) {
-            setSliderWidth(sliderRef.current.offsetWidth);
+        const updateSliderWidth = () => {
+             if (sliderRef.current) {
+                setSliderWidth(sliderRef.current.offsetWidth);
+            }
         }
+        updateSliderWidth();
+        window.addEventListener('resize', updateSliderWidth);
+        return () => window.removeEventListener('resize', updateSliderWidth);
     }, [sliderRef]);
 
     const handleDragEnd = () => {
         if (disabled) {
-            x.set(0);
+            springX.set(0);
             return;
         }
-        if (x.get() > sliderWidth - handleSize - 20) { // A bit of tolerance
+        if (x.get() > sliderWidth - handleSize - 20) {
             setUnlocked(true);
             onConfirm();
             setTimeout(() => {
-              x.set(0);
+              springX.set(0);
               setUnlocked(false);
             }, 1000);
         } else {
-            x.set(0);
+            springX.set(0);
         }
     };
     
@@ -72,21 +82,20 @@ const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onCon
           )}
         >
             <motion.div
-                className={cn("absolute left-1 top-1 h-16 w-16 rounded-full flex items-center justify-center", handleColor, disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing")}
-                style={{ x }}
+                className={cn("absolute left-1 top-1 h-16 w-16 rounded-full flex items-center justify-center z-10", handleColor, disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing")}
+                style={{ x: springX }}
                 drag="x"
-                dragConstraints={{ left: 0, right: sliderWidth - handleSize }}
+                dragConstraints={{ left: 0, right: sliderWidth > handleSize ? sliderWidth - handleSize - 8 : 0 }}
                 onDragEnd={handleDragEnd}
-                dragElastic={0.1}
+                dragElastic={0.05}
+                whileTap={{ scale: disabled ? 1 : 1.1 }}
             >
                 <Fingerprint className="h-8 w-8" />
             </motion.div>
             <AnimatePresence>
-              {!unlocked && x.get() < 50 && (
+              {!unlocked && (
                 <motion.span
-                    initial={{ opacity: 1, x: 0 }}
-                    animate={{ opacity: 1 - (x.get() / (sliderWidth * 0.5)), x: x.get() * 0.1 }}
-                    exit={{ opacity: 0 }}
+                    style={{ opacity: textOpacity, x: textX }}
                     className="select-none pointer-events-none text-center px-20"
                 >
                     {disabled ? disabledReason : text}
@@ -110,7 +119,7 @@ export default function CheckInOutPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [locationStatus, setLocationStatus] = useState('Requesting location...');
   const [currentLocation, setCurrentLocation] = useState<{ lat: number, lng: number } | null>(null);
-  const [checkInLocation, setCheckInLocation] = useState<{ lat: number, lng: number } | undefined>(undefined);
+  const [checkInLocation, setCheckInLocation] = useState<{ lat: number; lng: number; } | undefined>(undefined);
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
@@ -529,3 +538,5 @@ export default function CheckInOutPage() {
     </div>
   );
 }
+
+    
