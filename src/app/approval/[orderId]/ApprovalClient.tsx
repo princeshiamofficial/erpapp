@@ -40,13 +40,11 @@ const formatDate = (dateString: string | undefined) => {
 
 export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
   const [order, setOrder] = useState(initialOrder);
-  const [changes, setChanges] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<'pending' | 'approved' | 'changes_requested' | 'error'>(
     initialOrder.currentStatus === 'approved-for-production' ? 'approved' : 'pending'
   );
   const [isConfirmingApproval, setIsConfirmingApproval] = useState(false);
-  const [isRequestingChanges, setIsRequestingChanges] = useState(false);
   const { toast } = useToast();
   
   const [isClient, setIsClient] = useState(false);
@@ -116,24 +114,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
     setIsSubmitting(false);
     setIsConfirmingApproval(false);
   };
-
-  const handleRequestChanges = async () => {
-    if (!changes.trim()) {
-      toast({ title: "Changes Required", description: "Please describe the changes you would like to request.", variant: "destructive" });
-      return;
-    }
-    setIsSubmitting(true);
-    const result = await requestChangesAction(order.id, changes, order.crmUserId, order.crmUserName);
-    if (result.success) {
-      setSubmissionStatus('changes_requested');
-      toast({ title: "Changes Requested", description: "Your requested changes have been submitted." });
-    } else {
-      setSubmissionStatus('error');
-      toast({ title: "Error", description: result.error || "Could not submit your request.", variant: "destructive" });
-    }
-    setIsSubmitting(false);
-    setIsRequestingChanges(false);
-  };
+  
   
   if (submissionStatus === 'approved') {
     return (
@@ -157,11 +138,11 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
 
   return (
     <>
-      <div ref={invoiceRef} className="max-w-4xl mx-auto p-0 sm:p-4 md:p-6 lg:p-8">
+      <div ref={invoiceRef} className="max-w-4xl mx-auto p-0">
         <div className="bg-card border border-border/40 rounded-xl shadow-2xl">
-           <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 p-6 sm:p-8 border-b border-border/30">
+           <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 p-4 sm:p-6 border-b border-border/30">
             <div>
-              <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> INVOICE</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-7 w-7 sm:h-8 sm:w-8 mr-3" /> INVOICE</h2>
               <div className="mb-2">
                   <Image
                     src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
@@ -172,19 +153,19 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                     className="object-contain rounded-md"
                   />
               </div>
-              <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
-              <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-              <div className="text-sm text-muted-foreground mt-1.5">{order.updatedAt && order.updatedByUserName ? (isClient ? <>Last Updated: {order.updatedByUserName} {formatDate(order.updatedAt)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} on ${formatDate(order.createdAt)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+              <p className="text-muted-foreground text-xs sm:text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
+              <p className="text-muted-foreground text-xs sm:text-sm">colorhut.official@gmail.com | +8801919-760626</p>
+              <div className="text-xs text-muted-foreground mt-1.5">{order.updatedAt && order.updatedByUserName ? (isClient ? <>Last Updated: {order.updatedByUserName} {formatDate(order.updatedAt)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} on ${formatDate(order.createdAt)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
             </div>
             <div className="text-left sm:text-right mt-4 sm:mt-0">
-              <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-              <div className="text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-              <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
+              <p className="text-md sm:text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+              <div className="text-xs sm:text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+              <div className="mt-2"><svg ref={barcodeRef} className="object-contain"></svg></div>
             </div>
           </div>
           
-          <div className="px-6 sm:px-8">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="px-4 sm:px-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
                 <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
                   <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4"/>Bill To:</h4>
                   <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
@@ -202,7 +183,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">Order Items</h3>
                     <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
-                      <Table><TableHeader><TableRow><TableHead>Model</TableHead><TableHead className="text-center">Quantity</TableHead><TableHead>Lamination</TableHead><TableHead className="text-right">Unit Price</TableHead><TableHead className="text-right">Total Price</TableHead></TableRow></TableHeader>
+                      <Table><TableHeader><TableRow><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead></TableRow></TableHeader>
                         <TableBody>{order.orderItems.map((item, index) => (<TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
                               <TableCell className="font-medium text-card-foreground">{item.model}</TableCell><TableCell className="text-center text-card-foreground">{item.quantity}</TableCell><TableCell className="text-card-foreground">{item.lamination}</TableCell><TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell><TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
                         </TableRow>))}</TableBody></Table>
@@ -211,13 +192,13 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
               )}
           </div>
           
-          {order.orderNotes && (<div className="px-6 sm:px-8 mb-8">
+          {order.orderNotes && (<div className="px-4 sm:px-6 mb-6">
             <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80"/>Order Notes:</h3>
             <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
           </div>)}
 
           {allAdvancePaymentRecords.length > 0 && (
-            <div className="px-6 sm:px-8 mb-8">
+            <div className="px-4 sm:px-6 mb-6">
               <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80"/>Payments History</h3>
               <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                 <Table>
@@ -238,23 +219,23 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
             </div>
           )}
 
-          <div className="px-6 sm:px-8 flex justify-end mt-8 pt-6 pb-6 border-t border-border/30">
+          <div className="px-4 sm:px-6 flex justify-end mt-6 pt-6 pb-6 border-t border-border/30">
             <div className="w-full max-w-xs sm:max-w-sm relative">
-              <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
-              {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
-              <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
+              <div className="flex justify-between mb-1 text-sm"><span className="text-muted-foreground">Order Items Total:</span><span className="font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
+              {effectiveDiscount > 0 && (<div className="flex justify-between mb-1 text-sm"><span className="text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Client Discount:</span><span className="font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
+              <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="font-semibold text-foreground">Net Payable:</span><span className="font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
               {shippingCharge <= 0 && (
-                <p className="text-sm font-semibold text-muted-foreground mb-2 text-right">(Excluding delivery charge)</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2 text-right">(Excluding delivery charge)</p>
               )}
               
               {shippingCharge > 0 && (
-                <div className="flex justify-between mb-2">
-                  <span className="text-md text-muted-foreground flex items-center"><Truck className="h-4 w-4 mr-1"/>Shipping Charge:</span>
-                  <span className="text-md font-medium text-foreground">+ {formatCurrency(shippingCharge)}</span>
+                <div className="flex justify-between mb-2 text-sm">
+                  <span className="text-muted-foreground flex items-center"><Truck className="h-4 w-4 mr-1"/>Shipping Charge:</span>
+                  <span className="font-medium text-foreground">+ {formatCurrency(shippingCharge)}</span>
                 </div>
               )}
 
-              {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
+              {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2 text-sm"><span className="text-muted-foreground">Total Advance Paid:</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
               {showPaidBadge ? (
                   <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
                       <Image
@@ -267,15 +248,14 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                       />
                   </div>
               ) : (grandTotal > 0 && amountDue > 0.01) && (
-                  <><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
+                  <><Separator className="my-2 bg-border/50" /><div className="flex justify-between text-lg"><span className="font-bold text-primary">Amount Due:</span><span className="font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
               )}
             </div>
           </div>
         </div>
       </div>
       
-      {/* Approval Form */}
-      <div className="max-w-4xl mx-auto mt-8 flex flex-col items-center justify-center p-4">
+      <div className="max-w-4xl mx-auto mt-6 flex flex-col items-center justify-center p-4">
         <Button size="lg" onClick={() => setIsConfirmingApproval(true)} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
             Approve for Production
@@ -293,21 +273,6 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsConfirmingApproval(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleApprove}>Confirm</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      <AlertDialog open={isRequestingChanges} onOpenChange={setIsRequestingChanges}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Submit Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to submit these change requests? Our team will be notified.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsRequestingChanges(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRequestChanges}>Submit Request</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
