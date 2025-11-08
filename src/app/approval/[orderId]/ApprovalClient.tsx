@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
@@ -275,20 +275,12 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
       </div>
       
       {/* Approval Form */}
-      <Card className="max-w-4xl mx-auto mt-8 shadow-lg">
-        <CardHeader>
-          <CardTitle>Action Required</CardTitle>
-          <CardDescription>
-            Approve the order to send it to production.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter className="bg-muted/30 p-6 flex flex-col sm:flex-row justify-end gap-4">
-            <Button size="lg" onClick={() => setIsConfirmingApproval(true)} disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
-                Approve for Production
-            </Button>
-        </CardFooter>
-      </Card>
+      <div className="max-w-4xl mx-auto mt-8 flex flex-col items-center justify-center p-4">
+        <Button size="lg" onClick={() => setIsConfirmingApproval(true)} disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
+            Approve for Production
+        </Button>
+      </div>
       
       <AlertDialog open={isConfirmingApproval} onOpenChange={setIsConfirmingApproval}>
         <AlertDialogContent>
