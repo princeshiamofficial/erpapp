@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, ArrowRight, PlusCircle, Edit, Trash2, ClipboardList } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, PlusCircle, Edit, Trash2, ClipboardList, Printer } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
@@ -191,23 +191,32 @@ export default function MyDailyRoutinePage() {
     setRoutineToDelete(null);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (isAuthLoading || !currentUser) {
     return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
   
   return (
     <>
-      <div className="space-y-4 p-1 sm:p-4">
-        <div className="flex justify-between items-center bg-card p-2 rounded-md">
+      <div className="space-y-4 p-1 sm:p-4 printable-area">
+        <div className="flex justify-between items-center bg-card p-2 rounded-md no-print">
           <Button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" /> Previous Month
           </Button>
           <h2 className="text-lg font-semibold text-center">
             {format(currentMonth, "MMMM yyyy")}
           </h2>
-          <Button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} variant="outline">
-            Next Month <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handlePrint} variant="outline">
+              <Printer className="h-4 w-4 mr-2"/> Print
+            </Button>
+            <Button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} variant="outline">
+              Next Month <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -230,14 +239,14 @@ export default function MyDailyRoutinePage() {
                                     <span style={{ color: textColor }} className="text-center">{header.title}</span>
                                     <span className="font-normal text-xs text-center" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
                                 </div>
-                                <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3" style={{ color: textColor }}/></Button>
                                 </div>
                             </th>
                            )
                         })}
-                        <th className="border p-2 align-top bg-muted/50 w-24 min-w-[96px]">
+                        <th className="border p-2 align-top bg-muted/50 w-24 min-w-[96px] no-print">
                           <Button size="sm" className="w-full h-full" onClick={openAddDialog}>
                             <PlusCircle className="h-4 w-4 mr-1 sm:mr-2"/>
                             <span className="hidden sm:inline">New</span>
@@ -275,7 +284,7 @@ export default function MyDailyRoutinePage() {
                                         </td>
                                     )
                                 })}
-                                <td className="border p-2"></td>
+                                <td className="border p-2 no-print"></td>
                             </tr>
                         )
                     })}
@@ -320,6 +329,37 @@ export default function MyDailyRoutinePage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+       <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 landscape;
+            margin: 0.5cm;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .printable-area {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          table {
+            font-size: 10px; /* Smaller font for print */
+          }
+          th, td {
+            padding: 2px 4px;
+          }
+          th.no-print, td.no-print {
+            display: none;
+          }
+          button {
+            display: none;
+          }
+        }
+      `}</style>
     </>
   );
 }
