@@ -8,9 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { approveOrderAction, requestChangesAction } from './actions';
+import { approveOrderAction } from './actions';
 import type { TrackingLink, AdvancePaymentRecord } from '@/types';
-import { CheckCircle, Edit, Loader2, FileText, StickyNote, Percent, Building, MapPin, Phone, ReceiptText, Truck, User } from 'lucide-react';
+import { CheckCircle, Edit, Loader2, FileText, StickyNote, Percent, Building, MapPin, Phone, ReceiptText, Truck, User, AlertTriangle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -45,6 +45,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
     initialOrder.currentStatus === 'approved-for-production' ? 'approved' : 'pending'
   );
   const [isConfirmingApproval, setIsConfirmingApproval] = useState(false);
+  const [isPaymentAlertOpen, setIsPaymentAlertOpen] = useState(false);
   const { toast } = useToast();
   
   const [isClient, setIsClient] = useState(false);
@@ -71,12 +72,12 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
     setIsClient(true);
     setOrder(initialOrder);
   }, [initialOrder]);
-
-  const orderSubtotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+  
+  const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
+  const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
   const effectiveDiscount = order.specialClientDiscount || 0;
   const netPayable = orderSubtotal - effectiveDiscount;
-  const shippingCharge = order.shippingCharge || 0;
-  
+
   const allAdvancePaymentRecords = useMemo(() => {
     const records: AdvancePaymentRecord[] = [];
     if (order.advancePayments && order.advancePayments.length > 0) {
@@ -96,9 +97,25 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
   }, [order]);
 
   const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
+  const shippingCharge = order.shippingCharge || 0;
   const grandTotal = netPayable + shippingCharge;
   const amountDue = grandTotal - totalAdvancePaid;
-  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01);
+
+  const showPaidBadge = grandTotal > 0 && amountDue <= 0.01;
+  const showApprovedStamp = order.currentStatus === 'Approved';
+
+  const handleApprovalClick = () => {
+    if (netPayable <= 0) {
+        setIsConfirmingApproval(true);
+        return;
+    }
+    const paymentPercentage = (totalAdvancePaid / netPayable) * 100;
+    if (paymentPercentage < 45) {
+        setIsPaymentAlertOpen(true);
+    } else {
+        setIsConfirmingApproval(true);
+    }
+  };
 
 
   const handleApprove = async () => {
@@ -155,12 +172,12 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
               </div>
               <p className="text-muted-foreground text-xs sm:text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
               <p className="text-muted-foreground text-xs sm:text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-              <div className="text-xs text-muted-foreground mt-1.5">{order.updatedAt && order.updatedByUserName ? (isClient ? <>Last Updated: {order.updatedByUserName} {formatDate(order.updatedAt)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} on ${formatDate(order.createdAt)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+              <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} on ${formatDate(order.createdAt)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
             </div>
             <div className="text-left sm:text-right mt-4 sm:mt-0">
               <p className="text-md sm:text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
               <div className="text-xs sm:text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-              <div className="mt-2"><svg ref={barcodeRef} className="object-contain"></svg></div>
+              <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
             </div>
           </div>
           
@@ -235,7 +252,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                 </div>
               )}
 
-              {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2 text-sm"><span className="text-muted-foreground">Total Advance Paid:</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
+              {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2 text-sm"><span className="text-muted-foreground">{showPaidBadge ? "Total Paid:" : "Total Advance Paid:"}</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
               {showPaidBadge ? (
                   <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
                       <Image
@@ -256,7 +273,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
       </div>
       
       <div className="max-w-4xl mx-auto mt-6 flex flex-col items-center justify-center p-4">
-        <Button size="lg" onClick={() => setIsConfirmingApproval(true)} disabled={isSubmitting}>
+        <Button size="lg" onClick={handleApprovalClick} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
             Approve for Production
         </Button>
@@ -274,6 +291,23 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
             <AlertDialogCancel onClick={() => setIsConfirmingApproval(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleApprove}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isPaymentAlertOpen} onOpenChange={setIsPaymentAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                    Payment Required
+                </AlertDialogTitle>
+                <AlertDialogDescription className="pt-2">
+                    A minimum payment of 45% of the net payable amount is required before this order can be approved for production. Please complete the payment to proceed.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogAction onClick={() => setIsPaymentAlertOpen(false)}>OK</AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
