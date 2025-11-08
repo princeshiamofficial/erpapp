@@ -11,6 +11,7 @@ import { approveOrderAction, requestChangesAction } from './actions';
 import type { TrackingLink } from '@/types';
 import { CheckCircle, Edit, Loader2, FileText, StickyNote } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
 
 interface ApprovalClientProps {
   order: TrackingLink;
