@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { approveOrderAction, requestChangesAction } from './actions';
 import type { TrackingLink, AdvancePaymentRecord } from '@/types';
-import { CheckCircle, Edit, Loader2, FileText, StickyNote, Percent, Building, MapPin, Phone, ReceiptText, Truck } from 'lucide-react';
+import { CheckCircle, Edit, Loader2, FileText, StickyNote, Percent, Building, MapPin, Phone, ReceiptText, Truck, User } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -159,7 +159,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
     <>
       <div ref={invoiceRef} className="max-w-4xl mx-auto p-0 sm:p-4 md:p-6 lg:p-8">
         <div className="bg-card border border-border/40 rounded-xl shadow-2xl">
-          <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 p-6 sm:p-8 border-b border-border/30">
+           <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 p-6 sm:p-8 border-b border-border/30">
             <div>
               <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> INVOICE</h2>
               <div className="mb-2">
@@ -215,7 +215,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
               <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80"/>Payments History</h3>
               <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {allAdvancePaymentRecords.map((record) => (
                       <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
@@ -223,6 +223,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                         <TableCell className="font-medium text-green-600">{formatCurrency(record.amount)}</TableCell>
                         <TableCell className="text-card-foreground">{record.paymentMethod || 'N/A'}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{record.notes || 'N/A'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{record.recordedByUserName || 'N/A'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -278,29 +279,10 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
         <CardHeader>
           <CardTitle>Action Required</CardTitle>
           <CardDescription>
-            Approve the order to send it to production, or request changes if something needs to be corrected.
+            Approve the order to send it to production.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-            <div className="pt-4 border-t space-y-2">
-              <Label htmlFor="changes" className="text-base font-semibold">Request Changes</Label>
-              <Textarea
-                id="changes"
-                value={changes}
-                onChange={(e) => setChanges(e.target.value)}
-                placeholder="If you need any changes, please describe them here..."
-                rows={4}
-                className="bg-background"
-                disabled={isSubmitting}
-                suppressHydrationWarning
-              />
-            </div>
-        </CardContent>
         <CardFooter className="bg-muted/30 p-6 flex flex-col sm:flex-row justify-end gap-4">
-            <Button variant="outline" size="lg" onClick={() => setIsRequestingChanges(true)} disabled={isSubmitting || !changes.trim()}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Edit className="mr-2 h-4 w-4" />}
-                Request Changes
-            </Button>
             <Button size="lg" onClick={() => setIsConfirmingApproval(true)} disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
                 Approve for Production
