@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Link as LinkIcon } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2 } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -489,14 +489,9 @@ export function OrderDetailsClient({
   const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
   const shippingCharge = order.shippingCharge || 0;
   const grandTotal = netPayable + shippingCharge;
-  
-  const isDeliveredByCourier = packzyStatus === 'delivered';
-  const isDeliveredInternally = order.currentStatus === 'delivered';
-  const isConsideredDelivered = isDeliveredByCourier || isDeliveredInternally;
-  
-  const amountDue = isConsideredDelivered ? 0 : (grandTotal - totalAdvancePaid);
-  
-  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01) || isConsideredDelivered;
+  const amountDue = grandTotal - totalAdvancePaid;
+
+  const showPaidBadge = grandTotal > 0 && amountDue <= 0.01;
 
 
   return (
@@ -632,7 +627,7 @@ export function OrderDetailsClient({
                          <TableCell>
                             {record.documentUrl ? (
                                 <NextLink href={record.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-primary hover:underline" title="View Payment Proof">
-                                    <LinkIcon className="h-3.5 w-3.5" />
+                                    <Paperclip className="h-3.5 w-3.5" />
                                     <span>{record.paymentMethod || 'N/A'}</span>
                                 </NextLink>
                             ) : (
@@ -687,11 +682,22 @@ export function OrderDetailsClient({
 
         {showApproveButton && (
             <div id="approve" className="text-center py-8">
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1],
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  repeatType: "mirror",
+                }}
+              >
                 <NextLink href={`/approval/${order.id}`} passHref>
                     <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg py-3 px-8 rounded-lg shadow-lg hover:shadow-primary/40 transition-all duration-300 ease-in-out transform hover:scale-105">
                         Approve Now
                     </Button>
                 </NextLink>
+              </motion.div>
             </div>
         )}
 
@@ -775,3 +781,4 @@ export function OrderDetailsClient({
     </>
   );
 }
+
