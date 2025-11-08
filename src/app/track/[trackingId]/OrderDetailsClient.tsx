@@ -149,6 +149,13 @@ export function OrderDetailsClient({
     
     if (window.location.hash === '#approve') {
       setShowApproveButton(true);
+      // Use timeout to ensure the element is rendered before scrolling
+      setTimeout(() => {
+        const approveSection = document.getElementById('approve');
+        if (approveSection) {
+          approveSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     }
 
     const fetchPackzyStatus = async () => {
