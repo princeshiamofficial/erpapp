@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -31,14 +31,11 @@ const ATTENDANCE_STORAGE_KEY = 'colorHutAttendanceMark';
 const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean, disabledReason: string }) => {
     const [unlocked, setUnlocked] = useState(false);
     const x = useMotionValue(0);
-    const springX = useSpring(x, { stiffness: 300, damping: 40 });
     const sliderRef = React.useRef<HTMLDivElement>(null);
     const [sliderWidth, setSliderWidth] = useState(0);
     const handleSize = 64; 
 
     const textOpacity = useTransform(x, [0, sliderWidth / 3], [1, 0]);
-    const textX = useTransform(x, [0, sliderWidth / 3], [0, 20]);
-
 
     useEffect(() => {
         const updateSliderWidth = () => {
@@ -51,20 +48,20 @@ const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onCon
         return () => window.removeEventListener('resize', updateSliderWidth);
     }, [sliderRef]);
 
-    const handleDragEnd = () => {
+    const handleDragEnd = (event: any, info: any) => {
         if (disabled) {
-            springX.set(0);
+            x.set(0);
             return;
         }
-        if (x.get() > sliderWidth - handleSize - 20) {
+        if (info.offset.x > sliderWidth - handleSize - 20) {
             setUnlocked(true);
             onConfirm();
             setTimeout(() => {
-              springX.set(0);
+              x.set(0);
               setUnlocked(false);
             }, 1000);
         } else {
-            springX.set(0);
+            x.set(0);
         }
     };
     
@@ -83,7 +80,7 @@ const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onCon
         >
             <motion.div
                 className={cn("absolute left-1 top-1 h-16 w-16 rounded-full flex items-center justify-center z-10", handleColor, disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing")}
-                style={{ x: springX }}
+                style={{ x }}
                 drag="x"
                 dragConstraints={{ left: 0, right: sliderWidth > handleSize ? sliderWidth - handleSize - 8 : 0 }}
                 onDragEnd={handleDragEnd}
@@ -95,7 +92,7 @@ const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onCon
             <AnimatePresence>
               {!unlocked && (
                 <motion.span
-                    style={{ opacity: textOpacity, x: textX }}
+                    style={{ opacity: textOpacity }}
                     className="select-none pointer-events-none text-center px-20"
                 >
                     {disabled ? disabledReason : text}
