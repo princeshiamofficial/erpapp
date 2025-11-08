@@ -288,19 +288,9 @@ export default function CheckInOutPage() {
     return () => clearInterval(timer);
   }, []);
   
-  const handleActionConfirm = () => {
-    if (status === 'Checked Out') {
-      handleCheckIn();
-    } else {
-      handleCheckOut();
-    }
-    setTimeout(() => setIsSheetOpen(false), 500);
-  };
-  
-  const handleCheckIn = async () => {
+   const handleCheckIn = async () => {
     if (!canPerformAction) {
         toast({ title: "Check-in Failed", description: disabledReason, variant: "destructive" });
-        setIsSheetOpen(false);
         return;
     }
     if (status === 'Checked In' || !currentUser) return;
@@ -310,7 +300,6 @@ export default function CheckInOutPage() {
     let isLate = false;
     let checkInMessage = 'You checked in on time.';
     
-    // Find the applicable office time for the current user's role
     const userRole = currentUser.role;
     const applicableOfficeTime = officeTimes.find(time => 
       (Array.isArray(time.applicableRoles) && time.applicableRoles.includes(userRole)) || time.applicableRoles === 'all'
@@ -332,7 +321,7 @@ export default function CheckInOutPage() {
     
     const newAttendanceStatus = isLate ? 'Late' as const : 'On Time' as const;
     setAttendanceStatus(newAttendanceStatus);
-    setCheckInLocation(currentLocation || undefined); // Set the check-in location
+    setCheckInLocation(currentLocation || undefined);
 
     const recordData = {
       checkInTime: now.toISOString(),
@@ -365,7 +354,6 @@ export default function CheckInOutPage() {
   const handleCheckOut = async () => {
     if (!canPerformAction) {
         toast({ title: "Check-out Failed", description: disabledReason, variant: "destructive" });
-        setIsSheetOpen(false);
         return;
     }
     if (status === 'Checked Out' || !checkInTime || !currentUser) return;
@@ -378,7 +366,7 @@ export default function CheckInOutPage() {
 
     const recordData = {
       checkInTime: checkInTime.toISOString(),
-      status: attendanceStatus, // Pass the preserved status
+      status: attendanceStatus, 
       checkInLocation: checkInLocation,
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
@@ -393,7 +381,7 @@ export default function CheckInOutPage() {
           checkInTime: checkInTime.toISOString(),
           checkInLocation: checkInLocation,
           checkOutTime: now.toISOString(),
-          attendanceStatus: attendanceStatus, // Preserve status
+          attendanceStatus: attendanceStatus,
         });
         toast({
           title: "Checked Out Successfully",
@@ -402,6 +390,15 @@ export default function CheckInOutPage() {
     } else {
         toast({ title: "Check-out Failed", description: result.error, variant: "destructive" });
     }
+  };
+  
+  const handleActionConfirm = () => {
+    if (status === 'Checked Out') {
+      handleCheckIn();
+    } else {
+      handleCheckOut();
+    }
+    setIsSheetOpen(false); // Close sheet after action is triggered
   };
 
   const calculateHoursWorked = () => {
