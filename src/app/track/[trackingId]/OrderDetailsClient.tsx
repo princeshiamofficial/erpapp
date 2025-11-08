@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2 } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -781,4 +781,3 @@ export function OrderDetailsClient({
     </>
   );
 }
-
