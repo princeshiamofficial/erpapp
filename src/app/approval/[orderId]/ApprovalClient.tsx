@@ -174,10 +174,11 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
               </div>
               <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
               <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
+              <div className="text-sm text-muted-foreground mt-1.5">{order.updatedAt && order.updatedByUserName ? (isClient ? <>Last Updated: {order.updatedByUserName} {formatDate(order.updatedAt)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} on ${formatDate(order.createdAt)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
             </div>
             <div className="text-left sm:text-right mt-4 sm:mt-0">
               <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-              <div className="text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-56" />}</div>
+              <div className="text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
               <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
             </div>
           </div>
@@ -190,6 +191,11 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                   <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{order.address}</p>
                   <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{order.phoneNumber}</p>
                 </div>
+                {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
+                  <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
+                  <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
+                </div>)}
               </div>
 
               {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
@@ -232,7 +238,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
             </div>
           )}
 
-          <div className="px-6 sm:px-8 flex justify-end mt-8 pt-6 border-t border-border/30">
+          <div className="px-6 sm:px-8 flex justify-end mt-8 pt-6 pb-6 border-t border-border/30">
             <div className="w-full max-w-xs sm:max-w-sm relative">
               <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
               {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
@@ -248,13 +254,7 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                 </div>
               )}
 
-              {totalAdvancePaid > 0 && (
-                <div className="flex justify-between mb-2">
-                  <span className="text-md text-muted-foreground">Total Advance Paid:</span>
-                  <span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span>
-                </div>
-              )}
-
+              {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
               {showPaidBadge ? (
                   <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
                       <Image
