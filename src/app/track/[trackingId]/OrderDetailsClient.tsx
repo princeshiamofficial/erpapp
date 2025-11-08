@@ -22,7 +22,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion } from 'framer-motion';
 import { formatDistanceToNowStrict, parseISO, format as formatDateFns } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import NextLink from 'next/link';
 import { cn } from '@/lib/utils';
@@ -465,7 +465,7 @@ export function OrderDetailsClient({
         amount: order.advancePayment,
         date: order.createdAt,
         paymentMethod: order.paymentMethod || "Unknown",
-        notes: "Initial advance payment (legacy data).",
+        notes: "Initial advance payment (legacy).",
         recordedByUserId: order.crmUserId,
         recordedByUserName: order.crmUserName,
       });
@@ -671,6 +671,17 @@ export function OrderDetailsClient({
             </div>
           )}
         </div>
+
+        <Separator className="my-6 sm:my-8 bg-border/30" />
+        
+        <div id="approve" className="text-center py-8">
+            <NextLink href={`/approval/${order.id}`} passHref>
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg py-3 px-8 rounded-lg shadow-lg hover:shadow-primary/40 transition-all duration-300 ease-in-out transform hover:scale-105">
+                    Approve Now
+                </Button>
+            </NextLink>
+        </div>
+
 
         <Separator className="my-6 sm:my-8 bg-border/30" />
 
