@@ -102,6 +102,8 @@ export function OrderDetailsClient({
   const [commentToDelete, setCommentToDelete] = useState<{ id: string; isReply: boolean; parentId?: string; text: string; } | null>(null);
   const [isDeletingComment, setIsDeletingComment] = useState(false);
   
+  const [showApproveButton, setShowApproveButton] = useState(false);
+  
   // Combine server-passed user and client-side user for the most up-to-date state
   const currentUser = useMemo(() => authContextUser || initialCurrentUser, [authContextUser, initialCurrentUser]);
 
@@ -144,6 +146,10 @@ export function OrderDetailsClient({
       localStorage.setItem('CLIENT_REACTOR_ID_KEY', storedReactorId);
     }
     setClientReactorId(storedReactorId);
+    
+    if (window.location.hash === '#approve') {
+      setShowApproveButton(true);
+    }
 
     const fetchPackzyStatus = async () => {
       if (initialOrder.packzyTrackingCode) {
@@ -672,16 +678,15 @@ export function OrderDetailsClient({
           )}
         </div>
 
-        <Separator className="my-6 sm:my-8 bg-border/30" />
-        
-        <div id="approve" className="text-center py-8">
-            <NextLink href={`/approval/${order.id}`} passHref>
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg py-3 px-8 rounded-lg shadow-lg hover:shadow-primary/40 transition-all duration-300 ease-in-out transform hover:scale-105">
-                    Approve Now
-                </Button>
-            </NextLink>
-        </div>
-
+        {showApproveButton && (
+            <div id="approve" className="text-center py-8">
+                <NextLink href={`/approval/${order.id}`} passHref>
+                    <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg py-3 px-8 rounded-lg shadow-lg hover:shadow-primary/40 transition-all duration-300 ease-in-out transform hover:scale-105">
+                        Approve Now
+                    </Button>
+                </NextLink>
+            </div>
+        )}
 
         <Separator className="my-6 sm:my-8 bg-border/30" />
 
