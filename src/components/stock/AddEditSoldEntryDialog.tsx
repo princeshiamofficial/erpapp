@@ -174,8 +174,7 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
               <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
             </div>
              <div className="space-y-1">
-                <Label>Company Name</Label>
-                <Input value={companyName} readOnly disabled placeholder="Auto-filled from Order" className="bg-muted/50" />
+                <Input value={companyName} readOnly disabled placeholder="Auto-filled from Order" className="bg-muted/50 mt-7" />
              </div>
           </div>
           
