@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -232,10 +233,11 @@ export default function PayrollPage() {
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-      const dailySalary = effectiveSalary / 30;
-      const salaryForDaysWorked = dailySalary * presentDays;
+      const dailySalaryBasedOnWorkingDays = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
+      const dailySalaryForFine = effectiveSalary / 30; // Fine is always based on 30 days
+      const salaryForDaysWorked = dailySalaryBasedOnWorkingDays * presentDays;
 
-      const automaticFine = Math.floor(lateDays / 3) * dailySalary;
+      const automaticFine = Math.floor(lateDays / 3) * dailySalaryForFine;
       
       const providentFund = effectiveSalary * 0.07;
       const trainingFee = 0;
@@ -626,6 +628,66 @@ export default function PayrollPage() {
     </Card>
   );
   
+  const attendeesReportContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Filter by date..."
+                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                type="date"
+                value={attendanceDateFilter}
+                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Employee</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>In Time</TableHead>
+                <TableHead>Out Time</TableHead>
+                <TableHead>Hours Worked</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
+                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    No attendance data recorded for the selected period.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
@@ -729,78 +791,6 @@ export default function PayrollPage() {
           existingPayslip={existingPayslipData}
           weekendDays={weekendDays}
         />
-      )}
-      {employeeToIncrement && (
-        <IncrementSalaryDialog
-          isOpen={!!employeeToIncrement}
-          onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
-          employee={employeeToIncrement}
-          onSalaryIncremented={fetchData}
-        />
-      )}
-      {leaveToManage && currentUser && (
-        <ManageLeaveDialog
-            isOpen={!!leaveToManage}
-            onOpenChange={(open) => !open && setLeaveToManage(null)}
-            employee={leaveToManage}
-            currentUser={currentUser}
-            onLeaveUpdated={fetchData}
-        />
-      )}
-      {incrementToDelete && (
-        <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive"/>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>This will delete the salary increment and revert the salary change from that date. This action cannot be undone.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmDeleteIncrement} disabled={isDeletingIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                {isDeletingIncrement ? <><Loader2 className="h-4 w-4 animate-spin mr-2"/>Deleting...</> : "Yes, Delete Increment"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-       {historyToView && (
-        <Sheet open={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)}>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Salary History for {historyToView.name}</SheetTitle>
-              <SheetDescription>
-                A record of all salary increments for this employee.
-              </SheetDescription>
-            </SheetHeader>
-            <ScrollArea className="h-[calc(100vh-10rem)] mt-4 pr-4">
-              <div className="space-y-4">
-                {(historyToView.salaryHistory || []).length > 0 ? (
-                  historyToView.salaryHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((inc, index) => (
-                    <Card key={index} onDoubleClick={() => setIncrementToDelete({employeeId: historyToView.id, increment: inc})}>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-semibold">{format(new Date(inc.date), 'MMMM yyyy')}</p>
-                            <p className="text-sm text-green-600 font-medium">Increment: {formatCurrency(inc.incrementAmount)}</p>
-                          </div>
-                          <div className="text-right">
-                             <p className="text-xs text-muted-foreground">Previous: {formatCurrency(inc.previousSalary)}</p>
-                             <p className="text-lg font-bold">{formatCurrency(inc.newSalary)}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center text-muted-foreground pt-10">
-                    <History className="h-10 w-10 mx-auto mb-2 opacity-50"/>
-                    No salary increment history found.
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </SheetContent>
-        </Sheet>
       )}
     </div>
   );

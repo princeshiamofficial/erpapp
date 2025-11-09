@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -74,7 +75,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return baseSalary / 30; // Always divide by 30 for fine calculation
   }, [employee.salary]);
 
-  const perDaySalaryForAbsence = useMemo(() => {
+  const dailySalaryBasedOnWorkingDays = useMemo(() => {
       const baseSalary = employee.salary || 0;
       return totalWorkingDays > 0 ? baseSalary / totalWorkingDays : 0;
   }, [employee.salary, totalWorkingDays]);
@@ -138,10 +139,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const trainingFeeNum = isNewEmployee ? (parseFloat(trainingFee) || 0) : 0;
     const advanceNum = parseFloat(advance) || 0;
     
-    const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
+    const salaryForDaysWorked = dailySalaryBasedOnWorkingDays * presentDays;
     
     return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum - advanceNum;
-  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence, trainingFee, isNewEmployee, advance]);
+  }, [incentive, fine, providentFund, present, dailySalaryBasedOnWorkingDays, trainingFee, isNewEmployee, advance]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
