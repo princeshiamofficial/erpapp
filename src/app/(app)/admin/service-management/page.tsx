@@ -182,7 +182,8 @@ export default function ServiceManagementPage() {
     );
   }
   
-  const renderItemList = (items: (ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem)[], type: ItemType, title: string, Icon: React.ElementType) => (
+  const renderItemList = (items: (ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem)[], type: ItemType, title: string, Icon: React.ElementType) => {
+    return (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
       <CardHeader className="border-b p-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -230,7 +231,7 @@ export default function ServiceManagementPage() {
         )}
       </CardContent>
     </Card>
-  );
+  )};
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -308,3 +309,5 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
+
+    
