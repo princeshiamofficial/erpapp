@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -125,6 +124,26 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum - advanceNum;
   }, [incentive, fine, providentFund, present, dailySalary, trainingFee, isNewEmployee, advance]);
 
+  const handlePresentChange = (value: string) => {
+    const presentValue = parseInt(value, 10);
+    setPresent(value);
+    if (!isNaN(presentValue) && presentValue >= 0 && presentValue <= 30) {
+      setAbsent(String(30 - presentValue));
+    } else if (value === '') {
+      setAbsent('30');
+    }
+  };
+
+  const handleAbsentChange = (value: string) => {
+    const absentValue = parseInt(value, 10);
+    setAbsent(value);
+    if (!isNaN(absentValue) && absentValue >= 0 && absentValue <= 30) {
+      setPresent(String(30 - absentValue));
+    } else if (value === '') {
+      setPresent('30');
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,11 +187,11 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
             <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                     <Label htmlFor="present-days">Present</Label>
-                    <Input id="present-days" type="number" value={present} onChange={e => setPresent(e.target.value)} required />
+                    <Input id="present-days" type="number" value={present} onChange={(e) => handlePresentChange(e.target.value)} required />
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor="absent-days">Absent</Label>
-                    <Input id="absent-days" type="number" value={absent} onChange={e => setAbsent(e.target.value)} required />
+                    <Input id="absent-days" type="number" value={absent} onChange={(e) => handleAbsentChange(e.target.value)} required />
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor="late-days">Late</Label>

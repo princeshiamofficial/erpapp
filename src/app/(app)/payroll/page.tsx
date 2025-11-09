@@ -223,7 +223,7 @@ export default function PayrollPage() {
 
       const dailySalary = effectiveSalary / 30; // Strictly use 30 days for daily salary calculation
       const salaryForDaysWorked = dailySalary * presentDays;
-      const absentDays = Math.max(0, 30 - presentDays); // Assuming 30 day month for absence
+      const absentDays = 30 - presentDays;
 
       const automaticFine = Math.floor(lateDays / 3) * dailySalary;
       
@@ -235,7 +235,7 @@ export default function PayrollPage() {
       return {
         ...employee,
         presentDays,
-        absentDays,
+        absentDays: Math.max(0, absentDays),
         lateDays,
         providentFund,
         fine: automaticFine,
