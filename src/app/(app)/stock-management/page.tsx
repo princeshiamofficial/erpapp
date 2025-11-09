@@ -499,7 +499,7 @@ export default function StockManagementPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Order ID</TableHead>
+                        <TableHead>Recorded by</TableHead>
                         <TableHead>Product Name</TableHead>
                         <TableHead>Quantity</TableHead>
                         <TableHead>Total Price</TableHead>
