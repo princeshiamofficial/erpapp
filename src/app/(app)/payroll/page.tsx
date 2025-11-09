@@ -204,7 +204,6 @@ export default function PayrollPage() {
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
       
       if (payslip) {
-        // If a saved payslip exists, use its data directly.
         return {
           ...employee,
           presentDays: payslip.presentDays,
@@ -220,7 +219,6 @@ export default function PayrollPage() {
         };
       }
       
-      // If no saved payslip, calculate from attendance.
       const userAttendanceInRange = attendanceData.filter(att => 
           att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
       );
@@ -234,13 +232,13 @@ export default function PayrollPage() {
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-      const perDaySalaryForFine = effectiveSalary / 30;
-      const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
+      const dailySalary = effectiveSalary / 30;
+      const salaryForDaysWorked = dailySalary * presentDays;
+
+      const automaticFine = Math.floor(lateDays / 3) * dailySalary;
       
-      const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-      const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
       const providentFund = effectiveSalary * 0.07;
-      const trainingFee = 0; // Default, can be edited
+      const trainingFee = 0;
       
       const payableAmount = salaryForDaysWorked - automaticFine - providentFund;
 
@@ -704,7 +702,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -807,6 +805,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-
-    
