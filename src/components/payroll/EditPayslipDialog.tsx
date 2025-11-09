@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Employee, Payslip } from '@/types';
-import { getDaysInMonth, getDay } from 'date-fns';
+import { getDaysInMonth, getDay, isAfter, startOfMonth } from 'date-fns';
 import { updatePayslipAction } from '@/app/(app)/payroll/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -56,29 +56,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
   }, [selectedDate]);
   
-  const totalWorkingDays = useMemo(() => {
-      if (!weekendDays) return 30; // Fallback
-      const daysInMonth = getDaysInMonth(selectedDate);
-      const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
-      let workingDays = 0;
-      for (let i = 1; i <= daysInMonth; i++) {
-          const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-          if (!weekendDayIndexes.includes(getDay(currentDate))) {
-              workingDays++;
-          }
-      }
-      return workingDays;
-  }, [selectedDate, weekendDays]);
-
-  const perDaySalaryForFine = useMemo(() => {
+  const dailySalary = useMemo(() => {
     const baseSalary = employee.salary || 0;
-    return baseSalary / 30; // Always divide by 30 for fine calculation
+    return baseSalary / 30;
   }, [employee.salary]);
-
-  const dailySalaryBasedOnWorkingDays = useMemo(() => {
-      const baseSalary = employee.salary || 0;
-      return totalWorkingDays > 0 ? baseSalary / totalWorkingDays : 0;
-  }, [employee.salary, totalWorkingDays]);
   
   const isNewEmployee = useMemo(() => {
     if (!employee?.joiningDate) return false;
@@ -100,15 +81,15 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         setAdvance(existingPayslip.advance?.toString() || '0');
         setPaymentStatus(existingPayslip.paymentStatus);
       } else {
-        const initialPresent = employee.presentDays?.toString() || totalWorkingDays.toString();
+        const initialPresent = employee.presentDays?.toString() || '30';
         const initialLate = employee.lateDays?.toString() || '0';
-        const initialAbsent = employee.absentDays?.toString() || (totalWorkingDays - parseInt(initialPresent, 10)).toString();
+        const initialAbsent = employee.absentDays?.toString() || (30 - parseInt(initialPresent, 10)).toString();
         
         setPresent(initialPresent);
         setAbsent(initialAbsent);
         setLate(initialLate);
         
-        const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * perDaySalaryForFine;
+        const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * dailySalary;
         setFine(calculatedFine.toFixed(2));
         
         setIncentive('0');
@@ -118,15 +99,15 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, existingPayslip, totalWorkingDays, perDaySalaryForFine]);
+  }, [isOpen, employee, existingPayslip, dailySalary]);
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
     if (!isNaN(lateDaysNum) && lateDaysNum >= 0) {
-      const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalaryForFine;
+      const calculatedFine = Math.floor(lateDaysNum / 3) * dailySalary;
       setFine(calculatedFine.toFixed(2));
     }
-  }, [late, perDaySalaryForFine]);
+  }, [late, dailySalary]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
@@ -139,10 +120,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const trainingFeeNum = isNewEmployee ? (parseFloat(trainingFee) || 0) : 0;
     const advanceNum = parseFloat(advance) || 0;
     
-    const salaryForDaysWorked = dailySalaryBasedOnWorkingDays * presentDays;
+    const salaryForDaysWorked = dailySalary * presentDays;
     
     return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum - advanceNum;
-  }, [incentive, fine, providentFund, present, dailySalaryBasedOnWorkingDays, trainingFee, isNewEmployee, advance]);
+  }, [incentive, fine, providentFund, present, dailySalary, trainingFee, isNewEmployee, advance]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {

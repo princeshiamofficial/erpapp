@@ -189,17 +189,6 @@ export default function PayrollPage() {
     }
 
     // Calculations
-    const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const daysInMonth = getDaysInMonth(selectedDate);
-    const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
-    let totalWorkingDays = 0;
-    for (let i = 1; i <= daysInMonth; i++) {
-        const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-        if (!weekendDayIndexes.includes(getDay(currentDate))) {
-            totalWorkingDays++;
-        }
-    }
-    
     const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
@@ -226,18 +215,17 @@ export default function PayrollPage() {
       
       const presentDays = userAttendanceInRange.length;
       const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
-      const absentDays = (totalWorkingDays - presentDays);
       
       const relevantHistory = (employee.salaryHistory || [])
           .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-      const dailySalaryBasedOnWorkingDays = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-      const dailySalaryForFine = effectiveSalary / 30; // Fine is always based on 30 days
-      const salaryForDaysWorked = dailySalaryBasedOnWorkingDays * presentDays;
+      const dailySalary = effectiveSalary / 30; // Strictly use 30 days for daily salary calculation
+      const salaryForDaysWorked = dailySalary * presentDays;
+      const absentDays = Math.max(0, 30 - presentDays); // Assuming 30 day month for absence
 
-      const automaticFine = Math.floor(lateDays / 3) * dailySalaryForFine;
+      const automaticFine = Math.floor(lateDays / 3) * dailySalary;
       
       const providentFund = effectiveSalary * 0.07;
       const trainingFee = 0;
@@ -247,7 +235,7 @@ export default function PayrollPage() {
       return {
         ...employee,
         presentDays,
-        absentDays: Math.max(0, absentDays),
+        absentDays,
         lateDays,
         providentFund,
         fine: automaticFine,
@@ -276,7 +264,7 @@ export default function PayrollPage() {
       totalPayableAmount: payableTotal
     };
 
-  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -507,6 +495,70 @@ export default function PayrollPage() {
                 </PaginationContent></Pagination>
             </div>
         )}
+      </CardContent>
+    </Card>
+  );
+
+  const employeePerformanceContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="space-y-3">
+            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+                <span>Employee</span>
+                <span>Designation</span>
+                <span className="text-center">Completed Orders</span>
+                <span className="text-center">Efficiency Score</span>
+                <span className="text-center">Revenue Generated</span>
+                <span className="text-center">Rating</span>
+            </div>
+            {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                    </div>
+                ))
+            ) : paginatedEmployees.length > 0 ? (
+                paginatedEmployees.map((employee) => (
+                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+                        <div className="flex items-center gap-3">
+                            {/* Avatar placeholder */}
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                            <span className="font-medium text-gray-800">{employee.name}</span>
+                        </div>
+                        <span>{employee.designation}</span>
+                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
+                        <div className="flex items-center gap-2">
+                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
+                           <span className="text-xs font-semibold">85%</span>
+                        </div>
+                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
+                        <div className="flex justify-center items-center gap-1 text-yellow-500">
+                          <Star className="h-4 w-4 fill-current"/>
+                          <span className="font-bold text-sm">4.8</span>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <div className="text-center py-16 text-gray-500">No performance data available.</div>
+            )}
+        </div>
       </CardContent>
     </Card>
   );
