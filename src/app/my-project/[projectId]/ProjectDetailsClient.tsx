@@ -62,15 +62,8 @@ export function ProjectDetailsClient({
     <DndContext>
       <div className="flex flex-col h-full space-y-4 p-4">
         {isReadOnly && (
-          <div className="flex items-center justify-center gap-2 p-2 rounded-md">
-            <Image
-                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-                alt="Color Hut Logo"
-                width={160}
-                height={40}
-                priority
-                className="object-contain rounded-md"
-              />
+          <div className="flex items-center justify-center gap-2 p-2 rounded-md bg-black text-white">
+            <Logo className="h-8 w-8 text-white" />
           </div>
         )}
         <h1 className="text-2xl font-bold tracking-tight">
