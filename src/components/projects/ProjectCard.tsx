@@ -204,10 +204,15 @@ const calculateProgressInfo = (
 };
 
 export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, allUsers, onOpenAssignDrDialog }: ProjectCardProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
     data: { project },
-    disabled: isOverlay, 
+    disabled: isOverlay || !isMounted, 
   });
   
   const crmUser = allUsers.find(u => u.id === project.assigneeId);
@@ -246,13 +251,15 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
+  
+  const dndAttributes = isMounted ? listeners : {};
+  const dndProps = isMounted ? { ...attributes, ...listeners } : {};
 
   return (
     <motion.div
       ref={!isOverlay ? setNodeRef : null}
       style={style}
-      {...(!isOverlay ? listeners : {})}
-      {...(!isOverlay ? attributes : {})}
+      {...(!isOverlay ? dndProps : {})}
       animate={{
         scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1),
         opacity: !isOverlay && isDragging ? 0.4 : 1,
@@ -266,6 +273,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
         "relative group",
         isOverlay ? "z-50" : (isDragging ? "z-50" : "")
       )}
+      onClick={() => isMounted && !isOverlay && onViewLead(project)}
     >
       <Card
         className={cn(
