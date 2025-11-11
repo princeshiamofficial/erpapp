@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DndContext, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
@@ -50,12 +50,12 @@ export function ProjectDetailsClient({
     return grouped;
   }, [project]);
   
-  const { contactPerson, businessName } = useMemo(() => {
+  const { businessName } = useMemo(() => {
     const parts = (project?.name || '').split(' • ');
     if (parts.length > 1) {
-      return { contactPerson: parts[0].trim(), businessName: parts.slice(1).join(' • ').trim() };
+      return { businessName: parts.slice(1).join(' • ').trim() };
     }
-    return { contactPerson: '', businessName: project?.name || 'Loading...' };
+    return { businessName: project?.name || 'Loading...' };
   }, [project?.name]);
 
 
@@ -63,7 +63,7 @@ export function ProjectDetailsClient({
     <DndContext>
       <div className="flex flex-col h-full space-y-4 p-4">
         {isReadOnly && (
-          <div className="flex items-center justify-center gap-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-md text-sm font-medium">
+          <div className="flex items-center justify-center gap-2 p-2 bg-gray-900 text-white rounded-md text-sm font-medium">
             <EyeOff className="h-4 w-4" />
             Read-Only View
           </div>
