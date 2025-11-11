@@ -210,7 +210,7 @@ export default function SalaryTransferPage() {
       <style jsx global>{`
         @media print {
           @page {
-            margin-top: 1.5in;
+            margin-top: 1in;
           }
           body {
             -webkit-print-color-adjust: exact;
