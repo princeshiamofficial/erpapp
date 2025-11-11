@@ -211,6 +211,7 @@ export default function SalaryTransferPage() {
         @media print {
           @page {
             margin-top: 1in;
+            margin-bottom: 1in;
           }
           body {
             -webkit-print-color-adjust: exact;
@@ -221,6 +222,7 @@ export default function SalaryTransferPage() {
             margin: 0 !important;
             border: none;
             box-shadow: none;
+            background-color: transparent !important;
           }
           .no-print {
             display: none;
