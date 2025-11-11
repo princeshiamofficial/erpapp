@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DndContext, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners } from '@dnd-kit/core';
 import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { ProjectCard } from '@/components/projects/ProjectCard';
-import type { Project, CustomStatus, User, GlobalSettings, ProjectStatusType, TrackingLink } from '@/types';
+import type { Project, CustomStatus, User, GlobalSettings, ProjectStatusType } from '@/types';
 import dynamic from 'next/dynamic';
 import { Briefcase, EyeOff } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
