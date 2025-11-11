@@ -1,5 +1,4 @@
 
-
 import { Suspense } from 'react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
