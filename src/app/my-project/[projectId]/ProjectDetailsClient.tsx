@@ -1,11 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DndContext } from '@dnd-kit/core';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import type { Project, CustomStatus, User, GlobalSettings, ProjectStatusType } from '@/types';
-import { EyeOff, Briefcase } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
+import { Logo } from '@/components/layout/Logo';
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: Briefcase, headerBgClass: 'bg-sky-600' },
@@ -51,10 +52,8 @@ export function ProjectDetailsClient({
   const { businessName } = useMemo(() => {
     const nameParts = (project?.name || '').split(' • ');
     if (nameParts.length > 1) {
-      // Return the part after the first '•'
       return { businessName: nameParts.slice(1).join(' • ').trim() };
     }
-    // If no '•', return the whole name as the business name
     return { businessName: project?.name || 'Loading...' };
   }, [project?.name]);
 
@@ -63,8 +62,15 @@ export function ProjectDetailsClient({
     <DndContext>
       <div className="flex flex-col h-full space-y-4 p-4">
         {isReadOnly && (
-          <div className="flex items-center justify-center gap-2 p-2 bg-black text-white rounded-md text-sm font-medium">
-            Read-Only View
+          <div className="flex items-center justify-center gap-2 p-2 rounded-md">
+            <Image
+                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                alt="Color Hut Logo"
+                width={160}
+                height={40}
+                priority
+                className="object-contain rounded-md"
+              />
           </div>
         )}
         <h1 className="text-2xl font-bold tracking-tight">
