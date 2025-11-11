@@ -7,12 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import type { Project, CustomStatus, User, GlobalSettings, ProjectStatusType } from '@/types';
-import dynamic from 'next/dynamic';
 import { Briefcase, EyeOff } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
-
-// Since this is a public page, interactive dialogs are not needed.
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: Briefcase, headerBgClass: 'bg-sky-600' },
@@ -49,19 +44,19 @@ export function ProjectDetailsClient({
       'CR Clearance': [], 'CO Clearance': [], 'Cancel': [], 'On Design': [],
       'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
     };
-    if (grouped[project.status]) {
+    if (project && grouped[project.status]) {
       grouped[project.status].push(project);
     }
     return grouped;
   }, [project]);
   
   const { contactPerson, businessName } = useMemo(() => {
-    const parts = (project.name || '').split(' • ');
+    const parts = (project?.name || '').split(' • ');
     if (parts.length > 1) {
       return { contactPerson: parts[0].trim(), businessName: parts.slice(1).join(' • ').trim() };
     }
-    return { contactPerson: '', businessName: project.name };
-  }, [project.name]);
+    return { contactPerson: '', businessName: project?.name || 'Loading...' };
+  }, [project?.name]);
 
 
   return (
