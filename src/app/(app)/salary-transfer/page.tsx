@@ -140,7 +140,7 @@ export default function SalaryTransferPage() {
                 <p>Salary Month : <span className="text-red-600 font-semibold">{format(selectedDate, 'MMM-yy')}</span></p>
               </div>
               <div className="px-2 mt-1">
-                <p>Bank Name : <span className="text-red-600 font-semibold">UNITED COMM. BANK (A/C No)</span></p>
+                <p>Bank Name : <span className="text-red-600 font-semibold">UNITED COMM. BANK (A/C 0872101000007053)</span></p>
               </div>
            </div>
 
