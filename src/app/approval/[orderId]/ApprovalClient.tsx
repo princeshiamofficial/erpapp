@@ -318,7 +318,9 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogAction onClick={() => setIsPaymentAlertOpen(false)}>OK</AlertDialogAction>
+                <AlertDialogAction onClick={() => setIsPaymentAlertOpen(false)}>
+                        OK
+                </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
