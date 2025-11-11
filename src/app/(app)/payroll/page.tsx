@@ -188,6 +188,17 @@ export default function PayrollPage() {
     }
 
     // Calculations
+    const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const daysInMonth = getDaysInMonth(selectedDate);
+    const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
+    let totalWorkingDays = 0;
+    for (let i = 1; i <= daysInMonth; i++) {
+        const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
+        if (!weekendDayIndexes.includes(getDay(currentDate))) {
+            totalWorkingDays++;
+        }
+    }
+    
     const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
@@ -214,6 +225,7 @@ export default function PayrollPage() {
       
       const presentDays = userAttendanceInRange.length;
       const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
+      const absentDays = (totalWorkingDays - presentDays);
       
       const relevantHistory = (employee.salaryHistory || [])
           .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
@@ -222,7 +234,6 @@ export default function PayrollPage() {
 
       const dailySalary = effectiveSalary / 30;
       const salaryForDaysWorked = dailySalary * presentDays;
-      const absentDays = 30 - presentDays;
 
       const automaticFine = Math.floor(lateDays / 3) * dailySalary;
       
@@ -263,7 +274,7 @@ export default function PayrollPage() {
       totalPayableAmount: payableTotal
     };
 
-  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData]);
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -815,7 +826,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
