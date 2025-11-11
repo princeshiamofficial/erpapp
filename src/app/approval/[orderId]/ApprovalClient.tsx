@@ -17,6 +17,8 @@ import { Separator } from '@/components/ui/separator';
 import JsBarcode from 'jsbarcode';
 import { Skeleton } from '@/components/ui/skeleton';
 import { parseISO, format } from 'date-fns';
+import { motion } from 'framer-motion';
+import NextLink from 'next/link';
 
 interface ApprovalClientProps {
   order: TrackingLink;
@@ -273,10 +275,20 @@ export function ApprovalClient({ order: initialOrder }: ApprovalClientProps) {
       </div>
       
       <div className="max-w-4xl mx-auto mt-6 flex flex-col items-center justify-center p-4">
-        <Button size="lg" onClick={handleApprovalClick} disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
-            Approve for Production
-        </Button>
+        <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, repeatType: "mirror" }}
+        >
+            <Button 
+                size="lg" 
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg py-3 px-8 rounded-lg shadow-lg hover:shadow-primary/40 transition-all duration-300 ease-in-out transform hover:scale-105"
+                onClick={handleApprovalClick}
+                disabled={isSubmitting}
+            >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
+                Approve Now
+            </Button>
+        </motion.div>
       </div>
       
       <AlertDialog open={isConfirmingApproval} onOpenChange={setIsConfirmingApproval}>
