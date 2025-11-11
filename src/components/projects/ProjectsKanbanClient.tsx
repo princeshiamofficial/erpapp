@@ -13,7 +13,9 @@ import {
   CheckCircle,
   PackageCheck,
   AlertTriangle,
-  ClipboardList
+  ClipboardList,
+  Search,
+  EyeOff
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +52,7 @@ import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from '@/lib/utils';
 
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -128,6 +131,9 @@ export function ProjectsKanbanClient() {
   
   const [projectOwnerFilter, setProjectOwnerFilter] = useState<'my' | 'all'>('my');
 
+  const [isReadOnly, setIsReadOnly] = useState(false);
+  const [hashId, setHashId] = useState<string | null>(null);
+
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -175,33 +181,43 @@ export function ProjectsKanbanClient() {
     }
   }, [toast]);
   
-  // Fetch data on component mount
   useEffect(() => {
-    if (currentUser) {
-        fetchData();
+    if (typeof window !== 'undefined') {
+      const currentHash = window.location.hash.substring(1);
+      if (currentHash) {
+        setHashId(currentHash);
+        if (!currentUser) {
+          setIsReadOnly(true);
+        }
+      }
     }
-  }, [currentUser, fetchData]);
+    fetchData();
+  }, [fetchData, currentUser]);
+  
 
   const filteredProjects = useMemo(() => {
-    let roleFilteredProjects = projects;
+    let baseProjects = projects;
     
-    if (currentUser?.role === 'CRM') {
-        if (currentUser.isLeader) {
-            if (projectOwnerFilter === 'my') {
-                roleFilteredProjects = projects.filter(project => project.assigneeId === currentUser.id);
+    // Filter for hash-based public view
+    if (hashId) {
+      baseProjects = baseProjects.filter(project => project.id === hashId);
+    } else {
+        // Apply role-based filters only if not in single-project (hash) view
+        if (currentUser?.role === 'CRM') {
+            if (currentUser.isLeader) {
+                if (projectOwnerFilter === 'my') {
+                    baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
+                }
+                // 'all' filter means we don't filter by user, so use 'projects'
             } else {
-                // 'all' filter, so they see everything
-                roleFilteredProjects = projects;
+                baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
             }
-        } else {
-            // Regular CRMs only see their own projects
-            roleFilteredProjects = projects.filter(project => project.assigneeId === currentUser.id);
+        } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+          baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
         }
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-      roleFilteredProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
     }
-    
-    return roleFilteredProjects.filter(project => {
+
+    return baseProjects.filter(project => {
       const matchesSearchTerm = debouncedSearchTerm.trim() === '' || 
         project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         project.projectIdDisplay.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
@@ -229,7 +245,7 @@ export function ProjectsKanbanClient() {
       }
       return matchesSearchTerm && matchesCategory && matchesEndDate;
     });
-  }, [projects, debouncedSearchTerm, categoryFilter, endDateFilter, currentUser, projectOwnerFilter]);
+  }, [projects, debouncedSearchTerm, categoryFilter, endDateFilter, currentUser, projectOwnerFilter, hashId]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
@@ -257,6 +273,9 @@ export function ProjectsKanbanClient() {
   ];
   
   const visibleKanbanColumns = useMemo(() => {
+    if (isReadOnly) { // Show all columns in read-only mode
+        return KANBAN_COLUMNS_CONFIG;
+    }
     if (!currentUser || !globalSettings?.projectStageAccess) {
       return [];
     }
@@ -268,9 +287,10 @@ export function ProjectsKanbanClient() {
     return KANBAN_COLUMNS_CONFIG.filter(column => 
       userPermissions[column.status]?.includes(currentUser.role)
     );
-  }, [currentUser, globalSettings]);
+  }, [currentUser, globalSettings, isReadOnly]);
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (isReadOnly) return;
     const { active } = event;
     if (active.data.current?.project) {
       setActiveProject(active.data.current.project as Project);
@@ -278,7 +298,7 @@ export function ProjectsKanbanClient() {
   };
 
   const handleConfirmStatusUpdate = useCallback(async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
-    if (!currentUser) return;
+    if (!currentUser || isReadOnly) return;
     const originalStatus = project.status;
     
     setProjects(prevProjects => {
@@ -299,10 +319,12 @@ export function ProjectsKanbanClient() {
     } else {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
     }
-  }, [currentUser, toast]);
+  }, [currentUser, toast, isReadOnly]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveProject(null);
+    if (isReadOnly) return;
+
     const { active, over } = event;
   
     if (!currentUser) {
@@ -338,11 +360,10 @@ export function ProjectsKanbanClient() {
       if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
         setProjectForDocsComplete(project);
         setIsDocsCompleteDialogOpen(true);
-        return; // Halt direct status update, wait for dialog confirmation
+        return; 
       }
     }
   
-    // Existing checks
     if (newStatus === 'Logistics' && project.status !== 'Logistics' && globalSettings?.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
       setIsLoading(true);
       const order = await getOrderById(project.id);
@@ -388,15 +409,15 @@ export function ProjectsKanbanClient() {
     }
   
     handleConfirmStatusUpdate(project, newStatus);
-  }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate]);
+  }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate, isReadOnly]);
   
   const handleDragCancel = () => {
     setActiveProject(null);
   };
   
   const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
-    if (!currentUser) {
-        toast({ title: "Error", description: "User not authenticated.", variant: "destructive" });
+    if (isReadOnly || !currentUser) {
+        toast({ title: "Read-Only Mode", description: "Actions are disabled.", variant: "default" });
         return;
     }
     
@@ -421,7 +442,7 @@ export function ProjectsKanbanClient() {
       setIsAssignDrDialogOpen(true);
     }
 
-  }, [toast, currentUser]);
+  }, [toast, currentUser, isReadOnly]);
 
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
@@ -448,34 +469,42 @@ export function ProjectsKanbanClient() {
         collisionDetection={closestCorners}
     >
       <div className="flex flex-col h-full space-y-4">
-        {/* Filter Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
-          <Input
-            placeholder="Search projects (ID, Name, Assignee, DR)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-card border-border/50 focus:border-primary"
-          />
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="bg-card border-border/50 focus:border-primary">
-              <SelectValue placeholder="Filter by category..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={endDateFilter} onValueChange={setEndDateFilter}>
-            <SelectTrigger className="bg-card border-border/50 focus:border-primary">
-              <SelectValue placeholder="Filter by end date..." />
-            </SelectTrigger>
-            <SelectContent>
-              {endDateOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+        {isReadOnly && (
+          <div className="flex items-center justify-center gap-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-md text-sm font-medium">
+            <EyeOff className="h-4 w-4" />
+            Read-Only View
+          </div>
+        )}
+
+        {!isReadOnly && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
+            <Input
+              placeholder="Search projects (ID, Name, Assignee, DR)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-card border-border/50 focus:border-primary"
+            />
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="bg-card border-border/50 focus:border-primary">
+                <SelectValue placeholder="Filter by category..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={endDateFilter} onValueChange={setEndDateFilter}>
+              <SelectTrigger className="bg-card border-border/50 focus:border-primary">
+                <SelectValue placeholder="Filter by end date..." />
+              </SelectTrigger>
+              <SelectContent>
+                {endDateOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         
-        {currentUser?.isLeader && currentUser?.role === 'CRM' && (
+        {currentUser?.isLeader && currentUser?.role === 'CRM' && !isReadOnly && (
           <div className="px-4 sm:px-0">
             <Select value={projectOwnerFilter} onValueChange={(value) => setProjectOwnerFilter(value as 'my' | 'all')}>
               <SelectTrigger className="w-full sm:w-[180px]">
@@ -489,7 +518,6 @@ export function ProjectsKanbanClient() {
           </div>
         )}
 
-        {/* Kanban Board Section */}
         <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
           <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
             {visibleKanbanColumns.map((col) => (
@@ -508,6 +536,7 @@ export function ProjectsKanbanClient() {
                 allUsers={allUsers}
                 onOpenAssignDrDialog={handleOpenAssignDrDialog}
                 isSearching={!!debouncedSearchTerm}
+                isReadOnly={isReadOnly}
               />
             ))}
           </div>
@@ -643,3 +672,580 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
+
+```
+- src/components/projects/KanbanColumn.tsx:
+```tsx
+
+"use client";
+
+import dynamic from 'next/dynamic';
+import type { Project, CustomStatus, User } from '@/types'; 
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { LucideIcon } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+
+
+const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
+  ssr: false,
+});
+
+interface KanbanColumnProps {
+  id: string; 
+  title: string;
+  icon: LucideIcon;
+  projects: Project[];
+  headerBgClass: string;
+  headerTextClass?: string;
+  headerIconClass?: string;
+  isLoading?: boolean;
+  currentUser: User | null; 
+  allStatuses: CustomStatus[]; 
+  allUsers: User[]; 
+  onOpenAssignDrDialog: (project: Project) => void;
+  isSearching?: boolean;
+  isReadOnly?: boolean; // New prop for read-only mode
+}
+
+const PROJECTS_PER_PAGE = 20;
+
+export function KanbanColumn({ 
+  id,
+  title, 
+  icon: Icon, 
+  projects, 
+  headerBgClass, 
+  headerTextClass = "text-white",
+  headerIconClass = "text-white",
+  isLoading = false,
+  currentUser,
+  allStatuses,
+  allUsers,
+  onOpenAssignDrDialog,
+  isSearching = false,
+  isReadOnly = false, // New prop with default value
+}: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id, disabled: isReadOnly }); // Disable droppable in read-only mode
+  const [visibleCount, setVisibleCount] = useState(PROJECTS_PER_PAGE);
+
+  useEffect(() => {
+    setVisibleCount(PROJECTS_PER_PAGE);
+  }, [projects]);
+  
+  const handleLoadMore = () => {
+    setVisibleCount(prevCount => prevCount + PROJECTS_PER_PAGE);
+  };
+  
+  const visibleProjects = useMemo(() => projects.slice(0, visibleCount), [projects, visibleCount]);
+  const hasMoreProjects = visibleCount < projects.length;
+
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        "w-[280px] sm:w-[300px] shrink-0 flex flex-col bg-muted/30 rounded-lg overflow-hidden transition-all duration-200 ease-in-out h-full",
+        isOver && !isReadOnly ? 'border-primary ring-2 ring-primary shadow-xl scale-[1.01]' : 'border-border/30 shadow-sm' 
+      )}
+    >
+      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass} rounded-t-lg shrink-0`}>
+        <div className="flex items-center">
+          <Icon className={`mr-2 h-4 w-4 ${headerIconClass}`} />
+          <h2 className="font-semibold text-sm tracking-wide">{title}</h2>
+        </div>
+        <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : projects.length}</span>
+      </div>
+      <ScrollArea className="flex-1 bg-background/10 custom-scrollbar">
+        <div className="space-y-3 p-3">
+        {isLoading && projects.length === 0 ? (
+          <div className="space-y-3">
+            <Skeleton className="h-20 w-full rounded-md" />
+            <Skeleton className="h-20 w-full rounded-md" />
+            <Skeleton className="h-20 w-full rounded-md" />
+          </div>
+        ) : visibleProjects.length === 0 ? (
+          <div className="flex items-center justify-center h-32">
+            <p className="text-xs text-muted-foreground text-center italic">No projects in this stage.</p>
+          </div>
+        ) : (
+          <AnimatePresence>
+            {visibleProjects.map((project, index) => (
+              <motion.div
+                key={project.id}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, delay: (index % PROJECTS_PER_PAGE) * 0.03 }}
+              >
+                  <ProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    currentUser={currentUser}
+                    allStatuses={allStatuses}
+                    allUsers={allUsers}
+                    onOpenAssignDrDialog={onOpenAssignDrDialog}
+                    isReadOnly={isReadOnly}
+                  />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
+        {hasMoreProjects && (
+          <div className="text-center pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-8"
+              onClick={handleLoadMore}
+            >
+              Load More ({projects.length - visibleCount} remaining)
+            </Button>
+          </div>
+        )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+```
+- src/components/projects/ProjectCard.tsx:
+```tsx
+
+"use client";
+
+import type { Project, CustomStatus, User } from '@/types'; 
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react'; // Added UserCheck
+import { Button, buttonVariants } from '@/components/ui/button';
+import Link from 'next/link';
+import { Progress } from '@/components/ui/progress';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
+import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
+import React, { useState, useEffect } from 'react'; 
+import { motion } from 'framer-motion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Inline SVG Stopwatch Icon Component
+const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx="12" cy="14" r="8" />
+    <line x1="12" y1="6" x2="12" y2="2" />
+    <line x1="10" y1="2" x2="14" y2="2" />
+    <path d="M12 14l2-2" />
+  </svg>
+);
+
+interface ProjectCardProps {
+  project: Project;
+  isOverlay?: boolean; 
+  currentUser: User | null; 
+  allStatuses: CustomStatus[]; 
+  allUsers: User[]; // Added
+  onOpenAssignDrDialog: (project: Project) => void; 
+  isReadOnly?: boolean; // New prop for read-only mode
+}
+
+function formatDurationPrecise(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "Due";
+
+  const days = Math.floor(totalSeconds / (3600 * 24));
+  const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+
+  let parts: string[] = [];
+  if (days > 0) {
+    parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0 && days < 1) parts.push(`${minutes}m`);
+  } else if (hours > 0) {
+    parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 && hours < 1) parts.push(`${seconds}s`);
+  } else if (minutes > 0) {
+    parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+  } else if (seconds > 0) {
+     return "<1s";
+  }
+  
+  if (parts.length === 0) {
+     return "Due";
+  }
+
+  return parts.join(' ');
+}
+
+interface ProgressInfo {
+  showProgressBar: boolean;
+  percentage: number;
+  displayText: string;
+  isOverdue: boolean;
+  progressColorClass: string;
+}
+
+const calculateProgressInfo = (
+  project: Project,
+  now: Date
+): ProgressInfo => {
+  
+  const { status, createdAt, updatedAt, endDate, 
+          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, cancelAt, deliveredAt
+        } = project;
+
+  let effectiveStartDateIso: string | undefined;
+
+  if (status === 'CR Clearance') effectiveStartDateIso = crClearanceAt;
+  else if (status === 'On Design') effectiveStartDateIso = onDesignAt;
+  else if (status === 'On Hold') effectiveStartDateIso = onHoldAt;
+  else if (status === 'Logistics') effectiveStartDateIso = logisticsAt;
+  else if (status === 'Courier') effectiveStartDateIso = courierAt;
+  else if (status === 'Cancel') effectiveStartDateIso = cancelAt;
+  else if (status === 'Delivered') effectiveStartDateIso = deliveredAt;
+  else if (status === 'CO Clearance') effectiveStartDateIso = project.coClearanceAt || onDesignAt;
+
+  if (!effectiveStartDateIso) {
+    effectiveStartDateIso = updatedAt || createdAt;
+  }
+  
+  if (!effectiveStartDateIso) {
+    return { showProgressBar: true, percentage: 0, displayText: "Start date missing", isOverdue: false, progressColorClass: "bg-muted" };
+  }
+
+  const effectiveStartDate = parseISO(effectiveStartDateIso);
+  let effectiveTargetDate = endDate ? parseISO(endDate) : now; 
+  let slaStageName: string | null = null;
+  let showProgressBar = true;
+  let progressColorClass = 'progress-indicator-gradient'; 
+
+  if (status === 'Cancel' || status === 'Delivered') {
+    showProgressBar = false;
+    return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
+  }
+
+  switch (status) {
+    case 'CR Clearance':
+      effectiveTargetDate = addHours(effectiveStartDate, 24);
+      slaStageName = " (24H SLA)";
+      break;
+    case 'On Design':
+      effectiveTargetDate = addHours(effectiveStartDate, 48);
+      slaStageName = " (48H SLA)";
+      break;
+    case 'CO Clearance':
+      effectiveTargetDate = addHours(effectiveStartDate, 24);
+      slaStageName = " (24H SLA)";
+      break;
+    case 'On Hold':
+      effectiveTargetDate = addDays(effectiveStartDate, 15); 
+      slaStageName = " (Max 15 Days)";
+      break;
+    case 'Logistics':
+      effectiveTargetDate = addHours(effectiveStartDate, 24);
+      slaStageName = " (24H SLA)";
+      break;
+    case 'Courier':
+      effectiveTargetDate = addHours(effectiveStartDate, 6);
+      slaStageName = " (6H SLA)";
+      break;
+    default:
+      if (!endDate) {
+          showProgressBar = false;
+          return { showProgressBar, percentage:0, displayText: "No target date", isOverdue: false, progressColorClass:"" };
+      }
+      effectiveTargetDate = parseISO(endDate);
+      break;
+  }
+
+  let currentPercentage: number;
+  let currentDisplayText: string;
+  let currentIsOverdue = false;
+
+  if (isAfter(now, effectiveTargetDate)) {
+    currentIsOverdue = true;
+    const timeOver = formatDistanceToNowStrict(effectiveTargetDate, { addSuffix: false });
+    currentDisplayText = `Overdue by ${timeOver}`;
+    progressColorClass = 'bg-destructive';
+    currentPercentage = 100;
+  } else if (
+    isBefore(now, effectiveStartDate) && status !== 'Cancel' && status !== 'On Hold' 
+  ) {
+    const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
+    currentDisplayText = `Starts in ${timeUntilStart}`;
+    currentPercentage = 0;
+  } else {
+    const secondsRemaining = differenceInSeconds(effectiveTargetDate, now);
+    if (secondsRemaining <= 0) {
+      currentDisplayText = (status === 'On Hold') ? "Hold period ended" : "Stage due";
+      currentPercentage = 100;
+      progressColorClass = isAfter(now, effectiveTargetDate) ? 'bg-destructive' : 'bg-yellow-500';
+    } else {
+      currentDisplayText = `${formatDurationPrecise(secondsRemaining)} remaining`;
+      const totalDurationSeconds = differenceInSeconds(effectiveTargetDate, effectiveStartDate);
+      const elapsedDurationSeconds = differenceInSeconds(now, effectiveStartDate);
+      currentPercentage = totalDurationSeconds > 0 ? Math.max(0, Math.min(100, (elapsedDurationSeconds / totalDurationSeconds) * 100)) : (isAfter(now, effectiveStartDate) ? 100 : 0);
+    }
+  }
+
+  if (slaStageName && !currentIsOverdue) {
+    currentDisplayText += slaStageName;
+  } else if (currentIsOverdue && slaStageName) {
+     currentDisplayText += slaStageName;
+  }
+
+  return {
+    showProgressBar,
+    percentage: Math.round(currentPercentage),
+    displayText: currentDisplayText,
+    isOverdue: currentIsOverdue,
+    progressColorClass,
+  };
+};
+
+export function ProjectCard({ 
+  project, 
+  isOverlay = false, 
+  currentUser, 
+  allStatuses, 
+  allUsers, 
+  onOpenAssignDrDialog,
+  isReadOnly = false // Default to false
+}: ProjectCardProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: project.id,
+    data: { project },
+    disabled: isOverlay || isReadOnly, // Disable dragging in read-only mode 
+  });
+  
+  const crmUser = allUsers.find(u => u.id === project.assigneeId);
+  const drUser = project.designerRepresentativeId ? allUsers.find(u => u.id === project.designerRepresentativeId) : null;
+
+  const style = !isOverlay && transform ? {
+    transform: CSS.Translate.toString(transform),
+  } : undefined;
+
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
+  };
+  
+  const [progressInfo, setProgressInfo] = useState<ProgressInfo>(() => 
+    calculateProgressInfo(project, new Date())
+  );
+
+  useEffect(() => {
+    const updateInfo = () => {
+        setProgressInfo(calculateProgressInfo(project, new Date()));
+    };
+    updateInfo(); 
+    const intervalId = setInterval(updateInfo, 5000); 
+    return () => clearInterval(intervalId); 
+  }, [project]);
+  
+  const truncatedProjectName = project.name.length > 35 
+    ? `${project.name.substring(0, 35)}...` 
+    : project.name;
+
+  const canAssignDrPermission = !isReadOnly && (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM');
+  const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design' || project.status === 'CO Clearance');
+
+  const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
+  const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isReadOnly) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    // Default click behavior (opening tracking page) happens via the Link component
+  };
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isReadOnly) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+  }
+
+  const cursorClass = isReadOnly 
+    ? "cursor-default" 
+    : (isDragging ? "cursor-grabbing" : "cursor-grab active:cursor-grabbing");
+
+  return (
+    <motion.div
+      ref={!isOverlay ? setNodeRef : null}
+      style={style}
+      {...(!isOverlay ? listeners : {})}
+      {...(!isOverlay ? attributes : {})}
+      animate={{
+        scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1),
+        opacity: !isOverlay && isDragging ? 0.4 : 1,
+        boxShadow: isOverlay
+          ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2), 0px 5px 10px -6px rgba(0, 0, 0, 0.2)" 
+          : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)", 
+        rotate: isOverlay ? 2 : 0,
+      }}
+      transition={{ duration: 0.15, ease: "easeInOut" }}
+      className={cn(
+        "relative group",
+        isOverlay ? "z-50" : (isDragging ? "z-50" : "")
+      )}
+      onClick={handleCardClick}
+    >
+      <Card
+        className={cn(
+          "bg-card w-full shadow-none", 
+          cursorClass,
+          isDragging && "ring-2 ring-primary"
+        )}
+      >
+        <CardContent className="p-3 space-y-2.5">
+          <div className="flex justify-between items-start">
+            <span className="text-sm font-semibold text-foreground truncate">{project.projectIdDisplay}</span>
+            {!isOverlay && (
+                 <Link
+                    href={`/track/${project.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), "h-6 w-6", isReadOnly && "pointer-events-none")}
+                    onClick={handleLinkClick}
+                    title="View Invoice / Order Details"
+                  >
+                    <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </Link>
+            )}
+          </div>
+          
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground" title={project.name}>{truncatedProjectName}</p>
+          </div>
+
+          <Link
+            href={`/track/${project.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleLinkClick}
+            title="View Public Tracking Page"
+            className={cn(isReadOnly && "pointer-events-none")}
+          >
+            <div className={cn(
+                "inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors",
+                !isReadOnly && "hover:bg-destructive/30"
+            )}>
+              <CalendarDays className="mr-1.5 h-3 w-3" />
+              Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
+            </div>
+          </Link>
+          
+          {progressInfo.showProgressBar && (
+              <div className="pt-1">
+              <div className="flex items-center space-x-2 mb-1">
+                  <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
+              </div>
+              <Progress 
+                  value={progressInfo.percentage} 
+                  className="h-2.5 rounded-full bg-secondary shadow-inner" 
+                  indicatorClassName={progressInfo.progressColorClass}
+              />
+              </div>
+          )}
+
+          <div className="flex items-center justify-start mt-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
+                      crmInfoClickable && "cursor-pointer"
+                    )}
+                    onClick={
+                      crmInfoClickable
+                        ? (e) => { 
+                            e.stopPropagation();
+                            console.log('[ProjectCard] CRM AVATAR clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                            onOpenAssignDrDialog(project);
+                          }
+                        : undefined
+                    }
+                  >
+                    <Avatar className="h-7 w-7 text-xs border bg-muted">
+                      <AvatarImage src={crmUser?.avatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
+                      <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
+                    </Avatar>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>CRM: {project.assigneeName}</p>
+                  {crmInfoClickable && <p className="text-xs text-primary">(Click to assign DR)</p>}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {project.designerRepresentativeName && (
+              <>
+                <div className="w-px h-5 bg-border mx-1.5"></div> 
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                       <div
+                          className={cn(
+                            "hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
+                            drInfoClickable && "cursor-pointer"
+                          )}
+                          onClick={
+                            drInfoClickable
+                              ? (e) => {
+                                  e.stopPropagation();
+                                  console.log('[ProjectCard] DR AVATAR area clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                                  onOpenAssignDrDialog(project);
+                                }
+                              : undefined
+                          }
+                       >
+                        <Avatar className="h-7 w-7 text-xs border border-blue-400 bg-muted">
+                          <AvatarImage src={drUser?.avatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
+                          <AvatarFallback className="text-blue-500 font-semibold">
+                            {getInitials(project.designerRepresentativeName)}
+                          </AvatarFallback>
+                        </Avatar>
+                       </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>DR: {project.designerRepresentativeName}</p>
+                      {drInfoClickable && <p className="text-xs text-primary">(Click to re-assign DR)</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+```
