@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -387,7 +388,7 @@ export default function PayrollPage() {
   })), []);
 
   const employeeListContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+    <Card className="shadow-lg border-none rounded-2xl bg-transparent overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">Employee list</CardTitle>
@@ -574,7 +575,7 @@ export default function PayrollPage() {
   );
 
   const salarySheetContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+    <Card className="shadow-lg border-none rounded-2xl bg-transparent overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
