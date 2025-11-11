@@ -2,12 +2,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { DndContext, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners } from '@dnd-kit/core';
-import { useToast } from '@/hooks/use-toast';
+import { DndContext } from '@dnd-kit/core';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
-import { ProjectCard } from '@/components/projects/ProjectCard';
 import type { Project, CustomStatus, User, GlobalSettings, ProjectStatusType } from '@/types';
-import { Briefcase, EyeOff } from 'lucide-react';
+import { EyeOff, Briefcase } from 'lucide-react';
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: Briefcase, headerBgClass: 'bg-sky-600' },
@@ -51,10 +49,12 @@ export function ProjectDetailsClient({
   }, [project]);
   
   const { businessName } = useMemo(() => {
-    const parts = (project?.name || '').split(' • ');
-    if (parts.length > 1) {
-      return { businessName: parts.slice(1).join(' • ').trim() };
+    const nameParts = (project?.name || '').split(' • ');
+    if (nameParts.length > 1) {
+      // Return the part after the first '•'
+      return { businessName: nameParts.slice(1).join(' • ').trim() };
     }
+    // If no '•', return the whole name as the business name
     return { businessName: project?.name || 'Loading...' };
   }, [project?.name]);
 
@@ -63,13 +63,12 @@ export function ProjectDetailsClient({
     <DndContext>
       <div className="flex flex-col h-full space-y-4 p-4">
         {isReadOnly && (
-          <div className="flex items-center justify-center gap-2 p-2 bg-gray-900 text-white rounded-md text-sm font-medium">
-            <EyeOff className="h-4 w-4" />
+          <div className="flex items-center justify-center gap-2 p-2 bg-black text-white rounded-md text-sm font-medium">
             Read-Only View
           </div>
         )}
         <h1 className="text-2xl font-bold tracking-tight">
-          Project: <span className="text-muted-foreground">{businessName || project.projectIdDisplay}</span>
+          Project: <span className="text-muted-foreground">{businessName}</span>
         </h1>
         <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
           <div className="flex space-x-4 h-full min-w-max">
