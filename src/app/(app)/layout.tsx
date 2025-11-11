@@ -1,21 +1,11 @@
 
-import { Suspense } from 'react';
-import { AppHeader } from '@/components/layout/AppHeader';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
-import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { getGlobalSettings } from '@/lib/settings-service';
 import type { User } from '@/types';
-import { cookies, headers } from 'next/headers';
-import { cn } from '@/lib/utils';
-import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import { cookies } from 'next/headers';
 import 'leaflet/dist/leaflet.css';
-import { ClientLayout } from './ClientLayout'; // Import the new Client Component
+import { ClientLayout } from './ClientLayout'; 
 
-// This is now a Server Component
+// This is now a pure Server Component. It fetches data and passes it down.
 export default async function AuthenticatedLayout({
   children,
 }: {
@@ -33,22 +23,13 @@ export default async function AuthenticatedLayout({
     }
   }
 
-  // Fetch settings on the server
+  // Fetch initial settings on the server.
   const globalSettings = await getGlobalSettings();
   
-  const headersList = headers();
-  const userAgent = headersList.get('user-agent');
-  const isMobile = (header: string | null) => {
-    if (!header) return false;
-    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(header.toLowerCase());
-  };
-  const showBottomNav = isMobile(userAgent);
-
   return (
     <ClientLayout 
       initialUser={currentUser} 
       initialGlobalSettings={globalSettings}
-      showBottomNav={showBottomNav}
     >
       {children}
     </ClientLayout>
