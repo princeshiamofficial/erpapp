@@ -54,6 +54,15 @@ export function ProjectDetailsClient({
     }
     return grouped;
   }, [project]);
+  
+  const { contactPerson, businessName } = useMemo(() => {
+    const parts = (project.name || '').split(' • ');
+    if (parts.length > 1) {
+      return { contactPerson: parts[0].trim(), businessName: parts.slice(1).join(' • ').trim() };
+    }
+    return { contactPerson: '', businessName: project.name };
+  }, [project.name]);
+
 
   return (
     <DndContext>
@@ -65,7 +74,7 @@ export function ProjectDetailsClient({
           </div>
         )}
         <h1 className="text-2xl font-bold tracking-tight">
-          Project: <span className="text-muted-foreground">{project.projectIdDisplay}</span>
+          Project: <span className="text-muted-foreground">{businessName || project.projectIdDisplay}</span>
         </h1>
         <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
           <div className="flex space-x-4 h-full min-w-max">
