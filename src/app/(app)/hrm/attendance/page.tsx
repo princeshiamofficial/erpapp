@@ -103,6 +103,7 @@ export default function AttendancePage() {
       from: startOfDay(subDays(new Date(), 29)),
       to: endOfDay(new Date()),
     });
+    const [reportSearchTerm, setReportSearchTerm] = useState('');
 
 
     const fetchData = useCallback(async () => {
@@ -123,7 +124,7 @@ export default function AttendancePage() {
             getAttendanceForMonth(subDays(new Date(), 30)),
             getAttendanceForMonth(subDays(new Date(), 60)),
             getUsers(),
-            getWeekendSettings(),
+            getWeekendSettings()
           ]);
 
           const allAttendance = [
@@ -274,7 +275,7 @@ export default function AttendancePage() {
           }
         }
         
-        return allUsers.map(user => {
+        const baseReport = allUsers.map(user => {
             const employeeDetails = employees.find(e => e.userId === user.id);
             if (!employeeDetails) return null;
 
@@ -303,7 +304,20 @@ export default function AttendancePage() {
                 earlyCheckoutDays
             };
         }).filter(Boolean);
-    }, [allUsers, employees, attendanceData, selectedWeekends, reportDateRange]);
+
+        if (!reportSearchTerm) {
+            return baseReport;
+        }
+
+        const lowercasedSearch = reportSearchTerm.toLowerCase();
+        return baseReport.filter(item => 
+            item && (
+                item.employeeName.toLowerCase().includes(lowercasedSearch) ||
+                item.designation.toLowerCase().includes(lowercasedSearch)
+            )
+        );
+
+    }, [allUsers, employees, attendanceData, selectedWeekends, reportDateRange, reportSearchTerm]);
 
 
     const renderPagination = () => {
@@ -766,10 +780,21 @@ export default function AttendancePage() {
               <CardTitle className="text-xl font-bold text-gray-800">Attendance Report</CardTitle>
               <CardDescription>A full month summary of attendance.</CardDescription>
             </div>
-            <DateRangePicker2 
-                initialRange={reportDateRange} 
-                onDateRangeChange={(range) => setReportDateRange(range)} 
-            />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-grow sm:flex-grow-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                      placeholder="Search..."
+                      value={reportSearchTerm}
+                      onChange={(e) => setReportSearchTerm(e.target.value)}
+                      className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10"
+                  />
+              </div>
+              <DateRangePicker2 
+                  initialRange={reportDateRange} 
+                  onDateRangeChange={(range) => setReportDateRange(range)} 
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-6 pt-0">
@@ -815,7 +840,7 @@ export default function AttendancePage() {
                        <TableRow>
                           <TableCell colSpan={10} className="text-center h-48 text-gray-500">
                               <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                              No attendance summary data available for this month.
+                              No attendance summary data available for this period.
                           </TableCell>
                       </TableRow>
                   )}
@@ -900,3 +925,6 @@ export default function AttendancePage() {
 
     
 
+
+
+    
