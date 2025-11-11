@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -388,7 +387,7 @@ export default function PayrollPage() {
   })), []);
 
   const employeeListContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-transparent overflow-hidden">
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">Employee list</CardTitle>
@@ -575,7 +574,7 @@ export default function PayrollPage() {
   );
 
   const salarySheetContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-transparent overflow-hidden">
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
@@ -827,7 +826,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-transparent">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
