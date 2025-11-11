@@ -1,11 +1,13 @@
 
 
+"use server";
+
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc, deleteField } from 'firebase/firestore';
 import type { Project, ProjectStatusType, User, OrderLogEntry } from '@/types'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { formatISO, addDays } from 'date-fns';
-import { getOrders } from './order-service'; 
+import { getOrders, getOrderById as getOrderByIdFromService } from './order-service'; 
 import { ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from './status-service'; 
 import { getUsers as getAllUsersService } from './user-service'; 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
@@ -98,6 +100,69 @@ export const getProjects = async (): Promise<Project[]> => {
     return dateBUpdated - dateAUpdated;
   });
 };
+
+export const getProjectById = async (projectId: string): Promise<Project | null> => {
+  if (!projectId) return null;
+
+  try {
+    const persistentProject = await fetchFromApiV3(`collections/${PROJECTS_COLLECTION}/documents/${projectId}`);
+    if (persistentProject && persistentProject.data) {
+      console.log(`[getProjectById] Found persistent project for ID: ${projectId}`);
+      return { id: persistentProject.id, ...persistentProject.data } as Project;
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+      console.log(`[getProjectById] No persistent project found for ${projectId}. Falling back to order data.`);
+    } else {
+      console.error(`[getProjectById] Error fetching persistent project ${projectId}:`, error);
+    }
+  }
+
+  // Fallback: If no persistent project, try to build one from an order.
+  try {
+    const order = await getOrderByIdFromService(projectId);
+    if (order) {
+      console.log(`[getProjectById] Found order for ID ${projectId}. Building dynamic project view.`);
+      const projectCreatedAt = order.createdAt || formatISO(new Date());
+      const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2));
+      const crmUser = await getAllUsersService().then(users => users.find(u => u.id === order.crmUserId));
+
+      let projectStatus: ProjectStatusType;
+      if (order.currentStatus === 'cancelled') projectStatus = 'Cancel';
+      else if (order.currentStatus === 'delivered') projectStatus = 'Delivered';
+      else if (order.currentStatus === 'shipped') projectStatus = 'Courier';
+      else if (order.currentStatus === 'on-hold') projectStatus = 'On Hold';
+      else if (order.currentStatus === 'logistics') projectStatus = 'Logistics';
+      else if (order.currentStatus === 'co-clearance') projectStatus = 'CO Clearance';
+      else if (order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design')) projectStatus = 'On Design';
+      else projectStatus = 'CR Clearance';
+
+      return {
+        id: order.id,
+        projectIdDisplay: order.id,
+        name: order.companyName,
+        status: projectStatus,
+        assigneeId: order.crmUserId,
+        assigneeName: order.crmUserName,
+        assigneeInitials: getInitialsForName(order.crmUserName),
+        assigneeAvatarUrl: crmUser?.avatarUrl || null,
+        designerRepresentativeId: order.designerRepresentativeId || null,
+        designerRepresentativeName: order.designerRepresentativeName || null,
+        designerRepresentativeAvatarUrl: null,
+        categoryTag: 'From Order',
+        createdAt: projectCreatedAt,
+        updatedAt: order.updatedAt || projectCreatedAt,
+        endDate: projectEndDate,
+      };
+    }
+  } catch (error) {
+    console.error(`[getProjectById] Error in fallback to order for ID ${projectId}:`, error);
+  }
+
+  console.log(`[getProjectById] No project or order found for ID: ${projectId}`);
+  return null;
+};
+
 
 
 export const updateProjectStatus = async (
