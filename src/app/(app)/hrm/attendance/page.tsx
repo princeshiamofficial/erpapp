@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -29,7 +30,7 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
@@ -99,9 +100,12 @@ export default function AttendancePage() {
 
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
     
-    const [reportDateRange, setReportDateRange] = useState<DateRange | undefined>({
-      from: startOfDay(subDays(new Date(), 29)),
-      to: endOfDay(new Date()),
+    const [reportDateRange, setReportDateRange] = useState<DateRange | undefined>(() => {
+      const now = new Date();
+      return {
+        from: startOfMonth(now),
+        to: endOfMonth(now),
+      };
     });
     const [reportSearchTerm, setReportSearchTerm] = useState('');
 
