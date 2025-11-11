@@ -111,9 +111,12 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
       return { id: persistentProject.id, ...persistentProject.data } as Project;
     }
   } catch (error) {
-    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+    // This is the critical fix: explicitly check the error message.
+    if (error instanceof Error && error.message.toLowerCase().includes('document not found')) {
       console.log(`[getProjectById] No persistent project found for ${projectId}. Falling back to order data.`);
+      // Swallow this specific error and proceed to the fallback logic below.
     } else {
+      // For any other type of error, log it, but still attempt the fallback.
       console.error(`[getProjectById] Error fetching persistent project ${projectId}:`, error);
     }
   }
