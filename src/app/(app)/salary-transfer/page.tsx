@@ -127,7 +127,7 @@ export default function SalaryTransferPage() {
   };
 
   return (
-    <div className="space-y-6 printable-area bg-white p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 printable-area bg-transparent p-4 sm:p-6 lg:p-8">
       <Card className="print:border-0 print:shadow-none print:bg-transparent">
         <CardHeader className="text-center print:text-black">
           <CardTitle className="text-xl font-bold pt-2">COMPANY NAME: COLOR HUT</CardTitle>
