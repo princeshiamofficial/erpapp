@@ -51,9 +51,6 @@ import { KanbanColumn } from './KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from '@/lib/utils';
-
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -456,7 +453,7 @@ export function ProjectsKanbanClient() {
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
   }, [toast]);
   
-  if (isLoading) {
+  if (isLoading && projects.length === 0) {
     return <KanbanSkeleton />;
   }
 
@@ -536,18 +533,17 @@ export function ProjectsKanbanClient() {
                 allUsers={allUsers}
                 onOpenAssignDrDialog={handleOpenAssignDrDialog}
                 isSearching={!!debouncedSearchTerm}
-                isReadOnly={isReadOnly}
               />
             ))}
           </div>
-          {projects.length === 0 && !isLoading && (
+          {filteredProjects.length === 0 && !isLoading && (
             <div className="text-center py-10 text-muted-foreground mt-8">
               <Briefcase className="mx-auto h-16 w-16 opacity-30 mb-4" />
               <p className="text-xl font-semibold">No projects found.</p>
               <p className="text-sm">
                 {searchTerm || categoryFilter !== 'all' || endDateFilter !== 'all'
                   ? "Try adjusting your filters or search term."
-                  : "Get started by adding new projects."}
+                  : "Get started by adding new orders or projects."}
               </p>
             </div>
           )}
@@ -561,8 +557,7 @@ export function ProjectsKanbanClient() {
             currentUser={currentUser}
             allStatuses={allStatuses}
             allUsers={allUsers}
-            onOpenAssignDrDialog={handleOpenAssignDrDialog} 
-            isReadOnly={isReadOnly}
+            onOpenAssignDrDialog={handleOpenAssignDrDialog}
           />
         ) : null}
       </DragOverlay>
@@ -673,5 +668,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
-```
