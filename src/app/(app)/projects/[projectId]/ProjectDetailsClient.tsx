@@ -16,7 +16,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
-const HoldReasonDialog = dynamic(() => import('@/components/projects/HoldReasonDialog').then(mod => mod.HoldReasonDialog'));
+const HoldReasonDialog = dynamic(() => import('@/components/projects/HoldReasonDialog').then(mod => mod.HoldReasonDialog));
 const CourierConfirmationDialog = dynamic(() => import('@/components/projects/CourierConfirmationDialog').then(mod => mod.CourierConfirmationDialog));
 const FileUploadConfirmationDialog = dynamic(() => import('@/components/projects/FileUploadConfirmationDialog').then(mod => mod.FileUploadConfirmationDialog));
 
@@ -63,6 +63,18 @@ export function ProjectDetailsClient({
   const [paymentValidationError, setPaymentValidationError] = useState<string | null>(null);
   const [projectForDocsComplete, setProjectForDocsComplete] = useState<Project | null>(null);
   const [isDocsCompleteDialogOpen, setIsDocsCompleteDialogOpen] = useState(false);
+
+  // This is a workaround to satisfy fetchData dependency array without causing re-fetches
+  // We can assume toast function is stable.
+  const stableToast = useCallback(toast, []);
+
+  const fetchData = useCallback(async () => {
+    // In a single-project view, we might not need to re-fetch, 
+    // but this is here for consistency if live updates are needed.
+    // For now, it just re-sets the initial state.
+    setProject(initialProject);
+  }, [initialProject]);
+
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
