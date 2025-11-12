@@ -212,6 +212,7 @@ export default function PaymentHistoryPage() {
                   <TableHead>Reference</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Method</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -224,6 +225,7 @@ export default function PaymentHistoryPage() {
                       <TableCell><Skeleton className="h-5 w-28"/></TableCell>
                       <TableCell><Skeleton className="h-6 w-16 rounded-full"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-20"/></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                     </TableRow>
                   ))
                 ) : paginatedPayments.length > 0 ? (
@@ -239,11 +241,12 @@ export default function PaymentHistoryPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>{p.method}</TableCell>
+                      <TableCell>{formatDateSafe(p.date)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-48">No payment records found.</TableCell>
+                    <TableCell colSpan={7} className="text-center h-48">No payment records found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -252,7 +255,7 @@ export default function PaymentHistoryPage() {
                       <TableRow className="font-bold">
                           <TableCell colSpan={2}>Total for Period</TableCell>
                           <TableCell className="text-right text-green-600">{formatCurrency(totalPayment)}</TableCell>
-                          <TableCell colSpan={3}></TableCell>
+                          <TableCell colSpan={4}></TableCell>
                       </TableRow>
                   </TableFooter>
               )}
