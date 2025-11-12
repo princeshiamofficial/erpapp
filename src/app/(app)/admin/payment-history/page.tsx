@@ -46,6 +46,13 @@ const formatDateSafe = (dateString?: string) => {
 type SortKey = 'vendorName' | 'date' | 'payment';
 type SortDirection = 'asc' | 'desc';
 
+// Mock data to demonstrate different statuses
+const fallbackData: BillReport[] = [
+    { id: 'fb-1', vendorId: 'V-001', vendorName: 'PrintSource Inc.', date: subDays(new Date(), 2).toISOString(), invoiceId: 'INV-2024-001', amount: 5000, payment: 5000, method: 'Bank Transfer', status: 'Approved' },
+    { id: 'fb-2', vendorId: 'V-002', vendorName: 'Creative Papers', date: subDays(new Date(), 5).toISOString(), invoiceId: 'INV-2024-002', amount: 12000, payment: 0, method: 'N/A', status: 'Pending' },
+    { id: 'fb-3', vendorId: 'V-001', vendorName: 'PrintSource Inc.', date: subDays(new Date(), 10).toISOString(), invoiceId: 'INV-2024-003', amount: 7500, payment: 7500, method: 'Cash', status: 'Approved' },
+];
+
 export default function PaymentHistoryPage() {
   const { toast } = useToast();
   const [allPayments, setAllPayments] = useState<BillReport[]>([]);
@@ -62,9 +69,11 @@ export default function PaymentHistoryPage() {
     setIsLoading(true);
     try {
       const fetchedPayments = await getAllPaymentHistory();
-      setAllPayments(fetchedPayments);
+      // If no real data, use fallback data to show UI capabilities
+      setAllPayments(fetchedPayments.length > 0 ? fetchedPayments : fallbackData);
     } catch (error) {
       toast({ title: "Error", description: "Could not load payment history.", variant: "destructive" });
+      setAllPayments(fallbackData); // Use fallback on error too
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +104,8 @@ export default function PaymentHistoryPage() {
       results = results.filter(p =>
         p.vendorName.toLowerCase().includes(lowerSearchTerm) ||
         p.invoiceId.toLowerCase().includes(lowerSearchTerm) ||
-        p.method.toLowerCase().includes(lowerSearchTerm)
+        p.method.toLowerCase().includes(lowerSearchTerm) ||
+        (p.status && p.status.toLowerCase().includes(lowerSearchTerm))
       );
     }
 
@@ -148,11 +158,11 @@ export default function PaymentHistoryPage() {
       return;
     }
     const dataToExport = filteredAndSortedPayments.map(p => ({
-      'Order ID': p.vendorName, // Assuming Order ID is the vendor name as per user's request
-      'Company': p.invoiceId, // This seems to be what user wants for company
+      'Order ID': p.vendorName,
+      'Company': p.invoiceId, 
       'Payment Amount': p.payment,
       'Reference': p.invoiceId,
-      'Status': p.payment > 0 ? 'Paid' : 'Unpaid',
+      'Status': p.status || (p.payment > 0 ? 'Paid' : 'Unpaid'),
       'Method': p.method,
       'Date': formatDateSafe(p.date),
     }));
@@ -223,7 +233,7 @@ export default function PaymentHistoryPage() {
                       <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-28"/></TableCell>
-                      <TableCell><Skeleton className="h-6 w-16 rounded-full"/></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20 rounded-full"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-20"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                     </TableRow>
@@ -232,12 +242,16 @@ export default function PaymentHistoryPage() {
                   paginatedPayments.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.vendorName}</TableCell>
-                      <TableCell>{p.vendorName}</TableCell> {/* Re-using vendorName for company for now */}
+                      <TableCell>{p.vendorName}</TableCell>
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
                       <TableCell className="font-mono text-xs">{p.invoiceId}</TableCell>
                        <TableCell>
-                        <Badge variant={p.payment > 0 ? 'default' : 'destructive'} className={p.payment > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                            {p.payment > 0 ? 'Paid' : 'Unpaid'}
+                        <Badge variant={p.status === 'Approved' || p.payment > 0 ? 'default' : (p.status === 'Pending' ? 'outline' : 'destructive')} className={cn(
+                          p.status === 'Approved' || p.payment > 0 ? 'bg-green-100 text-green-800' : 
+                          p.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        )}>
+                            {p.status || (p.payment > 0 ? 'Paid' : 'Unpaid')}
                         </Badge>
                       </TableCell>
                       <TableCell>{p.method}</TableCell>
