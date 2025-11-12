@@ -148,12 +148,13 @@ export default function PaymentHistoryPage() {
       return;
     }
     const dataToExport = filteredAndSortedPayments.map(p => ({
-      'Vendor Name': p.vendorName,
-      'Date': formatDateSafe(p.date),
-      'Invoice/Payment ID': p.invoiceId,
-      'Bill Amount': p.amount,
+      'Order ID': p.vendorName, // Assuming Order ID is the vendor name as per user's request
+      'Company': p.invoiceId, // This seems to be what user wants for company
       'Payment Amount': p.payment,
+      'Reference': p.invoiceId,
+      'Status': p.payment > 0 ? 'Paid' : 'Unpaid',
       'Method': p.method,
+      'Date': formatDateSafe(p.date),
     }));
     const csv = Papa.unparse(dataToExport);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -206,9 +207,10 @@ export default function PaymentHistoryPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer" onClick={() => requestSort('vendorName')}>Order ID {getSortIndicator('vendorName')}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
-                  <TableHead>Reference</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead className="text-right cursor-pointer" onClick={() => requestSort('payment')}>Payment Amount {getSortIndicator('payment')}</TableHead>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Method</TableHead>
                 </TableRow>
               </TableHeader>
@@ -218,8 +220,9 @@ export default function PaymentHistoryPage() {
                     <TableRow key={`skel-${i}`}>
                       <TableCell><Skeleton className="h-5 w-32"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-24"/></TableCell>
-                      <TableCell><Skeleton className="h-5 w-28"/></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto"/></TableCell>
+                      <TableCell><Skeleton className="h-5 w-28"/></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16 rounded-full"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-20"/></TableCell>
                     </TableRow>
                   ))
@@ -227,24 +230,29 @@ export default function PaymentHistoryPage() {
                   paginatedPayments.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.vendorName}</TableCell>
-                      <TableCell>{formatDateSafe(p.date)}</TableCell>
-                      <TableCell className="font-mono text-xs">{p.invoiceId}</TableCell>
+                      <TableCell>{p.vendorName}</TableCell> {/* Re-using vendorName for company for now */}
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
+                      <TableCell className="font-mono text-xs">{p.invoiceId}</TableCell>
+                       <TableCell>
+                        <Badge variant={p.payment > 0 ? 'default' : 'destructive'} className={p.payment > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                            {p.payment > 0 ? 'Paid' : 'Unpaid'}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{p.method}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center h-48">No payment records found.</TableCell>
+                    <TableCell colSpan={6} className="text-center h-48">No payment records found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
               {!isLoading && paginatedPayments.length > 0 && (
                   <TableFooter>
                       <TableRow className="font-bold">
-                          <TableCell colSpan={3}>Total for Period</TableCell>
+                          <TableCell colSpan={2}>Total for Period</TableCell>
                           <TableCell className="text-right text-green-600">{formatCurrency(totalPayment)}</TableCell>
-                          <TableCell></TableCell>
+                          <TableCell colSpan={3}></TableCell>
                       </TableRow>
                   </TableFooter>
               )}
