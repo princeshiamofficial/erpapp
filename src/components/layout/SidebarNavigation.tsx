@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -110,6 +109,7 @@ const navItems: NavItem[] = [
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/admin/stock-management", label: "Stock Management", icon: Archive, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/admin/payment-history", label: "Payment History", icon: Wallet, roles: ["SYSTEM_ADMIN", "ADMIN"] },
     ]
   },
 ];
