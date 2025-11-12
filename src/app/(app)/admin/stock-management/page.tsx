@@ -35,7 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import type { ServiceModelItem, TrackingLink, SoldHistoryEntry } from '@/types';
+import type { ServiceModelItem, TrackingLink, SoldHistoryEntry, User } from '@/types';
 import { getStockItems } from '@/lib/stock-service'; 
 import { getSoldHistory, deleteSoldHistoryEntry } from '@/lib/sold-history-service';
 import { getOrders } from '@/lib/order-service'; // Import getOrders
@@ -50,6 +50,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseISO, format } from 'date-fns';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { getUsers } from '@/lib/user-service';
 
 const AddEditSoldEntryDialog = dynamic(() => import('@/components/stock/AddEditSoldEntryDialog').then(mod => mod.AddEditSoldEntryDialog));
 
@@ -100,7 +101,8 @@ export default function StockManagementPage() {
     const [activeTab, setActiveTab] = useState("stock");
     const [stockItems, setStockItems] = useState<ServiceModelItem[]>([]);
     const [soldHistory, setSoldHistory] = useState<SoldHistoryEntry[]>([]);
-    const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); // New state for orders
+    const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); 
+    const [allUsers, setAllUsers] = useState<User[]>([]); // To map user IDs to names
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -129,14 +131,16 @@ export default function StockManagementPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [fetchedItems, fetchedSoldHistory, fetchedOrders] = await Promise.all([
+            const [fetchedItems, fetchedSoldHistory, fetchedOrders, fetchedUsers] = await Promise.all([
                 getStockItems(),
                 getSoldHistory(),
-                getOrders(), // Fetch orders
+                getOrders(), 
+                getUsers(), // Fetch all users
             ]);
             setStockItems(fetchedItems);
             setSoldHistory(fetchedSoldHistory);
-            setAllOrders(fetchedOrders); // Set orders state
+            setAllOrders(fetchedOrders); 
+            setAllUsers(fetchedUsers); // Set users state
         } catch (error) {
             console.error("Error fetching stock data:", error);
             toast({ title: "Error", description: "Could not load stock data.", variant: "destructive" });
@@ -144,6 +148,14 @@ export default function StockManagementPage() {
             setIsLoading(false);
         }
     }, [toast]);
+    
+    const userMap = useMemo(() => {
+        const map = new Map<string, string>();
+        allUsers.forEach(user => {
+            map.set(user.id, user.name);
+        });
+        return map;
+    }, [allUsers]);
 
     useEffect(() => {
         if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
@@ -499,7 +511,7 @@ export default function StockManagementPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Order ID</TableHead>
+                        <TableHead>Recorded by</TableHead>
                         <TableHead>Product Name</TableHead>
                         <TableHead>Quantity</TableHead>
                         <TableHead>Total Price</TableHead>
@@ -513,7 +525,7 @@ export default function StockManagementPage() {
                     ) : soldHistoryData.length > 0 ? (
                         soldHistoryData.map((item, index) => (
                            <TableRow key={item.id}>
-                               <TableCell><Link href={`/track/${item.orderId}`} className="text-primary hover:underline font-mono text-xs">{item.orderId}</Link></TableCell>
+                               <TableCell>{userMap.get(item.orderId) || item.orderId}</TableCell>
                                <TableCell>{item.productName}</TableCell>
                                <TableCell>{item.quantity}</TableCell>
                                <TableCell>{formatCurrency(item.totalPrice)}</TableCell>
@@ -675,7 +687,3 @@ export default function StockManagementPage() {
         </>
     );
 }
-
-    
-
-    

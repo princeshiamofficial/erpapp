@@ -3,6 +3,7 @@
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import type { SoldHistoryEntry } from '@/types'; // Assuming SoldHistoryEntry is defined in types
+import { getStockItems, updateStockItem } from './stock-service'; // Import from stock-service
 
 const COLLECTION_NAME = 'soldhistory';
 
@@ -31,7 +32,31 @@ export const addSoldHistoryEntry = async (entryData: Omit<SoldHistoryEntry, 'id'
             method: 'POST',
             body: JSON.stringify(payload),
         });
-        return { id: newDoc.id, ...newDoc.data } as SoldHistoryEntry;
+
+        const newEntry = { id: newDoc.id, ...newDoc.data } as SoldHistoryEntry;
+
+        // --- STOCK DEDUCTION LOGIC ---
+        const allStockItems = await getStockItems();
+        const productSold = allStockItems.find(item => item.name === newEntry.productName);
+
+        if (productSold) {
+            // updateStockItem expects a stock change value, so we pass a negative number.
+            const stockChange = -newEntry.quantity;
+            await updateStockItem(
+                productSold.id,
+                productSold.name,
+                productSold.buyingPrice,
+                productSold.sellingPrice,
+                productSold.imageUrl,
+                productSold.isReadyMade,
+                stockChange
+            );
+        } else {
+            console.warn(`[addSoldHistoryEntry] Product "${newEntry.productName}" not found in stock. Stock not deducted.`);
+        }
+        // --- END STOCK DEDUCTION LOGIC ---
+
+        return newEntry;
     } catch (error) {
         console.error("Error adding sold history entry via API v3:", error);
         return null;
@@ -64,4 +89,3 @@ export const deleteSoldHistoryEntry = async (id: string): Promise<boolean> => {
         return false;
     }
 };
-
