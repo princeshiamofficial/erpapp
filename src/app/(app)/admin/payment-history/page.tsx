@@ -205,7 +205,7 @@ export default function PaymentHistoryPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => requestSort('vendorName')}>order id {getSortIndicator('vendorName')}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => requestSort('vendorName')}>Order ID {getSortIndicator('vendorName')}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                   <TableHead>Invoice/Payment ID</TableHead>
                   <TableHead>Type</TableHead>
