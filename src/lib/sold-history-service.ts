@@ -2,8 +2,8 @@
 "use server";
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
-import type { SoldHistoryEntry } from '@/types'; // Assuming SoldHistoryEntry is defined in types
-import { getStockItems, updateStockItem } from './stock-service'; // Import from stock-service
+import type { SoldHistoryEntry, ServiceModelItem } from '@/types'; 
+import { getStockItems, updateStockItem } from './stock-service'; 
 
 const COLLECTION_NAME = 'soldhistory';
 
@@ -40,7 +40,6 @@ export const addSoldHistoryEntry = async (entryData: Omit<SoldHistoryEntry, 'id'
         const productSold = allStockItems.find(item => item.name === newEntry.productName);
 
         if (productSold) {
-            // updateStockItem expects a stock change value, so we pass a negative number.
             const stockChange = -newEntry.quantity;
             await updateStockItem(
                 productSold.id,
@@ -52,7 +51,7 @@ export const addSoldHistoryEntry = async (entryData: Omit<SoldHistoryEntry, 'id'
                 stockChange
             );
         } else {
-            console.warn(`[addSoldHistoryEntry] Product "${newEntry.productName}" not found in stock. Stock not deducted.`);
+            console.warn(`[addSoldHistoryEntry] Product "${newEntry.productName}" not found in stock collection. Stock not deducted.`);
         }
         // --- END STOCK DEDUCTION LOGIC ---
 

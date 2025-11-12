@@ -19,10 +19,11 @@ import { Calendar } from "@/components/ui/calendar";
 import type { SoldHistoryEntry, ServiceModelItem, TrackingLink } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { addSoldHistoryEntry, updateSoldHistoryEntry } from '@/lib/sold-history-service';
-import { updateModelStock } from '@/lib/service-options-service';
+import { updateStockItem } from '@/lib/stock-service';
 import { Loader2, Calendar as CalendarIcon, ChevronsUpDown, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface AddEditSoldEntryDialogProps {
   isOpen: boolean;
@@ -35,7 +36,6 @@ interface AddEditSoldEntryDialogProps {
 
 export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEdit, stockItems, allOrders }: AddEditSoldEntryDialogProps) {
   const [orderId, setOrderId] = useState('');
-  const [companyName, setCompanyName] = useState(''); // State for company name
   const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
@@ -50,49 +50,19 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
     if (isOpen) {
       if (isEditMode && entryToEdit) {
         setOrderId(entryToEdit.orderId);
-        // Find company name from allOrders if available
-        if(allOrders && Array.isArray(allOrders)) {
-            const order = allOrders.find(o => o.id === entryToEdit.orderId);
-            const nameParts = (order?.companyName || '').split(' • ');
-            const actualBusinessName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : order?.companyName;
-            setCompanyName(actualBusinessName || '');
-        } else {
-             setCompanyName('');
-        }
         setProductName(entryToEdit.productName);
         setQuantity(entryToEdit.quantity.toString());
         setTotalPrice(entryToEdit.totalPrice.toString());
         setSaleDate(parseISO(entryToEdit.saleDate));
       } else {
         setOrderId('');
-        setCompanyName('');
         setProductName('');
         setQuantity('');
         setTotalPrice('');
         setSaleDate(new Date());
       }
     }
-  }, [isOpen, entryToEdit, isEditMode, allOrders]);
-
-  useEffect(() => {
-    if (allOrders && Array.isArray(allOrders) && orderId) {
-      const trimmedJobId = orderId.trim();
-      const existingOrder = allOrders.find(order => {
-        const orderJobId = (order.companyName || '').split(' • ')[0].trim();
-        return orderJobId.toLowerCase() === trimmedJobId.toLowerCase();
-      });
-
-      if (existingOrder) {
-          const nameParts = (existingOrder.companyName || '').split(' • ');
-          const actualBusinessName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : existingOrder.companyName;
-          setCompanyName(actualBusinessName);
-      } else {
-        setCompanyName('');
-      }
-    } else {
-      setCompanyName('');
-    }
-  }, [orderId, allOrders]);
+  }, [isOpen, entryToEdit, isEditMode]);
 
   useEffect(() => {
     if (productName && quantity) {
@@ -103,10 +73,10 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
         const calculatedPrice = product.sellingPrice * numericQuantity;
         setTotalPrice(calculatedPrice.toString());
       } else {
-        setTotalPrice(''); // Reset if quantity is invalid or product has no price
+        setTotalPrice('');
       }
     } else {
-      setTotalPrice(''); // Reset if no product or quantity
+      setTotalPrice('');
     }
   }, [productName, quantity, stockItems]);
 
@@ -136,28 +106,27 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
 
     let result;
     if (isEditMode && entryToEdit) {
-      // Note: Editing a sold history might need logic to revert stock changes, which can be complex.
-      // For now, we just update the record.
+      // Logic for editing stock is complex (reverting old change, applying new one).
+      // For now, we only update the history record.
       result = await updateSoldHistoryEntry(entryToEdit.id, entryData);
+       if (result) {
+        toast({ title: "Success", description: "Sold entry has been updated." });
+        onSave();
+      } else {
+        toast({ title: "Error", description: "Could not update the sold entry.", variant: "destructive" });
+      }
     } else {
+      // Adding a new entry correctly deducts stock.
       result = await addSoldHistoryEntry(entryData);
       if (result) {
-        // Find the product and decrease its stock
-        const product = stockItems.find(item => item.name === productName);
-        if (product && product.stockCount !== undefined) {
-          await updateModelStock(product.id, -numericQuantity);
-        }
+        toast({ title: "Success", description: `Sold entry has been added.` });
+        onSave();
+      } else {
+        toast({ title: "Error", description: "Could not save the sold entry.", variant: "destructive" });
       }
     }
     
     setIsSubmitting(false);
-
-    if (result) {
-      toast({ title: "Success", description: `Sold entry has been ${isEditMode ? 'updated' : 'added'}.` });
-      onSave();
-    } else {
-      toast({ title: "Error", description: "Could not save the sold entry.", variant: "destructive" });
-    }
   };
 
   return (
@@ -168,14 +137,9 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
           <DialogDescription>Manually record a product sale.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="orderId">Recorded by Name</Label>
-              <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
-            </div>
-             <div className="space-y-1">
-                <Input value={companyName} readOnly disabled placeholder="Auto-filled from Order" className="bg-muted/50 mt-7" />
-             </div>
+          <div className="space-y-1">
+            <Label htmlFor="orderId">Order ID</Label>
+            <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
           </div>
           
           <div className="space-y-1">
