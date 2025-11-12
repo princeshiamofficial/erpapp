@@ -190,7 +190,7 @@ export default function PaymentHistoryPage() {
                 <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by vendor, ID..."
+                    placeholder="Search by Order ID, Reference..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 h-10"
