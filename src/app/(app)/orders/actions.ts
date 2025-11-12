@@ -1,3 +1,4 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -11,6 +12,7 @@ import { getModels, updateModelStock } from '@/lib/service-options-service';
 import { fetchFromApiV3 } from '@/lib/api-helper2';
 import { adminApp } from '@/lib/firebase-admin'; // Import adminApp
 import type { messaging } from 'firebase-admin'; // Import messaging type
+import { logAdvancePaymentToHistory } from '@/lib/payment-history-service';
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -152,6 +154,11 @@ export async function createOrderAction(
 
     const createdOrder = await addOrderService(newOrderDataForService);
     if (!createdOrder) return { error: "Failed to create order due to a service error." };
+    
+    // Log initial payment to history backup
+    if (createdOrder.advancePayments && createdOrder.advancePayments.length > 0) {
+        await logAdvancePaymentToHistory(createdOrder, createdOrder.advancePayments[0]);
+    }
 
     for (const item of processedOrderItems) {
       const modelInfo = allModels.find(m => m.name === item.model);
@@ -168,6 +175,7 @@ export async function createOrderAction(
     revalidatePath("/(app)/orders/monthly");
     revalidatePath("/(app)/admin/model-management");
     revalidatePath("/(app)/crm/sow"); // Revalidate SOW page
+    revalidatePath("/(app)/admin/payment-history"); // Revalidate Payment History
     return createdOrder;
 
   } catch (error: any) {
@@ -309,7 +317,7 @@ export async function updateOrderAction(
       finalUpdates.orderItems = updates.orderItems;
     }
 
-
+    let newAdvanceRecord: AdvancePaymentRecord | null = null;
     if (updates.newAdvancePaymentAmount && updates.newAdvancePaymentAmount > 0) {
         if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
             return { success: false, error: "Payment method is required for new advance payment." };
@@ -318,7 +326,7 @@ export async function updateOrderAction(
             return { success: false, error: "Payment proof is required unless payment method is 'Cash'." };
         }
 
-        const newAdvanceRecord: AdvancePaymentRecord = {
+        newAdvanceRecord = {
             id: uuidv4(),
             amount: updates.newAdvancePaymentAmount,
             date: new Date().toISOString(),
@@ -355,6 +363,11 @@ export async function updateOrderAction(
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) return { success: false, error: "Failed to retrieve updated order after update." };
+    
+    // Log new payment to history backup if it exists
+    if (newAdvanceRecord) {
+        await logAdvancePaymentToHistory(updatedOrder, newAdvanceRecord);
+    }
     
     try {
         const project = await fetchFromApiV3(`collections/projects/documents/${orderId}`);
@@ -393,6 +406,7 @@ export async function updateOrderAction(
     revalidatePath("/(app)/projects");
     revalidatePath("/(app)/admin/model-management");
     revalidatePath("/(app)/crm/sow"); // Revalidate SOW page
+    revalidatePath("/(app)/admin/payment-history"); // Revalidate Payment History
 
     return { success: true, order: updatedOrder };
   } catch (error: any) {
@@ -597,6 +611,7 @@ export async function deleteOrderAction(
       revalidatePath("/(app)/admin/stock-management");
       revalidatePath("/(app)/admin/model-management");
       revalidatePath("/(app)/crm/sow"); // Revalidate SOW page
+      revalidatePath("/(app)/admin/payment-history"); // Revalidate Payment History
       return { success: true };
     }
     return { success: false, error: "Failed to delete order from database. Service returned failure." };
@@ -608,4 +623,5 @@ export async function deleteOrderAction(
 }
 
     
+
 
