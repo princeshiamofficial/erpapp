@@ -138,7 +138,7 @@ export function AddEditSoldEntryDialog({ isOpen, onOpenChange, onSave, entryToEd
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-1">
-            <Label htmlFor="orderId">Order ID</Label>
+            <Label htmlFor="orderId">Recorded by</Label>
             <Input id="orderId" value={orderId} onChange={e => setOrderId(e.target.value)} required />
           </div>
           
