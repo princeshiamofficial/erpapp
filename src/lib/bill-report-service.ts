@@ -1,5 +1,4 @@
 
-
 "use server";
 
 import type { BillReport } from '@/types';
@@ -24,19 +23,6 @@ export const getBillReports = async (): Promise<BillReport[]> => {
   }
 };
 
-export const addBillReportAction = async (reportData: Omit<BillReport, 'id'>): Promise<{ success: boolean; report?: BillReport; error?: string }> => {
-  try {
-    const newDoc = await addBillReport(reportData);
-    if (newDoc) {
-      return { success: true, report: newDoc };
-    }
-    return { success: false, error: "Failed to add report to database." };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
-  }
-};
-
-
 export const addBillReport = async (reportData: Omit<BillReport, 'id'>): Promise<BillReport | null> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
@@ -45,6 +31,9 @@ export const addBillReport = async (reportData: Omit<BillReport, 'id'>): Promise
         method: 'POST',
         body: JSON.stringify(payload),
     });
+
+    // Also add to the centralized payment history
+    await addPaymentToHistory(reportData);
 
     return {
         id: newDoc.id,
@@ -57,18 +46,6 @@ export const addBillReport = async (reportData: Omit<BillReport, 'id'>): Promise
   }
 };
 
-export const updateBillReportAction = async (reportId: string, reportData: Omit<BillReport, 'id'>): Promise<{ success: boolean; error?: string }> => {
-    try {
-        const success = await updateBillReport(reportId, reportData);
-        if (success) {
-            return { success: true };
-        }
-        return { success: false, error: "Failed to update report in the database." };
-    } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
-    }
-};
-
 export const updateBillReport = async (id: string, updates: Partial<BillReport>): Promise<boolean> => {
     try {
         const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
@@ -77,6 +54,10 @@ export const updateBillReport = async (id: string, updates: Partial<BillReport>)
             method: 'PUT',
             body: JSON.stringify({ data: finalData })
         });
+        
+        // Also update the centralized payment history
+        await addPaymentToHistory(finalData as Omit<BillReport, 'id'>);
+
         return true;
     } catch (error) {
         console.error(`Error updating bill report ${id} via API v3:`, error);
@@ -87,12 +68,43 @@ export const updateBillReport = async (id: string, updates: Partial<BillReport>)
 
 export const deleteBillReport = async (id: string): Promise<{ success: boolean, error?: string }> => {
   try {
+    // Also delete from the payment history
+    const reportToDelete = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
+    if (reportToDelete && reportToDelete.data) {
+        const date = new Date(reportToDelete.data.date);
+        const historyCollectionName = `payHistory-${format(date, 'MM-yyyy')}`;
+        await fetchFromApiV3(`collections/${historyCollectionName}/documents/${id}`, {
+            method: 'DELETE'
+        }).catch(err => console.warn(`Could not delete from payment history, it might not exist: ${err.message}`));
+    }
+    
     await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
         method: 'DELETE'
     });
+
     return { success: true };
   } catch (error) {
     console.error(`Error deleting bill report ${id} via API v3:`, error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 };
+
+// Helper to add/update entry in the monthly payment history collection
+async function addPaymentToHistory(reportData: Omit<BillReport, 'id'>) {
+    const date = new Date(reportData.date);
+    const collectionName = `payHistory-${format(date, 'MM-yyyy')}`;
+    const docId = reportData.invoiceId.includes('PAY-') ? reportData.invoiceId : reportData.id;
+
+    try {
+        await ensureCollectionExistsV3(collectionName);
+        const payload = { data: reportData };
+        // Use PUT with a predictable ID to create or overwrite
+        await fetchFromApiV3(`collections/${collectionName}/documents/${docId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    } catch (error) {
+        console.error(`Error syncing payment to history collection ${collectionName}:`, error);
+        // We don't throw here to avoid failing the main operation
+    }
+}

@@ -4,6 +4,7 @@ import type { VendorBill, BillPaymentRecord } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
+import { addBillReport } from './bill-report-service'; // Import the service
 
 const COLLECTION_NAME = 'vendorBills';
 
@@ -48,7 +49,6 @@ export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<V
     const currentDate = new Date();
     const datePrefix = `INV-${format(currentDate, 'yyyyMMdd')}-`;
     
-    // Fetch all bills to determine the next sequence number for the day
     const allBillsResponse = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444`);
     let newSequence = 1;
     if (allBillsResponse && Array.isArray(allBillsResponse.documents)) {
@@ -65,11 +65,11 @@ export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<V
     
     const billDataWithId = {
       ...billData,
-      billId: billId, // Also keep it as a field inside the document
+      billId: billId,
     };
 
     const payload = {
-        id: billId, // Use the custom ID for the document ID
+        id: billId,
         data: billDataWithId
     };
 
@@ -78,6 +78,17 @@ export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<V
         body: JSON.stringify(payload),
     });
     
+    // Also create a record in the billReports collection for history
+    await addBillReport({
+        vendorId: billData.vendorId,
+        vendorName: billData.vendorName,
+        date: billData.billDate,
+        invoiceId: billId,
+        amount: billData.total,
+        payment: 0, // No payment made when bill is created
+        method: 'N/A'
+    });
+
     return { id: billId, ...billDataWithId } as VendorBill;
   } catch (error) {
     console.error("Error adding vendor bill via API v3:", error);
