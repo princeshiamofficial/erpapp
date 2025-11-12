@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Wallet, ArrowUpDown, Download } from 'lucide-react';
+import { Loader2, Search, Wallet, ArrowUpDown, Download, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAllPaymentHistory } from '@/lib/payment-history-service';
 import type { BillReport } from '@/types';
@@ -26,6 +26,17 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 const ITEMS_PER_PAGE = 25;
 
@@ -64,6 +75,9 @@ export default function PaymentHistoryPage() {
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  
+  const [reportToUpdateStatus, setReportToUpdateStatus] = useState<BillReport | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -177,12 +191,42 @@ export default function PaymentHistoryPage() {
     document.body.removeChild(link);
   };
 
-  const renderPagination = () => {
-    // Omitting for brevity, would be same as other paginated pages
-    return null;
+  const handleStatusChangeRequest = (report: BillReport) => {
+    // For now, only allow changing for 'Pending' or 'Approved' statuses
+    if (report.status === 'Pending' || report.status === 'Approved') {
+      setReportToUpdateStatus(report);
+    } else {
+        toast({ title: "Action Not Allowed", description: `Cannot change status from "${report.status}".`, variant: "default" });
+    }
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!reportToUpdateStatus) return;
+    
+    setIsUpdatingStatus(true);
+    const newStatus = reportToUpdateStatus.status === 'Approved' ? 'Pending' : 'Approved';
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // UI-only update
+    setAllPayments(prev => 
+        prev.map(p => 
+            p.id === reportToUpdateStatus.id ? { ...p, status: newStatus } : p
+        )
+    );
+    
+    setIsUpdatingStatus(false);
+    setReportToUpdateStatus(null);
+    
+    toast({
+      title: "Status Updated",
+      description: `Status for ${reportToUpdateStatus.invoiceId} changed to ${newStatus}.`,
+    });
   };
 
   return (
+    <>
     <div className="space-y-6">
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
@@ -200,7 +244,7 @@ export default function PaymentHistoryPage() {
                 <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by Order ID, Reference..."
+                    placeholder="Search records..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 h-10"
@@ -240,7 +284,7 @@ export default function PaymentHistoryPage() {
                   ))
                 ) : paginatedPayments.length > 0 ? (
                   paginatedPayments.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow key={p.id} onDoubleClick={() => handleStatusChangeRequest(p)} className="cursor-pointer">
                       <TableCell className="font-medium">{p.vendorName}</TableCell>
                       <TableCell>{p.vendorName}</TableCell>
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
@@ -293,5 +337,29 @@ export default function PaymentHistoryPage() {
         </CardFooter>
       </Card>
     </div>
+
+    {reportToUpdateStatus && (
+        <AlertDialog open={!!reportToUpdateStatus} onOpenChange={() => setReportToUpdateStatus(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-primary"/>
+                        Confirm Status Change
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to change the status for invoice <span className="font-semibold">{reportToUpdateStatus.invoiceId}</span> from "<span className="font-semibold">{reportToUpdateStatus.status}</span>" to "<span className="font-semibold">{reportToUpdateStatus.status === 'Approved' ? 'Pending' : 'Approved'}</span>"?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isUpdatingStatus} onClick={() => setReportToUpdateStatus(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmStatusChange} disabled={isUpdatingStatus}>
+                        {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        Confirm
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )}
+    </>
   );
 }
