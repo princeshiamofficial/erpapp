@@ -208,7 +208,6 @@ export default function PaymentHistoryPage() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('vendorName')}>Order ID {getSortIndicator('vendorName')}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                   <TableHead>Reference</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead className="text-right cursor-pointer" onClick={() => requestSort('amount')}>Bill Amount {getSortIndicator('amount')}</TableHead>
                   <TableHead className="text-right cursor-pointer" onClick={() => requestSort('payment')}>Payment Amount {getSortIndicator('payment')}</TableHead>
                   <TableHead>Method</TableHead>
@@ -221,7 +220,6 @@ export default function PaymentHistoryPage() {
                       <TableCell><Skeleton className="h-5 w-32"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-28"/></TableCell>
-                      <TableCell><Skeleton className="h-6 w-20 rounded-full"/></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto"/></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-20"/></TableCell>
@@ -233,9 +231,6 @@ export default function PaymentHistoryPage() {
                       <TableCell className="font-medium">{p.vendorName}</TableCell>
                       <TableCell>{formatDateSafe(p.date)}</TableCell>
                       <TableCell className="font-mono text-xs">{p.invoiceId}</TableCell>
-                      <TableCell>
-                        {p.amount > 0 ? <Badge variant="destructive">Bill</Badge> : <Badge variant="default" className="bg-green-600 hover:bg-green-700">Payment</Badge>}
-                      </TableCell>
                       <TableCell className="text-right font-mono">{p.amount > 0 ? formatCurrency(p.amount) : '-'}</TableCell>
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
                       <TableCell>{p.method}</TableCell>
@@ -243,14 +238,14 @@ export default function PaymentHistoryPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-48">No payment records found.</TableCell>
+                    <TableCell colSpan={6} className="text-center h-48">No payment records found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
               {!isLoading && paginatedPayments.length > 0 && (
                   <TableFooter>
                       <TableRow className="font-bold">
-                          <TableCell colSpan={4}>Total for Period</TableCell>
+                          <TableCell colSpan={3}>Total for Period</TableCell>
                           <TableCell className="text-right">{formatCurrency(totalAmount)}</TableCell>
                           <TableCell className="text-right text-green-600">{formatCurrency(totalPayment)}</TableCell>
                           <TableCell></TableCell>
