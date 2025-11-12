@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ const formatDateSafe = (dateString?: string) => {
   }
 };
 
-type SortKey = 'vendorName' | 'date' | 'amount' | 'payment';
+type SortKey = 'vendorName' | 'date' | 'payment';
 type SortDirection = 'asc' | 'desc';
 
 export default function PaymentHistoryPage() {
@@ -208,7 +208,6 @@ export default function PaymentHistoryPage() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('vendorName')}>Order ID {getSortIndicator('vendorName')}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                   <TableHead>Reference</TableHead>
-                  <TableHead className="text-right cursor-pointer" onClick={() => requestSort('amount')}>Bill Amount {getSortIndicator('amount')}</TableHead>
                   <TableHead className="text-right cursor-pointer" onClick={() => requestSort('payment')}>Payment Amount {getSortIndicator('payment')}</TableHead>
                   <TableHead>Method</TableHead>
                 </TableRow>
@@ -221,7 +220,6 @@ export default function PaymentHistoryPage() {
                       <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-28"/></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto"/></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto"/></TableCell>
                       <TableCell><Skeleton className="h-5 w-20"/></TableCell>
                     </TableRow>
                   ))
@@ -231,14 +229,13 @@ export default function PaymentHistoryPage() {
                       <TableCell className="font-medium">{p.vendorName}</TableCell>
                       <TableCell>{formatDateSafe(p.date)}</TableCell>
                       <TableCell className="font-mono text-xs">{p.invoiceId}</TableCell>
-                      <TableCell className="text-right font-mono">{p.amount > 0 ? formatCurrency(p.amount) : '-'}</TableCell>
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
                       <TableCell>{p.method}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-48">No payment records found.</TableCell>
+                    <TableCell colSpan={5} className="text-center h-48">No payment records found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -246,7 +243,6 @@ export default function PaymentHistoryPage() {
                   <TableFooter>
                       <TableRow className="font-bold">
                           <TableCell colSpan={3}>Total for Period</TableCell>
-                          <TableCell className="text-right">{formatCurrency(totalAmount)}</TableCell>
                           <TableCell className="text-right text-green-600">{formatCurrency(totalPayment)}</TableCell>
                           <TableCell></TableCell>
                       </TableRow>
