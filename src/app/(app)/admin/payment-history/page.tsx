@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -308,15 +308,6 @@ export default function PaymentHistoryPage() {
                   </TableRow>
                 )}
               </TableBody>
-              {!isLoading && paginatedPayments.length > 0 && (
-                  <TableFooter>
-                      <TableRow className="font-bold">
-                          <TableCell colSpan={2}>Total for Period</TableCell>
-                          <TableCell className="text-right text-green-600">{formatCurrency(totalPayment)}</TableCell>
-                          <TableCell colSpan={4}></TableCell>
-                      </TableRow>
-                  </TableFooter>
-              )}
             </Table>
           </div>
         </CardContent>
