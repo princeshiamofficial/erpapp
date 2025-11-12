@@ -16,7 +16,6 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
   { title: 'Logistics', status: 'Logistics', icon: Briefcase, headerBgClass: 'bg-orange-600' },
   { title: 'Courier', status: 'Courier', icon: Briefcase, headerBgClass: 'bg-green-600' },
   { title: 'Delivered', status: 'Delivered', icon: Briefcase, headerBgClass: 'bg-emerald-600' },
-  { title: 'Cancel', status: 'Cancel', icon: Briefcase, headerBgClass: 'bg-red-600' },
 ];
 
 interface ProjectDetailsClientProps {
@@ -40,8 +39,8 @@ export function ProjectDetailsClient({
   
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
-      'CR Clearance': [], 'CO Clearance': [], 'Cancel': [], 'On Design': [],
-      'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
+      'CR Clearance': [], 'CO Clearance': [], 'On Design': [],
+      'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [], 'Cancel': [],
     };
     if (project && grouped[project.status]) {
       grouped[project.status].push(project);
@@ -64,12 +63,12 @@ export function ProjectDetailsClient({
         {isReadOnly && (
           <div className="flex items-center justify-center gap-2 p-2 rounded-md bg-black text-white">
             <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-              alt="Color Hut Logo"
-              width={160}
-              height={40}
-              priority
-              className="object-contain"
+                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                alt="Color Hut Logo"
+                width={160}
+                height={40}
+                priority
+                className="object-contain"
             />
           </div>
         )}
