@@ -167,7 +167,7 @@ export default function PaymentHistoryPage() {
       'Company': p.invoiceId, 
       'Payment Amount': p.payment,
       'Reference/Notes': p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id,
-      'Status': p.status || 'N/A',
+      'Status': 'Pending',
       'Method': p.method,
       'Date': formatDateSafe(p.date),
     }));
@@ -182,47 +182,8 @@ export default function PaymentHistoryPage() {
     document.body.removeChild(link);
   };
 
-  const renderTableRows = () => {
-    if (isLoading) {
-      return [...Array(10)].map((_, i) => (
-        <TableRow key={`skel-${i}`}>
-          <TableCell><Skeleton className="h-5 w-32"/></TableCell>
-          <TableCell><Skeleton className="h-5 w-40"/></TableCell>
-          <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto"/></TableCell>
-          <TableCell><Skeleton className="h-5 w-28"/></TableCell>
-          <TableCell><Skeleton className="h-6 w-20 rounded-full"/></TableCell>
-          <TableCell><Skeleton className="h-5 w-20"/></TableCell>
-          <TableCell><Skeleton className="h-5 w-32"/></TableCell>
-        </TableRow>
-      ));
-    }
-    if (paginatedPayments.length > 0) {
-      return paginatedPayments.map((p) => (
-        <TableRow key={p.id}>
-          <TableCell className="font-medium">{p.vendorName}</TableCell> {/* Now shows Order ID */}
-          <TableCell>{p.invoiceId}</TableCell> {/* Now shows Company */}
-          <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
-          <TableCell className="font-mono text-xs">{p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id}</TableCell>
-          <TableCell>
-            <Badge variant={'secondary'} className={cn('bg-yellow-100 text-yellow-800')}>
-                {p.status}
-            </Badge>
-          </TableCell>
-          <TableCell>{p.method}</TableCell>
-          <TableCell>{formatDateSafe(p.date)}</TableCell>
-        </TableRow>
-      ));
-    }
-    return (
-      <TableRow>
-        <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
-      </TableRow>
-    );
-  };
-
 
   return (
-    <>
     <div className="space-y-6">
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
@@ -266,7 +227,37 @@ export default function PaymentHistoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {renderTableRows()}
+                {isLoading ? (
+                  [...Array(10)].map((_, i) => (
+                    <TableRow key={`skel-${i}`}>
+                      <TableCell colSpan={7}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedPayments.length > 0 ? (
+                  paginatedPayments.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.vendorName}</TableCell>
+                      <TableCell>{p.invoiceId}</TableCell>
+                      <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={'secondary'} className={cn('bg-yellow-100 text-yellow-800')}>
+                            Pending
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{p.method}</TableCell>
+                      <TableCell>{formatDateSafe(p.date)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -281,7 +272,6 @@ export default function PaymentHistoryPage() {
                 <PaginationItem>
                   <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/>
                 </PaginationItem>
-                {/* Simplified pagination display for brevity */}
                 <PaginationItem>
                   <PaginationLink href="#" isActive>
                     {currentPage}
@@ -299,6 +289,5 @@ export default function PaymentHistoryPage() {
         </CardFooter>
       </Card>
     </div>
-    </>
   );
 }
