@@ -106,8 +106,8 @@ export default function PaymentHistoryPage() {
     if (searchTerm.trim()) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       results = results.filter(p =>
-        p.vendorName.toLowerCase().includes(lowerSearchTerm) || // Now searching Order ID
-        p.invoiceId.toLowerCase().includes(lowerSearchTerm) || // Now searching Company Name
+        p.vendorName.toLowerCase().includes(lowerSearchTerm) || // Order ID
+        p.invoiceId.toLowerCase().includes(lowerSearchTerm) || // Company Name
         p.method.toLowerCase().includes(lowerSearchTerm) ||
         (p.notes && p.notes.toLowerCase().includes(lowerSearchTerm)) ||
         (p.status && p.status.toLowerCase().includes(lowerSearchTerm))
@@ -169,7 +169,7 @@ export default function PaymentHistoryPage() {
       'Order ID': p.vendorName,
       'Company': p.invoiceId, 
       'Payment Amount': p.payment,
-      'Reference': p.notes || p.id,
+      'Reference/Notes': p.notes || p.id,
       'Status': p.status || 'N/A',
       'Method': p.method,
       'Date': formatDateSafe(p.date),

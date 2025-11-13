@@ -40,6 +40,11 @@ export async function getAllPaymentHistory(): Promise<BillReport[]> {
         allOrders.forEach(order => {
             if (order.advancePayments && order.advancePayments.length > 0) {
                 order.advancePayments.forEach(payment => {
+                    let displayNotes = payment.notes || null;
+                    if (displayNotes && displayNotes.toLowerCase().includes('steadfast webhook')) {
+                        displayNotes = 'SteadFast';
+                    }
+
                     allPayments.push({
                         id: payment.id,
                         vendorId: order.crmUserId, // Using crmUserId as a reference
@@ -50,7 +55,7 @@ export async function getAllPaymentHistory(): Promise<BillReport[]> {
                         payment: payment.amount,
                         method: payment.paymentMethod || 'N/A',
                         status: 'Pending', // Default status changed to Pending
-                        notes: payment.notes || null, // Add notes field
+                        notes: displayNotes,
                     });
                 });
             } else if (order.advancePayment && order.advancePayment > 0) {
@@ -115,3 +120,4 @@ export async function logAdvancePaymentToHistory(order: TrackingLink, paymentRec
         // We don't re-throw here to avoid failing the main order operation
     }
 }
+
