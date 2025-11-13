@@ -618,7 +618,7 @@ export function OrderDetailsClient({
               <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80"/>Payments History</h3>
               <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Reference/Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {allAdvancePaymentRecords.map((record) => (
                       <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">

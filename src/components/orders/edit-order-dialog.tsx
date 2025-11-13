@@ -307,10 +307,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   };
   
   const isNewAdvanceEntered = (parseFloat(newAdvanceAmount) || 0) > 0;
-  
-  const isProofRequired = useMemo(() => {
-    return false; // Disabled as per user request
-  }, []);
 
   useEffect(() => {
     if (!isNewAdvanceEntered) {
@@ -352,7 +348,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !isLoadingOptions && orderItems.length > 0 && orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null) &&
       !(isNewAdvanceEntered && !newAdvancePaymentMethod.trim()) &&
       !(isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) &&
-      !(isNewAdvanceEntered && !newAdvancePaymentNotes.trim()) && // Check if notes are provided
+      !(isNewAdvanceEntered && !newAdvancePaymentNotes.trim()) &&
       isAdvPaymentValid && isDiscountValid;
   }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, newAdvancePaymentNotes, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount]);
 
@@ -362,32 +358,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (!currentUser || !currentUser.role) {
         toast({ title: "Authentication Error", variant: "destructive" }); return;
     }
-    if (!jobIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim() || !createdAt) {
-      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, and Date Created are required.", variant: "destructive" }); return;
-    }
-    if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
-       toast({ title: "Validation Error", description: "All order items must be complete.", variant: "destructive" }); return;
-    }
-    const parsedNewAdvAmount = parseFloat(newAdvanceAmount) || 0;
-    if (parsedNewAdvAmount > 0 && !newAdvancePaymentMethod.trim()) {
-        toast({ title: "Validation Error", description: "Payment Method is required for new advance payment.", variant: "destructive" }); return;
-    }
-    if (parsedNewAdvAmount > 0 && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) {
-        toast({ title: "Validation Error", description: "Specify 'Other' payment method.", variant: "destructive" }); return;
-    }
-    if (parsedNewAdvAmount > 0 && !newAdvancePaymentNotes.trim()) {
-        toast({ title: "Validation Error", description: "Reference/Notes are required for new advance payments.", variant: "destructive" }); return;
+    if (!canSubmit) {
+      toast({ title: "Validation Error", description: "Please fill all required fields correctly and ensure values are valid.", variant: "destructive" });
+      return;
     }
     
-    const totalAdvanceAfterNew = totalExistingAdvancePaid + parsedNewAdvAmount;
-    const grandTotal = netPayable;
-    if (totalAdvanceAfterNew > grandTotal && grandTotal > 0) {
-        toast({ title: "Validation Error", description: `Total advance payment cannot exceed grand total.`, variant: "destructive"}); return;
-    }
-    if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Discount cannot exceed total items price.`, variant: "destructive"}); return;
-    }
-
     setIsSubmitting(true);
     let newUploadedProofUrl: string | null = null;
     
@@ -416,7 +391,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       companyName: `${jobIdInput.trim()} • ${companyNameInput.trim()}`,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
-      createdAt: createdAt.toISOString(),
+      createdAt: createdAt!.toISOString(),
       specialClientDiscountString: specialClientDiscount.trim() || null,
       orderNotes: orderNotes.trim() || null,
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
@@ -426,7 +401,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (parseFloat(newAdvanceAmount) > 0) {
       finalUpdates.newAdvancePaymentAmount = parseFloat(newAdvanceAmount);
       finalUpdates.newAdvancePaymentMethod = newAdvancePaymentMethod.toLowerCase() === 'other' ? newCustomPaymentMethodText.trim() : newAdvancePaymentMethod.trim();
-      finalUpdates.newAdvancePaymentNotes = newAdvancePaymentNotes.trim() || null;
+      finalUpdates.newAdvancePaymentNotes = newAdvancePaymentNotes.trim();
       finalUpdates.newAdvancePaymentDocumentUrl = newUploadedProofUrl;
     }
     
@@ -552,7 +527,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <div className="mt-4 space-y-2">
                   <Label className="text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Advance Payment History</Label>
                   <div className="max-h-40 overflow-y-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
-                    <Table size="sm"><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead>
+                    <Table size="sm"><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Reference/Notes</TableHead>
                     {isAdmin && <TableHead className="h-8 text-right text-xs">Actions</TableHead>}
                     </TableRow></TableHeader>
                       <TableBody>
@@ -624,7 +599,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   </Popover>
                   {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method *</Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                 </div>)}
-                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isNewAdvanceEntered}/></div>)}
+                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isNewAdvanceEntered} /></div>)}
               </div>
 
               <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
