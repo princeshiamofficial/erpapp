@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { format, subMonths, startOfMonth } from 'date-fns';
@@ -60,16 +61,21 @@ export async function logAdvancePaymentToHistory(order: TrackingLink, paymentRec
     const date = new Date(paymentRecord.date);
     const collectionName = getPaymentHistoryCollectionName(date);
 
-    // Adapt the AdvancePaymentRecord to the BillReport structure for logging
-    const historyEntry: Omit<BillReport, 'id'> = {
-        vendorId: order.crmUserId, // Using crmUserId as the identifier
-        vendorName: order.crmUserName, // Using crmUserName
-        date: paymentRecord.date,
-        invoiceId: order.id, // The order ID is the "invoice"
-        amount: 0, // This is a payment, not a bill amount
-        payment: paymentRecord.amount,
+    // Adapt the AdvancePaymentRecord to a specific structure for logging
+    const historyEntry = {
+        orderId: order.id,
+        company: order.companyName,
+        paymentAmount: paymentRecord.amount,
+        reference: paymentRecord.id,
+        status: 'Approved', // Advance payments are implicitly approved
         method: paymentRecord.paymentMethod || 'Unknown',
-        status: 'Approved', // Advance payments are considered approved
+        date: paymentRecord.date,
+        // Add original context
+        _originalContext: {
+          crmUserId: order.crmUserId,
+          crmUserName: order.crmUserName,
+          paymentNotes: paymentRecord.notes,
+        }
     };
 
     try {
