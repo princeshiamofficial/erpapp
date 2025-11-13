@@ -92,6 +92,20 @@ export default function PaymentHistoryPage() {
   const filteredAndSortedPayments = useMemo(() => {
     let results = [...allPayments];
 
+    // Date range filter
+    if (selectedDateRange?.from && selectedDateRange?.to) {
+        const startDate = startOfDay(selectedDateRange.from);
+        const endDate = endOfDay(selectedDateRange.to);
+        results = results.filter(p => {
+            try {
+                const paymentDate = parseISO(p.date);
+                return isWithinInterval(paymentDate, { start: startDate, end: endDate });
+            } catch (e) {
+                return false;
+            }
+        });
+    }
+
     if (searchTerm.trim()) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       results = results.filter(p =>
@@ -124,7 +138,7 @@ export default function PaymentHistoryPage() {
     }
 
     return results;
-  }, [allPayments, searchTerm, sortConfig]);
+  }, [allPayments, searchTerm, sortConfig, selectedDateRange]);
   
   const handleStatusDoubleClick = (payment: BillReport) => {
     if (payment.status === 'Pending') {
@@ -137,11 +151,10 @@ export default function PaymentHistoryPage() {
     if (!paymentToUpdate) return;
 
     setIsUpdatingStatus(true);
-    const result = await updatePaymentStatus(paymentToUpdate.id, 'Paid');
+    const result = await updatePaymentStatus(paymentToUpdate.id, 'Approved');
 
     if (result.success) {
-      toast({ title: "Status Updated", description: `Payment for order ${paymentToUpdate.vendorName} marked as Paid.` });
-      // Refetch data to show the change
+      toast({ title: "Status Updated", description: `Payment for order ${paymentToUpdate.vendorName} marked as Approved.` });
       fetchData();
     } else {
       toast({ title: "Update Failed", description: result.error, variant: "destructive" });
@@ -267,8 +280,7 @@ export default function PaymentHistoryPage() {
                         <Badge 
                           variant={'secondary'} 
                           className={cn(
-                            'cursor-pointer',
-                            p.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            p.status === 'Pending' ? 'cursor-pointer bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                           )}
                         >
                             {p.status || 'Pending'}
@@ -323,14 +335,14 @@ export default function PaymentHistoryPage() {
             Confirm Status Change
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to mark the payment for order <span className="font-semibold">{paymentToUpdate?.vendorName}</span> as 'Paid'? This action cannot be undone.
+            Are you sure you want to mark the payment for order <span className="font-semibold">{paymentToUpdate?.vendorName}</span> as 'Approved'? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => setIsConfirmDialogOpen(false)} disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirmStatusUpdate} disabled={isUpdatingStatus}>
             {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isUpdatingStatus ? 'Updating...' : 'Mark as Paid'}
+            {isUpdatingStatus ? 'Updating...' : 'Mark as Approved'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

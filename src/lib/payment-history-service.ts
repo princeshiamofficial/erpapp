@@ -126,7 +126,7 @@ export async function logAdvancePaymentToHistory(order: TrackingLink, paymentRec
     }
 }
 
-export async function updatePaymentStatus(paymentId: string, newStatus: 'Paid' | 'Pending'): Promise<{ success: boolean, error?: string }> {
+export async function updatePaymentStatus(paymentId: string, newStatus: 'Approved' | 'Pending' | 'Paid' | 'Unpaid'): Promise<{ success: boolean, error?: string }> {
   const allPayments = await getAllPaymentHistory();
   const paymentToUpdate = allPayments.find(p => p.id === paymentId);
 
