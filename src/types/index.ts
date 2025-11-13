@@ -533,6 +533,7 @@ export interface BillReport {
     payment: number;
     method: string;
     status?: 'Approved' | 'Pending' | 'Paid' | 'Unpaid';
+    notes?: string | null;
 }
 
 export interface LrEntryItem {

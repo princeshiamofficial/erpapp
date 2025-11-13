@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -108,6 +109,7 @@ export default function PaymentHistoryPage() {
         p.vendorName.toLowerCase().includes(lowerSearchTerm) || // Now searching Order ID
         p.invoiceId.toLowerCase().includes(lowerSearchTerm) || // Now searching Company Name
         p.method.toLowerCase().includes(lowerSearchTerm) ||
+        (p.notes && p.notes.toLowerCase().includes(lowerSearchTerm)) ||
         (p.status && p.status.toLowerCase().includes(lowerSearchTerm))
       );
     }
@@ -167,7 +169,7 @@ export default function PaymentHistoryPage() {
       'Order ID': p.vendorName,
       'Company': p.invoiceId, 
       'Payment Amount': p.payment,
-      'Reference': p.id,
+      'Reference': p.notes || p.id,
       'Status': p.status || 'N/A',
       'Method': p.method,
       'Date': formatDateSafe(p.date),
@@ -222,7 +224,7 @@ export default function PaymentHistoryPage() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('vendorName')}>Order ID {getSortIndicator('vendorName')}</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead className="text-right cursor-pointer" onClick={() => requestSort('payment')}>Payment Amount {getSortIndicator('payment')}</TableHead>
-                  <TableHead>Reference</TableHead>
+                  <TableHead>Reference/Notes</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
@@ -247,7 +249,7 @@ export default function PaymentHistoryPage() {
                       <TableCell className="font-medium">{p.vendorName}</TableCell> {/* Now shows Order ID */}
                       <TableCell>{p.invoiceId}</TableCell> {/* Now shows Company */}
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">{p.id}</TableCell> {/* Use payment ID as reference */}
+                      <TableCell className="font-mono text-xs">{p.notes || p.id}</TableCell>
                        <TableCell>
                         <Badge variant={'secondary'} className={cn('bg-yellow-100 text-yellow-800')}>
                             {p.status}

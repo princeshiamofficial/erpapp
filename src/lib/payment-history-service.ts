@@ -50,6 +50,7 @@ export async function getAllPaymentHistory(): Promise<BillReport[]> {
                         payment: payment.amount,
                         method: payment.paymentMethod || 'N/A',
                         status: 'Pending', // Default status changed to Pending
+                        notes: payment.notes || null, // Add notes field
                     });
                 });
             } else if (order.advancePayment && order.advancePayment > 0) {
@@ -64,6 +65,7 @@ export async function getAllPaymentHistory(): Promise<BillReport[]> {
                     payment: order.advancePayment,
                     method: order.paymentMethod || 'Unknown',
                     status: 'Pending', // Default status changed to Pending
+                    notes: "Initial advance payment (legacy).",
                 });
             }
         });
