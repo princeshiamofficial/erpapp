@@ -67,7 +67,7 @@ export default function PaymentHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
     from: new Date('2025-11-13'),
-    to: new Date(),
+    to: new Date('2025-11-13'),
   });
   
 
