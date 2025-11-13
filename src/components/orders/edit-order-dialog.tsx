@@ -352,9 +352,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !isLoadingOptions && orderItems.length > 0 && orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null) &&
       !(isNewAdvanceEntered && !newAdvancePaymentMethod.trim()) &&
       !(isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) &&
-      !(isProofRequired && !selectedPaymentProof) &&
+      !(isNewAdvanceEntered && !newAdvancePaymentNotes.trim()) && // Check if notes are provided
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount, selectedPaymentProof, isProofRequired]);
+  }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, newAdvancePaymentNotes, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,6 +374,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }
     if (parsedNewAdvAmount > 0 && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) {
         toast({ title: "Validation Error", description: "Specify 'Other' payment method.", variant: "destructive" }); return;
+    }
+    if (parsedNewAdvAmount > 0 && !newAdvancePaymentNotes.trim()) {
+        toast({ title: "Validation Error", description: "Reference/Notes are required for new advance payments.", variant: "destructive" }); return;
     }
     
     const totalAdvanceAfterNew = totalExistingAdvancePaid + parsedNewAdvAmount;
@@ -613,14 +617,14 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
               <div className="mt-4 border-t border-border pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1"><Label htmlFor="newAdvanceAmount">Add New Advance Payment</Label><Input id="newAdvanceAmount" type="number" value={newAdvanceAmount} onChange={(e) => setNewAdvanceAmount(e.target.value)} placeholder="Amount (BDT)" min="0" step="0.01" disabled={isSubmitting} /></div>
-                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentMethod">New Payment Method <span className="text-destructive">*</span></Label>
+                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentMethod">New Payment Method *</Label>
                   <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
                     <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between bg-background" disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}><span className="flex-1 text-left whitespace-nowrap">{newAdvancePaymentMethod ? paymentMethodOptions.find(opt => opt.name === newAdvancePaymentMethod)?.name || newAdvancePaymentMethod : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length===0?"No methods":"Select method..."))}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
                     <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0"><Command><CommandInput placeholder="Search method..." /><CommandList><CommandEmpty>No method found.</CommandEmpty><CommandGroup>{paymentMethodOptions.map(opt => (<CommandItem key={opt.id} value={opt.name} onSelect={(val) => {handleNewAdvancePaymentMethodChange(paymentMethodOptions.find(o=>o.name.toLowerCase()===val.toLowerCase())?.name||val);setIsPaymentMethodPopoverOpen(false);}}><Check className={cn("mr-2 h-4 w-4",newAdvancePaymentMethod===opt.name?"opacity-100":"opacity-0")}/><span className="whitespace-nowrap">{opt.name}</span></CommandItem>))}</CommandGroup></CommandList></Command></PopoverContent>
                   </Popover>
-                  {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
+                  {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method *</Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                 </div>)}
-                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>)}
+                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isNewAdvanceEntered}/></div>)}
               </div>
 
               <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">

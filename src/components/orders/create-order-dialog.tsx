@@ -402,9 +402,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       ) &&
       !(isAdvancePaymentEntered && !advancePaymentMethod.trim()) &&
       !(isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
-      !(isProofRequired && !selectedPaymentProof) &&
+      !(isAdvancePaymentEntered && !newAdvancePaymentNotes.trim()) && // Check if notes are provided
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal, selectedPaymentProof, isProofRequired]);
+  }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, newAdvancePaymentNotes, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal]);
+
 
   const handleProofFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -726,8 +727,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 <>
                 <div className="space-y-1">
                   <Label htmlFor="advancePaymentMethod">
-                    Payment Method
-                    <span className="text-destructive"> *</span>
+                    Payment Method *
                   </Label>
                    <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
                     <PopoverTrigger asChild>
@@ -778,8 +778,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   {showCustomPaymentInput && (
                     <div className="mt-2 space-y-1">
                       <Label htmlFor="customPaymentMethodText">
-                        Specify Other Payment Method
-                        <span className="text-destructive"> *</span>
+                        Specify Other Payment Method *
                       </Label>
                       <Input
                         id="customPaymentMethodText"
@@ -791,9 +790,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     </div>
                   )}
                 </div>
-                 <div className="space-y-1">
-                    <Label htmlFor="newAdvancePaymentNotes">Reference/Notes</Label>
-                    <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID"/>
+                <div className="space-y-1">
+                  <Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label>
+                  <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={(e) => setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isAdvancePaymentEntered} />
                 </div>
                 </>
               )}
