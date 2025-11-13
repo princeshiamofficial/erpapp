@@ -66,7 +66,7 @@ export default function PaymentHistoryPage() {
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'date', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 29),
+    from: new Date('2025-11-13'),
     to: new Date(),
   });
   
