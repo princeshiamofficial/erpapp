@@ -14,7 +14,7 @@ import { Loader2, Search, Wallet, ArrowUpDown, Download, AlertTriangle } from 'l
 import { useToast } from '@/hooks/use-toast';
 import { getAllPaymentHistory } from '@/lib/payment-history-service';
 import type { BillReport } from '@/types';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, isAfter } from 'date-fns';
 import { DateRangePicker, type DateRange } from '@/components/dashboard/date-range-picker';
 import Papa from 'papaparse';
 import {
@@ -67,7 +67,7 @@ export default function PaymentHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
     from: new Date('2025-11-13'),
-    to: new Date('2025-11-13'),
+    to: undefined, // No end date to show everything after
   });
   
 
@@ -90,18 +90,17 @@ export default function PaymentHistoryPage() {
   const filteredAndSortedPayments = useMemo(() => {
     let results = [...allPayments];
 
-    if (selectedDateRange?.from) {
-      const startDate = startOfDay(selectedDateRange.from);
-      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-      results = results.filter(payment => {
+    // Filter for dates after November 13, 2025
+    const filterStartDate = new Date('2025-11-13');
+    results = results.filter(payment => {
         try {
-          const paymentDate = parseISO(payment.date);
-          return isWithinInterval(paymentDate, { start: startDate, end: endDate });
+            const paymentDate = parseISO(payment.date);
+            // isAfter checks if the first date is after the second one
+            return isAfter(paymentDate, filterStartDate);
         } catch {
-          return false;
+            return false;
         }
-      });
-    }
+    });
 
     if (searchTerm.trim()) {
       const lowerSearchTerm = searchTerm.toLowerCase();
@@ -135,7 +134,7 @@ export default function PaymentHistoryPage() {
     }
 
     return results;
-  }, [allPayments, searchTerm, selectedDateRange, sortConfig]);
+  }, [allPayments, searchTerm, sortConfig]);
   
   const totalPayment = useMemo(() => filteredAndSortedPayments.reduce((sum, p) => sum + p.payment, 0), [filteredAndSortedPayments]);
 
@@ -211,7 +210,7 @@ export default function PaymentHistoryPage() {
                     className="pl-10 h-10"
                   />
                 </div>
-                 {selectedDateRange && <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={(r) => setSelectedDateRange(r)} />}
+                 <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={(r) => setSelectedDateRange(r)} />
                  <Button variant="outline" onClick={handleExport} disabled={filteredAndSortedPayments.length === 0}><Download className="mr-2 h-4 w-4"/>Export</Button>
               </div>
             </div>
@@ -230,8 +229,8 @@ export default function PaymentHistoryPage() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>{
-                isLoading ? (
+              <TableBody>
+                {isLoading ? (
                   [...Array(10)].map((_, i) => (
                     <TableRow key={`skel-${i}`}>
                       <TableCell><Skeleton className="h-5 w-32"/></TableCell>
@@ -263,8 +262,8 @@ export default function PaymentHistoryPage() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
                   </TableRow>
-                )
-              }</TableBody>
+                )}
+              </TableBody>
             </Table>
           </div>
         </CardContent>
@@ -299,3 +298,4 @@ export default function PaymentHistoryPage() {
     </>
   );
 }
+
