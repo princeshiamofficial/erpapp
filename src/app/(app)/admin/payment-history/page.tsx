@@ -249,7 +249,7 @@ export default function PaymentHistoryPage() {
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
                       <TableCell className="font-mono text-xs">{p.id}</TableCell> {/* Use payment ID as reference */}
                        <TableCell>
-                        <Badge variant={'default'} className={cn('bg-green-100 text-green-800')}>
+                        <Badge variant={'secondary'} className={cn('bg-yellow-100 text-yellow-800')}>
                             {p.status}
                         </Badge>
                       </TableCell>

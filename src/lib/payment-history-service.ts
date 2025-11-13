@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { format, subMonths, startOfMonth } from 'date-fns';
@@ -48,7 +49,7 @@ export async function getAllPaymentHistory(): Promise<BillReport[]> {
                         amount: 0, // Not applicable in this context
                         payment: payment.amount,
                         method: payment.paymentMethod || 'N/A',
-                        status: 'Approved', // All advance payments are considered approved
+                        status: 'Pending', // Default status changed to Pending
                     });
                 });
             } else if (order.advancePayment && order.advancePayment > 0) {
@@ -62,7 +63,7 @@ export async function getAllPaymentHistory(): Promise<BillReport[]> {
                     amount: 0,
                     payment: order.advancePayment,
                     method: order.paymentMethod || 'Unknown',
-                    status: 'Approved',
+                    status: 'Pending', // Default status changed to Pending
                 });
             }
         });
