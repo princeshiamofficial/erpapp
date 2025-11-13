@@ -67,7 +67,7 @@ export default function PaymentHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
     from: new Date('2025-11-13'),
-    to: undefined, // No end date to show everything after
+    to: new Date('2025-11-13'),
   });
   
 
@@ -229,8 +229,8 @@ export default function PaymentHistoryPage() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {isLoading ? (
+              <TableBody>{
+                isLoading ? (
                   [...Array(10)].map((_, i) => (
                     <TableRow key={`skel-${i}`}>
                       <TableCell><Skeleton className="h-5 w-32"/></TableCell>
@@ -262,8 +262,8 @@ export default function PaymentHistoryPage() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
+                )
+              }</TableBody>
             </Table>
           </div>
         </CardContent>
@@ -298,4 +298,3 @@ export default function PaymentHistoryPage() {
     </>
   );
 }
-
