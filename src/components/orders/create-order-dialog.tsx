@@ -219,8 +219,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
   
   const isProofRequired = useMemo(() => {
-    return isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() !== 'cash';
-  }, [isAdvancePaymentEntered, advancePaymentMethod]);
+    return false; // Disabled as per user request
+  }, []);
 
   useEffect(() => {
     if (!isAdvancePaymentEntered) {
@@ -431,11 +431,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     
     // Final validations
     if (!canSubmit) {
-      if (isAdvancePaymentEntered && isProofRequired && !selectedPaymentProof) {
-        toast({ title: "Validation Error", description: "Payment proof is required unless the payment method is 'Cash'.", variant: "destructive" });
-      } else {
-        toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
-      }
+      toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
       return;
     }
     
@@ -799,30 +795,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     <Label htmlFor="newAdvancePaymentNotes">Reference/Notes</Label>
                     <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID"/>
                 </div>
-                 {isProofRequired && (
-                  <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                    <Label htmlFor="payment-proof">
-                      Payment Proof <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="payment-proof"
-                        type="file"
-                        ref={paymentProofRef}
-                        onChange={handleProofFileChange}
-                        className="flex-1"
-                        required={isProofRequired}
-                        accept="image/*"
-                      />
-                      {selectedPaymentProof && (
-                        <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile}>
-                          <XCircle className="h-4 w-4 text-destructive"/>
-                        </Button>
-                      )}
-                    </div>
-                    {selectedPaymentProof && <p className="text-xs text-muted-foreground">File: {selectedPaymentProof.name}</p>}
-                  </div>
-                )}
                 </>
               )}
             </div>

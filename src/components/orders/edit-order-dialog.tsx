@@ -309,8 +309,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const isNewAdvanceEntered = (parseFloat(newAdvanceAmount) || 0) > 0;
   
   const isProofRequired = useMemo(() => {
-    return isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() !== 'cash';
-  }, [isNewAdvanceEntered, newAdvancePaymentMethod]);
+    return false; // Disabled as per user request
+  }, []);
 
   useEffect(() => {
     if (!isNewAdvanceEntered) {
@@ -622,31 +622,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                         {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                     </div>
                     <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
-                     {isProofRequired && (
-                      <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                        <Label htmlFor="payment-proof-edit">
-                          Payment Proof <span className="text-destructive">*</span>
-                        </Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="payment-proof-edit"
-                            type="file"
-                            ref={paymentProofRef}
-                            onChange={handleProofFileChange}
-                            className="flex-1"
-                            required={isProofRequired}
-                            accept="image/*"
-                            disabled={isSubmitting || isUploadingProof}
-                          />
-                          {selectedPaymentProof && (
-                            <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile} disabled={isSubmitting}>
-                              <XCircle className="h-4 w-4 text-destructive"/>
-                            </Button>
-                          )}
-                        </div>
-                        {selectedPaymentProof && <p className="text-xs text-muted-foreground">File: {selectedPaymentProof.name}</p>}
-                      </div>
-                    )}
                 </>)}
               </div>
 
@@ -683,5 +658,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </>
   );
 }
-
-    

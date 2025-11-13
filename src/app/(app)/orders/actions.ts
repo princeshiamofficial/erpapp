@@ -107,10 +107,6 @@ export async function createOrderAction(
       if (isNaN(numAdvancePayment) || numAdvancePayment < 0) return { error: "Advance Payment Amount must be a non-negative number." };
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
-    
-    if (parsedAdvancePaymentAmount && parsedAdvancePaymentAmount > 0 && !data.advancePaymentDocumentUrl && data.advancePaymentMethod?.toLowerCase() !== 'cash') {
-      return { error: "Payment proof is required for advance payments unless it's cash." };
-    }
 
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
     const grandTotal = netPayable; 
@@ -322,10 +318,7 @@ export async function updateOrderAction(
         if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
             return { success: false, error: "Payment method is required for new advance payment." };
         }
-        if (updates.newAdvancePaymentMethod.toLowerCase() !== 'cash' && !updates.newAdvancePaymentDocumentUrl) {
-            return { success: false, error: "Payment proof is required unless payment method is 'Cash'." };
-        }
-
+        
         newAdvanceRecord = {
             id: uuidv4(),
             amount: updates.newAdvancePaymentAmount,
@@ -623,5 +616,6 @@ export async function deleteOrderAction(
 }
 
     
+
 
 
