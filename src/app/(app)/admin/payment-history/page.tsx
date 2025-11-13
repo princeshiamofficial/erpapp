@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -229,8 +228,8 @@ export default function PaymentHistoryPage() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>{
-                isLoading ? (
+              <TableBody>
+                {isLoading ? (
                   [...Array(10)].map((_, i) => (
                     <TableRow key={`skel-${i}`}>
                       <TableCell><Skeleton className="h-5 w-32"/></TableCell>
@@ -262,8 +261,8 @@ export default function PaymentHistoryPage() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
                   </TableRow>
-                )
-              }</TableBody>
+                )}
+              </TableBody>
             </Table>
           </div>
         </CardContent>
