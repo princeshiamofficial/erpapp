@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Search, Wallet, ArrowUpDown, Download, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getAllPaymentHistory } from '@/lib/payment-history-service';
+import { getAllPaymentHistory, updatePaymentStatus } from '@/lib/payment-history-service';
 import type { BillReport } from '@/types';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, isAfter } from 'date-fns';
 import { DateRangePicker, type DateRange } from '@/components/dashboard/date-range-picker';
@@ -68,6 +68,9 @@ export default function PaymentHistoryPage() {
     from: new Date('2025-11-13'),
     to: new Date('2025-11-13'),
   });
+  const [paymentToUpdate, setPaymentToUpdate] = useState<BillReport | null>(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
 
   const fetchData = useCallback(async () => {
@@ -89,22 +92,11 @@ export default function PaymentHistoryPage() {
   const filteredAndSortedPayments = useMemo(() => {
     let results = [...allPayments];
 
-    // Filter for dates after November 13, 2025
-    const filterStartDate = new Date('2025-11-13');
-    results = results.filter(payment => {
-        try {
-            const paymentDate = parseISO(payment.date);
-            return isAfter(paymentDate, filterStartDate);
-        } catch {
-            return false;
-        }
-    });
-
     if (searchTerm.trim()) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       results = results.filter(p =>
-        p.vendorName.toLowerCase().includes(lowerSearchTerm) || // Order ID
-        p.invoiceId.toLowerCase().includes(lowerSearchTerm) || // Company Name
+        p.vendorName.toLowerCase().includes(lowerSearchTerm) || 
+        p.invoiceId.toLowerCase().includes(lowerSearchTerm) || 
         p.method.toLowerCase().includes(lowerSearchTerm) ||
         (p.notes && p.notes.toLowerCase().includes(lowerSearchTerm)) ||
         (p.status && p.status.toLowerCase().includes(lowerSearchTerm))
@@ -133,6 +125,32 @@ export default function PaymentHistoryPage() {
 
     return results;
   }, [allPayments, searchTerm, sortConfig]);
+  
+  const handleStatusDoubleClick = (payment: BillReport) => {
+    if (payment.status === 'Pending') {
+      setPaymentToUpdate(payment);
+      setIsConfirmDialogOpen(true);
+    }
+  };
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!paymentToUpdate) return;
+
+    setIsUpdatingStatus(true);
+    const result = await updatePaymentStatus(paymentToUpdate.id, 'Paid');
+
+    if (result.success) {
+      toast({ title: "Status Updated", description: `Payment for order ${paymentToUpdate.vendorName} marked as Paid.` });
+      // Refetch data to show the change
+      fetchData();
+    } else {
+      toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    }
+
+    setIsUpdatingStatus(false);
+    setIsConfirmDialogOpen(false);
+    setPaymentToUpdate(null);
+  };
   
   const totalPayment = useMemo(() => filteredAndSortedPayments.reduce((sum, p) => sum + p.payment, 0), [filteredAndSortedPayments]);
 
@@ -167,7 +185,7 @@ export default function PaymentHistoryPage() {
       'Company': p.invoiceId, 
       'Payment Amount': p.payment,
       'Reference/Notes': p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id,
-      'Status': 'Pending',
+      'Status': p.status || 'Pending',
       'Method': p.method,
       'Date': formatDateSafe(p.date),
     }));
@@ -184,6 +202,7 @@ export default function PaymentHistoryPage() {
 
 
   return (
+    <>
     <div className="space-y-6">
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
@@ -244,9 +263,15 @@ export default function PaymentHistoryPage() {
                       <TableCell className="font-mono text-xs">
                         {p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={'secondary'} className={cn('bg-yellow-100 text-yellow-800')}>
-                            Pending
+                      <TableCell onDoubleClick={() => handleStatusDoubleClick(p)}>
+                        <Badge 
+                          variant={'secondary'} 
+                          className={cn(
+                            'cursor-pointer',
+                            p.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          )}
+                        >
+                            {p.status || 'Pending'}
                         </Badge>
                       </TableCell>
                       <TableCell>{p.method}</TableCell>
@@ -289,5 +314,28 @@ export default function PaymentHistoryPage() {
         </CardFooter>
       </Card>
     </div>
+
+    <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-primary" />
+            Confirm Status Change
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to mark the payment for order <span className="font-semibold">{paymentToUpdate?.vendorName}</span> as 'Paid'? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setIsConfirmDialogOpen(false)} disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmStatusUpdate} disabled={isUpdatingStatus}>
+            {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isUpdatingStatus ? 'Updating...' : 'Mark as Paid'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    </>
   );
 }
