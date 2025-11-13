@@ -169,7 +169,7 @@ export default function PaymentHistoryPage() {
       'Order ID': p.vendorName,
       'Company': p.invoiceId, 
       'Payment Amount': p.payment,
-      'Reference/Notes': p.notes || p.id,
+      'Reference/Notes': p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id,
       'Status': p.status || 'N/A',
       'Method': p.method,
       'Date': formatDateSafe(p.date),
@@ -230,8 +230,8 @@ export default function PaymentHistoryPage() {
                   <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>Date {getSortIndicator('date')}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {isLoading ? (
+              <TableBody>{
+                isLoading ? (
                   [...Array(10)].map((_, i) => (
                     <TableRow key={`skel-${i}`}>
                       <TableCell><Skeleton className="h-5 w-32"/></TableCell>
@@ -249,7 +249,7 @@ export default function PaymentHistoryPage() {
                       <TableCell className="font-medium">{p.vendorName}</TableCell> {/* Now shows Order ID */}
                       <TableCell>{p.invoiceId}</TableCell> {/* Now shows Company */}
                       <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">{p.notes || p.id}</TableCell>
+                      <TableCell className="font-mono text-xs">{p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id}</TableCell>
                        <TableCell>
                         <Badge variant={'secondary'} className={cn('bg-yellow-100 text-yellow-800')}>
                             {p.status}
@@ -263,8 +263,8 @@ export default function PaymentHistoryPage() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
+                )
+              }</TableBody>
             </Table>
           </div>
         </CardContent>
