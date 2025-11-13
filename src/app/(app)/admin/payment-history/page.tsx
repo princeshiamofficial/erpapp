@@ -99,7 +99,7 @@ export default function PaymentHistoryPage() {
         results = results.filter(p => {
             try {
                 const paymentDate = parseISO(p.date);
-                return isWithinInterval(paymentDate, { start: startDate, end: endDate });
+                 return isWithinInterval(paymentDate, { start: startDate, end: endDate }) && isAfter(paymentDate, new Date('2025-11-13'));
             } catch (e) {
                 return false;
             }
@@ -141,7 +141,7 @@ export default function PaymentHistoryPage() {
   }, [allPayments, searchTerm, sortConfig, selectedDateRange]);
   
   const handleStatusDoubleClick = (payment: BillReport) => {
-    if (payment.status === 'Pending') {
+    if (payment.status === 'Pending' || payment.status === 'Approved') {
       setPaymentToUpdate(payment);
       setIsConfirmDialogOpen(true);
     }
@@ -149,12 +149,14 @@ export default function PaymentHistoryPage() {
 
   const handleConfirmStatusUpdate = async () => {
     if (!paymentToUpdate) return;
+    
+    const newStatus = paymentToUpdate.status === 'Pending' ? 'Approved' : 'Pending';
 
     setIsUpdatingStatus(true);
-    const result = await updatePaymentStatus(paymentToUpdate.id, 'Approved');
+    const result = await updatePaymentStatus(paymentToUpdate.id, newStatus);
 
     if (result.success) {
-      toast({ title: "Status Updated", description: `Payment for order ${paymentToUpdate.vendorName} marked as Approved.` });
+      toast({ title: "Status Updated", description: `Payment for order ${paymentToUpdate.vendorName} marked as ${newStatus}.` });
       fetchData();
     } else {
       toast({ title: "Update Failed", description: result.error, variant: "destructive" });
@@ -213,6 +215,47 @@ export default function PaymentHistoryPage() {
     document.body.removeChild(link);
   };
 
+  const renderTableRows = () => {
+    if (isLoading) {
+      return [...Array(10)].map((_, i) => (
+        <TableRow key={`skel-${i}`}>
+          <TableCell colSpan={7}>
+            <Skeleton className="h-5 w-full" />
+          </TableCell>
+        </TableRow>
+      ));
+    }
+    if (paginatedPayments.length > 0) {
+      return paginatedPayments.map((p) => (
+        <TableRow key={p.id}>
+          <TableCell className="font-medium">{p.vendorName}</TableCell>
+          <TableCell>{p.invoiceId}</TableCell>
+          <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
+          <TableCell className="font-mono text-xs">
+            {p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : (p.notes || p.id)}
+          </TableCell>
+          <TableCell onDoubleClick={() => handleStatusDoubleClick(p)}>
+            <Badge 
+              variant={'secondary'} 
+              className={cn(
+                p.status === 'Pending' ? 'cursor-pointer bg-yellow-100 text-yellow-800' : 'cursor-pointer bg-green-100 text-green-800'
+              )}
+            >
+                {p.status || 'Pending'}
+            </Badge>
+          </TableCell>
+          <TableCell>{p.method}</TableCell>
+          <TableCell>{formatDateSafe(p.date)}</TableCell>
+        </TableRow>
+      ));
+    }
+    return (
+      <TableRow>
+        <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
+      </TableRow>
+    );
+  };
+
 
   return (
     <>
@@ -259,42 +302,7 @@ export default function PaymentHistoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  [...Array(10)].map((_, i) => (
-                    <TableRow key={`skel-${i}`}>
-                      <TableCell colSpan={7}>
-                        <Skeleton className="h-5 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : paginatedPayments.length > 0 ? (
-                  paginatedPayments.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.vendorName}</TableCell>
-                      <TableCell>{p.invoiceId}</TableCell>
-                      <TableCell className="text-right font-mono text-green-600">{p.payment > 0 ? formatCurrency(p.payment) : '-'}</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {p.notes?.toLowerCase().includes('steadfast webhook') ? 'SteadFast' : p.notes || p.id}
-                      </TableCell>
-                      <TableCell onDoubleClick={() => handleStatusDoubleClick(p)}>
-                        <Badge 
-                          variant={'secondary'} 
-                          className={cn(
-                            p.status === 'Pending' ? 'cursor-pointer bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                          )}
-                        >
-                            {p.status || 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{p.method}</TableCell>
-                      <TableCell>{formatDateSafe(p.date)}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center h-48">No payment records found for the selected criteria.</TableCell>
-                  </TableRow>
-                )}
+                {renderTableRows()}
               </TableBody>
             </Table>
           </div>
@@ -335,14 +343,14 @@ export default function PaymentHistoryPage() {
             Confirm Status Change
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to mark the payment for order <span className="font-semibold">{paymentToUpdate?.vendorName}</span> as 'Approved'? This action cannot be undone.
+            Are you sure you want to mark the payment for order <span className="font-semibold">{paymentToUpdate?.vendorName}</span> as '{paymentToUpdate?.status === 'Pending' ? 'Approved' : 'Pending'}'?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => setIsConfirmDialogOpen(false)} disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirmStatusUpdate} disabled={isUpdatingStatus}>
             {isUpdatingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isUpdatingStatus ? 'Updating...' : 'Mark as Approved'}
+            {isUpdatingStatus ? 'Updating...' : `Mark as ${paymentToUpdate?.status === 'Pending' ? 'Approved' : 'Pending'}`}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
