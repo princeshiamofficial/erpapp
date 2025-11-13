@@ -233,16 +233,16 @@ export async function updateAdvancePaymentStatus(
   orderId: string,
   paymentId: string,
   newStatus: 'Approved' | 'Pending'
-): Promise<TrackingLink | null> {
+): Promise<{ success: boolean; error?: string, order?: TrackingLink }> {
   try {
     const order = await getOrderById(orderId);
     if (!order || !order.advancePayments) {
-      throw new Error(`Order or payment history not found for order ${orderId}.`);
+      return { success: false, error: `Order or payment history not found for order ${orderId}.` };
     }
 
     const paymentIndex = order.advancePayments.findIndex(p => p.id === paymentId);
     if (paymentIndex === -1) {
-      throw new Error(`Payment record ${paymentId} not found in order ${orderId}.`);
+      return { success: false, error: `Payment record ${paymentId} not found in order ${orderId}.` };
     }
 
     const updatedPayments = [...order.advancePayments];
@@ -253,13 +253,14 @@ export async function updateAdvancePaymentStatus(
     
     const success = await updateOrder(orderId, { advancePayments: updatedPayments });
     if (success) {
-      return { ...order, advancePayments: updatedPayments };
+      // Return the entire order with the updated payment for the silent UI update
+      return { success: true, order: { ...order, advancePayments: updatedPayments } };
     } else {
-      throw new Error("Failed to save the updated order.");
+      return { success: false, error: "Failed to save the updated order to the database." };
     }
   } catch (error) {
     console.error(`Error updating payment status for order ${orderId}:`, error);
-    return null;
+    return { success: false, error: error instanceof Error ? error.message : "Failed to update status." };
   }
 }
 

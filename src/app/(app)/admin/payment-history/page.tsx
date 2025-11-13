@@ -11,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Search, Wallet, ArrowUpDown, Download, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getAllPaymentHistory, updatePaymentStatus } from '@/lib/payment-history-service';
-import type { BillReport } from '@/types';
+import { getAllPaymentHistory } from '@/lib/payment-history-service';
+import { updateAdvancePaymentStatus } from '@/lib/order-service'; // Corrected import
+import type { BillReport, AdvancePaymentRecord, TrackingLink } from '@/types';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, isAfter } from 'date-fns';
 import { DateRangePicker, type DateRange } from '@/components/dashboard/date-range-picker';
 import Papa from 'papaparse';
@@ -57,18 +58,24 @@ const formatDateSafe = (dateString?: string) => {
 type SortKey = 'vendorName' | 'date' | 'payment';
 type SortDirection = 'asc' | 'desc';
 
+type PaymentHistoryEntry = BillReport & { orderId?: string };
+
+
 export default function PaymentHistoryPage() {
   const { toast } = useToast();
-  const [allPayments, setAllPayments] = useState<BillReport[]>([]);
+  const [allPayments, setAllPayments] = useState<PaymentHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'date', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
-    from: new Date('2025-11-13'),
-    to: new Date('2025-11-13'),
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
+    const today = new Date();
+    return {
+      from: startOfDay(subDays(today, 29)),
+      to: endOfDay(today),
+    }
   });
-  const [paymentToUpdate, setPaymentToUpdate] = useState<BillReport | null>(null);
+  const [paymentToUpdate, setPaymentToUpdate] = useState<PaymentHistoryEntry | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
@@ -99,7 +106,8 @@ export default function PaymentHistoryPage() {
         results = results.filter(p => {
             try {
                 const paymentDate = parseISO(p.date);
-                 return isWithinInterval(paymentDate, { start: startDate, end: endDate }) && isAfter(paymentDate, new Date('2025-11-13'));
+                // The date '2025-11-13' check is kept as per previous request.
+                return isWithinInterval(paymentDate, { start: startDate, end: endDate }) && isAfter(paymentDate, new Date('2025-11-13'));
             } catch (e) {
                 return false;
             }
@@ -140,26 +148,37 @@ export default function PaymentHistoryPage() {
     return results;
   }, [allPayments, searchTerm, sortConfig, selectedDateRange]);
   
-  const handleStatusDoubleClick = (payment: BillReport) => {
-    if (payment.status === 'Pending' || payment.status === 'Approved') {
+  const handleStatusDoubleClick = (payment: PaymentHistoryEntry) => {
+    // Only allow changing status for payments linked to an order
+    if (payment.orderId && (payment.status === 'Pending' || payment.status === 'Approved')) {
       setPaymentToUpdate(payment);
       setIsConfirmDialogOpen(true);
     }
   };
 
   const handleConfirmStatusUpdate = async () => {
-    if (!paymentToUpdate) return;
+    if (!paymentToUpdate || !paymentToUpdate.orderId) return;
     
     const newStatus = paymentToUpdate.status === 'Pending' ? 'Approved' : 'Pending';
 
     setIsUpdatingStatus(true);
-    const result = await updatePaymentStatus(paymentToUpdate.id, newStatus);
+    const result = await updateAdvancePaymentStatus(paymentToUpdate.orderId, paymentToUpdate.id, newStatus);
 
-    if (result.success) {
+    if (result.success && result.order) {
       toast({ title: "Status Updated", description: `Payment for order ${paymentToUpdate.vendorName} marked as ${newStatus}.` });
-      fetchData();
+      
+      // Silent UI update
+      setAllPayments(prevPayments => {
+        return prevPayments.map(p => {
+            if (p.id === paymentToUpdate.id) {
+                return { ...p, status: newStatus };
+            }
+            return p;
+        });
+      });
+
     } else {
-      toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+      toast({ title: "Update Failed", description: result.error || "Failed to update status in the database.", variant: "destructive" });
     }
 
     setIsUpdatingStatus(false);
@@ -220,7 +239,7 @@ export default function PaymentHistoryPage() {
       return [...Array(10)].map((_, i) => (
         <TableRow key={`skel-${i}`}>
           <TableCell colSpan={7}>
-            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-8 w-full" />
           </TableCell>
         </TableRow>
       ));
@@ -238,7 +257,8 @@ export default function PaymentHistoryPage() {
             <Badge 
               variant={'secondary'} 
               className={cn(
-                p.status === 'Pending' ? 'cursor-pointer bg-yellow-100 text-yellow-800' : 'cursor-pointer bg-green-100 text-green-800'
+                p.status === 'Pending' && 'cursor-pointer bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
+                p.status === 'Approved' && 'cursor-pointer bg-green-100 text-green-800 hover:bg-green-200'
               )}
             >
                 {p.status || 'Pending'}
