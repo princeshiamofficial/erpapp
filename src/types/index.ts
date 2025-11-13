@@ -124,6 +124,7 @@ export interface AdvancePaymentRecord {
   recordedByUserId: string;
   recordedByUserName: string;
   documentUrl?: string | null;
+  status?: 'Pending' | 'Approved'; // New field for status
 }
 
 export interface Feedback {

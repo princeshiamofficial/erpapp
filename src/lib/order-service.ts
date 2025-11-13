@@ -172,6 +172,7 @@ export const addOrder = async (orderData: {
         notes: orderData.newAdvancePaymentNotes || "Initial advance payment.",
         documentUrl: orderData.advancePaymentDocumentUrl || null,
         recordedByUserId: orderData.crmUserId, recordedByUserName: orderData.crmUserName,
+        status: 'Pending', // Default status for new payments
       });
     }
 
@@ -227,6 +228,40 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     return false;
   }
 };
+
+export async function updateAdvancePaymentStatus(
+  orderId: string,
+  paymentId: string,
+  newStatus: 'Approved' | 'Pending'
+): Promise<TrackingLink | null> {
+  try {
+    const order = await getOrderById(orderId);
+    if (!order || !order.advancePayments) {
+      throw new Error(`Order or payment history not found for order ${orderId}.`);
+    }
+
+    const paymentIndex = order.advancePayments.findIndex(p => p.id === paymentId);
+    if (paymentIndex === -1) {
+      throw new Error(`Payment record ${paymentId} not found in order ${orderId}.`);
+    }
+
+    const updatedPayments = [...order.advancePayments];
+    updatedPayments[paymentIndex] = {
+      ...updatedPayments[paymentIndex],
+      status: newStatus,
+    };
+    
+    const success = await updateOrder(orderId, { advancePayments: updatedPayments });
+    if (success) {
+      return { ...order, advancePayments: updatedPayments };
+    } else {
+      throw new Error("Failed to save the updated order.");
+    }
+  } catch (error) {
+    console.error(`Error updating payment status for order ${orderId}:`, error);
+    return null;
+  }
+}
 
 export const updateOrdersBatch = async (updates: { id: string, data: Partial<TrackingLink> }[]): Promise<boolean> => {
     if (updates.length === 0) return true;
@@ -297,6 +332,7 @@ export async function autoSettleOrderIfDelivered(
       const settlementRecord: AdvancePaymentRecord = {
         id: uuidv4(), amount: dueAmount, date: new Date().toISOString(), paymentMethod: "COD",
         notes: settlementReason, recordedByUserId: actingUser.id, recordedByUserName: actingUser.name,
+        status: 'Approved', // Auto-approve COD payments
       };
       updates.advancePayments = [...(order.advancePayments || []), settlementRecord];
       needsUpdate = true;
