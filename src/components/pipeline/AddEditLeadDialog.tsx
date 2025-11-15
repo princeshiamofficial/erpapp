@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -45,7 +44,6 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [source, setSource] = useState('');
-  const [address, setAddress] = useState('');
   const [division, setDivision] = useState('');
   const [district, setDistrict] = useState('');
   const [thana, setThana] = useState('');
@@ -76,13 +74,23 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setBusinessName(lead.businessName);
         setPhone(lead.phone);
         setSource(lead.source);
-        setAddress(lead.address);
-        setDivision(lead.division || '');
-        setDistrict(lead.district || '');
-        setThana(lead.thana || '');
+        
+        // Deconstruct address
+        const addressParts = lead.address.split(',').map(p => p.trim());
+        const leadDivision = divisions.find(d => addressParts.includes(d.division));
+        
+        setDivision(leadDivision?.division || '');
+        
+        const leadDistrict = leadDivision?.districts.find(d => addressParts.includes(d.name));
+        setDistrict(leadDistrict?.name || '');
+        
+        // Thana is what remains
+        const thanaPart = addressParts.filter(p => p !== leadDivision?.division && p !== leadDistrict?.name).join(', ');
+        setThana(thanaPart);
+
         setNotes(lead.notes || '');
         setCustomerType(lead.customerType || '');
-        setPhoneError(null); // Reset error on load
+        setPhoneError(null);
       } else {
         // Reset for add mode
         setDate(new Date());
@@ -91,13 +99,12 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setBusinessName('');
         setPhone('');
         setSource('');
-        setAddress('');
         setDivision('');
         setDistrict('');
         setThana('');
         setNotes('');
         setCustomerType('');
-        setPhoneError(null); // Reset error on load
+        setPhoneError(null);
       }
       setTimeout(() => {
         contactNameInputRef.current?.focus();
@@ -123,14 +130,14 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    validatePhone(phone); // Final validation check
+    validatePhone(phone);
     if (phoneError) {
         toast({ title: "Validation Error", description: phoneError, variant: "destructive" });
         return;
     }
 
-    if (!date || !contactName || !businessName || !phone || !source || !address || !customerType) {
-      toast({ title: "Validation Error", description: "Please fill in all required fields, including Customer Type.", variant: "destructive" });
+    if (!date || !contactName || !businessName || !phone || !source || !division || !district || !thana || !customerType) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields.", variant: "destructive" });
       return;
     }
 
@@ -145,20 +152,23 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
     }
 
     setIsSubmitting(true);
+    
+    const combinedAddress = [thana, district, division].filter(Boolean).join(', ');
 
-    const leadData = {
+    const leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType } = {
       date: date.toISOString(),
       schedule: schedule ? schedule.toISOString() : null,
-      contactName, businessName, phone, source, address,
+      contactName, businessName, phone, source, 
+      address: combinedAddress,
       division: division || null,
       district: district || null,
       thana: thana || null,
       notes: notes || null,
       customerType: customerType || null,
     };
-
+    
     let result;
-    if (isEditMode) {
+    if (isEditMode && lead) {
       result = await updateLeadAction(lead.id, leadData);
       if (result.success && result.lead) {
         onLeadSaved(result.lead, true);
@@ -262,10 +272,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                 </Select>
               </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="address">Address</Label>
-              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
-            </div>
+            
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                     <Label htmlFor="division">Division</Label>
@@ -288,7 +295,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
             </div>
              <div className="space-y-1">
                 <Label htmlFor="thana">Thana</Label>
-                <Input id="thana" value={thana} onChange={(e) => setThana(e.target.value)} placeholder="Enter Thana/Upazila"/>
+                <Input id="thana" value={thana} onChange={(e) => setThana(e.target.value)} placeholder="Enter Thana/Upazila" required/>
             </div>
             <div className="space-y-1">
               <Label htmlFor="customerType">Customer Type</Label>
