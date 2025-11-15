@@ -62,7 +62,7 @@ export const initializeFCM = async (): Promise<string | null> => {
     const swRegistration = await navigator.serviceWorker.ready; // Use .ready to ensure the SW is active
     console.log("[NotificationUtils] Service worker is active. SW Registration object:", swRegistration);
     
-    const VAPID_KEY = "BMLD4tBKrzeVD7gh99dJGpWPDmcUPEuc23879zSSPVkG_swfL7M00xw-agMVnZdFqU8HhzFkApNdbUOPRyYsLDc";
+    const VAPID_KEY = "BMmAKwUdHqgZI3RoxiEl3608f_tNusP9JF8daxFJ99CTMjH1VGmLv7ctXnTcSeUKxRcWdbzhrkh2GPtY9Gw2R04";
     console.log("[NotificationUtils] Attempting to get FCM token using active SW registration and VAPID key.");
 
     const currentToken = await getToken(fcmMessaging, {
@@ -178,5 +178,3 @@ export const initializeFCM = async (): Promise<string | null> => {
     return null;
   }
 };
-
-    
