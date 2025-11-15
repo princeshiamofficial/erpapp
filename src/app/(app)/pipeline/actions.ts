@@ -101,7 +101,7 @@ export async function addLeadActivityAction(
     return { success: false, error: "Failed to add activity to lead." };
   } catch (error) {
     console.error("Error in addLeadActivityAction:", error);
-    return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
 
@@ -383,7 +383,7 @@ export async function transferSelectedLeadsAction(
     return { success: true, transferredCount: successfulTransfers };
   } catch (error) {
     console.error("Error in transferSelectedLeadsAction:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unexpected server error occurred.";
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
     return { success: false, transferredCount: 0, error: errorMessage };
   }
 }

@@ -74,20 +74,9 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setBusinessName(lead.businessName);
         setPhone(lead.phone);
         setSource(lead.source);
-        
-        // Deconstruct address
-        const addressParts = lead.address.split(',').map(p => p.trim());
-        const leadDivision = divisions.find(d => addressParts.includes(d.division));
-        
-        setDivision(leadDivision?.division || '');
-        
-        const leadDistrict = leadDivision?.districts.find(d => addressParts.includes(d.name));
-        setDistrict(leadDistrict?.name || '');
-        
-        // Thana is what remains
-        const thanaPart = addressParts.filter(p => p !== leadDivision?.division && p !== leadDistrict?.name).join(', ');
-        setThana(thanaPart);
-
+        setDivision(lead.division || '');
+        setDistrict(lead.district || '');
+        setThana(lead.thana || '');
         setNotes(lead.notes || '');
         setCustomerType(lead.customerType || '');
         setPhoneError(null);
@@ -153,7 +142,13 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
 
     setIsSubmitting(true);
     
-    const combinedAddress = [thana, district, division].filter(Boolean).join(', ');
+    const addressParts = [];
+    if (thana) addressParts.push(thana.trim());
+    if (district) addressParts.push(district.trim());
+    if (division && division.trim().toLowerCase() !== district.trim().toLowerCase()) {
+      addressParts.push(division.trim());
+    }
+    const combinedAddress = addressParts.filter(Boolean).join(', ');
 
     const leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType } = {
       date: date.toISOString(),
