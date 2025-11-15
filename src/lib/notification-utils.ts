@@ -58,11 +58,10 @@ export const initializeFCM = async (): Promise<string | null> => {
     }
     console.log("[NotificationUtils] Notification permission is granted.");
 
-    console.log("[NotificationUtils] Attempting to register service worker: /firebase-messaging-sw.js");
-    const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    console.log("[NotificationUtils] Service worker registration attempt complete. SW Registration object:", swRegistration);
+    console.log("[NotificationUtils] Waiting for service worker to be ready: /firebase-messaging-sw.js");
+    const swRegistration = await navigator.serviceWorker.ready; // Use .ready to ensure the SW is active
+    console.log("[NotificationUtils] Service worker is active. SW Registration object:", swRegistration);
     
-    // Using the registration object directly is more reliable than waiting for .ready
     const VAPID_KEY = "BMLD4tBKrzeVD7gh99dJGpWPDmcUPEuc23879zSSPVkG_swfL7M00xw-agMVnZdFqU8HhzFkApNdbUOPRyYsLDc";
     console.log("[NotificationUtils] Attempting to get FCM token using active SW registration and VAPID key.");
 
@@ -179,3 +178,5 @@ export const initializeFCM = async (): Promise<string | null> => {
     return null;
   }
 };
+
+    
