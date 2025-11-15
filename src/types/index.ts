@@ -390,6 +390,9 @@ export interface Lead {
   phone: string;
   source: string;
   address: string;
+  division?: string | null;
+  district?: string | null;
+  thana?: string | null;
   category: LeadCategory;
   status: LeadStatusType;
   notes?: string | null;

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -23,6 +24,7 @@ import { addLeadAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from "date-fns";
 import { cn } from '@/lib/utils';
+import { divisions } from '@/lib/district-data';
 
 interface AddEditLeadDialogProps {
   isOpen: boolean;
@@ -44,6 +46,9 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [source, setSource] = useState('');
   const [address, setAddress] = useState('');
+  const [division, setDivision] = useState('');
+  const [district, setDistrict] = useState('');
+  const [thana, setThana] = useState('');
   const [notes, setNotes] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +77,9 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setPhone(lead.phone);
         setSource(lead.source);
         setAddress(lead.address);
+        setDivision(lead.division || '');
+        setDistrict(lead.district || '');
+        setThana(lead.thana || '');
         setNotes(lead.notes || '');
         setCustomerType(lead.customerType || '');
         setPhoneError(null); // Reset error on load
@@ -84,6 +92,9 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setPhone('');
         setSource('');
         setAddress('');
+        setDivision('');
+        setDistrict('');
+        setThana('');
         setNotes('');
         setCustomerType('');
         setPhoneError(null); // Reset error on load
@@ -101,6 +112,14 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         validatePhone(numericValue);
     }
   };
+
+  const handleDivisionChange = (value: string) => {
+    setDivision(value);
+    setDistrict(''); // Reset district when division changes
+  };
+
+  const districtOptions = division ? divisions.find(d => d.division === division)?.districts || [] : [];
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +150,9 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
       date: date.toISOString(),
       schedule: schedule ? schedule.toISOString() : null,
       contactName, businessName, phone, source, address,
+      division: division || null,
+      district: district || null,
+      thana: thana || null,
       notes: notes || null,
       customerType: customerType || null,
     };
@@ -241,6 +263,34 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               </div>
             </div>
             <div className="space-y-1">
+              <Label htmlFor="address">Address</Label>
+              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
+            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <Label htmlFor="division">Division</Label>
+                    <Select value={division} onValueChange={handleDivisionChange}>
+                        <SelectTrigger id="division"><SelectValue placeholder="Select Division" /></SelectTrigger>
+                        <SelectContent>
+                            {divisions.map(d => <SelectItem key={d.division} value={d.division}>{d.division}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="district">District</Label>
+                    <Select value={district} onValueChange={setDistrict} disabled={!division}>
+                        <SelectTrigger id="district"><SelectValue placeholder="Select District" /></SelectTrigger>
+                        <SelectContent>
+                            {districtOptions.map(d => <SelectItem key={d.name} value={d.name}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+             <div className="space-y-1">
+                <Label htmlFor="thana">Thana</Label>
+                <Input id="thana" value={thana} onChange={(e) => setThana(e.target.value)} placeholder="Enter Thana/Upazila"/>
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="customerType">Customer Type</Label>
               <Select value={customerType} onValueChange={(value) => setCustomerType(value as CustomerType)} required>
                 <SelectTrigger id="customerType">
@@ -252,10 +302,6 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                   <SelectItem value="Order Lock">Order Lock</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="address">Address</Label>
-              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
             </div>
             <div className="space-y-1">
               <Label htmlFor="notes">Notes (Optional)</Label>
