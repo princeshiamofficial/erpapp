@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical } from "lucide-react"; 
+import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical, Briefcase } from "lucide-react"; 
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
@@ -45,6 +45,7 @@ export default function TrackingLinksPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+  const [copiedProjectLinkId, setCopiedProjectLinkId] = useState<string | null>(null);
 
   const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -92,29 +93,36 @@ export default function TrackingLinksPage() {
     setSelectedLink(null);
   };
 
-  const handleCopyLink = async (linkId: string) => {
-    const urlToCopy = `${window.location.origin}/feedback/${linkId}`;
+  const handleCopyLink = async (linkId: string, linkType: 'feedback' | 'project') => {
+    const urlToCopy = linkType === 'feedback'
+      ? `${window.location.origin}/feedback/${linkId}`
+      : `${window.location.origin}/my-project/${linkId}`;
+    
+    const successMessage = linkType === 'feedback' ? "Feedback link copied!" : "Project link copied!";
+    const setter = linkType === 'feedback' ? setCopiedLinkId : setCopiedProjectLinkId;
+
     try {
       if (!navigator.clipboard) {
         throw new Error("Clipboard API not available.");
       }
       await navigator.clipboard.writeText(urlToCopy);
-      toast({ title: "Link Copied!", description: "The feedback link has been copied to your clipboard." });
-      setCopiedLinkId(linkId);
-      setTimeout(() => setCopiedLinkId(null), 2000); 
+      toast({ title: "Link Copied!", description: successMessage });
+      setter(linkId);
+      setTimeout(() => setter(null), 2000); 
     } catch (err) {
       console.error('Failed to copy: ', err);
       let description = "Could not copy the link. Please try copying manually.";
       if (err instanceof Error) {
         if (err.name === 'NotAllowedError' || err.message.toLowerCase().includes("permissions policy")) {
-          description = "Clipboard access was denied or restricted by a permissions policy. Please check your browser settings or try copying manually.";
+          description = "Clipboard access was denied or restricted. Please check your browser settings.";
         } else if (err.message.includes("Clipboard API not available") || (typeof window !== 'undefined' && !window.isSecureContext)) {
-           description = "Copying to clipboard requires a secure connection (HTTPS) or is not supported by your browser. Please copy manually.";
+           description = "Copying to clipboard requires a secure connection (HTTPS) or is not supported by your browser.";
         }
       }
       toast({ title: "Copy Failed", description, variant: "destructive" });
     }
   };
+
 
   const filteredTrackingLinks = useMemo(() => {
     if (!searchTerm) return trackingLinks;
@@ -288,11 +296,18 @@ export default function TrackingLinksPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onSelect={() => handleCopyLink(link.id)}
+                                onSelect={() => handleCopyLink(link.id, 'feedback')}
                                 className="cursor-pointer"
                               >
                                 {copiedLinkId === link.id ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <ClipboardCopy className="mr-2 h-4 w-4" />}
                                 {copiedLinkId === link.id ? "Copied!" : "Copy Feedback Link"}
+                              </DropdownMenuItem>
+                               <DropdownMenuItem
+                                onSelect={() => handleCopyLink(link.id, 'project')}
+                                className="cursor-pointer"
+                              >
+                                {copiedProjectLinkId === link.id ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Briefcase className="mr-2 h-4 w-4" />}
+                                {copiedProjectLinkId === link.id ? "Copied!" : "Copy Project Link"}
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild className="cursor-pointer">
                                 <Link href={`/track/${link.id}`}>
