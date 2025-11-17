@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -12,7 +13,7 @@ import { getModels, updateModelStock } from '@/lib/service-options-service';
 import { fetchFromApiV3 } from '@/lib/api-helper2';
 import { adminApp } from '@/lib/firebase-admin'; // Import adminApp
 import type { messaging } from 'firebase-admin'; // Import messaging type
-import { logAdvancePaymentToHistory } from '@/lib/payment-history-service';
+import { addPaymentToHistory } from '@/lib/payment-history-service';
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -153,7 +154,19 @@ export async function createOrderAction(
     
     // Log initial payment to history backup
     if (createdOrder.advancePayments && createdOrder.advancePayments.length > 0) {
-        await logAdvancePaymentToHistory(createdOrder, createdOrder.advancePayments[0]);
+        const payment = createdOrder.advancePayments[0];
+        await addPaymentToHistory({
+            id: payment.id,
+            vendorId: createdOrder.crmUserId,
+            vendorName: createdOrder.id,
+            date: payment.date,
+            invoiceId: createdOrder.companyName,
+            amount: 0,
+            payment: payment.amount,
+            method: payment.paymentMethod || 'N/A',
+            notes: payment.notes || null,
+            status: payment.status || 'Pending'
+        });
     }
 
     for (const item of processedOrderItems) {
@@ -328,6 +341,7 @@ export async function updateOrderAction(
             recordedByUserId: currentUser.id,
             recordedByUserName: currentUser.name,
             documentUrl: updates.newAdvancePaymentDocumentUrl,
+            status: 'Pending', // New payments are pending
         };
         finalUpdates.advancePayments = [...(existingOrder.advancePayments || []), newAdvanceRecord];
 
@@ -359,7 +373,18 @@ export async function updateOrderAction(
     
     // Log new payment to history backup if it exists
     if (newAdvanceRecord) {
-        await logAdvancePaymentToHistory(updatedOrder, newAdvanceRecord);
+        await addPaymentToHistory({
+            id: newAdvanceRecord.id,
+            vendorId: updatedOrder.crmUserId,
+            vendorName: updatedOrder.id,
+            date: newAdvanceRecord.date,
+            invoiceId: updatedOrder.companyName,
+            amount: 0,
+            payment: newAdvanceRecord.amount,
+            method: newAdvanceRecord.paymentMethod || 'N/A',
+            notes: newAdvanceRecord.notes || null,
+            status: newAdvanceRecord.status || 'Pending'
+        });
     }
     
     try {
@@ -616,6 +641,7 @@ export async function deleteOrderAction(
 }
 
     
+
 
 
 

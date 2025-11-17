@@ -70,7 +70,7 @@ export async function getAllPaymentHistory(): Promise<PaymentHistoryEntry[]> {
     try {
         const billReports = await fetchFromApiV3(`collections/billReports/documents?limit=9999`);
         if (billReports && Array.isArray(billReports.documents)) {
-            const reportPayments = billReports.map((doc: { id: string, data: any }) => ({
+            const reportPayments = billReports.documents.map((doc: { id: string, data: any }) => ({
                 id: doc.id,
                 ...doc.data
             } as BillReport));
