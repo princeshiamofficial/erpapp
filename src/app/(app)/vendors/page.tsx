@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
 import { deleteUserAction } from '@/app/(app)/users/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -672,10 +672,7 @@ export default function VendorsPage() {
                                         <TableCell>{formatDate(bill.billDate)}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <Avatar className="h-9 w-9 border">
-                                                    <AvatarImage src={vendor?.avatarUrl || undefined} alt={bill.vendorName}/>
-                                                    <AvatarFallback>{getInitials(bill.vendorName)}</AvatarFallback>
-                                                </Avatar>
+                                                <Avatar className="h-9 w-9 border"><AvatarImage src={vendor?.avatarUrl || undefined} alt={bill.vendorName}/><AvatarFallback>{getInitials(bill.vendorName)}</AvatarFallback></Avatar>
                                                 <div>
                                                     <div className="font-medium">{vendor?.companyName}</div>
                                                     <div className="text-xs text-muted-foreground">{vendor?.name}</div>
