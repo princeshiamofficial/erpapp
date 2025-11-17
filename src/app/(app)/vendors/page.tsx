@@ -764,12 +764,12 @@ export default function VendorsPage() {
                                           </div>
                                            <div>
                                               <p className="text-xs text-muted-foreground">Status</p>
-                                              <p className="font-semibold">
+                                              <div className="font-semibold">
                                                   {totalDue <= 0 ? 
                                                       <Badge variant="outline" className="text-green-600 border-green-600">Paid</Badge> : 
                                                       <Badge variant="destructive">Due</Badge>
                                                   }
-                                              </p>
+                                              </div>
                                           </div>
                                           <div>
                                               {totalDue > 0 ? (
@@ -1005,5 +1005,3 @@ export default function VendorsPage() {
     </>
   );
 }
-
-    
