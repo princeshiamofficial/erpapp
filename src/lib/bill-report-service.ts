@@ -1,8 +1,11 @@
 
+
 "use server";
 
 import type { BillReport } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { format } from 'date-fns';
+import { addPaymentToHistory } from './payment-history-service'; // Import the service
 
 const COLLECTION_NAME = 'billReports';
 
@@ -32,13 +35,15 @@ export const addBillReport = async (reportData: Omit<BillReport, 'id'>): Promise
         body: JSON.stringify(payload),
     });
 
-    // Also add to the centralized payment history
-    await addPaymentToHistory(reportData);
-
-    return {
+    const newEntry = {
         id: newDoc.id,
         ...newDoc.data
     } as BillReport;
+
+    // Also add to the centralized payment history
+    await addPaymentToHistory(newEntry);
+
+    return newEntry;
   } catch (error) {
     console.error("Error adding bill report via API v3:", error);
     if (error instanceof Error) throw error;
@@ -56,7 +61,7 @@ export const updateBillReport = async (id: string, updates: Partial<BillReport>)
         });
         
         // Also update the centralized payment history
-        await addPaymentToHistory(finalData as Omit<BillReport, 'id'>);
+        await addPaymentToHistory(finalData as Omit<BillReport, 'id'> & {id: string});
 
         return true;
     } catch (error) {
@@ -88,23 +93,3 @@ export const deleteBillReport = async (id: string): Promise<{ success: boolean, 
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 };
-
-// Helper to add/update entry in the monthly payment history collection
-async function addPaymentToHistory(reportData: Omit<BillReport, 'id'>) {
-    const date = new Date(reportData.date);
-    const collectionName = `payHistory-${format(date, 'MM-yyyy')}`;
-    const docId = reportData.invoiceId.includes('PAY-') ? reportData.invoiceId : reportData.id;
-
-    try {
-        await ensureCollectionExistsV3(collectionName);
-        const payload = { data: reportData };
-        // Use PUT with a predictable ID to create or overwrite
-        await fetchFromApiV3(`collections/${collectionName}/documents/${docId}`, {
-            method: 'PUT',
-            body: JSON.stringify(payload),
-        });
-    } catch (error) {
-        console.error(`Error syncing payment to history collection ${collectionName}:`, error);
-        // We don't throw here to avoid failing the main operation
-    }
-}

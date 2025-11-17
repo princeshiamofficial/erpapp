@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { format, subMonths, startOfMonth } from 'date-fns';
@@ -65,6 +66,21 @@ export async function getAllPaymentHistory(): Promise<PaymentHistoryEntry[]> {
          console.error("Error transforming order payments into payment history:", error);
     }
 
+    // Now, fetch and merge bill reports
+    try {
+        const billReports = await fetchFromApiV3(`collections/billReports/documents?limit=9999`);
+        if (billReports && Array.isArray(billReports.documents)) {
+            const reportPayments = billReports.map((doc: { id: string, data: any }) => ({
+                id: doc.id,
+                ...doc.data
+            } as BillReport));
+            allPayments.push(...reportPayments);
+        }
+    } catch(error) {
+        console.error("Error fetching bill reports for payment history:", error);
+    }
+
+
     return allPayments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
@@ -77,9 +93,22 @@ export async function updatePaymentStatus(paymentId: string, newStatus: 'Approve
   return false; // Return false to indicate the old path is not working.
 }
 
-// This function is no longer needed as we are not using a separate `payHistory` collection.
-export async function logAdvancePaymentToHistory(order: TrackingLink, paymentRecord: AdvancePaymentRecord): Promise<void> {
-  // The logic is now to update the order itself, which is handled in order-service.
-  // This function can be left empty or removed.
-  console.log("[logAdvancePaymentToHistory] This function is deprecated. Payment history is derived directly from orders.");
+// Helper to add/update entry in the monthly payment history collection
+export async function addPaymentToHistory(reportData: Omit<BillReport, 'id'> & { id: string }) {
+    const date = new Date(reportData.date);
+    const collectionName = getPaymentHistoryCollectionName(date);
+    const docId = reportData.id; 
+
+    try {
+        await ensureCollectionExistsV3(collectionName);
+        const payload = { data: reportData };
+        // Use PUT with a predictable ID to create or overwrite
+        await fetchFromApiV3(`collections/${collectionName}/documents/${docId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+        });
+    } catch (error) {
+        console.error(`Error syncing payment to history collection ${collectionName}:`, error);
+        // We don't throw here to avoid failing the main operation
+    }
 }
