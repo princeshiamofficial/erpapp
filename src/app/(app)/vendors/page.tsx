@@ -748,12 +748,44 @@ export default function VendorsPage() {
                                       )}
                                       <div className="flex-1">
                                           <p className="text-sm font-medium">{vendor?.name || 'Unknown Vendor'}</p>
-                                          <p className="text-xs text-muted-foreground">{reports.length} Bill's</p>
+                                          <p className="text-xs text-muted-foreground">{reports.length} transaction(s)</p>
                                       </div>
                                   </div>
                                   </AccordionTrigger>
                                   <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+                                      <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                                          <div>
+                                              <p className="text-xs text-muted-foreground">Total Billed</p>
+                                              <p className="font-semibold">{formatCurrency(totalAmount)}</p>
+                                          </div>
+                                           <div>
+                                              <p className="text-xs text-muted-foreground">Total Paid</p>
+                                              <p className="font-semibold text-green-600">{formatCurrency(totalPayment)}</p>
+                                          </div>
+                                           <div>
+                                              <p className="text-xs text-muted-foreground">Status</p>
+                                              <p className="font-semibold">
+                                                  {totalDue <= 0 ? 
+                                                      <Badge variant="outline" className="text-green-600 border-green-600">Paid</Badge> : 
+                                                      <Badge variant="destructive">Due</Badge>
+                                                  }
+                                              </p>
+                                          </div>
+                                          <div>
+                                              {totalDue > 0 ? (
+                                                  <>
+                                                      <p className="text-xs text-muted-foreground">Balance Due</p>
+                                                      <p className="font-semibold text-destructive">{formatCurrency(totalDue)}</p>
+                                                  </>
+                                              ) : (
+                                                  <>
+                                                      <p className="text-xs text-muted-foreground">Advanced</p>
+                                                      <p className="font-semibold text-blue-600">{formatCurrency(Math.abs(totalDue))}</p>
+                                                  </>
+                                              )}
+                                          </div>
+                                      </div>
+                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 mt-4">
                                         <div className="space-y-2">
                                           <h4 className="font-semibold text-sm border-b pb-1">Billing</h4>
                                           <Table>
@@ -817,38 +849,6 @@ export default function VendorsPage() {
                                               </TableBody>
                                            </Table>
                                         </div>
-                                      </div>
-                                       <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-                                          <div>
-                                              <p className="text-xs text-muted-foreground">Total Billed</p>
-                                              <p className="font-semibold">{formatCurrency(totalAmount)}</p>
-                                          </div>
-                                           <div>
-                                              <p className="text-xs text-muted-foreground">Total Paid</p>
-                                              <p className="font-semibold text-green-600">{formatCurrency(totalPayment)}</p>
-                                          </div>
-                                           <div>
-                                              <p className="text-xs text-muted-foreground">Status</p>
-                                              <p className="font-semibold">
-                                                  {totalDue <= 0 ? 
-                                                      <Badge variant="outline" className="text-green-600 border-green-600">Paid</Badge> : 
-                                                      <Badge variant="destructive">Due</Badge>
-                                                  }
-                                              </p>
-                                          </div>
-                                          <div>
-                                              {totalDue > 0 ? (
-                                                  <>
-                                                      <p className="text-xs text-muted-foreground">Balance Due</p>
-                                                      <p className="font-semibold text-destructive">{formatCurrency(totalDue)}</p>
-                                                  </>
-                                              ) : (
-                                                  <>
-                                                      <p className="text-xs text-muted-foreground">Advanced</p>
-                                                      <p className="font-semibold text-blue-600">{formatCurrency(Math.abs(totalDue))}</p>
-                                                  </>
-                                              )}
-                                          </div>
                                       </div>
                                   </AccordionContent>
                               </AccordionItem>
@@ -1005,3 +1005,5 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
