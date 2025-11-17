@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -476,10 +475,7 @@ export default function VendorsPage() {
                         <TableRow key={vendor.id} className="hover:bg-muted/50">
                         <TableCell className="pl-6 font-medium">
                             <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9 border">
-                                <AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/>
-                                <AvatarFallback>{getInitials(vendor.name)}</AvatarFallback>
-                            </Avatar>
+                            <Avatar className="h-9 w-9 border"><AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/><AvatarFallback>{getInitials(vendor.name)}</AvatarFallback></Avatar>
                             <span>{vendor.name}</span>
                             </div>
                         </TableCell>
@@ -757,7 +753,11 @@ export default function VendorsPage() {
                                        <div className="text-right">
                                             <p className="text-xs text-muted-foreground">Total: {formatCurrency(totalAmount)}</p>
                                             <p className="text-xs text-green-600">Paid: {formatCurrency(totalPayment)}</p>
-                                            <p className="text-xs text-destructive">Due: {formatCurrency(totalDue)}</p>
+                                            {totalDue >= 0 ? (
+                                                <p className="text-xs text-destructive">Due: {formatCurrency(totalDue)}</p>
+                                            ) : (
+                                                <p className="text-xs text-blue-600">Advanced: {formatCurrency(Math.abs(totalDue))}</p>
+                                            )}
                                        </div>
                                   </div>
                                   </AccordionTrigger>
