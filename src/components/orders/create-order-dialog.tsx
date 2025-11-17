@@ -402,7 +402,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       ) &&
       !(isAdvancePaymentEntered && !advancePaymentMethod.trim()) &&
       !(isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
-      !(isAdvancePaymentEntered && !newAdvancePaymentNotes.trim()) && // Check if notes are provided
+      !(isAdvancePaymentEntered && newAdvancePaymentNotes.trim().length < 4) &&
       isAdvPaymentValid && isDiscountValid;
   }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, newAdvancePaymentNotes, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal]);
 
@@ -792,7 +792,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label>
-                  <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={(e) => setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isAdvancePaymentEntered} />
+                  <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={(e) => setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isAdvancePaymentEntered} minLength={4} />
                 </div>
                 </>
               )}

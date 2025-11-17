@@ -348,7 +348,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !isLoadingOptions && orderItems.length > 0 && orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null) &&
       !(isNewAdvanceEntered && !newAdvancePaymentMethod.trim()) &&
       !(isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) &&
-      !(isNewAdvanceEntered && !newAdvancePaymentNotes.trim()) &&
+      !(isNewAdvanceEntered && newAdvancePaymentNotes.trim().length < 4) &&
       isAdvPaymentValid && isDiscountValid;
   }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, newAdvancePaymentNotes, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount]);
 
@@ -599,7 +599,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   </Popover>
                   {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method *</Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                 </div>)}
-                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isNewAdvanceEntered} /></div>)}
+                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isNewAdvanceEntered} minLength={4} /></div>)}
               </div>
 
               <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
