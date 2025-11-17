@@ -43,7 +43,8 @@ import {
   Trash2, // For delete icon
   ClipboardList,
   TrendingUp, // For Assets icon
-  Target // For Target icon
+  Target, // For Target icon
+  LineChart as LineChartIcon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -1285,7 +1286,7 @@ function DashboardContent() {
               <OrderAnalysisClient allOrders={allOrders} />
             </div>
         )}
-        <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLrOrCo ? "lg:grid-cols-2" : "")}>
+        <div className="grid grid-cols-1 gap-6 mt-6 print:hidden lg:grid-cols-2">
            {!isDesignerRepOrLrOrCo && (
               <Card className="shadow-xl bg-card rounded-lg">
                 <CardHeader>
@@ -1505,3 +1506,4 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
