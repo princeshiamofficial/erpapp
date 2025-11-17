@@ -1347,6 +1347,18 @@ function DashboardContent() {
                 </CardContent>
               </Card>
            )}
+            <Card className="shadow-xl bg-card rounded-lg min-h-[480px]">
+                <CardHeader>
+                    <CardTitle className="flex items-center text-xl text-foreground">
+                        <LineChartIcon className="mr-2 h-6 w-6 text-primary" />
+                        Sales KPI
+                    </CardTitle>
+                    <CardDescription>Key Performance Indicators for sales activity.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {/* Content for the new card will go here */}
+                </CardContent>
+            </Card>
             {(isDesignerRepOrLrOrCo) && ( <div className="lg:col-span-1"></div>)}
         </div>
         
@@ -1471,7 +1483,7 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
                     <>
                         <div className="border-t border-dashed my-1.5"></div>
                         <p className="font-semibold text-xs text-muted-foreground mt-1">Contributors:</p>
-                        <ScrollArea className="pr-2 -mr-2">
+                        <ScrollArea className="max-h-32 pr-2 -mr-2">
                             <div className="space-y-1.5 mt-1">
                                 {userBreakdown.map(({ user, done, likelihood }) => (
                                     <div key={user.id} className="flex items-center gap-2 text-xs">
