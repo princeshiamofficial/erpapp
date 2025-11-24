@@ -70,12 +70,12 @@ export function AppHeader() {
             sidebarState === 'expanded' && "md:hidden"
           )}>
              <Image
-                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                src="https://colorhutbd.xyz/image/logo.png"
                 alt="Color Hut Logo"
                 width={160}
                 height={40}
                 priority
-                className="object-contain rounded-md"
+                className="object-contain"
               />
           </Link>
         </div>
