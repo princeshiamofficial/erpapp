@@ -66,7 +66,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
   { title: 'ROD', category: 'ROD', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
 ];
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 25;
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
@@ -366,7 +366,10 @@ export function PipelineClient() {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
       let startPage = Math.max(1, currentPage - 2); let endPage = Math.min(totalPages, currentPage + 2);
-      if (currentPage < 3) endPage = maxPagesToShow; else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+
+      if (currentPage < 3) endPage = maxPagesToShow;
+      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+      
       if (startPage > 1) { pageNumbers.push(1); if (startPage > 2) pageNumbers.push('...'); }
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages) { if (endPage < totalPages - 1) pageNumbers.push('...'); pageNumbers.push(totalPages); }
