@@ -16,7 +16,7 @@ import {
   ClipboardList,
   Search,
   EyeOff,
-  Download, // New Icon
+  Download,
   Loader2
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ import { CourierConfirmationDialog } from '@/components/projects/CourierConfirma
 import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog'; 
 import { FileUploadConfirmationDialog } from '@/components/projects/FileUploadConfirmationDialog';
 import { getProjects } from '@/lib/project-service';
-import { getStatuses } from '@/lib/status-service'; 
+import { getStatuses, DELIVERED_STATUS_ID } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import type { TrackingLink } from '@/types';
@@ -468,18 +468,22 @@ export function ProjectsKanbanClient() {
 
     const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
     const ordersResults = await Promise.all(ordersDataPromises);
-    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
+    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o!]));
     
     setIsLoading(false);
 
     const dataToExport = deliveredProjects.map(p => {
       const order = ordersMap.get(p.id);
+      
+      const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
+      const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
+
       return {
         'Job ID': p.projectIdDisplay,
         'Company Name': p.name,
         'Phone': order?.phoneNumber || 'N/A',
         'Address': order?.address || 'N/A',
-        'Delivery Date': p.deliveredAt ? format(parseISO(p.deliveredAt), 'yyyy-MM-dd HH:mm') : 'N/A',
+        'Delivery Date': deliveryDate,
       };
     });
   
@@ -716,3 +720,5 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
+
+    
