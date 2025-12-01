@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -464,7 +463,7 @@ export function ProjectsKanbanClient() {
       return;
     }
     
-    setIsLoading(true); // Indicate that we are fetching extra data
+    setIsLoading(true);
 
     const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
     const ordersResults = await Promise.all(ordersDataPromises);
@@ -716,55 +715,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
-```
-- src/hooks/use-local-storage.ts:
-```ts
-
-"use client";
-
-import * as React from "react";
-
-export function useLocalStorage<T>(
-  key: string,
-  defaultValue: T,
-  options?: {
-    listen?: boolean;
-    initializeWithValue?: boolean;
-  }
-) {
-  const { listen = false, initializeWithValue = true } = options ?? {};
-  const [value, setValue] = React.useState<T>(
-    (initializeWithValue
-      ? window.localStorage.getItem(key)
-        ? JSON.parse(window.localStorage.getItem(key)!)
-        : defaultValue
-      : defaultValue) as T
-  );
-
-  React.useEffect(() => {
-    if (!listen) return;
-
-    function handleStorage() {
-      if (window.localStorage.getItem(key)) {
-        setValue(JSON.parse(window.localStorage.getItem(key)!));
-      }
-    }
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [key, listen]);
-
-  return [
-    value,
-    (newValue: React.SetStateAction<T>) => {
-      setValue((currentValue) => {
-        const _newValue =
-          typeof newValue === "function" ? (newValue as (prev: T) => T)(currentValue) : newValue;
-        window.localStorage.setItem(key, JSON.stringify(_newValue));
-        return _newValue;
-      });
-    },
-  ] as const;
-}
-
-```
