@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   ClipboardList,
   Search,
-  EyeOff
+  EyeOff,
+  Download // New Icon
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,7 @@ import { KanbanColumn } from './KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
+import Papa from 'papaparse'; // Import papaparse for CSV export
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -452,8 +454,34 @@ export function ProjectsKanbanClient() {
     } : p));
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
   }, [toast]);
+
+  const handleExport = () => {
+    if (filteredProjects.length === 0) {
+      toast({ title: "No Data", description: "No projects match the current filters to export." });
+      return;
+    }
+    const dataToExport = filteredProjects.map(p => ({
+      'Project ID': p.projectIdDisplay,
+      'Name': p.name,
+      'Status': p.status,
+      'End Date': p.endDate ? format(parseISO(p.endDate), 'yyyy-MM-dd') : 'N/A',
+      'Assignee': p.assigneeName,
+      'DR': p.designerRepresentativeName || 'N/A',
+      'Created At': p.createdAt ? format(parseISO(p.createdAt), 'yyyy-MM-dd HH:mm') : 'N/A',
+    }));
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'projects_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Export Started", description: "Your project data is being downloaded." });
+  };
   
-  if (isLoading && projects.length === 0) {
+  if (isLoading) {
     return <KanbanSkeleton />;
   }
 
@@ -474,12 +502,12 @@ export function ProjectsKanbanClient() {
         )}
 
         {!isReadOnly && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-4 sm:px-0">
             <Input
               placeholder="Search projects (ID, Name, Assignee, DR)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-card border-border/50 focus:border-primary"
+              className="bg-card border-border/50 focus:border-primary lg:col-span-2"
             />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="bg-card border-border/50 focus:border-primary">
@@ -490,14 +518,15 @@ export function ProjectsKanbanClient() {
                 {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={endDateFilter} onValueChange={setEndDateFilter}>
-              <SelectTrigger className="bg-card border-border/50 focus:border-primary">
-                <SelectValue placeholder="Filter by end date..." />
-              </SelectTrigger>
-              <SelectContent>
-                {endDateOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+             <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={filteredProjects.length === 0}
+                className="bg-card border-border/50 focus:border-primary"
+            >
+                <Download className="mr-2 h-4 w-4" />
+                Export to CSV
+            </Button>
           </div>
         )}
         
