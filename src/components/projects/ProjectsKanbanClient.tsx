@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -455,33 +456,51 @@ export function ProjectsKanbanClient() {
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
   }, [toast]);
 
-  const handleExport = () => {
-    if (filteredProjects.length === 0) {
-      toast({ title: "No Data", description: "No projects match the current filters to export." });
+  const handleExport = async () => {
+    const deliveredProjects = projects.filter(p => p.status === 'Delivered');
+  
+    if (deliveredProjects.length === 0) {
+      toast({ title: "No Data", description: "There are no projects in the 'Delivered' stage to export." });
       return;
     }
-    const dataToExport = filteredProjects.map(p => ({
-      'Project ID': p.projectIdDisplay,
-      'Name': p.name,
-      'Status': p.status,
-      'End Date': p.endDate ? format(parseISO(p.endDate), 'yyyy-MM-dd') : 'N/A',
-      'Assignee': p.assigneeName,
-      'DR': p.designerRepresentativeName || 'N/A',
-      'Created At': p.createdAt ? format(parseISO(p.createdAt), 'yyyy-MM-dd HH:mm') : 'N/A',
-    }));
-    const csv = Papa.unparse(dataToExport);
+    
+    setIsLoading(true); // Indicate that we are fetching extra data
+
+    const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
+    const ordersResults = await Promise.all(ordersDataPromises);
+    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
+    
+    setIsLoading(false);
+
+    const dataToExport = deliveredProjects.map(p => {
+      const order = ordersMap.get(p.id);
+      return {
+        'Job ID': p.projectIdDisplay,
+        'Company Name': p.name,
+        'Phone': order?.phoneNumber || 'N/A',
+        'Address': order?.address || 'N/A',
+        'Delivery Date': p.deliveredAt ? format(parseISO(p.deliveredAt), 'yyyy-MM-dd HH:mm') : 'N/A',
+      };
+    });
+  
+    const csv = Papa.unparse(dataToExport, {
+        header: true,
+        columns: ["Job ID", "Company Name", "Phone", "Address", "Delivery Date"]
+    });
+
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'projects_export.csv');
+    link.setAttribute('download', 'delivered_projects_export.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast({ title: "Export Started", description: "Your project data is being downloaded." });
+  
+    toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
   };
   
-  if (isLoading) {
+  if (isLoading && projects.length === 0) {
     return <KanbanSkeleton />;
   }
 
@@ -521,11 +540,11 @@ export function ProjectsKanbanClient() {
              <Button
                 variant="outline"
                 onClick={handleExport}
-                disabled={filteredProjects.length === 0}
+                disabled={isLoading}
                 className="bg-card border-border/50 focus:border-primary"
             >
-                <Download className="mr-2 h-4 w-4" />
-                Export to CSV
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                Export Delivered
             </Button>
           </div>
         )}
@@ -697,3 +716,55 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
+
+```
+- src/hooks/use-local-storage.ts:
+```ts
+
+"use client";
+
+import * as React from "react";
+
+export function useLocalStorage<T>(
+  key: string,
+  defaultValue: T,
+  options?: {
+    listen?: boolean;
+    initializeWithValue?: boolean;
+  }
+) {
+  const { listen = false, initializeWithValue = true } = options ?? {};
+  const [value, setValue] = React.useState<T>(
+    (initializeWithValue
+      ? window.localStorage.getItem(key)
+        ? JSON.parse(window.localStorage.getItem(key)!)
+        : defaultValue
+      : defaultValue) as T
+  );
+
+  React.useEffect(() => {
+    if (!listen) return;
+
+    function handleStorage() {
+      if (window.localStorage.getItem(key)) {
+        setValue(JSON.parse(window.localStorage.getItem(key)!));
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [key, listen]);
+
+  return [
+    value,
+    (newValue: React.SetStateAction<T>) => {
+      setValue((currentValue) => {
+        const _newValue =
+          typeof newValue === "function" ? (newValue as (prev: T) => T)(currentValue) : newValue;
+        window.localStorage.setItem(key, JSON.stringify(_newValue));
+        return _newValue;
+      });
+    },
+  ] as const;
+}
+
+```
