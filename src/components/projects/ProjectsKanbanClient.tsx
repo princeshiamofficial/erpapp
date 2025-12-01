@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -478,9 +479,13 @@ export function ProjectsKanbanClient() {
       const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
       const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
 
+      const nameParts = (p.name || '').split(' • ');
+      const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
+      const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
+      
       return {
-        'Job ID': p.projectIdDisplay,
-        'Company Name': p.name,
+        'Job ID': jobId,
+        'Company Name': companyName,
         'Phone': order?.phoneNumber || 'N/A',
         'Address': order?.address || 'N/A',
         'Delivery Date': deliveryDate,
@@ -720,5 +725,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
-    
