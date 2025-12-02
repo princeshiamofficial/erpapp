@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -474,23 +473,21 @@ export function ProjectsKanbanClient() {
     setIsLoading(false);
 
     const dataToExport = deliveredProjects.map(p => {
-      const order = ordersMap.get(p.id);
+        const order = ordersMap.get(p.id);
+        const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
+        const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
+        const nameParts = (p.name || '').split(' • ');
+        const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
+        const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
       
-      const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
-      const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
-
-      const nameParts = (p.name || '').split(' • ');
-      const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
-      const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
-      
-      return {
-        'Job ID': jobId,
-        'Company Name': companyName,
-        'Phone': order?.phoneNumber || 'N/A',
-        'Address': order?.address || 'N/A',
-        'Delivery Date': deliveryDate,
-      };
-    });
+        return {
+          'Job ID': jobId,
+          'Company Name': companyName,
+          'Phone': order?.phoneNumber || 'N/A',
+          'Address': order?.address || 'N/A',
+          'Delivery Date': deliveryDate,
+        };
+      });
   
     const csv = Papa.unparse(dataToExport, {
         header: true,
