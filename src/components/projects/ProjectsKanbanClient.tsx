@@ -506,6 +506,8 @@ export function ProjectsKanbanClient() {
     toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
   };
   
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+
   if (isLoading && projects.length === 0) {
     return <KanbanSkeleton />;
   }
@@ -543,15 +545,17 @@ export function ProjectsKanbanClient() {
                 {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
               </SelectContent>
             </Select>
-             <Button
-                variant="outline"
-                onClick={handleExport}
-                disabled={isLoading}
-                className="bg-card border-border/50 focus:border-primary"
-            >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                Export Delivered
-            </Button>
+            {isAdmin && (
+              <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  disabled={isLoading}
+                  className="bg-card border-border/50 focus:border-primary"
+              >
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                  Export Delivered
+              </Button>
+            )}
           </div>
         )}
         
