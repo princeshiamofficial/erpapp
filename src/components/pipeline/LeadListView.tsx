@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { useMemo } from 'react';
 import type { Lead, User, LeadCategory } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +74,23 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
   const isAllSelected = leads.length > 0 && selectedLeadIds.size === leads.length;
   const isSomeSelected = selectedLeadIds.size > 0 && selectedLeadIds.size < leads.length;
 
+  const duplicatePhoneNumbers = useMemo(() => {
+    const phoneCounts = new Map<string, number>();
+    leads.forEach(lead => {
+      if (lead.phone) {
+        phoneCounts.set(lead.phone, (phoneCounts.get(lead.phone) || 0) + 1);
+      }
+    });
+
+    const duplicates = new Set<string>();
+    for (const [phone, count] of phoneCounts.entries()) {
+      if (count > 1) {
+        duplicates.add(phone);
+      }
+    }
+    return duplicates;
+  }, [leads]);
+
 
   return (
     <div className="mt-4 border rounded-lg overflow-hidden bg-card">
@@ -121,9 +139,14 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                             const crmUser = allCrmUsers.find(u => u.id === lead.crmId);
                             const scheduleDate = lead.schedule ? parseISO(lead.schedule) : null;
                             const isPast = scheduleDate ? isBefore(scheduleDate, startOfDay(new Date())) && !isToday(scheduleDate) : false;
+                            const isDuplicatePhone = lead.phone && duplicatePhoneNumbers.has(lead.phone);
                             
                             return (
-                                <TableRow key={lead.id} className="hover:bg-muted/50" data-state={selectedLeadIds.has(lead.id) ? "selected" : ""}>
+                                <TableRow 
+                                  key={lead.id} 
+                                  className={cn("hover:bg-muted/50", isDuplicatePhone && "bg-red-100/50 dark:bg-red-900/20")}
+                                  data-state={selectedLeadIds.has(lead.id) ? "selected" : ""}
+                                >
                                     {isSelectionMode && (
                                         <TableCell className="pl-4">
                                             <Checkbox
