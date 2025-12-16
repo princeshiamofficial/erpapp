@@ -228,18 +228,16 @@ export function SidebarNavigation() {
 
                       return (
                         <SidebarMenuSubItem key={subItem.href}>
-                           <Link href={subItem.href} passHref legacyBehavior>
-                            <SidebarMenuSubButton
+                           <SidebarMenuSubButton
                               asChild
                               isActive={isSubActive}
                               disabled={subItem.disabled}
                             >
-                                <a className="flex items-center w-full" {...linkProps}>
+                                <Link href={subItem.href} className="flex items-center w-full" {...linkProps}>
                                   <subItem.icon className="mr-3 h-4 w-4 shrink-0" />
                                   <span className="truncate text-sm">{subItem.label}</span>
-                                </a>
+                                </Link>
                             </SidebarMenuSubButton>
-                           </Link>
                         </SidebarMenuSubItem>
                       );
                     })}
@@ -255,7 +253,6 @@ export function SidebarNavigation() {
       
       return (
         <SidebarMenuItem key={`${item.href}-${item.label}`}>
-          <Link href={item.href} passHref legacyBehavior>
             <SidebarMenuButton
               asChild
               isActive={isActive}
@@ -275,14 +272,13 @@ export function SidebarNavigation() {
                 )
               }
             >
-              <a className="flex items-center w-full">
+              <Link href={item.href} className="flex items-center w-full">
                 <item.icon className="mr-3 h-5 w-5 shrink-0" />
                 <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
                   {item.label}
                 </span>
-              </a>
+              </Link>
             </SidebarMenuButton>
-          </Link>
         </SidebarMenuItem>
       );
     });
