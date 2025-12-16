@@ -1,9 +1,9 @@
-// Import the Firebase scripts for compatibility mode
+
+// This is a generated file. Do not edit.
+// If you need to make changes, please edit the source file and re-run the build.
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
 
-// Initialize the Firebase app in the service worker
-// Use the same config as in your web app
 const firebaseConfig = {
   apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
   authDomain: "colorhut-57f5a.firebaseapp.com",
@@ -16,19 +16,16 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// Retrieve an instance of Firebase Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.log(
-    "[firebase-messaging-sw.js] Received background message ",
-    payload
-  );
-
-  const notificationTitle = payload.notification.title;
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
+  const notificationTitle = payload.notification?.title || 'New Message';
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: "/icons/icon-192x192.png", // Ensure you have this icon in your public folder
+    body: payload.notification?.body || 'You have a new notification.',
+    icon: payload.notification?.icon || '/icons/icon-192x192.png',
+    data: payload.data || {}
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

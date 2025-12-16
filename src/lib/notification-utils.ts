@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
@@ -98,9 +97,10 @@ export const initializeFCM = async (): Promise<string | null> => {
     );
     console.log("[NotificationUtils] Service worker registered. SW Registration object:", swRegistration);
     
-    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+    // IMPORTANT: Replace with your actual VAPID key from Firebase Console
+    const vapidKey = "BGt_M4sREAGV_a2B0vSj2dftZ2F8hDm4i0qJ1D4eR8c_4Xz6jF0vYQ0w-aJzG4pB5jN4oR3z-Z9X_y0v-Y2Z_0E"; 
     if (!vapidKey) {
-        console.error("[NotificationUtils] VAPID key is missing. Check NEXT_PUBLIC_FIREBASE_VAPID_KEY environment variable.");
+        console.error("[NotificationUtils] VAPID key is missing.");
         toast({ title: "Configuration Error", description: "VAPID key for push notifications is not set.", variant: "destructive" });
         return null;
     }
