@@ -118,6 +118,8 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         reportProductFilters: data.reportProductFilters ?? DEFAULT_GLOBAL_SETTINGS.reportProductFilters,
         roleBasedTargets: data.roleBasedTargets ?? DEFAULT_GLOBAL_SETTINGS.roleBasedTargets,
         pipelineAccess: data.pipelineAccess ?? { canViewAllLeads: [] },
+        telegramBotToken: data.telegramBotToken,
+        telegramChatId: data.telegramChatId,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -504,6 +506,26 @@ export async function setRoleBasedTargets(targets: RoleBasedTarget): Promise<boo
     return true;
   } catch (error) {
     console.error("Error setting role-based targets:", error);
+    return false;
+  }
+}
+
+export async function setTelegramSettings(botToken: string | null, chatId: string | null): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    const updates = {
+        telegramBotToken: botToken,
+        telegramChatId: chatId
+    };
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, updates);
+    } else {
+      await setDoc(settingsDocRef, { ...DEFAULT_GLOBAL_SETTINGS, ...updates });
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting Telegram settings:", error);
     return false;
   }
 }

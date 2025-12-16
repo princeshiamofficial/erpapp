@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getStatusById, READY_FOR_DESIGN_STATUS_ID, DELIVERED_STATUS_ID } from './status-service';
 import { format, parseISO } from 'date-fns';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { sendTelegramMessage } from './notification-utils'; // Import the new Telegram helper
 
 const ORDERS_COLLECTION = 'orders';
 const PROJECTS_COLLECTION = 'projects';
@@ -166,14 +167,30 @@ export const addOrder = async (orderData: {
 
     const initialAdvancePayments: AdvancePaymentRecord[] = [];
     if (orderData.advancePaymentAmount && orderData.advancePaymentAmount > 0) {
-      initialAdvancePayments.push({
+      const newPayment: AdvancePaymentRecord = {
         id: uuidv4(), amount: orderData.advancePaymentAmount, date: finalCreatedAt,
         paymentMethod: orderData.advancePaymentMethod || "Unknown", 
         notes: orderData.newAdvancePaymentNotes || "Initial advance payment.",
         documentUrl: orderData.advancePaymentDocumentUrl || null,
         recordedByUserId: orderData.crmUserId, recordedByUserName: orderData.crmUserName,
         status: 'Pending', // Default status for new payments
-      });
+      };
+      initialAdvancePayments.push(newPayment);
+
+      // Send Telegram notification for the new payment
+      const message = `
+        <b>🎉 New Advance Payment Received!</b>
+        
+        <b>Order ID:</b> <code>${orderId}</code>
+        <b>Company:</b> ${orderData.companyName}
+        <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString()} BDT
+        <b>Method:</b> ${newPayment.paymentMethod}
+        <b>Recorded By:</b> ${orderData.crmUserName}
+        
+        <a href="https://colorhut.xyz/track/${orderId}">View Order Details</a>
+      `;
+      await sendTelegramMessage(message);
+
     }
 
     const newOrderData: Omit<TrackingLink, 'id'> = {
@@ -240,21 +257,45 @@ export async function updateAdvancePaymentStatus(
       return { success: false, error: `Order or payment history not found for order ${orderId}.` };
     }
 
-    const paymentIndex = order.advancePayments.findIndex(p => p.id === paymentId);
-    if (paymentIndex === -1) {
-      return { success: false, error: `Payment record ${paymentId} not found in order ${orderId}.` };
-    }
+    let paymentUpdated = false;
+    const updatedPayments = (order.advancePayments || []).map(p => {
+      if (p.id === paymentId) {
+        if(p.status !== newStatus) {
+            paymentUpdated = true;
+            return { ...p, status: newStatus };
+        }
+      }
+      return p;
+    });
 
-    const updatedPayments = [...order.advancePayments];
-    updatedPayments[paymentIndex] = {
-      ...updatedPayments[paymentIndex],
-      status: newStatus,
-    };
+    if (!paymentUpdated) {
+        return { success: true, order: order }; // No change needed
+    }
     
     const success = await updateOrder(orderId, { advancePayments: updatedPayments });
     if (success) {
-      // Return the entire order with the updated payment for the silent UI update
-      return { success: true, order: { ...order, advancePayments: updatedPayments } };
+      const updatedOrder = { ...order, advancePayments: updatedPayments };
+      
+      // If the new status is 'Approved', send a Telegram notification
+      if (newStatus === 'Approved') {
+        const payment = updatedPayments.find(p => p.id === paymentId);
+        if (payment) {
+          const message = `
+            <b>✅ Payment Approved!</b>
+            
+            <b>Order ID:</b> <code>${orderId}</code>
+            <b>Company:</b> ${order.companyName}
+            <b>Amount:</b> ${payment.amount.toLocaleString()} BDT
+            <b>Method:</b> ${payment.paymentMethod}
+            <b>Recorded By:</b> ${payment.recordedByUserName}
+            
+            <a href="https://colorhut.xyz/track/${orderId}">View Order Details</a>
+          `;
+          await sendTelegramMessage(message);
+        }
+      }
+
+      return { success: true, order: updatedOrder };
     } else {
       return { success: false, error: "Failed to save the updated order to the database." };
     }
