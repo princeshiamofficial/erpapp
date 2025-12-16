@@ -74,15 +74,10 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 
 export const initializeFCM = async (): Promise<string | null> => {
   console.log("[NotificationUtils] initializeFCM called");
-  if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
-    console.log("[NotificationUtils] Browser does not support notifications or service workers.");
-    return null;
-  }
-  
-  const messagingSupported = await isSupported();
-  if (!messagingSupported) {
-    console.log("[NotificationUtils] Firebase Messaging not supported in this browser.");
-    return null;
+  const isSupportedClient = typeof window !== 'undefined' && (await isSupported());
+  if (!isSupportedClient) {
+      console.log("[NotificationUtils] Firebase Messaging not supported in this browser environment.");
+      return null;
   }
   
   const fcmMessaging = getMessaging(app);
@@ -159,6 +154,8 @@ export const initializeFCM = async (): Promise<string | null> => {
         description = "Service Worker registration failed. Please check the console for errors in firebase-messaging-sw.js.";
     } else if (error.code === 'messaging/invalid-vapid-key') {
         description = "Invalid VAPID Key provided. Please check your environment variables.";
+    } else if (error.name === 'AbortError') {
+        description = "Push service registration was aborted. This can happen if the browser is not HTTPS, in incognito, or due to a service worker conflict."
     }
     toast({ title: "Notification Setup Failed", description, variant: "destructive", duration: 15000 });
     return null;
