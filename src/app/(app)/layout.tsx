@@ -11,7 +11,7 @@ export default async function AuthenticatedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userCookie = cookieStore.get('colorhut-user');
   let currentUser: User | null = null;
   if (userCookie && userCookie.value) {
