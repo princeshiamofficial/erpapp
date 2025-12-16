@@ -1,10 +1,50 @@
 
+
 "use client";
 
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { app } from '@/lib/firebase'; 
 import { toast } from '@/hooks/use-toast';
 import { storeUserFCMTokenAction } from '@/app/(app)/users/actions';
+import { getGlobalSettings } from './settings-service';
+
+export async function sendTelegramMessage(message: string): Promise<boolean> {
+  try {
+    const settings = await getGlobalSettings();
+    const token = settings.telegramBotToken;
+    const chatId = settings.telegramChatId;
+
+    if (!token || !chatId) {
+      console.warn("Telegram settings (bot token or chat ID) are not configured. Skipping notification.");
+      return false;
+    }
+
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+      }),
+    });
+
+    const responseData = await response.json();
+    if (responseData.ok) {
+      console.log("Telegram message sent successfully.");
+      return true;
+    } else {
+      console.error("Failed to send Telegram message:", responseData.description);
+      return false;
+    }
+  } catch (error) {
+    console.error("Error sending Telegram message:", error);
+    return false;
+  }
+}
 
 export const requestNotificationPermission = async (): Promise<NotificationPermission | null> => {
   console.log("[NotificationUtils] requestNotificationPermission called");
