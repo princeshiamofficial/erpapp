@@ -11,36 +11,45 @@ export async function sendTelegramMessage(message: string): Promise<boolean> {
   try {
     const settings = await getGlobalSettings();
     const token = settings.telegramBotToken;
-    const chatId = settings.telegramChatId;
+    const chatIds = settings.telegramChatIds;
 
-    if (!token || !chatId) {
-      console.warn("Telegram settings (bot token or chat ID) are not configured. Skipping notification.");
+    if (!token || !chatIds || chatIds.length === 0) {
+      console.warn("Telegram settings (bot token or chat IDs) are not configured. Skipping notification.");
       return false;
     }
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'HTML',
-      }),
-    });
+    
+    let allSuccessful = true;
+    for (const chatId of chatIds) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: 'HTML',
+          }),
+        });
 
-    const responseData = await response.json();
-    if (responseData.ok) {
-      console.log("Telegram message sent successfully.");
-      return true;
-    } else {
-      console.error("Failed to send Telegram message:", responseData.description);
-      return false;
+        const responseData = await response.json();
+        if (responseData.ok) {
+          console.log(`Telegram message sent successfully to chat ID: ${chatId}.`);
+        } else {
+          allSuccessful = false;
+          console.error(`Failed to send Telegram message to chat ID: ${chatId}:`, responseData.description);
+        }
+      } catch (error) {
+        allSuccessful = false;
+        console.error(`Error sending Telegram message to chat ID: ${chatId}:`, error);
+      }
     }
+    return allSuccessful;
   } catch (error) {
-    console.error("Error sending Telegram message:", error);
+    console.error("Error sending Telegram messages:", error);
     return false;
   }
 }

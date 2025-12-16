@@ -66,7 +66,7 @@ export default function CrmTargetSettingsPage() {
   const [drNotifBody, setDrNotifBody] = useState('');
   const [roleBasedTargets, setRoleBasedTargets] = useState<RoleBasedTarget>({ CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
   const [telegramBotToken, setTelegramBotToken] = useState('');
-  const [telegramChatId, setTelegramChatId] = useState('');
+  const [telegramChatIds, setTelegramChatIds] = useState('');
 
 
   // Notification states
@@ -123,7 +123,7 @@ export default function CrmTargetSettingsPage() {
       setDrNotifBody(globalSettings.drAssignmentNotificationBody || '');
       setRoleBasedTargets(globalSettings.roleBasedTargets || { CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
       setTelegramBotToken(globalSettings.telegramBotToken || '');
-      setTelegramChatId(globalSettings.telegramChatId || '');
+      setTelegramChatIds(Array.isArray(globalSettings.telegramChatIds) ? globalSettings.telegramChatIds.join(', ') : '');
 
 
       setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
@@ -258,7 +258,8 @@ export default function CrmTargetSettingsPage() {
   
   const handleSaveTelegramSettings = async () => {
     setIsSubmittingTelegram(true);
-    const result = await updateTelegramSettingsAction(telegramBotToken.trim() || null, telegramChatId.trim() || null);
+    const chatIdsArray = telegramChatIds.split(',').map(id => id.trim()).filter(id => id);
+    const result = await updateTelegramSettingsAction(telegramBotToken.trim() || null, chatIdsArray.length > 0 ? chatIdsArray : null);
     if (result.success) {
       toast({ title: "Settings Updated", description: "Telegram settings have been saved." });
     } else {
@@ -489,14 +490,18 @@ export default function CrmTargetSettingsPage() {
                 />
             </div>
             <div className="space-y-1.5">
-                <Label htmlFor="telegram-chat-id">Chat ID</Label>
-                <Input
-                    id="telegram-chat-id"
-                    value={telegramChatId}
-                    onChange={(e) => setTelegramChatId(e.target.value)}
-                    placeholder="Enter the target Chat ID or Channel ID"
+                <Label htmlFor="telegram-chat-ids">Chat IDs</Label>
+                <Textarea
+                    id="telegram-chat-ids"
+                    value={telegramChatIds}
+                    onChange={(e) => setTelegramChatIds(e.target.value)}
+                    placeholder="Enter one or more Chat IDs, separated by commas"
                     disabled={isSubmittingTelegram || isLoading}
+                    rows={2}
                 />
+                <p className="text-xs text-muted-foreground">
+                  To send to multiple chats, separate each ID with a comma (e.g., -100123...,-100456...).
+                </p>
             </div>
         </CardContent>
         <CardFooter className="border-t p-5 flex justify-end">
@@ -929,4 +934,3 @@ export default function CrmTargetSettingsPage() {
     </div>
   );
 }
-

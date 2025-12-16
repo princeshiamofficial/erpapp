@@ -271,7 +271,7 @@ export interface GlobalSettings {
   roleBasedTargets?: RoleBasedTarget;
   pipelineAccess?: PipelineAccessSettings; // New setting
   telegramBotToken?: string | null;
-  telegramChatId?: string | null;
+  telegramChatIds?: string[] | null;
 }
 
 export interface LeaderboardThemeSettings {

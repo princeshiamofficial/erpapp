@@ -119,7 +119,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         roleBasedTargets: data.roleBasedTargets ?? DEFAULT_GLOBAL_SETTINGS.roleBasedTargets,
         pipelineAccess: data.pipelineAccess ?? { canViewAllLeads: [] },
         telegramBotToken: data.telegramBotToken,
-        telegramChatId: data.telegramChatId,
+        telegramChatIds: data.telegramChatIds ?? [],
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -510,13 +510,13 @@ export async function setRoleBasedTargets(targets: RoleBasedTarget): Promise<boo
   }
 }
 
-export async function setTelegramSettings(botToken: string | null, chatId: string | null): Promise<boolean> {
+export async function setTelegramSettings(botToken: string | null, chatIds: string[] | null): Promise<boolean> {
   try {
     const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
     const docSnap = await getDoc(settingsDocRef);
     const updates = {
         telegramBotToken: botToken,
-        telegramChatId: chatId
+        telegramChatIds: chatIds
     };
     if (docSnap.exists()) {
       await updateDoc(settingsDocRef, updates);
