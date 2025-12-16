@@ -19,6 +19,7 @@ import {
   setPipelineAccess,
   setLeadCategoryAccess,
   setPaymentValidationStatus, // Import new service function
+  setTelegramSettings,
 } from "@/lib/settings-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
@@ -267,6 +268,23 @@ export async function updateDrAssignmentNotificationTemplatesAction(
     return { success: false, error: "Failed to update DR assignment notification templates in database." };
   } catch (error) {
     console.error("Error in updateDrAssignmentNotificationTemplatesAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateTelegramSettingsAction(
+  botToken: string | null,
+  chatId: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setTelegramSettings(botToken, chatId);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update Telegram settings in database." };
+  } catch (error) {
+    console.error("Error in updateTelegramSettingsAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
