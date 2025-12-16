@@ -89,15 +89,27 @@ export const initializeFCM = async (): Promise<string | null> => {
       return null;
     }
     console.log("[NotificationUtils] Notification permission is granted.");
+    
+    // Unregister all existing service workers to prevent conflicts
+    if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length > 0) {
+            console.log(`[NotificationUtils] Unregistering ${registrations.length} existing service worker(s)...`);
+            for (const registration of registrations) {
+                await registration.unregister();
+                console.log(`[NotificationUtils] Unregistered service worker with scope: ${registration.scope}`);
+            }
+        }
+    }
 
-    console.log("[NotificationUtils] Registering service worker: /firebase-messaging-sw.js with scope: /");
+
+    console.log("[NotificationUtils] Registering new service worker: /firebase-messaging-sw.js with scope: /");
     const swRegistration = await navigator.serviceWorker.register(
       "/firebase-messaging-sw.js",
       { scope: "/" }
     );
     console.log("[NotificationUtils] Service worker registered. SW Registration object:", swRegistration);
     
-    // IMPORTANT: Replace with your actual VAPID key from Firebase Console
     const vapidKey = "BGt_M4sREAGV_a2B0vSj2dftZ2F8hDm4i0qJ1D4eR8c_4Xz6jF0vYQ0w-aJzG4pB5jN4oR3z-Z9X_y0v-Y2Z_0E"; 
     if (!vapidKey) {
         console.error("[NotificationUtils] VAPID key is missing.");
