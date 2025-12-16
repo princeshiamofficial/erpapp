@@ -28,6 +28,7 @@ import {
   updateMaintenanceModeAction,
   updateDrAssignmentNotificationTemplatesAction,
   updateRoleBasedTargetsAction,
+  updateTelegramSettingsAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -64,6 +65,8 @@ export default function CrmTargetSettingsPage() {
   const [drNotifTitle, setDrNotifTitle] = useState('');
   const [drNotifBody, setDrNotifBody] = useState('');
   const [roleBasedTargets, setRoleBasedTargets] = useState<RoleBasedTarget>({ CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
+  const [telegramBotToken, setTelegramBotToken] = useState('');
+  const [telegramChatId, setTelegramChatId] = useState('');
 
 
   // Notification states
@@ -92,6 +95,7 @@ export default function CrmTargetSettingsPage() {
   const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
   const [isSubmittingDrNotif, setIsSubmittingDrNotif] = useState(false);
   const [isSubmittingRoleTargets, setIsSubmittingRoleTargets] = useState(false);
+  const [isSubmittingTelegram, setIsSubmittingTelegram] = useState(false);
 
   // FCM Token Display State
   const [fcmUserSearchTerm, setFcmUserSearchTerm] = useState('');
@@ -118,6 +122,8 @@ export default function CrmTargetSettingsPage() {
       setDrNotifTitle(globalSettings.drAssignmentNotificationTitle || '');
       setDrNotifBody(globalSettings.drAssignmentNotificationBody || '');
       setRoleBasedTargets(globalSettings.roleBasedTargets || { CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
+      setTelegramBotToken(globalSettings.telegramBotToken || '');
+      setTelegramChatId(globalSettings.telegramChatId || '');
 
 
       setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
@@ -248,6 +254,17 @@ export default function CrmTargetSettingsPage() {
       toast({ title: "Update Failed", description: result.error || "Could not save DR notification template.", variant: "destructive" });
     }
     setIsSubmittingDrNotif(false);
+  };
+  
+  const handleSaveTelegramSettings = async () => {
+    setIsSubmittingTelegram(true);
+    const result = await updateTelegramSettingsAction(telegramBotToken.trim() || null, telegramChatId.trim() || null);
+    if (result.success) {
+      toast({ title: "Settings Updated", description: "Telegram settings have been saved." });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not save Telegram settings.", variant: "destructive" });
+    }
+    setIsSubmittingTelegram(false);
   };
 
   const handleNotificationRoleCheckboxChange = (role: UserRole, checked: boolean | "indeterminate") => {
@@ -444,6 +461,48 @@ export default function CrmTargetSettingsPage() {
           <Button onClick={handleSaveRoleTargets} disabled={isLoading || isSubmittingRoleTargets}>
             {isSubmittingRoleTargets ? "Saving Targets..." : "Save Role Targets"}
           </Button>
+        </CardFooter>
+      </Card>
+
+
+      <Separator className="my-8" />
+      
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+                <Send className="h-6 w-6 text-primary" /> Telegram Bot Integration
+            </CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                Configure your Telegram bot to receive real-time payment notifications.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+            <div className="space-y-1.5">
+                <Label htmlFor="telegram-token">Bot Token</Label>
+                <Input
+                    id="telegram-token"
+                    type="password"
+                    value={telegramBotToken}
+                    onChange={(e) => setTelegramBotToken(e.target.value)}
+                    placeholder="Enter your Telegram Bot Token"
+                    disabled={isSubmittingTelegram || isLoading}
+                />
+            </div>
+            <div className="space-y-1.5">
+                <Label htmlFor="telegram-chat-id">Chat ID</Label>
+                <Input
+                    id="telegram-chat-id"
+                    value={telegramChatId}
+                    onChange={(e) => setTelegramChatId(e.target.value)}
+                    placeholder="Enter the target Chat ID or Channel ID"
+                    disabled={isSubmittingTelegram || isLoading}
+                />
+            </div>
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+            <Button onClick={handleSaveTelegramSettings} disabled={isSubmittingTelegram || isLoading}>
+                {isSubmittingTelegram ? "Saving..." : "Save Telegram Settings"}
+            </Button>
         </CardFooter>
       </Card>
 
@@ -870,3 +929,4 @@ export default function CrmTargetSettingsPage() {
     </div>
   );
 }
+
