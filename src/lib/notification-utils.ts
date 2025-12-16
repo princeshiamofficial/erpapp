@@ -74,15 +74,14 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 
 export const initializeFCM = async (): Promise<string | null> => {
   console.log("[NotificationUtils] initializeFCM called");
-  if (typeof window === 'undefined') {
-    console.log("[NotificationUtils] Cannot initialize FCM in non-browser environment.");
+  if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
+    console.log("[NotificationUtils] Browser does not support notifications or service workers.");
     return null;
   }
-
+  
   const messagingSupported = await isSupported();
   if (!messagingSupported) {
     console.log("[NotificationUtils] Firebase Messaging not supported in this browser.");
-    // No toast here, as NotificationBell might call this and want to handle it
     return null;
   }
   
@@ -93,128 +92,75 @@ export const initializeFCM = async (): Promise<string | null> => {
     const permission = Notification.permission;
     if (permission !== 'granted') {
       console.log('[NotificationUtils] Notification permission not granted yet. Token cannot be retrieved.');
-      // No toast here, requestNotificationPermission handles this feedback.
       return null;
     }
     console.log("[NotificationUtils] Notification permission is granted.");
 
-    console.log("[NotificationUtils] Waiting for service worker to be ready: /firebase-messaging-sw.js");
-    const swRegistration = await navigator.serviceWorker.ready; // Use .ready to ensure the SW is active
-    console.log("[NotificationUtils] Service worker is active. SW Registration object:", swRegistration);
+    console.log("[NotificationUtils] Registering service worker: /firebase-messaging-sw.js with scope: /");
+    const swRegistration = await navigator.serviceWorker.register(
+      "/firebase-messaging-sw.js",
+      { scope: "/" }
+    );
+    console.log("[NotificationUtils] Service worker registered. SW Registration object:", swRegistration);
     
-    const VAPID_KEY = "BMmAKwUdHqgZI3RoxiEl3608f_tNusP9JF8daxFJ99CTMjH1VGmLv7ctXnTcSeUKxRcWdbzhrkh2GPtY9Gw2R04";
+    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+    if (!vapidKey) {
+        console.error("[NotificationUtils] VAPID key is missing. Check NEXT_PUBLIC_FIREBASE_VAPID_KEY environment variable.");
+        toast({ title: "Configuration Error", description: "VAPID key for push notifications is not set.", variant: "destructive" });
+        return null;
+    }
+
     console.log("[NotificationUtils] Attempting to get FCM token using active SW registration and VAPID key.");
 
     const currentToken = await getToken(fcmMessaging, {
       serviceWorkerRegistration: swRegistration,
-      vapidKey: VAPID_KEY, 
+      vapidKey: vapidKey, 
     });
 
     if (currentToken) {
-      console.log('[NotificationUtils] >>> FCM TOKEN ACQUIRED (USE THIS FOR TESTING):', currentToken);
-      // No toast here for successful token acquisition as it's a common operation
+      console.log('[NotificationUtils] >>> FCM TOKEN ACQUIRED:', currentToken);
     } else {
-      console.warn('[NotificationUtils] No registration token available. Check VAPID key in Firebase project and SW console for errors. Ensure SW is active.');
-      // toast({ title: "Notification Token Error", description: "Could not get notification token. Check VAPID key & SW. See console for details.", variant: "destructive", duration: 10000 });
+      console.warn('[NotificationUtils] No registration token available. Check VAPID key, SW console for errors.');
+      toast({ title: "Token Error", description: "Could not get notification token. Check console.", variant: "destructive", duration: 10000 });
       return null;
     }
 
-    // Foreground message listener
     onMessage(fcmMessaging, (payload) => {
-      console.log('[NotificationUtils] === Foreground message received ===. Raw payload:', JSON.stringify(payload, null, 2));
+      console.log('[NotificationUtils] === Foreground message received ===', payload);
       
-      const notificationData = payload.data || {}; 
-      const fcmNotification = payload.notification || {};
-
-      const notificationTitle = notificationData.title || fcmNotification.title || "Color Hut Message";
-      const notificationBody = notificationData.body || fcmNotification.body || "You have a new update.";
+      const { title, body, icon, badge } = payload.notification || {};
+      const { click_action, ...data } = payload.data || {};
       
-      let notificationIcon = notificationData.iconUrl || notificationData.icon || fcmNotification.icon || '/icons/icon-192x192.png';
-      if (notificationIcon && !notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
-          notificationIcon = window.location.origin + (notificationIcon.startsWith('.') ? notificationIcon.substring(1) : '/' + notificationIcon);
-      } else if (notificationIcon && !notificationIcon.startsWith('http')) {
-          notificationIcon = window.location.origin + notificationIcon;
-      }
-
-      let notificationBadge = notificationData.badgeUrl || notificationData.badge || '/icons/icon-72x72.png';
-      if (notificationBadge && !notificationBadge.startsWith('http') && !notificationBadge.startsWith('/')) {
-          notificationBadge = window.location.origin + (notificationBadge.startsWith('.') ? notificationBadge.substring(1) : '/' + notificationBadge);
-      } else if (notificationBadge && !notificationBadge.startsWith('http')) {
-          notificationBadge = window.location.origin + notificationBadge;
-      }
-      
-      const clickAction = notificationData.click_action || notificationData.targetUrl || fcmNotification.click_action || window.location.origin;
-      
+      const notificationTitle = title || "Color Hut Message";
       const notificationOptions: NotificationOptions = {
-        body: notificationBody,
-        icon: notificationIcon,
-        badge: notificationBadge,
-        data: { 
-          click_action: clickAction,
-          ...notificationData
-        },
-        tag: notificationData.tag || fcmNotification.tag || payload.messageId || 'colorhut-fg-notif-' + Date.now(),
-        renotify: true, 
-        requireInteraction: true, 
+        body: body || "You have a new update.",
+        icon: icon || '/icons/icon-192x192.png',
+        badge: badge || '/icons/icon-72x72.png',
+        data: { click_action: click_action || window.location.origin, ...data },
       };
       
-      const customSoundUrl = notificationData.customSoundUrl;
-      if (customSoundUrl) {
-          console.log("[NotificationUtils] Custom sound URL found in foreground data payload:", customSoundUrl);
-          try {
-            const audio = new Audio(customSoundUrl as string);
-            audio.play().catch(e => console.warn("[NotificationUtils] Foreground custom sound playback failed:", e));
-          } catch (e) {
-            console.error("[NotificationUtils] Error playing foreground custom sound:", e);
-          }
-      } else {
-        console.log("[NotificationUtils] No customSoundUrl in foreground data. Browser default sound may apply if notification is shown.");
-      }
-      
-      console.log("[NotificationUtils] Foreground notification options prepared (after custom sound handling):", JSON.stringify(notificationOptions, null, 2));
-      
       navigator.serviceWorker.ready.then(registration => {
-        console.log("[NotificationUtils] Attempting to show foreground notification via SW registration's showNotification method with options:", JSON.stringify(notificationOptions));
-        registration.showNotification(notificationTitle, notificationOptions)
-         .then(() => console.log("[NotificationUtils] Foreground notification shown via SW registration successfully."))
-         .catch(err => {
-            console.error("[NotificationUtils] Error showing foreground notification via SW registration:", err);
-            toast({ title: "Notif Display Error", description: `FG (SW Show): ${''+err.message}`, variant: "destructive" });
-         });
-      }).catch(err => {
-        console.error("[NotificationUtils] Error getting SW registration for foreground notification display:", err);
-        toast({ title: "SW Reg Error", description: `FG (SW Ready): ${''+err.message}`, variant: "destructive" });
+        registration.showNotification(notificationTitle, notificationOptions);
       });
 
-      // This toast is for app-level feedback, separate from the actual system notification.
       toast({
-        title: `FG Update: ${notificationTitle}`,
-        description: notificationBody,
+        title: `Update: ${notificationTitle}`,
+        description: body,
         duration: 10000,
       });
     });
+
     return currentToken;
 
   } catch (error: any) {
     console.error('[NotificationUtils] FATAL Error during FCM Initialization:', error);
     let description = "Could not set up push notifications. Check console for detailed error.";
-    if (error.name === 'InvalidStateError' && error.message.includes('PushManager')) {
-        description = `PushManager Invalid State: Possible inactive SW or VAPID key. Ensure provided VAPID key is correct. Error: ${error.message}`;
-    } else if (error.code === 'messaging/failed-service-worker-registration' || (error.message && (error.message.includes('ServiceWorker script evaluation failed') || error.message.includes("Failed to register a ServiceWorker")) ) ) {
-        description = "Service Worker Reg/Eval Failed: '/firebase-messaging-sw.js' issue. Check SW console & config.";
-    } else if (error.code === 'messaging/invalid-vapid-key' || (error.message && (error.message.toLowerCase().includes('applicationserverkey') || error.message.toLowerCase().includes('vapid key')))) {
-        description = "Invalid VAPID Key: Verify key in Firebase Console and used in code.";
-    } else if (error.code === 'messaging/sw-registration-expected' || (error.message && error.message.includes("No active Service Worker")) || error.message.includes("Subscription failed - no active Service Worker")) {
-        description = "No Active SW: SW registration might have failed or it's not active. Check SW console.";
-    } else if (error.code === 'messaging/permission-default') {
-        description = "Notification Permission Default: Click the bell icon to grant permission.";
-    } else if (error.code === 'messaging/permission-denied') {
-        description = "Notification Permission Denied: Enable notifications in browser settings for this site.";
-    } else if (error.message) {
-        description = `Error: ${error.message} (Code: ${error.code || 'N/A'})`;
+     if (error.code === 'messaging/failed-service-worker-registration' || error.message?.includes('ServiceWorker')) {
+        description = "Service Worker registration failed. Please check the console for errors in firebase-messaging-sw.js.";
+    } else if (error.code === 'messaging/invalid-vapid-key') {
+        description = "Invalid VAPID Key provided. Please check your environment variables.";
     }
-    // We cannot use the useToast hook here. The caller should handle displaying this error.
-    console.error("FCM Setup Error:", description);
+    toast({ title: "Notification Setup Failed", description, variant: "destructive", duration: 15000 });
     return null;
   }
 };
