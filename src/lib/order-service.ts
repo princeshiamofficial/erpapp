@@ -211,7 +211,7 @@ export const addOrder = async (orderData: {
     
     const payload = { id: orderId, data: newOrderData };
     
-    await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents`, {
+    const newDoc = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents`, {
         method: 'POST', body: JSON.stringify(payload)
     });
     
@@ -219,7 +219,8 @@ export const addOrder = async (orderData: {
 
   } catch (error: any) {
     console.error("Error adding order via API v3:", error.message ? error.message : error);
-    return null;
+    if (error instanceof Error) throw error;
+    throw new Error("An unknown error occurred while creating the order.");
   }
 };
 
@@ -629,3 +630,4 @@ export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
