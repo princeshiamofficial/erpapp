@@ -4,7 +4,7 @@
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { app } from '@/lib/firebase'; 
 import { toast } from '@/hooks/use-toast';
-import { storeUserFCMTokenAction } from '@/app/(app)/users/actions';
+import { storeUserFCMTokenAction } from '@/app/(app)/users/actions'; 
 import { getGlobalSettings } from './settings-service';
 
 export async function sendTelegramMessage(message: string): Promise<boolean> {
@@ -128,7 +128,8 @@ export const initializeFCM = async (): Promise<string | null> => {
       console.log('[NotificationUtils] >>> FCM TOKEN ACQUIRED:', currentToken);
     } else {
       console.warn('[NotificationUtils] No registration token available. Check VAPID key, SW console for errors.');
-      toast({ title: "Token Error", description: "Could not get notification token. Check console.", variant: "destructive", duration: 10000 });
+      // This part is now commented out to hide the toast
+      // toast({ title: "Token Error", description: "Could not get notification token. Check console.", variant: "destructive", duration: 10000 });
       return null;
     }
 
@@ -169,7 +170,8 @@ export const initializeFCM = async (): Promise<string | null> => {
     } else if (error.name === 'AbortError') {
         description = "Push service registration was aborted. This can happen if the browser is not HTTPS, in incognito, or due to a service worker conflict."
     }
-    toast({ title: "Notification Setup Failed", description, variant: "destructive", duration: 15000 });
+    // This part is now commented out to hide the toast
+    // toast({ title: "Notification Setup Failed", description, variant: "destructive", duration: 15000 });
     return null;
   }
 };
