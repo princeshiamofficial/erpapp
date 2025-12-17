@@ -92,7 +92,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onD
         className={cn(
           "bg-card w-full shadow-sm hover:shadow-md transition-shadow",
           isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing"),
-          wasUpdatedToday && 'border-green-500/50 hover:border-green-500'
+          wasUpdatedToday && 'bg-green-100/50 dark:bg-green-900/20'
         )}
       >
         <CardContent className="p-3 space-y-2.5">
