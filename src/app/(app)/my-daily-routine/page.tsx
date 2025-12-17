@@ -4,13 +4,13 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, ArrowRight, PlusCircle, Edit, Trash2, ClipboardList, Printer } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, PlusCircle, Edit, Trash2, ClipboardList, Printer, Calendar as CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction } from './actions';
-import { format, addDays, startOfWeek, subDays, parse, differenceInMinutes, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, addDays, startOfWeek, subDays, parse, differenceInMinutes, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +18,9 @@ import { AddEditRoutineDialog } from '@/components/daily-routine/AddEditRoutineD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from '@/components/ui/card';
 import { getContrastTextColor } from '@/lib/status-service';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 
 // Helper function to format time string to AM/PM
@@ -43,11 +46,14 @@ export default function MyDailyRoutinePage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const [routinesData, setRoutinesData] = useState<Record<string, DailyRoutine>>({});
   const [routineHeaders, setRoutineHeaders] = useState<DailyRoutine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
+  const [selectedDay, setSelectedDay] = useState(new Date());
+
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [routineToEdit, setRoutineToEdit] = useState<DailyRoutine | null>(null);
@@ -199,9 +205,83 @@ export default function MyDailyRoutinePage() {
     return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
   
-  return (
-    <>
-      <div className="space-y-4 p-1 sm:p-4 printable-area">
+  const renderMobileView = () => {
+    const selectedDateKey = format(selectedDay, 'yyyy-MM-dd');
+    const dayRoutine = routinesData[selectedDateKey];
+    
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center bg-card p-2 rounded-md no-print">
+            <Button onClick={() => setSelectedDay(subDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-48 justify-center text-md font-semibold h-9">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDay, 'd MMM, yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDay}
+                  onSelect={(day) => day && setSelectedDay(day)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Button onClick={() => setSelectedDay(addDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
+                <ArrowRight className="h-4 w-4" />
+            </Button>
+        </div>
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+            </div>
+          ) : routineHeaders.length > 0 ? (
+            routineHeaders.map(header => {
+              let isChecked = false;
+              if (dayRoutine?.completedTasks) {
+                if (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[header.id]) {
+                  isChecked = true;
+                } else if (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id)) {
+                  isChecked = true;
+                }
+              }
+              return (
+                <div key={header.id} className="flex items-center p-3 bg-card rounded-lg shadow-sm border" onClick={() => handleToggleTask(selectedDay, header.id)}>
+                   <Checkbox
+                      checked={isChecked}
+                      className="h-6 w-6 rounded-md mr-4"
+                      aria-label={`Mark ${header.title} as completed`}
+                   />
+                   <div className="flex-1">
+                      <p className="font-semibold text-foreground">{header.title}</p>
+                      <p className="text-sm text-muted-foreground">{formatTime12Hour(header.time)}</p>
+                   </div>
+                   <div className="h-3 w-3 rounded-full" style={{ backgroundColor: header.color || '#e5e7eb' }} />
+                </div>
+              );
+            })
+          ) : (
+             <Card className="text-center py-10 text-muted-foreground">
+                <CardContent>
+                  <p>No routines configured yet.</p>
+                   <Button onClick={openAddDialog} size="sm" className="mt-4">
+                      <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
+                    </Button>
+                </CardContent>
+             </Card>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderDesktopView = () => (
+     <div className="space-y-4 printable-area">
         <div className="flex justify-between items-center bg-card p-2 rounded-md no-print">
           <Button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" /> Previous Month
@@ -303,6 +383,13 @@ export default function MyDailyRoutinePage() {
              </CardContent>
            </Card>
         )}
+      </div>
+  );
+
+  return (
+    <>
+      <div className="p-4 sm:p-6 lg:p-8">
+        {isMobile ? renderMobileView() : renderDesktopView()}
       </div>
       <AddEditRoutineDialog
         isOpen={isAddEditDialogOpen}

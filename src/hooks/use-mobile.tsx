@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -17,5 +18,5 @@ export function useIsMobile() {
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
-  return !!isMobile
+  return isMobile
 }
