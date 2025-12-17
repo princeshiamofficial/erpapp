@@ -210,7 +210,7 @@ export default function MyDailyRoutinePage() {
     const dayRoutine = routinesData[selectedDateKey];
     
     return (
-      <div className="space-y-4">
+      <>
         <div className="sticky top-0 z-10 flex justify-between items-center bg-card/80 backdrop-blur-sm p-2 rounded-b-md no-print shadow-sm">
             <Button onClick={() => setSelectedDay(subDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
@@ -235,7 +235,7 @@ export default function MyDailyRoutinePage() {
                 <ArrowRight className="h-4 w-4" />
             </Button>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-3 pt-4">
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
@@ -276,7 +276,7 @@ export default function MyDailyRoutinePage() {
              </Card>
           )}
         </div>
-      </div>
+      </>
     );
   };
 
@@ -404,7 +404,7 @@ export default function MyDailyRoutinePage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete the routine "<span className="font-semibold">{routineToDelete.title}</span>". This cannot be undone.
+                This will permanently delete the routine "<span className="font-semibold">{routineToDelete.title}</span>". This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
