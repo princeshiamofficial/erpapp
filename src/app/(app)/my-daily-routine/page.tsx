@@ -290,7 +290,7 @@ export default function MyDailyRoutinePage() {
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-48 justify-center text-md font-semibold h-9">
+                <Button variant="outline" className="w-40 justify-center text-md font-semibold h-9">
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {format(selectedDay, 'd MMM, yyyy')}
                 </Button>
@@ -304,9 +304,14 @@ export default function MyDailyRoutinePage() {
                 />
               </PopoverContent>
             </Popover>
-            <Button onClick={() => setSelectedDay(addDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
-                <ArrowRight className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+                <Button onClick={() => setSelectedDay(addDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
+                    <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button onClick={openAddDialog} variant="outline" size="icon" className="h-9 w-9 bg-primary/10 text-primary border-primary/20">
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+            </div>
         </div>
         <div className="flex-1 overflow-y-auto pt-4 space-y-3" ref={scrollContainerRef}>
           {isLoading ? (
@@ -540,4 +545,3 @@ export default function MyDailyRoutinePage() {
     </>
   );
 }
-
