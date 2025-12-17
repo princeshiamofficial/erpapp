@@ -219,7 +219,7 @@ export default function MyDailyRoutinePage() {
         </div>
 
         {isLoading ? (
-          <div className="overflow-x-auto bg-card p-2 rounded-lg shadow-sm">
+          <div className="bg-card p-2 rounded-lg shadow-sm">
             <Skeleton className="h-[400px] w-full" />
           </div>
         ) : routineHeaders.length > 0 ? (
