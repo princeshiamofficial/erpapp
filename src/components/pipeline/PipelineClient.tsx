@@ -41,7 +41,7 @@ import { ViewLeadDialog } from './ViewLeadDialog';
 import {
   PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall,
   Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check,
-  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X
+  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X, Activity
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
@@ -69,6 +69,16 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
 const ITEMS_PER_PAGE = 25;
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
+
+const ACTIVITY_TYPES = [
+  'Follow-up Call',
+  'Sent Proposal',
+  'Meeting',
+  'Site Visit',
+  'Negotiation',
+  'No Response',
+  'Other'
+];
 
 export function PipelineClient() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -109,6 +119,7 @@ export function PipelineClient() {
     to: new Date(),
   });
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [activityFilter, setActivityFilter] = useState<string>('all');
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState(new Set<string>());
@@ -163,17 +174,22 @@ export function PipelineClient() {
   const filteredLeads = useMemo(() => {
     let baseLeads = [...leads];
 
+    // Filter by CRM first
     if (selectedCrmId !== 'all') {
       baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
     
-    // Date filter
-    if (selectedDateRange?.from && viewMode !== 'calendar') { // Calendar view handles its own date range
+    // Date filter - on lead creation date for kanban/list, on schedule for calendar
+    if (selectedDateRange?.from) {
       const startDate = startOfDay(selectedDateRange.from);
       const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
+      const dateKey = viewMode === 'calendar' ? 'schedule' : 'date';
+
       baseLeads = baseLeads.filter(lead => {
+        const dateToFilter = lead[dateKey as keyof Lead] as string | null | undefined;
+        if (!dateToFilter) return false;
         try {
-          const leadDate = parseISO(lead.date);
+          const leadDate = parseISO(dateToFilter);
           return isWithinInterval(leadDate, { start: startDate, end: endDate });
         } catch {
           return false;
@@ -181,6 +197,13 @@ export function PipelineClient() {
       });
     }
 
+    // Activity filter
+    if (activityFilter !== 'all') {
+      baseLeads = baseLeads.filter(lead => 
+        lead.activityHistory?.some(activity => activity.activity === activityFilter)
+      );
+    }
+    
     // Category filter (only for list view)
     if (viewMode === 'list' && categoryFilter !== 'all') {
       baseLeads = baseLeads.filter(lead => lead.category === categoryFilter);
@@ -199,7 +222,7 @@ export function PipelineClient() {
     }
 
     return baseLeads;
-  }, [leads, searchTerm, selectedCrmId, selectedDateRange, categoryFilter, viewMode, globalSettings]);
+  }, [leads, searchTerm, selectedCrmId, selectedDateRange, categoryFilter, viewMode, activityFilter]);
   
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
 
@@ -210,7 +233,7 @@ export function PipelineClient() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCrmId, viewMode, selectedDateRange, categoryFilter]);
+  }, [searchTerm, selectedCrmId, viewMode, selectedDateRange, categoryFilter, activityFilter]);
   
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
@@ -253,12 +276,12 @@ export function PipelineClient() {
             setLeads(prev => [savedLead, ...prev]);
         }
     } else {
-        fetchLeadsAndUsers(); // Fallback to refetch if new lead data isn't returned
+        fetchLeadsAndUsers();
     }
   };
 
   const handleLeadUpdatedFromView = () => {
-    fetchLeadsAndUsers(); // Re-fetch to get latest data
+    fetchLeadsAndUsers();
   };
   
   const handleDeleteRequest = (lead: Lead) => {
@@ -434,9 +457,21 @@ export function PipelineClient() {
                 {filteredCrmUsersForDropdown.map(crm => (<CommandItem key={crm.id} value={crm.name} onSelect={() => { setSelectedCrmId(crm.id); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />{crm.name}</CommandItem>))}
               </CommandGroup></CommandList></Command></PopoverContent>
             </Popover>
-            {viewMode !== 'calendar' && (
-              <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
-            )}
+            <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
+            
+            <Select value={activityFilter} onValueChange={setActivityFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/50 focus:border-primary h-10">
+                <div className="flex items-center gap-2 truncate">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Filter by activity..." />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Activities</SelectItem>
+                {ACTIVITY_TYPES.map(act => <SelectItem key={act} value={act}>{act}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
             {viewMode === 'list' && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/50 focus:border-primary h-10"><SelectValue placeholder="Filter by category..." /></SelectTrigger>
