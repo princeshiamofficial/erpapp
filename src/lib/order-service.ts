@@ -188,6 +188,7 @@ export const addOrder = async (orderData: {
         <b>Recorded By:</b> ${orderData.crmUserName}
         
         <a href="https://app.colorhutbd.xyz/track/${orderId}">View Order Details</a>
+        <a href="https://app.colorhutbd.xyz/admin/payment-history">View Payment History</a>
       `;
       await sendTelegramMessage(message);
 
@@ -630,5 +631,6 @@ export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
 
 

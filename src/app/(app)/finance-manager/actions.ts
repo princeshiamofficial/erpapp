@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -21,7 +22,7 @@ import type { messaging } from 'firebase-admin';
 import { getGlobalSettings } from '@/lib/settings-service';
 
 const formatAmountForNotification = (amount: number): string => {
-  return `BDT ${amount.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(amount);
 };
 
 // Action to add a new transaction
