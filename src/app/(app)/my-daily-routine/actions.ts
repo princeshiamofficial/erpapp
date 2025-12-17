@@ -42,7 +42,7 @@ export async function toggleRoutineTaskAction(
 }
 
 // Actions for managing routine headers
-export async function addRoutineAction(routineData: Omit<DailyRoutine, 'id' | 'createdAt' | 'isCompleted'>): Promise<{ success: boolean; routine?: DailyRoutine; error?: string }> {
+export async function addRoutineAction(routineData: Omit<DailyRoutine, 'id' | 'createdAt' | 'updatedAt' | 'completedTasks'>): Promise<{ success: boolean; routine?: DailyRoutine; error?: string }> {
     try {
         const newRoutine = await addRoutineHeader(routineData);
         if (newRoutine) {
