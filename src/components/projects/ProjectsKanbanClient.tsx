@@ -49,7 +49,7 @@ import { getUsers } from '@/lib/user-service';
 import type { TrackingLink } from '@/types';
 import { Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { KanbanColumn } from './KanbanColumn';
+import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
@@ -468,7 +468,7 @@ export function ProjectsKanbanClient() {
 
     const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
     const ordersResults = await Promise.all(ordersDataPromises);
-    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o!]));
+    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
     
     setIsLoading(false);
 
