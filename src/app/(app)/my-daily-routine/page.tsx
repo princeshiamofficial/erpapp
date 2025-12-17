@@ -60,7 +60,7 @@ export default function MyDailyRoutinePage() {
     try {
       const [fetchedRoutines, fetchedHeaders] = await Promise.all([
         getRoutinesAction(currentUser.id),
-        getRoutineHeadersForUser(currentUser.id)
+        getRoutineHeadersAction(currentUser.id)
       ]);
       
       const routinesMap = fetchedRoutines.reduce((acc, routine) => {
