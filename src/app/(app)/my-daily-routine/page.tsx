@@ -225,9 +225,9 @@ export default function MyDailyRoutinePage() {
         ) : routineHeaders.length > 0 ? (
           <div className="h-[calc(100vh-12rem)] overflow-auto custom-scrollbar border rounded-lg">
             <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-10">
+                <thead className="sticky top-0 z-30">
                     <tr>
-                        <th className="sticky left-0 z-20 border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
+                        <th className="sticky left-0 z-40 border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
                             <p className="font-semibold text-sm">Date With Day</p>
                         </th>
                         {routineHeaders.map(header => {
@@ -259,7 +259,7 @@ export default function MyDailyRoutinePage() {
                         const dayRoutine = routinesData[dateKey];
                         return (
                             <tr key={dateKey} className="hover:bg-muted/30">
-                                <td className="sticky left-0 border p-2 text-center bg-orange-200 dark:bg-orange-800/50 z-10">
+                                <td className="sticky left-0 border p-2 text-center bg-orange-200 dark:bg-orange-800/50 z-20">
                                     <p className="font-semibold text-sm">{format(date, 'dd/MM/yy')}</p>
                                     <p className="text-xs">{format(date, 'EEEE')}</p>
                                 </td>
