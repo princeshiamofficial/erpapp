@@ -30,7 +30,7 @@ export async function getLeadByIdAction(leadId: string): Promise<Lead | null> {
 
 
 export async function addLeadAction(
-  leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType },
+  leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status' | 'updatedAt'> & { category?: LeadCategory, status?: LeadStatusType },
   currentUser: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
@@ -48,13 +48,14 @@ export async function addLeadAction(
       changedByUserName: currentUser.name,
     };
 
-    const leadDataWithUser = {
+    const leadDataWithUser: Omit<Lead, 'id'> = {
       ...leadData,
       crmId: currentUser.id,
       crmName: currentUser.name,
       category: leadData.category || 'POP', 
       status: leadData.status || 'New Lead',
       activityHistory: [initialActivity],
+      updatedAt: new Date().toISOString(),
     };
     const newLead = await addLead(leadDataWithUser);
     if (newLead) {
@@ -86,7 +87,7 @@ export async function addLeadActivityAction(
 
     // Use the client's state of the lead to avoid race conditions
     const updatedHistory = [...(existingLead.activityHistory || []), newActivity];
-    const success = await updateLead(leadId, { activityHistory: updatedHistory });
+    const success = await updateLead(leadId, { activityHistory: updatedHistory, updatedAt: new Date().toISOString() });
 
     if (success) {
       // Revalidation is still useful for other clients.
@@ -125,7 +126,7 @@ export async function deleteLeadActivityAction(
             return { success: false, error: "Activity to delete was not found." };
         }
         
-        const success = await updateLead(leadId, { activityHistory: updatedHistory });
+        const success = await updateLead(leadId, { activityHistory: updatedHistory, updatedAt: new Date().toISOString() });
 
         if (success) {
             revalidatePath("/(app)/pipeline");
@@ -157,6 +158,7 @@ export async function addLeadsBatchAction(
               ...lead,
               crmId: currentUser.id,
               crmName: currentUser.name,
+              updatedAt: new Date().toISOString(),
             };
             const newLead = await addLead(leadDataWithUser);
             if (newLead) {
@@ -196,8 +198,10 @@ export async function updateLeadAction(
             return { success: false, error: "Invalid phone number. It must be an 11-digit number starting with 0." };
         }
     }
+
+    const finalUpdates = { ...updates, updatedAt: new Date().toISOString() };
     
-    const success = await updateLead(leadId, updates);
+    const success = await updateLead(leadId, finalUpdates);
     if (success) {
       revalidatePath("/(app)/pipeline");
       const updatedLead = await getLeadById(leadId);
@@ -241,6 +245,7 @@ export async function transferLeadAction(
         const updates = {
             crmId: newCrmUser.id,
             crmName: newCrmUser.name,
+            updatedAt: new Date().toISOString(),
         };
 
         const success = await updateLead(leadId, updates);
@@ -307,6 +312,7 @@ export async function transferLeadsBatchAction(
                 const updates = {
                     crmId: targetCrmUser.id,
                     crmName: targetCrmUser.name,
+                    updatedAt: new Date().toISOString(),
                 };
                 updatePromises.push(updateLead(lead.id, updates));
             }
@@ -352,6 +358,7 @@ export async function transferSelectedLeadsAction(
     const updates = {
       crmId: targetCrmUser.id,
       crmName: targetCrmUser.name,
+      updatedAt: new Date().toISOString(),
     };
     
     let successfulTransfers = 0;

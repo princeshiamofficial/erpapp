@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { Lead, User } from '@/types';
@@ -10,7 +11,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday } from 'date-fns';
 import {
   Tooltip,
   TooltipContent,
@@ -68,6 +69,8 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onD
   const canDelete = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
   const canTransfer = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
 
+  const wasUpdatedToday = lead.updatedAt ? isToday(parseISO(lead.updatedAt)) : false;
+
 
   return (
     <motion.div
@@ -88,7 +91,8 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onD
       <Card
         className={cn(
           "bg-card w-full shadow-sm hover:shadow-md transition-shadow",
-          isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing")
+          isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing"),
+          wasUpdatedToday && 'border-green-500/50 hover:border-green-500'
         )}
       >
         <CardContent className="p-3 space-y-2.5">

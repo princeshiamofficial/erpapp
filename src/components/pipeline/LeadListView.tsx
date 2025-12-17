@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo } from 'react';
@@ -140,11 +141,16 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                             const scheduleDate = lead.schedule ? parseISO(lead.schedule) : null;
                             const isPast = scheduleDate ? isBefore(scheduleDate, startOfDay(new Date())) && !isToday(scheduleDate) : false;
                             const isDuplicatePhone = lead.phone && duplicatePhoneNumbers.has(lead.phone);
+                            const wasUpdatedToday = lead.updatedAt ? isToday(parseISO(lead.updatedAt)) : false;
                             
                             return (
                                 <TableRow 
                                   key={lead.id} 
-                                  className={cn("hover:bg-muted/50", isDuplicatePhone && "bg-red-100/50 dark:bg-red-900/20")}
+                                  className={cn(
+                                    "hover:bg-muted/50",
+                                    isDuplicatePhone && "bg-red-100/50 dark:bg-red-900/20",
+                                    wasUpdatedToday && !isDuplicatePhone && "bg-green-100/50 dark:bg-green-900/20"
+                                  )}
                                   data-state={selectedLeadIds.has(lead.id) ? "selected" : ""}
                                 >
                                     {isSelectionMode && (

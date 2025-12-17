@@ -403,6 +403,7 @@ export interface Lead {
   crmName: string;
   customerType?: CustomerType | null;
   activityHistory?: LeadActivity[];
+  updatedAt?: string; // New field for last update timestamp
 }
 
 export interface DistrictDataEntry {
