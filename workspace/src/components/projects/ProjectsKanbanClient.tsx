@@ -42,13 +42,13 @@ import { CourierConfirmationDialog } from '@/components/projects/CourierConfirma
 import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog'; 
 import { FileUploadConfirmationDialog } from '@/components/projects/FileUploadConfirmationDialog';
 import { getProjects } from '@/lib/project-service';
-import { getStatuses } from '@/lib/status-service'; 
+import { getStatuses, DELIVERED_STATUS_ID } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import type { TrackingLink } from '@/types';
 import { Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { KanbanColumn } from './KanbanColumn';
+import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
@@ -473,14 +473,20 @@ export function ProjectsKanbanClient() {
 
     const dataToExport = deliveredProjects.map(p => {
       const order = ordersMap.get(p.id);
-      return {
-        'Job ID': p.projectIdDisplay,
-        'Company Name': p.name,
-        'Phone': order?.phoneNumber || 'N/A',
-        'Address': order?.address || 'N/A',
-        'Delivery Date': p.deliveredAt ? format(parseISO(p.deliveredAt), 'yyyy-MM-dd HH:mm') : 'N/A',
-      };
-    });
+      const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
+      const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
+      const nameParts = (p.name || '').split(' • ');
+      const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
+      const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
+      
+        return {
+          'Job ID': jobId,
+          'Company Name': companyName,
+          'Phone': order?.phoneNumber || 'N/A',
+          'Address': order?.address || 'N/A',
+          'Delivery Date': deliveryDate,
+        };
+      });
   
     const csv = Papa.unparse(dataToExport, {
         header: true,
