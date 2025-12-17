@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { app } from '@/lib/firebase'; 
