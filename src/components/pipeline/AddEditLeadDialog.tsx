@@ -153,7 +153,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
     }
     const combinedAddress = addressParts.filter(Boolean).join(', ');
 
-    const leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType } = {
+    const leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status' | 'updatedAt'> & { category?: LeadCategory, status?: LeadStatusType } = {
       date: date.toISOString(),
       schedule: schedule ? schedule.toISOString() : null,
       contactName, businessName, phone, source, 
@@ -172,7 +172,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         onLeadSaved(result.lead, true);
       }
     } else {
-        const createData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType } = leadData;
+        const createData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status' | 'updatedAt'> & { category?: LeadCategory, status?: LeadStatusType } = leadData;
         result = await addLeadAction(createData, currentUser);
         if (result.success && result.lead) {
             onLeadSaved(result.lead, false);

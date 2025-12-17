@@ -280,8 +280,8 @@ export function PipelineClient() {
     }
   };
 
-  const handleLeadUpdatedFromView = () => {
-    fetchLeadsAndUsers();
+  const handleLeadUpdatedFromView = (updatedLead: Lead) => {
+    setLeads(prev => prev.map(l => (l.id === updatedLead.id ? updatedLead : l)));
   };
   
   const handleDeleteRequest = (lead: Lead) => {
@@ -316,7 +316,7 @@ export function PipelineClient() {
   const handleUpdateLeadCategory = async (lead: Lead, newCategory: LeadCategory) => {
     const originalCategory = lead.category;
     if (newCategory === originalCategory) return;
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: newCategory } : l));
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: newCategory, updatedAt: new Date().toISOString() } : l));
     const result = await updateLeadAction(lead.id, { category: newCategory });
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || "Could not update lead category.", variant: "destructive" });
