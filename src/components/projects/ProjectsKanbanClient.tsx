@@ -16,8 +16,7 @@ import {
   ClipboardList,
   Search,
   EyeOff,
-  Download,
-  Loader2
+  Download // New Icon
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +52,7 @@ import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
-import Papa from 'papaparse'; // Import papaparse for CSV export
+import Papa from 'papaparse';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -473,12 +472,12 @@ export function ProjectsKanbanClient() {
     setIsLoading(false);
 
     const dataToExport = deliveredProjects.map(p => {
-        const order = ordersMap.get(p.id);
-        const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
-        const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
-        const nameParts = (p.name || '').split(' • ');
-        const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
-        const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
+      const order = ordersMap.get(p.id);
+      const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
+      const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
+      const nameParts = (p.name || '').split(' • ');
+      const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
+      const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
       
         return {
           'Job ID': jobId,
@@ -506,8 +505,6 @@ export function ProjectsKanbanClient() {
     toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
   };
   
-  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-
   if (isLoading && projects.length === 0) {
     return <KanbanSkeleton />;
   }
@@ -545,17 +542,15 @@ export function ProjectsKanbanClient() {
                 {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
               </SelectContent>
             </Select>
-            {isAdmin && (
-              <Button
-                  variant="outline"
-                  onClick={handleExport}
-                  disabled={isLoading}
-                  className="bg-card border-border/50 focus:border-primary"
-              >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                  Export Delivered
-              </Button>
-            )}
+             <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={isLoading}
+                className="bg-card border-border/50 focus:border-primary"
+            >
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                Export Delivered
+            </Button>
           </div>
         )}
         
@@ -726,3 +721,5 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
+
+    
