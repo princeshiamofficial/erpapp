@@ -14,6 +14,7 @@ import { fetchFromApiV3 } from '@/lib/api-helper2';
 import { adminApp } from '@/lib/firebase-admin'; // Import adminApp
 import type { messaging } from 'firebase-admin'; // Import messaging type
 import { addPaymentToHistory } from '@/lib/payment-history-service';
+import { sendTelegramMessage } from "@/lib/notification-utils"; // Import the telegram helper
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -38,6 +39,11 @@ interface CreateOrderDialogFormData {
   orderNotes?: string | null;
   initialStatusId: string;
 }
+
+const formatAmountForNotification = (amount: number): string => {
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(amount);
+};
+
 
 export async function createOrderAction(
   data: CreateOrderDialogFormData,
@@ -353,6 +359,22 @@ export async function updateOrderAction(
         if (totalAdvanceAfterNew > currentGrandTotal && currentGrandTotal > 0) {
            return { success: false, error: `Total advance payment (${totalAdvanceAfterNew}) cannot exceed grand total amount (${currentGrandTotal}).` };
         }
+
+        // Send Telegram notification for the new payment
+        const message = `
+          <b>🎉 New Advance Payment Received!</b>
+          
+          <b>Order ID:</b> <code>${orderId}</code>
+          <b>Company:</b> ${finalUpdates.companyName || existingOrder.companyName}
+          <b>Amount:</b> ${formatAmountForNotification(newAdvanceRecord.amount)}
+          <b>Method:</b> ${newAdvanceRecord.paymentMethod}
+          <b>Recorded By:</b> ${currentUser.name}
+          
+          <a href="https://app.colorhutbd.xyz/track/${orderId}">View Order Details</a>
+          <a href="https://app.colorhutbd.xyz/admin/payment-history">View Payment History</a>
+        `;
+        await sendTelegramMessage(message);
+
     } else if (updates.advancePayments) {
         finalUpdates.advancePayments = updates.advancePayments;
     }
@@ -641,6 +663,7 @@ export async function deleteOrderAction(
 }
 
     
+
 
 
 
