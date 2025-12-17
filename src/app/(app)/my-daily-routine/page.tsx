@@ -60,9 +60,11 @@ export default function MyDailyRoutinePage() {
   const [routineToDelete, setRoutineToDelete] = useState<DailyRoutine | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isBackgroundRefresh = false) => {
     if (!currentUser) return;
-    setIsLoading(true);
+    if (!isBackgroundRefresh) {
+      setIsLoading(true);
+    }
     try {
       const [fetchedRoutines, fetchedHeaders] = await Promise.all([
         getRoutinesAction(currentUser.id),
@@ -79,15 +81,25 @@ export default function MyDailyRoutinePage() {
 
     } catch (error) {
       console.error("Error fetching routines:", error);
-      toast({ title: "Error", description: "Could not load your daily routines.", variant: "destructive" });
+      if (!isBackgroundRefresh) {
+        toast({ title: "Error", description: "Could not load your daily routines.", variant: "destructive" });
+      }
     } finally {
-      setIsLoading(false);
+      if (!isBackgroundRefresh) {
+        setIsLoading(false);
+      }
     }
   }, [currentUser, toast]);
 
   useEffect(() => {
     if (!isAuthLoading && currentUser) {
-      fetchData();
+      fetchData(); // Initial fetch
+      
+      const intervalId = setInterval(() => {
+        fetchData(true); // Silent background refresh every 15 seconds
+      }, 15000);
+
+      return () => clearInterval(intervalId); // Cleanup interval on unmount
     } else if (!isAuthLoading && !currentUser) {
       router.push('/login');
     }
@@ -210,7 +222,7 @@ export default function MyDailyRoutinePage() {
     const dayRoutine = routinesData[selectedDateKey];
     
     return (
-      <>
+      <div className="flex flex-col h-full">
         <div className="sticky top-0 z-10 flex justify-between items-center bg-card/80 backdrop-blur-sm p-2 rounded-b-md no-print shadow-sm">
             <Button onClick={() => setSelectedDay(subDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
@@ -235,7 +247,7 @@ export default function MyDailyRoutinePage() {
                 <ArrowRight className="h-4 w-4" />
             </Button>
         </div>
-        <div className="space-y-3 pt-4">
+        <div className="flex-1 overflow-y-auto pt-4 space-y-3">
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
@@ -276,7 +288,7 @@ export default function MyDailyRoutinePage() {
              </Card>
           )}
         </div>
-      </>
+      </div>
     );
   };
 
@@ -301,7 +313,7 @@ export default function MyDailyRoutinePage() {
 
         {isLoading ? (
           <div className="bg-card p-2 rounded-lg shadow-sm">
-            <Skeleton className="h-[400px] w-full" />
+            <Skeleton className="h-[calc(100vh-14rem)] w-full" />
           </div>
         ) : routineHeaders.length > 0 ? (
           <div className="h-[calc(100vh-12rem)] overflow-auto border rounded-lg custom-scrollbar">
@@ -388,7 +400,7 @@ export default function MyDailyRoutinePage() {
 
   return (
     <>
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8 h-screen flex flex-col">
         {isMobile ? renderMobileView() : renderDesktopView()}
       </div>
       <AddEditRoutineDialog
@@ -462,3 +474,4 @@ export default function MyDailyRoutinePage() {
     </>
   );
 }
+
