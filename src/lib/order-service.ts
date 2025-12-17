@@ -183,11 +183,11 @@ export const addOrder = async (orderData: {
         
         <b>Order ID:</b> <code>${orderId}</code>
         <b>Company:</b> ${orderData.companyName}
-        <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString()} BDT
+        <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
         <b>Method:</b> ${newPayment.paymentMethod}
         <b>Recorded By:</b> ${orderData.crmUserName}
         
-        <a href="https://colorhut.xyz/track/${orderId}">View Order Details</a>
+        <a href="https://app.colorhutbd.xyz/track/${orderId}">View Order Details</a>
       `;
       await sendTelegramMessage(message);
 
@@ -286,11 +286,11 @@ export async function updateAdvancePaymentStatus(
             
             <b>Order ID:</b> <code>${orderId}</code>
             <b>Company:</b> ${order.companyName}
-            <b>Amount:</b> ${payment.amount.toLocaleString()} BDT
+            <b>Amount:</b> ${payment.amount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
             <b>Method:</b> ${payment.paymentMethod}
             <b>Recorded By:</b> ${payment.recordedByUserName}
             
-            <a href="https://colorhut.xyz/track/${orderId}">View Order Details</a>
+            <a href="https://app.colorhutbd.xyz/track/${orderId}">View Order Details</a>
           `;
           await sendTelegramMessage(message);
         }
@@ -630,4 +630,5 @@ export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
 
