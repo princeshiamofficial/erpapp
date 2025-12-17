@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, ArrowRight, PlusCircle, Edit, Trash2, ClipboardList, Printer, Calendar as CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction } from './actions';
-import { format, addDays, startOfWeek, subDays, parse, differenceInMinutes, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, isToday } from 'date-fns';
+import { format, addDays, startOfWeek, subDays, parse, differenceInMinutes, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, isToday, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,6 +60,10 @@ export default function MyDailyRoutinePage() {
   const [routineToDelete, setRoutineToDelete] = useState<DailyRoutine | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const routineItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+
   const fetchData = useCallback(async (isBackgroundRefresh = false) => {
     if (!currentUser) return;
     if (!isBackgroundRefresh) {
@@ -104,6 +108,63 @@ export default function MyDailyRoutinePage() {
       router.push('/login');
     }
   }, [currentUser, isAuthLoading, router, fetchData]);
+  
+  useEffect(() => {
+    // This effect runs only for the mobile view and when viewing today's date
+    if (!isMobile || !isToday(selectedDay) || routineHeaders.length === 0 || !scrollContainerRef.current) {
+        return;
+    }
+
+    const autoScroll = () => {
+        const now = new Date();
+        const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+
+        // Find the first routine that starts after the current time
+        const upcomingRoutine = routineHeaders.find(header => {
+            if (!header.time) return false;
+            const startTimeStr = header.time.split(' to ')[0];
+            const [hours, minutes] = startTimeStr.split(':').map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return false;
+            const routineTimeInMinutes = hours * 60 + minutes;
+            return routineTimeInMinutes > currentTimeInMinutes;
+        });
+        
+        // Find the routine that is currently active
+        const activeRoutine = routineHeaders.slice().reverse().find(header => {
+            if (!header.time) return false;
+            const startTimeStr = header.time.split(' to ')[0];
+            const [hours, minutes] = startTimeStr.split(':').map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return false;
+            const routineTimeInMinutes = hours * 60 + minutes;
+            return routineTimeInMinutes <= currentTimeInMinutes;
+        });
+
+        const targetRoutine = upcomingRoutine || activeRoutine;
+
+        if (targetRoutine?.id) {
+            const element = routineItemRefs.current[targetRoutine.id];
+            if (element && scrollContainerRef.current) {
+                const container = scrollContainerRef.current;
+                const elementTop = element.offsetTop;
+                const elementHeight = element.offsetHeight;
+                const containerHeight = container.clientHeight;
+                
+                const scrollTo = elementTop - (containerHeight / 2) + (elementHeight / 2);
+
+                container.scrollTo({
+                    top: scrollTo,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    };
+    
+    // Run once on mount and then every minute
+    autoScroll();
+    const intervalId = setInterval(autoScroll, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [isMobile, selectedDay, routineHeaders]);
 
   const handleToggleTask = async (date: Date, taskId: string) => {
     if (!currentUser) return;
@@ -247,7 +308,7 @@ export default function MyDailyRoutinePage() {
                 <ArrowRight className="h-4 w-4" />
             </Button>
         </div>
-        <div className="flex-1 overflow-y-auto pt-4 space-y-3">
+        <div className="flex-1 overflow-y-auto pt-4 space-y-3" ref={scrollContainerRef}>
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
@@ -263,7 +324,12 @@ export default function MyDailyRoutinePage() {
                 }
               }
               return (
-                <div key={header.id} className="flex items-center p-3 bg-card rounded-lg shadow-sm border" onClick={() => handleToggleTask(selectedDay, header.id)}>
+                <div
+                  key={header.id}
+                  ref={el => (routineItemRefs.current[header.id] = el)}
+                  className="flex items-center p-3 bg-card rounded-lg shadow-sm border"
+                  onClick={() => handleToggleTask(selectedDay, header.id)}
+                >
                    <Checkbox
                       checked={isChecked}
                       className="h-6 w-6 rounded-md mr-4"
