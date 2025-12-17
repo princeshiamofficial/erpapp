@@ -211,7 +211,7 @@ export default function MyDailyRoutinePage() {
     
     return (
       <div className="space-y-4">
-        <div className="flex justify-between items-center bg-card p-2 rounded-md no-print">
+        <div className="sticky top-0 z-10 flex justify-between items-center bg-card/80 backdrop-blur-sm p-2 rounded-b-md no-print shadow-sm">
             <Button onClick={() => setSelectedDay(subDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
