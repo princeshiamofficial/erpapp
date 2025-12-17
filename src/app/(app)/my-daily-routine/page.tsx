@@ -223,7 +223,7 @@ export default function MyDailyRoutinePage() {
             <Skeleton className="h-[400px] w-full" />
           </div>
         ) : routineHeaders.length > 0 ? (
-          <div className="h-[calc(100vh-12rem)] overflow-auto custom-scrollbar border rounded-lg">
+          <div className="overflow-auto custom-scrollbar border rounded-lg h-[calc(100vh-12rem)]">
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 z-30">
                     <tr>
