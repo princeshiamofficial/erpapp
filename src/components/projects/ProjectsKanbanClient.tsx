@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -54,6 +55,9 @@ import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
 import Papa from 'papaparse';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
+import { isWithinInterval, subDays, startOfDay, endOfDay } from 'date-fns';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -133,6 +137,8 @@ export function ProjectsKanbanClient() {
 
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [hashId, setHashId] = useState<string | null>(null);
+  
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>();
 
 
   const sensors = useSensors(
@@ -226,26 +232,20 @@ export function ProjectsKanbanClient() {
 
       const matchesCategory = categoryFilter === 'all' || project.categoryTag === categoryFilter;
 
-      let matchesEndDate = true;
-      if (endDateFilter !== 'all' && project.endDate) {
+      let matchesDate = true;
+      if (selectedDateRange?.from) {
+        const startDate = startOfDay(selectedDateRange.from);
+        const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
         try {
-          const projectEndDate = parseISO(project.endDate);
-          const now = new Date();
-          if (endDateFilter === 'this_week') {
-            matchesEndDate = isSameWeek(projectEndDate, now, { weekStartsOn: 1 });
-          } else if (endDateFilter === 'this_month') {
-            matchesEndDate = isSameMonth(projectEndDate, now);
-          } else if (endDateFilter === 'this_year') {
-            matchesEndDate = isSameYear(projectEndDate, now);
-          }
-        } catch (e) {
-          console.warn("Error parsing project end date:", project.endDate, e);
-          matchesEndDate = false;
+          const projectDate = parseISO(project.createdAt || new Date().toISOString());
+          matchesDate = isWithinInterval(projectDate, { start: startDate, end: endDate });
+        } catch {
+          matchesDate = false;
         }
       }
-      return matchesSearchTerm && matchesCategory && matchesEndDate;
+      return matchesSearchTerm && matchesCategory && matchesDate;
     });
-  }, [projects, debouncedSearchTerm, categoryFilter, endDateFilter, currentUser, projectOwnerFilter, hashId]);
+  }, [projects, debouncedSearchTerm, categoryFilter, selectedDateRange, currentUser, projectOwnerFilter, hashId]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
@@ -264,14 +264,16 @@ export function ProjectsKanbanClient() {
     const categories = new Set(projects.map(p => p.categoryTag).filter(Boolean));
     return Array.from(categories).sort();
   }, [projects]);
-
-  const endDateOptions = [
-    { label: 'All Dates', value: 'all' },
-    { label: 'This Week', value: 'this_week' },
-    { label: 'This Month', value: 'this_month' },
-    { label: 'This Year', value: 'this_year' },
-  ];
   
+  const handleDateRangeChange = (
+    range: DateRange | undefined,
+    displayLabel: string, 
+    predefinedValue: PredefinedRange | "custom" | null
+  ) => {
+    setSelectedDateRange(range);
+  };
+
+
   const visibleKanbanColumns = useMemo(() => {
     if (isReadOnly) { // Show all columns in read-only mode
         return KANBAN_COLUMNS_CONFIG;
@@ -537,7 +539,12 @@ export function ProjectsKanbanClient() {
               placeholder="Search projects (ID, Name, Assignee, DR)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-card border-border/50 focus:border-primary lg:col-span-2"
+              className="bg-card border-border/50 focus:border-primary"
+            />
+             <DateRangePicker 
+                initialRange={selectedDateRange} 
+                onDateRangeChange={handleDateRangeChange}
+                className="bg-card border-border/50 focus:border-primary"
             />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="bg-card border-border/50 focus:border-primary">
@@ -730,4 +737,3 @@ export function ProjectsKanbanClient() {
   );
 }
 
-    
