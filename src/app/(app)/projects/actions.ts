@@ -1,5 +1,4 @@
 
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -250,7 +249,7 @@ export async function transferToCourierAction(
         <b>Recipient:</b> ${recipientNameRaw}
         <b>COD Amount:</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
         
-        <b>Tracking Link:</b> <a href="https://steadfast.com.bd/track/${consignment.tracking_code}">${consignment.tracking_code}</a>
+        <b>Tracking Link:</b> <a href="https://steadfast.com.bd/t/${consignment.tracking_code}">${consignment.tracking_code}</a>
     `;
     await sendTelegramMessage(telegramMessage);
 
