@@ -10,6 +10,7 @@ import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_ST
 import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
 import { fetchFromApiV3 } from '@/lib/api-helper2';
+import { sendTelegramMessage } from "@/lib/notification-utils";
 
 const sanitizeForPackzy = (input: string | null | undefined): string => {
   if (!input) return '';
@@ -239,6 +240,19 @@ export async function transferToCourierAction(
     
     // Add to the shippedOrders collection for quick sync checks
     await addShippedOrderEntry(order.id, consignment.tracking_code);
+
+    // Send Telegram notification
+    const telegramMessage = `
+        <b>🚚 Order Shipped via SteadFast!</b>
+        
+        <b>Order ID:</b> <code>${order.id}</code>
+        <b>Company:</b> ${order.companyName}
+        <b>Recipient:</b> ${recipientNameRaw}
+        <b>COD Amount:</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
+        
+        <b>Tracking Link:</b> <a href="https://steadfast.com.bd/track/${consignment.tracking_code}">${consignment.tracking_code}</a>
+    `;
+    await sendTelegramMessage(telegramMessage);
 
     revalidatePath("/(app)/projects");
     revalidatePath(`/track/${order.id}`);
