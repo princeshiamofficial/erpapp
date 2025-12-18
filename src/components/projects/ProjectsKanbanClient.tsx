@@ -16,7 +16,8 @@ import {
   ClipboardList,
   Search,
   EyeOff,
-  Download // New Icon
+  Download, // New Icon
+  Loader2
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -721,4 +722,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
