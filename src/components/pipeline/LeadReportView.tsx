@@ -53,8 +53,8 @@ export function LeadReportView({ leads }: LeadReportViewProps) {
                 <TableHead>Contact</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Assigned CRM</TableHead>
-                <TableHead>Lead Date</TableHead>
-                <TableHead>Update Lead Date</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Update Date</TableHead>
                 <TableHead>Note</TableHead>
                 <TableHead>Recent Activity Note</TableHead>
               </TableRow>
