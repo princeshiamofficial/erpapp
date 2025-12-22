@@ -48,7 +48,7 @@ export function LeadReportView({ leads }: LeadReportViewProps) {
       <CardContent>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="shadow-md">
               <TableRow>
                 <TableHead>Contact</TableHead>
                 <TableHead>Phone</TableHead>
