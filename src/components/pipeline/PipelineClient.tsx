@@ -180,11 +180,16 @@ export function PipelineClient() {
       baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
     
-    // Date filter - on lead creation date for kanban/list, on schedule for calendar
+    // Date filter
     if (selectedDateRange?.from) {
       const startDate = startOfDay(selectedDateRange.from);
       const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-      const dateKey = viewMode === 'calendar' ? 'schedule' : 'date';
+      let dateKey: 'date' | 'schedule' | 'updatedAt' = 'date';
+      if (viewMode === 'calendar') {
+        dateKey = 'schedule';
+      } else if (viewMode === 'report') {
+        dateKey = 'updatedAt';
+      }
 
       baseLeads = baseLeads.filter(lead => {
         const dateToFilter = lead[dateKey as keyof Lead] as string | null | undefined;
@@ -596,3 +601,5 @@ export function PipelineClient() {
     </DndContext>
   );
 }
+
+    
