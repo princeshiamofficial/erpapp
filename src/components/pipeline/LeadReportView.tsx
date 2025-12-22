@@ -12,7 +12,7 @@ import {
   TableRow,
   TableFooter
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { User as UserIcon, Phone, CalendarDays, History, StickyNote, MessageSquare, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -142,6 +142,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary"/>Lead Report</CardTitle>
+        
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
