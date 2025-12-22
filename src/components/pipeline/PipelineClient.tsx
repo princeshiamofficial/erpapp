@@ -41,7 +41,7 @@ import { ViewLeadDialog } from './ViewLeadDialog';
 import {
   PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall,
   Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check,
-  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X, Activity
+  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X, Activity, BarChart3
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
@@ -494,6 +494,11 @@ export function PipelineClient() {
                   <DropdownMenuItem onSelect={handleOpenBulkTransferDialog}><Users className="mr-2 h-4 w-4" /> Bulk Transfer</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            )}
+             {isAdmin && (
+                <Button variant="outline" className="w-full sm:w-auto h-10">
+                    <BarChart3 className="mr-2 h-4 w-4" /> Lead Reports
+                </Button>
             )}
             
             {isAdmin && viewMode === 'list' && !isSelectionMode && (

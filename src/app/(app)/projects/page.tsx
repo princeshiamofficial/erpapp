@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { ProjectsKanbanClient } from '@/components/projects/ProjectsKanbanClient';
+import { ProjectsKanbanClient } from '@/components/projects/ProjectsKanbanClient2';
 
 // The page component itself is now much simpler.
 export default function ProjectsPage() {
