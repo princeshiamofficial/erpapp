@@ -65,9 +65,9 @@ export function LeadReportView({ leads }: LeadReportViewProps) {
                   <TableRow key={lead.id}>
                     <TableCell className="font-medium">{lead.contactName}</TableCell>
                     <TableCell>{lead.phone}</TableCell>
-                    <TableCell>{lead.crmName}</TableCell>
-                    <TableCell>{formatDateSafe(lead.date)}</TableCell>
-                    <TableCell>{formatDateSafe(lead.updatedAt)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{lead.crmName}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatDateSafe(lead.date)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatDateSafe(lead.updatedAt)}</TableCell>
                     <TableCell className="text-muted-foreground truncate max-w-xs">{lead.notes || 'N/A'}</TableCell>
                     <TableCell className="text-muted-foreground truncate max-w-xs">{getRecentActivityNote(lead)}</TableCell>
                   </TableRow>
