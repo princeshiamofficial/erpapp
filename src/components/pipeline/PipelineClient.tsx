@@ -47,6 +47,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Papa from 'papaparse';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadListView } from './LeadListView'; 
+import { LeadReportView } from './LeadReportView';
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
@@ -111,7 +112,7 @@ export function PipelineClient() {
   const [leadToView, setLeadToView] = useState<Lead | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
-  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'calendar'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'calendar' | 'report'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
@@ -489,16 +490,12 @@ export function PipelineClient() {
                   <Button variant="outline" className="w-full sm:w-auto h-10">Actions <ChevronDown className="ml-2 h-4 w-4" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setViewMode('report')}><BarChart3 className="mr-2 h-4 w-4" />Lead Reports</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => setIsImportOpen(true)}><FileSpreadsheet className="mr-2 h-4 w-4" />Import Leads</DropdownMenuItem>
                   <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}><Download className="mr-2 h-4 w-4" />Export Leads</DropdownMenuItem>
                   <DropdownMenuItem onSelect={handleOpenBulkTransferDialog}><Users className="mr-2 h-4 w-4" /> Bulk Transfer</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
-             {isAdmin && (
-                <Button variant="outline" className="w-full sm:w-auto h-10">
-                    <BarChart3 className="mr-2 h-4 w-4" /> Lead Reports
-                </Button>
             )}
             
             {isAdmin && viewMode === 'list' && !isSelectionMode && (
@@ -554,6 +551,8 @@ export function PipelineClient() {
               </PaginationContent></Pagination></div>
             )}
           </>
+        ) : viewMode === 'report' ? (
+          <LeadReportView leads={filteredLeads} />
         ) : (
           <div className="flex-1 mt-4 flex flex-col">
             <LeadCalendarView 
