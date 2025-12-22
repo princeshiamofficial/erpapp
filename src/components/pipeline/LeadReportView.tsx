@@ -53,9 +53,6 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
     <Card>
       <CardHeader>
         <CardTitle>Lead Report</CardTitle>
-        <CardDescription>
-          Detailed report of all leads matching the current filters.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
