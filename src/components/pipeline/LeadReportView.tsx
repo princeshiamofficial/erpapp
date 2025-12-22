@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -10,11 +11,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
-import { User as UserIcon, Phone, CalendarDays, History, StickyNote, MessageSquare } from 'lucide-react';
+import { User as UserIcon, Phone, CalendarDays, History, StickyNote, MessageSquare, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
@@ -141,7 +141,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Lead Report</CardTitle>
+        <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary"/>Lead Report</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
