@@ -53,8 +53,8 @@ export function LeadReportView({ leads }: LeadReportViewProps) {
               <TableRow>
                 <TableHead className="whitespace-nowrap"><User className="h-4 w-4 mr-2 inline-block"/>Contact</TableHead>
                 <TableHead className="whitespace-nowrap"><Phone className="h-4 w-4 mr-2 inline-block"/>Phone</TableHead>
-                <TableHead className="whitespace-nowrap"><UserCheck className="h-4 w-4 mr-2 inline-block"/>Assigned CRM</TableHead>
                 <TableHead className="whitespace-nowrap"><CalendarDays className="h-4 w-4 mr-2 inline-block"/>Date</TableHead>
+                <TableHead className="whitespace-nowrap"><UserCheck className="h-4 w-4 mr-2 inline-block"/>Assigned CRM</TableHead>
                 <TableHead className="whitespace-nowrap"><History className="h-4 w-4 mr-2 inline-block"/>Update Date</TableHead>
                 <TableHead className="whitespace-nowrap"><StickyNote className="h-4 w-4 mr-2 inline-block"/>Note</TableHead>
                 <TableHead className="whitespace-nowrap"><MessageSquare className="h-4 w-4 mr-2 inline-block"/>Recent Activity Note</TableHead>
@@ -66,8 +66,8 @@ export function LeadReportView({ leads }: LeadReportViewProps) {
                   <TableRow key={lead.id}>
                     <TableCell className="font-medium">{lead.contactName}</TableCell>
                     <TableCell>{lead.phone}</TableCell>
-                    <TableCell className="whitespace-nowrap">{lead.crmName}</TableCell>
                     <TableCell className="whitespace-nowrap">{formatDateSafe(lead.date)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{lead.crmName}</TableCell>
                     <TableCell className="whitespace-nowrap">{formatDateSafe(lead.updatedAt)}</TableCell>
                     <TableCell className="text-muted-foreground truncate max-w-xs">{lead.notes || 'N/A'}</TableCell>
                     <TableCell className="text-muted-foreground truncate max-w-xs">{getRecentActivityNote(lead)}</TableCell>
