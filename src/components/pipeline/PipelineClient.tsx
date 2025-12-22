@@ -552,7 +552,7 @@ export function PipelineClient() {
             )}
           </>
         ) : viewMode === 'report' ? (
-          <LeadReportView leads={filteredLeads} />
+          <LeadReportView leads={filteredLeads} allUsers={allUsers} />
         ) : (
           <div className="flex-1 mt-4 flex flex-col">
             <LeadCalendarView 
