@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -11,8 +10,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { User as UserIcon, Phone, CalendarDays, History, StickyNote, MessageSquare, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,6 +42,13 @@ const getInitials = (name: string | undefined): string => {
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
+const getRecentActivityNote = (lead: Lead): string => {
+    if (!lead.activityHistory || lead.activityHistory.length === 0) {
+      return 'No activities yet';
+    }
+    const sortedActivities = [...lead.activityHistory].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return sortedActivities[0].notes || sortedActivities[0].activity;
+};
 
 export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -130,13 +137,6 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
     );
   };
   
-  const getRecentActivityNote = (lead: Lead): string => {
-    if (!lead.activityHistory || lead.activityHistory.length === 0) {
-      return 'No activities yet';
-    }
-    const sortedActivities = [...lead.activityHistory].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    return sortedActivities[0].notes || sortedActivities[0].activity;
-  };
 
   return (
     <Card>
@@ -146,7 +146,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
       <CardContent>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-gray-100 dark:bg-gray-800 shadow-md">
+            <TableHeader className="bg-muted/50 shadow-md">
               <TableRow>
                 <TableHead className="whitespace-nowrap"><UserIcon className="h-4 w-4 mr-2 inline-block"/>Contact</TableHead>
                 <TableHead className="whitespace-nowrap"><Phone className="h-4 w-4 mr-2 inline-block"/>Phone</TableHead>
@@ -176,7 +176,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">{formatDateSafe(lead.updatedAt)}</TableCell>
-                      <TableCell className="text-muted-foreground truncate max-w-xs">{lead.notes || 'N/A'}</TableCell>
+                      <TableCell className="text-muted-foreground truncate max-w-xs">{lead.notes?.replace(/^\d{2}\.\d{2}\.\d{2}-/, '').trim() || 'N/A'}</TableCell>
                       <TableCell className="text-muted-foreground truncate max-w-xs">{getRecentActivityNote(lead)}</TableCell>
                     </TableRow>
                   );
