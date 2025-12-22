@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
+import { User, Phone, CalendarDays, UserCheck, History, StickyNote, MessageSquare } from 'lucide-react'; // Import icons
 
 interface LeadReportViewProps {
   leads: Lead[];
@@ -48,15 +49,15 @@ export function LeadReportView({ leads }: LeadReportViewProps) {
       <CardContent>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-gray-50 dark:bg-gray-800 shadow-md">
+            <TableHeader className="bg-gray-100 dark:bg-gray-800 shadow-md">
               <TableRow>
-                <TableHead>Contact</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead className="whitespace-nowrap">Assigned CRM</TableHead>
-                <TableHead className="whitespace-nowrap">Date</TableHead>
-                <TableHead className="whitespace-nowrap">Update Date</TableHead>
-                <TableHead>Note</TableHead>
-                <TableHead>Recent Activity Note</TableHead>
+                <TableHead className="whitespace-nowrap"><User className="h-4 w-4 mr-2 inline-block"/>Contact</TableHead>
+                <TableHead className="whitespace-nowrap"><Phone className="h-4 w-4 mr-2 inline-block"/>Phone</TableHead>
+                <TableHead className="whitespace-nowrap"><UserCheck className="h-4 w-4 mr-2 inline-block"/>Assigned CRM</TableHead>
+                <TableHead className="whitespace-nowrap"><CalendarDays className="h-4 w-4 mr-2 inline-block"/>Date</TableHead>
+                <TableHead className="whitespace-nowrap"><History className="h-4 w-4 mr-2 inline-block"/>Update Date</TableHead>
+                <TableHead className="whitespace-nowrap"><StickyNote className="h-4 w-4 mr-2 inline-block"/>Note</TableHead>
+                <TableHead className="whitespace-nowrap"><MessageSquare className="h-4 w-4 mr-2 inline-block"/>Recent Activity Note</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
