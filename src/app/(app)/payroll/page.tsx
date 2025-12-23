@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -24,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -173,10 +174,6 @@ export default function PayrollPage() {
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      // No change needed here, we want all employees for the list, and will filter for salary sheet display
-    }
-
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
       results = results.filter(employee =>
@@ -186,6 +183,33 @@ export default function PayrollPage() {
         employee.designation.toLowerCase().includes(lowercasedFilter)
       );
     }
+
+    const selectedMonthStart = startOfMonth(selectedDate);
+
+    const salarySheetFilteredEmployees = results.filter(employee => {
+        try {
+            const joiningDate = parseISO(employee.joiningDate);
+            const statusChangeDate = employee.statusChangeDate ? parseISO(employee.statusChangeDate) : null;
+            
+            // Do not show if joining date is after the selected month
+            if (isAfter(joiningDate, endOfMonth(selectedMonthStart))) {
+                return false;
+            }
+            
+            // If inactive, do not show from the month of inactivation onwards
+            if (employee.status === 'Inactive' && statusChangeDate) {
+                const inactivationMonthStart = startOfMonth(statusChangeDate);
+                if (!isBefore(selectedMonthStart, inactivationMonthStart)) { // if selected month is same or after inactivation month
+                    return false;
+                }
+            }
+            
+            return true;
+        } catch (e) {
+            console.error("Error parsing date for employee", employee.name, e);
+            return false;
+        }
+    });
 
     // Calculations for Salary Sheet
     const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -199,8 +223,6 @@ export default function PayrollPage() {
         }
     }
     
-    const salarySheetFilteredEmployees = results.filter(e => e.status === 'Active');
-
     const calculatedData = salarySheetFilteredEmployees.map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
@@ -860,4 +882,3 @@ export default function PayrollPage() {
   );
 }
 
-    
