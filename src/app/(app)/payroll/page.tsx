@@ -205,12 +205,15 @@ export default function PayrollPage() {
     
     const salarySheetFilteredEmployees = employees.filter(e => {
         const joiningDate = parseISO(e.joiningDate);
-        if (isAfter(joiningDate, endOfMonth(selectedDate))) {
-            return false;
+        // Do not show employee if their joining month is after the selected month
+        if (isAfter(startOfMonth(joiningDate), endOfMonth(selectedDate))) {
+          return false;
         }
-        if (e.status === 'Inactive') {
-            const statusChangeMonth = e.statusChangeDate ? startOfMonth(parseISO(e.statusChangeDate)) : null;
-            if (statusChangeMonth && isBefore(statusChangeMonth, endOfMonth(selectedDate))) {
+
+        // Hide employee if their status is Inactive and the change happened before or during the selected month
+        if (e.status === 'Inactive' && e.statusChangeDate) {
+            const statusChangeMonth = startOfMonth(parseISO(e.statusChangeDate));
+            if (!isAfter(statusChangeMonth, endOfMonth(selectedDate))) {
                 return false;
             }
         }
@@ -859,7 +862,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>

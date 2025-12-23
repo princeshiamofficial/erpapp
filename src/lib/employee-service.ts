@@ -132,6 +132,11 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
         const currentSalary = existingEmployee.salary || 0;
         const newSalary = updates.salary;
 
+        // If status is changing, set the statusChangeDate
+        if (updates.status && updates.status !== existingEmployee.status) {
+            finalUpdates.statusChangeDate = new Date().toISOString();
+        }
+
         if (newSalary !== undefined && newSalary !== null && newSalary !== currentSalary) {
             const isReverting = finalUpdates.isReverting || false;
             

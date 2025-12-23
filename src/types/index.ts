@@ -64,6 +64,7 @@ export interface Employee {
   designation: string;
   joiningDate: string; // ISO string date
   status: 'Active' | 'Inactive';
+  statusChangeDate?: string | null; // New field for inactive/reactive date
   avatarUrl?: string | null;
   salary?: number | null;
   payslips?: { [key: string]: Payslip }; // Optional map of payslips
