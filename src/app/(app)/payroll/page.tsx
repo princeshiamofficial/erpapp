@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -18,13 +19,13 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt, ChevronDown } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore, startOfYear, endOfYear } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -190,7 +191,7 @@ export default function PayrollPage() {
       );
     }
 
-    // Calculations
+    // Calculations for Salary Sheet
     const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const daysInMonth = getDaysInMonth(selectedDate);
     const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
@@ -203,22 +204,27 @@ export default function PayrollPage() {
     }
     
     const salarySheetFilteredEmployees = employees.filter(e => {
-        const joiningDate = parseISO(e.joiningDate);
-        const selectedMonthStart = startOfMonth(selectedDate);
-        
-        // Don't show if joining date is after the month being viewed
-        if (isAfter(joiningDate, endOfMonth(selectedDate))) {
-            return false;
-        }
+        try {
+            const joiningDate = parseISO(e.joiningDate);
+            const selectedMonthStart = startOfMonth(selectedDate);
 
-        // Hide if inactive and the status change happened before the START of the selected month.
-        if (e.status === 'Inactive' && e.statusChangeDate) {
-            const statusChangeDate = parseISO(e.statusChangeDate);
-            if (!isAfter(statusChangeDate, selectedMonthStart)) {
+            // Don't show if joining date is after the month being viewed
+            if (isAfter(joiningDate, endOfMonth(selectedDate))) {
                 return false;
             }
+
+            // Hide if inactive and the status change happened before or during the selected month.
+            if (e.status === 'Inactive' && e.statusChangeDate) {
+                const statusChangeDate = parseISO(e.statusChangeDate);
+                if (isSameMonth(statusChangeDate, selectedDate) || isAfter(selectedDate, statusChangeDate)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (error) {
+            console.error("Error filtering employee:", e.name, error);
+            return false;
         }
-        return true;
     });
 
     const calculatedData = salarySheetFilteredEmployees.map(employee => {
@@ -480,7 +486,7 @@ export default function PayrollPage() {
                    paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
+                          <TableCell>{employee.nationalId}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
