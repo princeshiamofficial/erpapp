@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -408,7 +409,7 @@ export default function PayrollPage() {
                 <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white">
                   <Filter className="mr-2 h-4 w-4" />
                   <span>{statusFilter}</span>
-                  <ChevronDown className="ml-2 h-4 w-4" />
+                  
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -434,7 +435,7 @@ export default function PayrollPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>Employee ID</TableHead>
+                  <TableHead>ID No.</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Mobile NO</TableHead>
@@ -465,7 +466,7 @@ export default function PayrollPage() {
                    paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.employeeId}</TableCell>
+                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
@@ -848,7 +849,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
