@@ -12,7 +12,7 @@ import {
   TableRow,
   TableFooter
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { User as UserIcon, Phone, CalendarDays, History, StickyNote, MessageSquare, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -153,7 +153,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
                 <TableHead className="whitespace-nowrap"><Phone className="h-4 w-4 mr-2 inline-block"/>Phone</TableHead>
                 <TableHead className="whitespace-nowrap"><CalendarDays className="h-4 w-4 mr-2 inline-block"/>Date</TableHead>
                 <TableHead className="whitespace-nowrap"><UserIcon className="h-4 w-4 mr-2 inline-block"/>Assigned CRM</TableHead>
-                <TableHead className="whitespace-nowrap"><History className="h-4 w-4 mr-2 inline-block"/>Update Date</TableHead>
+                <TableHead className="whitespace-nowrap"><History className="h-4 w-4 mr-2 inline-block"/>Last Update</TableHead>
                 <TableHead className="whitespace-nowrap"><StickyNote className="h-4 w-4 mr-2 inline-block"/>Note</TableHead>
                 <TableHead className="whitespace-nowrap"><MessageSquare className="h-4 w-4 mr-2 inline-block"/>Recent Activity Note</TableHead>
               </TableRow>
