@@ -20,9 +20,11 @@ export async function addEmployeeAction(
   employeeData: Omit<Employee, 'id' | 'employeeId'>
 ): Promise<{ success: boolean; employee?: Employee; error?: string }> {
   try {
-    const phoneRegex = /^0\d{10}$/;
-    if (!phoneRegex.test(employeeData.mobileNo)) {
-      return { success: false, error: "Invalid mobile number. It must be an 11-digit number starting with 0." };
+    if (employeeData.mobileNo) {
+        const phoneRegex = /^0\d{10}$/;
+        if (!phoneRegex.test(employeeData.mobileNo)) {
+          return { success: false, error: "Invalid mobile number. It must be an 11-digit number starting with 0." };
+        }
     }
     const newEmployee = await addEmployeeService(employeeData);
     if (newEmployee) {

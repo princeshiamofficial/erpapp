@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -72,7 +73,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !mobileNo || !dob || !designation || !joiningDate || !salary) {
-      toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
+      toast({ title: "Validation Error", description: "All fields except National ID and Account No. are required.", variant: "destructive" });
       return;
     }
      const numericSalary = parseFloat(salary);
@@ -195,7 +196,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="nationalId">ID No.</Label>
-                <Input id="nationalId" value={nationalId} onChange={e => setNationalId(e.target.value)} disabled={isSubmitting} />
+                <Input id="nationalId" value={nationalId} onChange={e => setNationalId(e.target.value)} disabled={isSubmitting} placeholder="Auto-generated if blank" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="accountNo">Accounts No.</Label>
