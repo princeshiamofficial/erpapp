@@ -18,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt, ChevronDown } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -33,6 +33,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
@@ -110,6 +114,7 @@ export default function PayrollPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('Active');
 
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
@@ -171,10 +176,14 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
-    let results = employees;
+    let results = [...employees];
+
+    if (activeTab === 'employee_list' && statusFilter !== 'All') {
+      results = results.filter(e => e.status === statusFilter);
+    }
 
     if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      // No change needed here, we want all employees for the list, and will filter for salary sheet display
+      results = results.filter(e => e.status === 'Active');
     }
 
     if (searchTerm) {
@@ -257,7 +266,7 @@ export default function PayrollPage() {
       };
     });
 
-    const paid = calculatedData.filter(data => data.paymentStatus === 'Paid').reduce((total, data) => total + data.payableAmount, 0);
+    const paid = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
     const unpaid = calculatedData.filter(data => data.paymentStatus === 'Unpaid').reduce((total, data) => total + data.payableAmount, 0);
     const providentFundTotal = calculatedData.reduce((total, data) => total + data.providentFund, 0);
     const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0) + (data.advance || 0), 0);
@@ -274,7 +283,7 @@ export default function PayrollPage() {
       totalPayableAmount: payableTotal
     };
 
-  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays, statusFilter]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -290,7 +299,7 @@ export default function PayrollPage() {
   
   useEffect(() => {
       setCurrentPage(1);
-  }, [searchTerm, selectedDate, activeTab]);
+  }, [searchTerm, selectedDate, activeTab, statusFilter]);
 
   const handleDelete = async () => {
     if (!employeeToDelete) return;
@@ -396,7 +405,22 @@ export default function PayrollPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Employee List" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
             </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <span>{statusFilter}</span>
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuRadioGroup value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'All' | 'Active' | 'Inactive')}>
+                  <DropdownMenuRadioItem value="Active">Active</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="Inactive">Inactive</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <AddEmployeeDialog 
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
@@ -826,7 +850,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 bg-transparent">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -857,3 +881,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
