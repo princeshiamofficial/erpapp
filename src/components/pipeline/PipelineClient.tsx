@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -185,23 +184,32 @@ export function PipelineClient() {
     if (selectedDateRange?.from) {
       const startDate = startOfDay(selectedDateRange.from);
       const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-      let dateKey: 'date' | 'schedule' | 'updatedAt' = 'date';
-      if (viewMode === 'calendar') {
-        dateKey = 'schedule';
-      } else if (viewMode === 'report') {
-        dateKey = 'updatedAt';
-      }
+      
+      const dateKey: 'date' | 'schedule' = viewMode === 'calendar' ? 'schedule' : 'date';
 
-      baseLeads = baseLeads.filter(lead => {
-        const dateToFilter = lead[dateKey as keyof Lead] as string | null | undefined;
-        if (!dateToFilter) return false;
-        try {
-          const leadDate = parseISO(dateToFilter);
-          return isWithinInterval(leadDate, { start: startDate, end: endDate });
-        } catch {
-          return false;
-        }
-      });
+      if (viewMode === 'report') {
+        baseLeads = baseLeads.filter(lead => {
+            const dateToFilter = lead.updatedAt;
+            if (!dateToFilter) return false;
+            try {
+              const leadDate = parseISO(dateToFilter);
+              return isWithinInterval(leadDate, { start: startDate, end: endDate });
+            } catch {
+              return false;
+            }
+        });
+      } else {
+        baseLeads = baseLeads.filter(lead => {
+          const dateToFilter = lead[dateKey];
+          if (!dateToFilter) return false;
+          try {
+            const leadDate = parseISO(dateToFilter);
+            return isWithinInterval(leadDate, { start: startDate, end: endDate });
+          } catch {
+            return false;
+          }
+        });
+      }
     }
 
     // Activity filter
@@ -421,7 +429,11 @@ export function PipelineClient() {
     ));
   };
 
-  const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
+  const handleDateRangeChange = (
+    range: DateRange | undefined,
+    displayLabel: string, 
+    predefinedValue: PredefinedRange | "custom" | null
+  ) => {
     setSelectedDateRange(range);
   };
 
@@ -608,5 +620,3 @@ export function PipelineClient() {
     </DndContext>
   );
 }
-
-```
