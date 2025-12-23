@@ -10,9 +10,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { User as UserIcon, Phone, CalendarDays, History, StickyNote, MessageSquare, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -147,7 +146,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
       <CardContent>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-muted/50 shadow-md">
+            <TableHeader className="bg-muted/50 shadow-sm">
               <TableRow>
                 <TableHead className="whitespace-nowrap"><UserIcon className="h-4 w-4 mr-2 inline-block"/>Contact</TableHead>
                 <TableHead className="whitespace-nowrap"><Phone className="h-4 w-4 mr-2 inline-block"/>Phone</TableHead>
