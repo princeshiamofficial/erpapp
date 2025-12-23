@@ -25,10 +25,11 @@ interface LeadReportViewProps {
 
 const ITEMS_PER_PAGE = 25;
 
-const formatDateSafe = (dateString?: string) => {
+const formatDateSafe = (dateString?: string, includeTime: boolean = false) => {
   if (!dateString) return 'N/A';
   try {
-    return format(parseISO(dateString), 'd MMM, yyyy');
+    const formatString = includeTime ? 'd MMM yyyy, h:mm a' : 'd MMM, yyyy';
+    return format(parseISO(dateString), formatString);
   } catch (e) {
     return 'Invalid Date';
   }
@@ -175,7 +176,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
                             <span>{lead.crmName}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">{formatDateSafe(lead.updatedAt)}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatDateSafe(lead.updatedAt, true)}</TableCell>
                       <TableCell className="text-muted-foreground truncate max-w-xs">{lead.notes?.replace(/^\d{2}\.\d{2}\.\d{2}-/, '').trim() || 'N/A'}</TableCell>
                       <TableCell className="text-muted-foreground truncate max-w-xs">{getRecentActivityNote(lead)}</TableCell>
                     </TableRow>
