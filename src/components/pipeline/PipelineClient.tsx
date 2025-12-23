@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -226,8 +227,14 @@ export function PipelineClient() {
           (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
       );
     }
+    
+    // Sorting logic
+    if (viewMode === 'report') {
+        return baseLeads.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+    }
+    
+    return baseLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    return baseLeads;
   }, [leads, searchTerm, selectedCrmId, selectedDateRange, categoryFilter, viewMode, activityFilter]);
   
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
@@ -602,4 +609,4 @@ export function PipelineClient() {
   );
 }
 
-    
+```
