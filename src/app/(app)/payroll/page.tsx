@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -210,10 +210,10 @@ export default function PayrollPage() {
                 return false;
             }
 
-            // Hide if inactive and the status change happened before the selected month.
+            // Hide if inactive and the status change happened before or during the selected month.
             if (e.status === 'Inactive' && e.statusChangeDate) {
                 const statusChangeDate = parseISO(e.statusChangeDate);
-                if (isAfter(selectedDate, statusChangeDate) && !isSameMonth(statusChangeDate, selectedDate)) {
+                if (!isAfter(statusChangeDate, endOfMonth(selectedDate))) {
                     return false;
                 }
             }
@@ -882,4 +882,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
