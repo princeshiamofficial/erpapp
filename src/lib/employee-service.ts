@@ -97,7 +97,7 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
         const newEmployeeData = { 
             ...employeeData, 
             employeeId, 
-            nationalId: employeeData.nationalId || String(Math.floor(10000000 + Math.random() * 90000000)), // Auto-generate if not provided
+            nationalId: employeeData.nationalId || `2025${String(Math.floor(1000 + Math.random() * 9000))}`, // Auto-generate if not provided
             salaryHistory: [],
             yearlyLeave: employeeData.yearlyLeave || 12,
             leaveTaken: employeeData.leaveTaken || 0,
