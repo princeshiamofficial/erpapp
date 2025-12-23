@@ -34,8 +34,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
@@ -113,7 +111,6 @@ export default function PayrollPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('Active');
 
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
@@ -177,8 +174,8 @@ export default function PayrollPage() {
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'employee_list' && statusFilter !== 'All') {
-      results = results.filter(e => e.status === statusFilter);
+    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
+      // No change needed here, we want all employees for the list, and will filter for salary sheet display
     }
 
     if (searchTerm) {
@@ -203,20 +200,20 @@ export default function PayrollPage() {
         }
     }
     
-    const salarySheetFilteredEmployees = employees.filter(e => {
+    const salarySheetFilteredEmployees = results.filter(e => {
         try {
             const joiningDate = parseISO(e.joiningDate);
             const selectedMonthStart = startOfMonth(selectedDate);
 
-            // Don't show if joining date is after the month being viewed
+            // Hide if joining date is after the month being viewed
             if (isAfter(joiningDate, endOfMonth(selectedDate))) {
                 return false;
             }
 
-            // Hide if inactive and the status change happened before or during the selected month.
+            // Hide if inactive and the status change happened before the selected month.
             if (e.status === 'Inactive' && e.statusChangeDate) {
                 const statusChangeDate = parseISO(e.statusChangeDate);
-                if (isSameMonth(statusChangeDate, selectedDate) || isAfter(selectedDate, statusChangeDate)) {
+                if (isAfter(selectedDate, statusChangeDate) && !isSameMonth(statusChangeDate, selectedDate)) {
                     return false;
                 }
             }
@@ -237,7 +234,7 @@ export default function PayrollPage() {
           presentDays: payslip.presentDays,
           absentDays: payslip.absentDays,
           lateDays: payslip.lateDays,
-          providentFund: (employee.salary || 0) * 0.07,
+          providentFund: (employee.salary || 0) * 0.07, // PF is always based on current salary
           fine: payslip.fine,
           incentive: payslip.incentive,
           payableAmount: payslip.payableAmount,
@@ -302,7 +299,7 @@ export default function PayrollPage() {
       totalPayableAmount: payableTotal
     };
 
-  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays, statusFilter]);
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -318,7 +315,7 @@ export default function PayrollPage() {
   
   useEffect(() => {
       setCurrentPage(1);
-  }, [searchTerm, selectedDate, activeTab, statusFilter]);
+  }, [searchTerm, selectedDate, activeTab]);
 
   const handleDelete = async () => {
     if (!employeeToDelete) return;
@@ -424,22 +421,7 @@ export default function PayrollPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Employee List" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <span>{statusFilter}</span>
-                  
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuRadioGroup value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'All' | 'Active' | 'Inactive')}>
-                  <DropdownMenuRadioItem value="Active">Active</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="Inactive">Inactive</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
             <AddEmployeeDialog 
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
@@ -486,7 +468,7 @@ export default function PayrollPage() {
                    paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.nationalId}</TableCell>
+                          <TableCell>{employee.employeeId}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
@@ -900,3 +882,4 @@ export default function PayrollPage() {
     </div>
   );
 }
+
