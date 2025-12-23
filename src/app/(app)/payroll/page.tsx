@@ -172,7 +172,7 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
-    let results = employees;
+    let results = employees.filter(employee => employee.status === 'Active');
 
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
@@ -881,4 +881,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
