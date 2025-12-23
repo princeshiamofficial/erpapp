@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -25,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore, startOfYear, endOfYear } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -205,15 +204,17 @@ export default function PayrollPage() {
     
     const salarySheetFilteredEmployees = employees.filter(e => {
         const joiningDate = parseISO(e.joiningDate);
-        // Do not show employee if their joining month is after the selected month
-        if (isAfter(startOfMonth(joiningDate), endOfMonth(selectedDate))) {
-          return false;
+        const selectedMonthStart = startOfMonth(selectedDate);
+        
+        // Don't show if joining date is after the month being viewed
+        if (isAfter(joiningDate, endOfMonth(selectedDate))) {
+            return false;
         }
 
-        // Hide employee if their status is Inactive and the change happened before or during the selected month
+        // Hide if inactive and the status change happened before the START of the selected month.
         if (e.status === 'Inactive' && e.statusChangeDate) {
-            const statusChangeMonth = startOfMonth(parseISO(e.statusChangeDate));
-            if (!isAfter(statusChangeMonth, endOfMonth(selectedDate))) {
+            const statusChangeDate = parseISO(e.statusChangeDate);
+            if (!isAfter(statusChangeDate, selectedMonthStart)) {
                 return false;
             }
         }
@@ -479,7 +480,7 @@ export default function PayrollPage() {
                    paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.employeeId}</TableCell>
+                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
