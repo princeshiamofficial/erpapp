@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -181,10 +181,6 @@ export default function PayrollPage() {
       results = results.filter(e => e.status === statusFilter);
     }
 
-    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      results = results.filter(e => e.status === 'Active');
-    }
-
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
       results = results.filter(employee =>
@@ -207,7 +203,21 @@ export default function PayrollPage() {
         }
     }
     
-    const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
+    const salarySheetFilteredEmployees = employees.filter(e => {
+        const joiningDate = parseISO(e.joiningDate);
+        if (isAfter(joiningDate, endOfMonth(selectedDate))) {
+            return false;
+        }
+        if (e.status === 'Inactive') {
+            const statusChangeMonth = e.statusChangeDate ? startOfMonth(parseISO(e.statusChangeDate)) : null;
+            if (statusChangeMonth && isBefore(statusChangeMonth, endOfMonth(selectedDate))) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    const calculatedData = salarySheetFilteredEmployees.map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
       
@@ -217,7 +227,7 @@ export default function PayrollPage() {
           presentDays: payslip.presentDays,
           absentDays: payslip.absentDays,
           lateDays: payslip.lateDays,
-          providentFund: (employee.salary || 0) * 0.07, // PF is always based on current salary
+          providentFund: (employee.salary || 0) * 0.07,
           fine: payslip.fine,
           incentive: payslip.incentive,
           payableAmount: payslip.payableAmount,
@@ -265,7 +275,7 @@ export default function PayrollPage() {
       };
     });
 
-    const paid = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
+    const paid = calculatedData.filter(data => data.paymentStatus === 'Paid').reduce((total, data) => total + data.payableAmount, 0);
     const unpaid = calculatedData.filter(data => data.paymentStatus === 'Unpaid').reduce((total, data) => total + data.payableAmount, 0);
     const providentFundTotal = calculatedData.reduce((total, data) => total + data.providentFund, 0);
     const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0) + (data.advance || 0), 0);
@@ -435,7 +445,7 @@ export default function PayrollPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>ID No.</TableHead>
+                  <TableHead>Employee ID</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Mobile NO</TableHead>
@@ -466,7 +476,7 @@ export default function PayrollPage() {
                    paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
+                          <TableCell>{employee.employeeId}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
