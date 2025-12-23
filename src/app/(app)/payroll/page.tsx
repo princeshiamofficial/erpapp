@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -25,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -200,29 +199,7 @@ export default function PayrollPage() {
         }
     }
     
-    const salarySheetFilteredEmployees = results.filter(e => {
-        try {
-            const joiningDate = parseISO(e.joiningDate);
-            const selectedMonthStart = startOfMonth(selectedDate);
-
-            // Hide if joining date is after the month being viewed
-            if (isAfter(joiningDate, endOfMonth(selectedDate))) {
-                return false;
-            }
-
-            // Hide if inactive and the status change happened before or during the selected month.
-            if (e.status === 'Inactive' && e.statusChangeDate) {
-                const statusChangeDate = parseISO(e.statusChangeDate);
-                if (!isAfter(statusChangeDate, endOfMonth(selectedDate))) {
-                    return false;
-                }
-            }
-            return true;
-        } catch (error) {
-            console.error("Error filtering employee:", e.name, error);
-            return false;
-        }
-    });
+    const salarySheetFilteredEmployees = results.filter(e => e.status === 'Active');
 
     const calculatedData = salarySheetFilteredEmployees.map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
@@ -851,7 +828,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -882,3 +859,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
