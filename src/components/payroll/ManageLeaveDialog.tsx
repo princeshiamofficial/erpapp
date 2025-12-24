@@ -23,6 +23,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 
 interface ManageLeaveDialogProps {
@@ -175,17 +177,30 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
               </h4>
               <div className="space-y-1">
                 <Label>Leave Dates *</Label>
-                <div className="p-2 border rounded-md flex justify-center">
-                    <Calendar
-                        mode="multiple"
-                        selected={selectedDates}
-                        onSelect={setSelectedDates}
-                        disabled={{ before: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) }}
-                    />
-                </div>
-                {selectedDates && selectedDates.length > 0 && (
-                    <p className="text-sm text-muted-foreground">Selected {selectedDates.length} day(s).</p>
-                )}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className={cn("w-full justify-start text-left font-normal", !selectedDates?.length && "text-muted-foreground")}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDates?.length ? (
+                                `${selectedDates.length} date(s) selected`
+                            ) : (
+                                <span>Pick dates</span>
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                            mode="multiple"
+                            selected={selectedDates}
+                            onSelect={setSelectedDates}
+                            initialFocus
+                            disabled={{ before: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) }}
+                        />
+                    </PopoverContent>
+                </Popover>
               </div>
                <div className="space-y-1">
                   <Label htmlFor="leave-reason">Reason *</Label>
