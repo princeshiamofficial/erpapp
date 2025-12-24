@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -174,7 +175,19 @@ export default function PayrollPage() {
     let results = employees;
 
     if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      // No change needed here, we want all employees for the list, and will filter for salary sheet display
+      results = results.filter(employee => {
+        if (employee.status !== 'Active') {
+          return false;
+        }
+        try {
+          const joiningDate = parseISO(employee.joiningDate);
+          const selectedMonthStart = startOfMonth(selectedDate);
+          return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
+        } catch (e) {
+          console.error("Error parsing joining date for employee", employee.name, e);
+          return false;
+        }
+      });
     }
 
     if (searchTerm) {
@@ -199,7 +212,7 @@ export default function PayrollPage() {
         }
     }
     
-    const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
+    const calculatedData = results.map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
       
