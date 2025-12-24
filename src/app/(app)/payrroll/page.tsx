@@ -43,7 +43,7 @@ import { getWeekendSettings } from '@/lib/weekend-service';
 import Image from 'next/image';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
@@ -172,20 +172,20 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
-    let results = employees.filter(employee => {
-        if (employee.status !== 'Active') {
-            return false;
-        }
+    let results = employees.filter(employee => employee.status === 'Active');
+
+    const selectedMonthStart = startOfMonth(selectedDate);
+    results = results.filter(employee => {
         try {
             const joiningDate = parseISO(employee.joiningDate);
-            const selectedMonthStart = startOfMonth(selectedDate);
-            return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
+            // An employee is valid for the sheet if they joined in or before the selected month.
+            return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
         } catch (e) {
             console.error("Error parsing joining date for employee", employee.name, e);
             return false;
         }
     });
-
+    
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
       results = results.filter(employee =>
@@ -452,7 +452,7 @@ export default function PayrollPage() {
                    paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.employeeId}</TableCell>
+                          <TableCell>{employee.nationalId}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
@@ -835,7 +835,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
+    <div className="space-y-6 bg-transparent min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
