@@ -172,23 +172,19 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
-    let results = employees;
-
-    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      results = results.filter(employee => {
+    let results = employees.filter(employee => {
         if (employee.status !== 'Active') {
-          return false;
+            return false;
         }
         try {
-          const joiningDate = parseISO(employee.joiningDate);
-          const selectedMonthStart = startOfMonth(selectedDate);
-          return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
+            const joiningDate = parseISO(employee.joiningDate);
+            const selectedMonthStart = startOfMonth(selectedDate);
+            return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
         } catch (e) {
-          console.error("Error parsing joining date for employee", employee.name, e);
-          return false;
+            console.error("Error parsing joining date for employee", employee.name, e);
+            return false;
         }
-      });
-    }
+    });
 
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
@@ -425,7 +421,7 @@ export default function PayrollPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>ID No.</TableHead>
+                  <TableHead>Employee ID</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Mobile NO</TableHead>
@@ -456,7 +452,7 @@ export default function PayrollPage() {
                    paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.nationalId}</TableCell>
+                          <TableCell>{employee.employeeId}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
@@ -839,7 +835,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -870,3 +866,4 @@ export default function PayrollPage() {
     </div>
   );
 }
+
