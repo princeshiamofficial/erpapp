@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -176,6 +177,24 @@ export default function PayrollPage() {
 
     if (activeTab === 'employee_list' && statusFilter !== 'all') {
       results = results.filter(employee => employee.status === statusFilter);
+    } else if (activeTab === 'employee_list' && statusFilter === 'all') {
+      // no status filter for employee list
+    } else {
+        // For salary sheet and summary, only show active employees relevant for the month
+        results = results.filter(employee => {
+            if (employee.status !== 'Active') {
+                return false;
+            }
+            try {
+                const joiningDate = parseISO(employee.joiningDate);
+                const selectedMonthStart = startOfMonth(selectedDate);
+                // An employee should appear if they joined on or before the end of the selected month.
+                return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
+            } catch (e) {
+                console.error("Error parsing joining date for employee", employee.name, e);
+                return false;
+            }
+        });
     }
 
     if (searchTerm) {
@@ -200,16 +219,7 @@ export default function PayrollPage() {
         }
     }
     
-    const calculatedData = results.filter(e => {
-        if (e.status !== 'Active') return false; // Only active employees
-        try {
-            const joiningDate = parseISO(e.joiningDate);
-            const selectedMonthStart = startOfMonth(selectedDate);
-            return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
-        } catch(e) {
-            return false;
-        }
-    }).map(employee => {
+    const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
       
@@ -434,7 +444,7 @@ export default function PayrollPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>National ID No.</TableHead>
+                  <TableHead>Employee ID</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Mobile NO</TableHead>
@@ -848,7 +858,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
+    <div className="space-y-6 bg-transparent">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -879,5 +889,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
