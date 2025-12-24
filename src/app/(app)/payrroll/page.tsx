@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -187,8 +186,6 @@ export default function PayrollPage() {
 
     if (activeTab === 'employee_list' && statusFilter !== 'all') {
       results = results.filter(employee => employee.status === statusFilter);
-    } else if (activeTab === 'employee_list' && statusFilter === 'all') {
-      // no status filter for employee list
     } else if (activeTab === 'salary_sheet' || activeTab === 'summary') {
         results = results.filter(employee => {
             if (employee.status !== 'Active') {
@@ -683,12 +680,7 @@ export default function PayrollPage() {
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                          <Skeleton className="h-9 w-9 rounded-full" />
-                          <Skeleton className="h-4 w-24" />
-                      </div>
-                    </TableCell>
+                    <TableCell><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -929,6 +921,4 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-
 
