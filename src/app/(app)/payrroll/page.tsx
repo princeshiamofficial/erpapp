@@ -43,7 +43,7 @@ import { getWeekendSettings } from '@/lib/weekend-service';
 import Image from 'next/image';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
@@ -172,14 +172,14 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
-    let results = employees.filter(employee => employee.status === 'Active');
-
-    const selectedMonthStart = startOfMonth(selectedDate);
-    results = results.filter(employee => {
+    let results = employees.filter(employee => {
+        if (employee.status !== 'Active') {
+            return false;
+        }
         try {
             const joiningDate = parseISO(employee.joiningDate);
-            // An employee is valid for the sheet if they joined in or before the selected month.
-            return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
+            const selectedMonthStart = startOfMonth(selectedDate);
+            return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
         } catch (e) {
             console.error("Error parsing joining date for employee", employee.name, e);
             return false;
@@ -421,7 +421,7 @@ export default function PayrollPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>Employee ID</TableHead>
+                  <TableHead>National ID No.</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Mobile NO</TableHead>
@@ -835,7 +835,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 bg-transparent min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -863,7 +863,91 @@ export default function PayrollPage() {
           weekendDays={weekendDays}
         />
       )}
+      {employeeToIncrement && (
+        <IncrementSalaryDialog
+          isOpen={!!employeeToIncrement}
+          onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
+          employee={employeeToIncrement}
+          onSalaryIncremented={fetchData}
+        />
+      )}
+      {leaveToManage && currentUser && (
+        <ManageLeaveDialog
+            isOpen={!!leaveToManage}
+            onOpenChange={(open) => !open && setLeaveToManage(null)}
+            employee={leaveToManage}
+            currentUser={currentUser}
+            onLeaveUpdated={fetchData}
+        />
+      )}
+      {historyToView && (
+        <Sheet open={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)}>
+          <SheetContent className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>History for {historyToView.name}</SheetTitle>
+              <SheetDescription>View salary increment and leave history for this employee.</SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="h-[calc(100vh-8rem)] pr-4">
+              <div className="py-4 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold flex items-center mb-2"><TrendingUp className="mr-2 h-5 w-5 text-primary"/>Salary History</h3>
+                    <div className="space-y-2">
+                       {historyToView.salaryHistory && historyToView.salaryHistory.length > 0 ? (
+                          historyToView.salaryHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((inc, i) => (
+                              <div key={i} className="p-3 border rounded-md bg-muted/50 relative group">
+                                <p className="font-medium">{format(new Date(inc.date), 'MMMM yyyy')}: <span className="text-green-600">+{formatCurrency(inc.incrementAmount)}</span></p>
+                                <p className="text-sm text-muted-foreground">New Salary: {formatCurrency(inc.newSalary)}</p>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-1 right-1 h-7 w-7 text-destructive/50 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => setIncrementToDelete({ employeeId: historyToView.id, increment: inc })}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                          ))
+                       ) : <p className="text-sm text-muted-foreground">No salary increments recorded.</p>}
+                    </div>
+                  </div>
+                   <div>
+                    <h3 className="text-lg font-semibold flex items-center mb-2"><Calendar className="mr-2 h-5 w-5 text-primary"/>Leave History</h3>
+                     <div className="space-y-2">
+                       {historyToView.leaveHistory && historyToView.leaveHistory.length > 0 ? (
+                          historyToView.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((leave, i) => (
+                              <div key={i} className="p-3 border rounded-md bg-muted/50">
+                                <p><span className="font-medium">{leave.days} day(s)</span> on {format(new Date(leave.date), 'd MMM, yyyy')}</p>
+                                <p className="text-sm text-muted-foreground">Reason: {leave.reason}</p>
+                              </div>
+                          ))
+                       ) : <p className="text-sm text-muted-foreground">No leave records found.</p>}
+                    </div>
+                  </div>
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
+      )}
+       {incrementToDelete && (
+        <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive"/>Revert Salary Increment?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'MMMM yyyy')}</span>? This will revert the salary to its previous value. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDeleteIncrement} disabled={isDeletingIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Reverting...</> : "Yes, Revert"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
 
+```
