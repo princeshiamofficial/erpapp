@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -26,7 +25,7 @@ import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
-import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
+import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payrroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import {
@@ -179,8 +178,7 @@ export default function PayrollPage() {
       results = results.filter(employee => employee.status === statusFilter);
     } else if (activeTab === 'employee_list' && statusFilter === 'all') {
       // no status filter for employee list
-    } else {
-        // For salary sheet and summary, only show active employees relevant for the month
+    } else if (activeTab === 'salary_sheet' || activeTab === 'summary') {
         results = results.filter(employee => {
             if (employee.status !== 'Active') {
                 return false;
@@ -188,7 +186,6 @@ export default function PayrollPage() {
             try {
                 const joiningDate = parseISO(employee.joiningDate);
                 const selectedMonthStart = startOfMonth(selectedDate);
-                // An employee should appear if they joined on or before the end of the selected month.
                 return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
             } catch (e) {
                 console.error("Error parsing joining date for employee", employee.name, e);
@@ -207,7 +204,7 @@ export default function PayrollPage() {
       );
     }
 
-    // Calculations for Salary Sheet
+    // Calculations
     const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const daysInMonth = getDaysInMonth(selectedDate);
     const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
@@ -416,7 +413,7 @@ export default function PayrollPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Employee List" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
             </div>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Inactive')}>
+             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Inactive')}>
               <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
@@ -886,6 +883,85 @@ export default function PayrollPage() {
           weekendDays={weekendDays}
         />
       )}
+      {employeeToIncrement && (
+        <IncrementSalaryDialog
+          isOpen={!!employeeToIncrement}
+          onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
+          employee={employeeToIncrement}
+          onSalaryIncremented={fetchData}
+        />
+      )}
+      {leaveToManage && currentUser && (
+        <ManageLeaveDialog
+          isOpen={!!leaveToManage}
+          onOpenChange={(open) => !open && setLeaveToManage(null)}
+          employee={leaveToManage}
+          currentUser={currentUser}
+          onLeaveUpdated={fetchData}
+        />
+      )}
+
+      <Sheet open={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>History for {historyToView?.name}</SheetTitle>
+            <SheetDescription>View salary increment and leave history.</SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100vh-8rem)] mt-4 pr-4">
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-semibold text-foreground flex items-center gap-2 mb-2"><History className="h-5 w-5 text-primary"/>Salary History</h4>
+                <div className="space-y-2">
+                  {historyToView?.salaryHistory && historyToView.salaryHistory.length > 0 ? (
+                    historyToView.salaryHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(inc => (
+                      <div key={inc.date} className="text-sm p-2 border rounded-md bg-muted/50 group relative">
+                        <p>Incremented by <span className="font-semibold">{formatCurrency(inc.incrementAmount)}</span> on <span className="font-semibold">{format(new Date(inc.date), 'd MMM, yyyy')}</span></p>
+                        <p className="text-xs text-muted-foreground">New Salary: {formatCurrency(inc.newSalary)}</p>
+                         <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setIncrementToDelete({employeeId: historyToView.id, increment: inc})}>
+                          <Trash2 className="h-4 w-4 text-destructive"/>
+                        </Button>
+                      </div>
+                    ))
+                  ) : <p className="text-sm text-muted-foreground">No salary increment history.</p>}
+                </div>
+              </div>
+               <div>
+                <h4 className="font-semibold text-foreground flex items-center gap-2 mb-2"><Calendar className="h-5 w-5 text-primary"/>Leave History</h4>
+                 <div className="space-y-2">
+                  {historyToView?.leaveHistory && historyToView.leaveHistory.length > 0 ? (
+                    historyToView.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(rec => (
+                      <div key={rec.id} className="text-sm p-2 border rounded-md bg-muted/50">
+                        <p><span className="font-semibold">{rec.days} day(s)</span> leave on <span className="font-semibold">{format(new Date(rec.date), 'd MMM, yyyy')}</span></p>
+                        <p className="text-xs text-muted-foreground">Reason: {rec.reason}</p>
+                      </div>
+                    ))
+                  ) : <p className="text-sm text-muted-foreground">No leave history.</p>}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {incrementToDelete && (
+         <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive"/>Revert Salary Increment?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span> and revert the salary. This action cannot be easily undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingIncrement}>
+                {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Reverting...</> : "Yes, Revert"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
