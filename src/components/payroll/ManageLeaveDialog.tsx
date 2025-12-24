@@ -19,9 +19,7 @@ import { Loader2, Calendar as CalendarIcon, ClipboardList, PlusCircle, AlertTria
 import type { Employee, LeaveRecord, User } from '@/types';
 import { addLeaveRecordAction, deleteLeaveRecordAction } from '@/app/(app)/payroll/actions';
 import { format, parseISO } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -36,9 +34,8 @@ interface ManageLeaveDialogProps {
 }
 
 export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChange, currentUser }: ManageLeaveDialogProps) {
-  const [leaveDays, setLeaveDays] = useState('');
+  const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([]);
   const [leaveReason, setLeaveReason] = useState('');
-  const [leaveDate, setLeaveDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editedLeaveTaken, setEditedLeaveTaken] = useState<string>('');
   const [recordToDelete, setRecordToDelete] = useState<LeaveRecord | null>(null);
@@ -52,9 +49,8 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
 
   useEffect(() => {
     if (!isOpen) {
-      setLeaveDays('');
+      setSelectedDates([]);
       setLeaveReason('');
-      setLeaveDate(new Date());
       setEditedLeaveTaken('');
       setRecordToDelete(null);
     } else if (employee) {
@@ -65,30 +61,27 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employee) return;
-    const days = parseInt(leaveDays, 10);
-    if (isNaN(days) || days <= 0) {
-      toast({ title: "Invalid Input", description: "Please enter a positive number for leave days.", variant: "destructive" });
+    const days = selectedDates?.length || 0;
+    if (days <= 0) {
+      toast({ title: "Validation Error", description: "Please select at least one leave date.", variant: "destructive" });
       return;
     }
     if (!leaveReason.trim()) {
       toast({ title: "Validation Error", description: "A reason for the leave is required.", variant: "destructive" });
       return;
     }
-    if (!leaveDate) {
-      toast({ title: "Validation Error", description: "Please select a date for the leave.", variant: "destructive" });
-      return;
-    }
-
+    
     setIsSubmitting(true);
+    // For simplicity, we record this as a single event, even for multiple days.
+    // The "date" is the first selected date.
     const newLeaveRecord: Omit<LeaveRecord, 'id'> = {
-      date: leaveDate.toISOString(),
+      date: selectedDates![0].toISOString(),
       days,
       reason: leaveReason.trim(),
       recordedByUserId: currentUser.id,
       recordedByUserName: currentUser.name,
     };
     
-    // Check if admin has manually edited the total
     const finalLeaveTaken = editedLeaveTaken !== leaveTaken.toString() ? parseInt(editedLeaveTaken, 10) : undefined;
     
     const result = await addLeaveRecordAction(employee.id, newLeaveRecord, finalLeaveTaken);
@@ -108,11 +101,11 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     setIsDeleting(true);
     const result = await deleteLeaveRecordAction(employee.id, recordToDelete.id);
     setIsDeleting(false);
-    setRecordToDelete(null); // Close confirmation dialog
+    setRecordToDelete(null);
     if (result.success) {
         toast({ title: "History Deleted", description: "The leave record has been removed." });
-        onLeaveUpdated(); // Refresh parent data
-        onOpenChange(false); // Close main dialog
+        onLeaveUpdated();
+        onOpenChange(false); 
     } else {
         toast({ title: "Error", description: result.error, variant: "destructive" });
     }
@@ -180,23 +173,19 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                 <PlusCircle className="mr-2 h-5 w-5 text-primary" />
                 Record New Leave
               </h4>
-              <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                      <Label htmlFor="leave-days">Days Taken *</Label>
-                      <Input id="leave-days" type="number" value={leaveDays} onChange={(e) => setLeaveDays(e.target.value)} required min="1" placeholder="e.g., 1" />
-                  </div>
-                   <div className="space-y-1">
-                      <Label htmlFor="leave-date">Date *</Label>
-                      <Popover>
-                          <PopoverTrigger asChild>
-                              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !leaveDate && "text-muted-foreground")}>
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {leaveDate ? format(leaveDate, "PPP") : <span>Pick a date</span>}
-                              </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={leaveDate} onSelect={setLeaveDate} initialFocus /></PopoverContent>
-                      </Popover>
-                   </div>
+              <div className="space-y-1">
+                <Label>Leave Dates *</Label>
+                <div className="p-2 border rounded-md flex justify-center">
+                    <Calendar
+                        mode="multiple"
+                        selected={selectedDates}
+                        onSelect={setSelectedDates}
+                        disabled={{ before: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) }}
+                    />
+                </div>
+                {selectedDates && selectedDates.length > 0 && (
+                    <p className="text-sm text-muted-foreground">Selected {selectedDates.length} day(s).</p>
+                )}
               </div>
                <div className="space-y-1">
                   <Label htmlFor="leave-reason">Reason *</Label>
@@ -204,7 +193,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
               </div>
               <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-                <Button type="submit" disabled={isSubmitting || !leaveDays || !leaveReason || !leaveDate}>
+                <Button type="submit" disabled={isSubmitting || !selectedDates || selectedDates.length === 0 || !leaveReason}>
                   {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recording...</> : "Record Leave"}
                 </Button>
               </DialogFooter>

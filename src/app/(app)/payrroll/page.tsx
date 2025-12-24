@@ -171,23 +171,22 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
-    let results = employees;
-
-    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      results = results.filter(employee => {
+    let results = employees.filter(employee => {
         if (employee.status !== 'Active') {
-          return false;
+            const statusChangeDate = employee.statusChangeDate ? parseISO(employee.statusChangeDate) : null;
+            if (statusChangeDate && isBefore(statusChangeDate, startOfMonth(selectedDate))) {
+                return false;
+            }
         }
         try {
-          const joiningDate = parseISO(employee.joiningDate);
-          const selectedMonthStart = startOfMonth(selectedDate);
-          return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
+            const joiningDate = parseISO(employee.joiningDate);
+            const selectedMonthStart = startOfMonth(selectedDate);
+            return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
         } catch (e) {
-          console.error("Error parsing joining date for employee", employee.name, e);
-          return false;
+            console.error("Error parsing joining date for employee", employee.name, e);
+            return false;
         }
-      });
-    }
+    });
 
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
@@ -199,7 +198,7 @@ export default function PayrollPage() {
       );
     }
 
-    // Calculations
+    // Calculations for Salary Sheet
     const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const daysInMonth = getDaysInMonth(selectedDate);
     const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
@@ -286,7 +285,7 @@ export default function PayrollPage() {
       totalPayableAmount: payableTotal
     };
 
-  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
+  }, [employees, searchTerm, selectedDate, salarySheetData, attendanceData, weekendDays]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -638,6 +637,66 @@ export default function PayrollPage() {
     </Card>
   );
   
+  const attendeesReportContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Filter by date..."
+                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                type="date"
+                value={attendanceDateFilter}
+                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Employee</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>In Time</TableHead>
+                <TableHead>Out Time</TableHead>
+                <TableHead>Hours Worked</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
+                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    No attendance data recorded for the selected period.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
@@ -714,7 +773,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-transparent">
+    <div className="space-y-6 bg-transparent p-4 sm:p-6 lg:p-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
