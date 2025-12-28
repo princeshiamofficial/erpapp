@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -187,8 +186,6 @@ export default function PayrollPage() {
 
     if (activeTab === 'employee_list' && statusFilter !== 'all') {
       results = results.filter(employee => employee.status === statusFilter);
-    } else if (activeTab === 'employee_list' && statusFilter === 'all') {
-      // no status filter for employee list
     } else if (activeTab === 'salary_sheet' || activeTab === 'summary') {
         results = results.filter(employee => {
             if (employee.status !== 'Active') {
@@ -197,6 +194,7 @@ export default function PayrollPage() {
             try {
                 const joiningDate = parseISO(employee.joiningDate);
                 const selectedMonthStart = startOfMonth(selectedDate);
+                // An employee is included in the salary sheet if they joined *before* the end of the selected month.
                 return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
             } catch (e) {
                 console.error("Error parsing joining date for employee", employee.name, e);
@@ -469,7 +467,7 @@ export default function PayrollPage() {
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                       <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -485,7 +483,7 @@ export default function PayrollPage() {
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.nationalId}</TableCell>
+                          <TableCell>{employee.employeeId}</TableCell>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-9 w-9 border">
@@ -560,6 +558,70 @@ export default function PayrollPage() {
     </Card>
   );
 
+  const employeePerformanceContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="space-y-3">
+            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+                <span>Employee</span>
+                <span>Designation</span>
+                <span className="text-center">Completed Orders</span>
+                <span className="text-center">Efficiency Score</span>
+                <span className="text-center">Revenue Generated</span>
+                <span className="text-center">Rating</span>
+            </div>
+            {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                    </div>
+                ))
+            ) : paginatedEmployees.length > 0 ? (
+                paginatedEmployees.map((employee) => (
+                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+                        <div className="flex items-center gap-3">
+                            {/* Avatar placeholder */}
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                            <span className="font-medium text-gray-800">{employee.name}</span>
+                        </div>
+                        <span>{employee.designation}</span>
+                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
+                        <div className="flex items-center gap-2">
+                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
+                           <span className="text-xs font-semibold">85%</span>
+                        </div>
+                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
+                        <div className="flex justify-center items-center gap-1 text-yellow-500">
+                          <Star className="h-4 w-4 fill-current"/>
+                          <span className="font-bold text-sm">4.8</span>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <div className="text-center py-16 text-gray-500">No performance data available.</div>
+            )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const salarySheetContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
@@ -614,7 +676,7 @@ export default function PayrollPage() {
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -824,7 +886,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -852,7 +914,7 @@ export default function PayrollPage() {
           weekendDays={weekendDays}
         />
       )}
-      {employeeToIncrement && (
+       {employeeToIncrement && (
         <IncrementSalaryDialog
           isOpen={!!employeeToIncrement}
           onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
