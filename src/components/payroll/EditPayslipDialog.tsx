@@ -111,9 +111,13 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   const handlePresentChange = (value: string) => {
     const newPresent = parseInt(value, 10);
-    if (!isNaN(newPresent) && newPresent >= 0) {
+    if (!isNaN(newPresent)) {
       setPresent(newPresent.toString());
-      setAbsent((FIXED_WORKING_DAYS - newPresent).toString());
+      if (newPresent >= 30) {
+        setAbsent('0');
+      } else {
+        setAbsent((FIXED_WORKING_DAYS - newPresent).toString());
+      }
     }
   };
 
@@ -121,7 +125,8 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const newAbsent = parseInt(value, 10);
     if (!isNaN(newAbsent)) { // Allow negative numbers for absent
       setAbsent(newAbsent.toString());
-      setPresent((FIXED_WORKING_DAYS - newAbsent).toString());
+      const newPresent = FIXED_WORKING_DAYS - newAbsent;
+      setPresent(newPresent.toString());
     }
   };
 
