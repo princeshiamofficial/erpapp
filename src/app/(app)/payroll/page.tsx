@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -43,8 +44,6 @@ import Image from 'next/image';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
@@ -69,14 +68,6 @@ interface SummaryCardProps {
   circleBgClass?: string;
   isLoading?: boolean;
 }
-
-const getInitials = (name: string | undefined): string => {
-  if (!name) return '??';
-  const names = name.split(' ');
-  if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
-};
-
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading }) => {
   if (isLoading) {
@@ -120,7 +111,6 @@ export default function PayrollPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive'>('Active');
 
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
@@ -184,23 +174,8 @@ export default function PayrollPage() {
   const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'employee_list' && statusFilter !== 'all') {
-      results = results.filter(employee => employee.status === statusFilter);
-    } else if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-        results = results.filter(employee => {
-            if (employee.status !== 'Active') {
-                return false;
-            }
-            try {
-                const joiningDate = parseISO(employee.joiningDate);
-                const selectedMonthStart = startOfMonth(selectedDate);
-                // An employee is included in the salary sheet if they joined *before* the end of the selected month.
-                return !isAfter(joiningDate, endOfMonth(selectedMonthStart));
-            } catch (e) {
-                console.error("Error parsing joining date for employee", employee.name, e);
-                return false;
-            }
-        });
+    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
+      // No change needed here, we want all employees for the list, and will filter for salary sheet display
     }
 
     if (searchTerm) {
@@ -213,7 +188,7 @@ export default function PayrollPage() {
       );
     }
 
-    // Calculations for Salary Sheet
+    // Calculations
     const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const daysInMonth = getDaysInMonth(selectedDate);
     const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
@@ -300,7 +275,7 @@ export default function PayrollPage() {
       totalPayableAmount: payableTotal
     };
 
-  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays, statusFilter]);
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -316,7 +291,7 @@ export default function PayrollPage() {
   
   useEffect(() => {
       setCurrentPage(1);
-  }, [searchTerm, selectedDate, activeTab, statusFilter]);
+  }, [searchTerm, selectedDate, activeTab]);
 
   const handleDelete = async () => {
     if (!employeeToDelete) return;
@@ -422,19 +397,7 @@ export default function PayrollPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Employee List" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
             </div>
-             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Inactive')}>
-              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  <SelectValue placeholder="Filter by status" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
             <AddEmployeeDialog 
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
@@ -467,7 +430,7 @@ export default function PayrollPage() {
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -478,21 +441,11 @@ export default function PayrollPage() {
                     </TableRow>
                   ))
                 ) : paginatedEmployees.length > 0 ? (
-                   paginatedEmployees.map((employee, index) => {
-                     const user = allUsers.find(u => u.id === employee.userId);
-                     return (
+                   paginatedEmployees.map((employee, index) => (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
                           <TableCell>{employee.employeeId}</TableCell>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-9 w-9 border">
-                                    <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
-                                    <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
-                                </Avatar>
-                                <span>{employee.name}</span>
-                            </div>
-                          </TableCell>
+                          <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
                           <TableCell>{format(new Date(employee.dob), 'yyyy-MM-dd')}</TableCell>
@@ -532,8 +485,7 @@ export default function PayrollPage() {
                               </DropdownMenu>
                           </TableCell>
                       </TableRow>
-                   )
-                })
+                   ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center h-48 text-gray-500">
@@ -676,7 +628,7 @@ export default function PayrollPage() {
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell><div className="flex items-center gap-3"><Skeleton className="h-9 w-9 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -689,47 +641,36 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data) => {
-                    const user = allUsers.find(u => u.id === data.userId);
-                    return (
-                        <TableRow key={data.id}>
-                            <TableCell className="font-medium">
-                                <div className="flex items-center gap-3">
-                                    <Avatar className="h-9 w-9 border">
-                                        <AvatarImage src={user?.avatarUrl || undefined} alt={data.name} />
-                                        <AvatarFallback>{getInitials(data.name)}</AvatarFallback>
-                                    </Avatar>
-                                    <span>{data.name}</span>
-                                </div>
-                            </TableCell>
-                            <TableCell>{data.presentDays}</TableCell>
-                            <TableCell>{data.absentDays}</TableCell>
-                            <TableCell>{data.lateDays}</TableCell>
-                            <TableCell>{formatCurrency(data.providentFund)}</TableCell>
-                            <TableCell>{formatCurrency(data.fine)}</TableCell>
-                            <TableCell>{formatCurrency(data.incentive)}</TableCell>
-                            <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
-                            <TableCell>
-                              <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                               <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="h-8" 
-                                  onClick={() => {
-                                    const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-                                    const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
-                                    setExistingPayslipData(payslipForDialog);
-                                    setPayslipToEdit(data);
-                                  }}
-                               >
-                                Edit payslip
-                              </Button>
-                            </TableCell>
-                        </TableRow>
-                    )
-                })
+                salarySheetCalculatedData.map((data) => (
+                    <TableRow key={data.id}>
+                        <TableCell className="font-medium">{data.name}</TableCell>
+                        <TableCell>{data.presentDays}</TableCell>
+                        <TableCell>{data.absentDays}</TableCell>
+                        <TableCell>{data.lateDays}</TableCell>
+                        <TableCell>{formatCurrency(data.providentFund)}</TableCell>
+                        <TableCell>{formatCurrency(data.fine)}</TableCell>
+                        <TableCell>{formatCurrency(data.incentive)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
+                        <TableCell>
+                          <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                           <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8" 
+                              onClick={() => {
+                                const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+                                const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
+                                setExistingPayslipData(payslipForDialog);
+                                setPayslipToEdit(data);
+                              }}
+                           >
+                            Edit payslip
+                          </Button>
+                        </TableCell>
+                    </TableRow>
+                  ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={10} className="h-48 text-center text-gray-500">
@@ -886,7 +827,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-transparent min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -913,84 +854,6 @@ export default function PayrollPage() {
           existingPayslip={existingPayslipData}
           weekendDays={weekendDays}
         />
-      )}
-       {employeeToIncrement && (
-        <IncrementSalaryDialog
-          isOpen={!!employeeToIncrement}
-          onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
-          employee={employeeToIncrement}
-          onSalaryIncremented={fetchData}
-        />
-      )}
-      {leaveToManage && currentUser && (
-        <ManageLeaveDialog
-          isOpen={!!leaveToManage}
-          onOpenChange={(open) => !open && setLeaveToManage(null)}
-          employee={leaveToManage}
-          currentUser={currentUser}
-          onLeaveUpdated={fetchData}
-        />
-      )}
-
-      <Sheet open={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>History for {historyToView?.name}</SheetTitle>
-            <SheetDescription>View salary increment and leave history.</SheetDescription>
-          </SheetHeader>
-          <ScrollArea className="h-[calc(100vh-8rem)] mt-4 pr-4">
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-semibold text-foreground flex items-center gap-2 mb-2"><History className="h-5 w-5 text-primary"/>Salary History</h4>
-                <div className="space-y-2">
-                  {historyToView?.salaryHistory && historyToView.salaryHistory.length > 0 ? (
-                    historyToView.salaryHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(inc => (
-                      <div key={inc.date} className="text-sm p-2 border rounded-md bg-muted/50 group relative">
-                        <p>Incremented by <span className="font-semibold">{formatCurrency(inc.incrementAmount)}</span> on <span className="font-semibold">{format(new Date(inc.date), 'd MMM, yyyy')}</span></p>
-                        <p className="text-xs text-muted-foreground">New Salary: {formatCurrency(inc.newSalary)}</p>
-                         <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setIncrementToDelete({employeeId: historyToView.id, increment: inc})}>
-                          <Trash2 className="h-4 w-4 text-destructive"/>
-                        </Button>
-                      </div>
-                    ))
-                  ) : <p className="text-sm text-muted-foreground">No salary increment history.</p>}
-                </div>
-              </div>
-               <div>
-                <h4 className="font-semibold text-foreground flex items-center gap-2 mb-2"><Calendar className="h-5 w-5 text-primary"/>Leave History</h4>
-                 <div className="space-y-2">
-                  {historyToView?.leaveHistory && historyToView.leaveHistory.length > 0 ? (
-                    historyToView.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(rec => (
-                      <div key={rec.id} className="text-sm p-2 border rounded-md bg-muted/50">
-                        <p><span className="font-semibold">{rec.days} day(s)</span> leave on <span className="font-semibold">{format(new Date(rec.date), 'd MMM, yyyy')}</span></p>
-                        <p className="text-xs text-muted-foreground">Reason: {rec.reason}</p>
-                      </div>
-                    ))
-                  ) : <p className="text-sm text-muted-foreground">No leave history.</p>}
-                </div>
-              </div>
-            </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-
-      {incrementToDelete && (
-         <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive"/>Revert Salary Increment?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span> and revert the salary. This action cannot be easily undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingIncrement}>
-                {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Reverting...</> : "Yes, Revert"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       )}
     </div>
   );

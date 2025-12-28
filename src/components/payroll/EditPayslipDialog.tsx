@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Employee, Payslip } from '@/types';
-import { getDaysInMonth, getDay, isAfter, startOfMonth } from 'date-fns';
+import { getDaysInMonth, getDay } from 'date-fns';
 import { updatePayslipAction } from '@/app/(app)/payroll/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -55,6 +56,25 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
   }, [selectedDate]);
   
+  const totalWorkingDays = useMemo(() => {
+      if (!weekendDays) return 30; // Fallback
+      const daysInMonth = getDaysInMonth(selectedDate);
+      const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
+      let workingDays = 0;
+      for (let i = 1; i <= daysInMonth; i++) {
+          const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
+          if (!weekendDayIndexes.includes(getDay(currentDate))) {
+              workingDays++;
+          }
+      }
+      return workingDays;
+  }, [selectedDate, weekendDays]);
+
+  const perDaySalaryForFine = useMemo(() => {
+    const baseSalary = employee.salary || 0;
+    return baseSalary / 30; // Always divide by 30 for fine calculation
+  }, [employee.salary]);
+
   const dailySalary = useMemo(() => {
     const baseSalary = employee.salary || 0;
     return baseSalary / 30;
@@ -80,15 +100,15 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         setAdvance(existingPayslip.advance?.toString() || '0');
         setPaymentStatus(existingPayslip.paymentStatus);
       } else {
-        const initialPresent = employee.presentDays?.toString() || '30';
+        const initialPresent = employee.presentDays?.toString() || totalWorkingDays.toString();
         const initialLate = employee.lateDays?.toString() || '0';
-        const initialAbsent = employee.absentDays?.toString() || (30 - parseInt(initialPresent, 10)).toString();
+        const initialAbsent = employee.absentDays?.toString() || (totalWorkingDays - parseInt(initialPresent, 10)).toString();
         
         setPresent(initialPresent);
         setAbsent(initialAbsent);
         setLate(initialLate);
         
-        const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * dailySalary;
+        const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * perDaySalaryForFine;
         setFine(calculatedFine.toFixed(2));
         
         setIncentive('0');
@@ -98,15 +118,15 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, existingPayslip, dailySalary]);
+  }, [isOpen, employee, existingPayslip, totalWorkingDays, perDaySalaryForFine]);
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
     if (!isNaN(lateDaysNum) && lateDaysNum >= 0) {
-      const calculatedFine = Math.floor(lateDaysNum / 3) * dailySalary;
+      const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalaryForFine;
       setFine(calculatedFine.toFixed(2));
     }
-  }, [late, dailySalary]);
+  }, [late, perDaySalaryForFine]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
@@ -123,26 +143,6 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     
     return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum - advanceNum;
   }, [incentive, fine, providentFund, present, dailySalary, trainingFee, isNewEmployee, advance]);
-
-  const handlePresentChange = (value: string) => {
-    const presentValue = parseInt(value, 10);
-    setPresent(value);
-    if (!isNaN(presentValue) && presentValue >= 0 && presentValue <= 30) {
-      setAbsent(String(30 - presentValue));
-    } else if (value === '') {
-      setAbsent('30');
-    }
-  };
-
-  const handleAbsentChange = (value: string) => {
-    const absentValue = parseInt(value, 10);
-    setAbsent(value);
-    if (!isNaN(absentValue) && absentValue >= 0 && absentValue <= 30) {
-      setPresent(String(30 - absentValue));
-    } else if (value === '') {
-      setPresent('30');
-    }
-  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,11 +187,11 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
             <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                     <Label htmlFor="present-days">Present</Label>
-                    <Input id="present-days" type="number" value={present} onChange={(e) => handlePresentChange(e.target.value)} required />
+                    <Input id="present-days" type="number" value={present} onChange={e => setPresent(e.target.value)} required />
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor="absent-days">Absent</Label>
-                    <Input id="absent-days" type="number" value={absent} onChange={(e) => handleAbsentChange(e.target.value)} required />
+                    <Input id="absent-days" type="number" value={absent} onChange={e => setAbsent(e.target.value)} required />
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor="late-days">Late</Label>
