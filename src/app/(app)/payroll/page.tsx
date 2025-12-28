@@ -445,7 +445,7 @@ export default function PayrollPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>ID No.</TableHead>
+                  <TableHead>Employee ID</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Mobile NO</TableHead>
@@ -595,7 +595,7 @@ export default function PayrollPage() {
                             <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
                             <span className="font-medium text-gray-800">{employee.name}</span>
                         </div>
-                        <span>{(employee as Employee).designation}</span>
+                        <span>{employee.designation}</span>
                         <span className="text-center font-medium">120</span> {/* Placeholder Data */}
                         <div className="flex items-center gap-2">
                            <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
@@ -828,7 +828,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -862,7 +862,7 @@ export default function PayrollPage() {
           onSalaryIncremented={fetchData}
         />
       )}
-      {leaveToManage && currentUser && (
+       {leaveToManage && currentUser && (
         <ManageLeaveDialog
             isOpen={!!leaveToManage}
             onOpenChange={(open) => !open && setLeaveToManage(null)}
@@ -946,4 +946,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
