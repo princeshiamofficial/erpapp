@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -15,17 +14,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Minus, Plus } from 'lucide-react';
 import type { Employee, Payslip } from '@/types';
-import { getDaysInMonth, getDay } from 'date-fns';
 import { updatePayslipAction } from '@/app/(app)/payroll/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
-// Moved formatCurrency here to avoid import issues
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
-  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 };
 
 interface EditPayslipDialogProps {
@@ -33,14 +30,13 @@ interface EditPayslipDialogProps {
   onSave: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedDate: Date; // Added prop
-  weekendDays?: string[]; // Added prop
+  selectedDate: Date;
   existingPayslip?: Payslip;
 }
 
-const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const FIXED_WORKING_DAYS = 30;
 
-export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, weekendDays = [], existingPayslip }: EditPayslipDialogProps) {
+export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, existingPayslip }: EditPayslipDialogProps) {
   const [present, setPresent] = useState('30');
   const [absent, setAbsent] = useState('0');
   const [late, setLate] = useState('0');
@@ -55,37 +51,22 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const monthYearId = useMemo(() => {
     return `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
   }, [selectedDate]);
-  
-  const totalWorkingDays = useMemo(() => {
-      if (!weekendDays) return 30; // Fallback
-      const daysInMonth = getDaysInMonth(selectedDate);
-      const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
-      let workingDays = 0;
-      for (let i = 1; i <= daysInMonth; i++) {
-          const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-          if (!weekendDayIndexes.includes(getDay(currentDate))) {
-              workingDays++;
-          }
-      }
-      return workingDays;
-  }, [selectedDate, weekendDays]);
 
   const perDaySalaryForFine = useMemo(() => {
     const baseSalary = employee.salary || 0;
-    return baseSalary / 30; // Always divide by 30 for fine calculation
+    return baseSalary / FIXED_WORKING_DAYS;
   }, [employee.salary]);
 
   const dailySalary = useMemo(() => {
     const baseSalary = employee.salary || 0;
-    return baseSalary / 30;
+    return baseSalary / FIXED_WORKING_DAYS;
   }, [employee.salary]);
   
   const isNewEmployee = useMemo(() => {
     if (!employee?.joiningDate) return false;
     const joiningDate = new Date(employee.joiningDate);
     const selectedMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-    const selectedMonthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-    return joiningDate >= selectedMonthStart && joiningDate <= selectedMonthEnd;
+    return joiningDate >= selectedMonthStart;
   }, [employee.joiningDate, selectedDate]);
 
   useEffect(() => {
@@ -100,9 +81,9 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         setAdvance(existingPayslip.advance?.toString() || '0');
         setPaymentStatus(existingPayslip.paymentStatus);
       } else {
-        const initialPresent = employee.presentDays?.toString() || totalWorkingDays.toString();
+        const initialPresent = employee.presentDays?.toString() || FIXED_WORKING_DAYS.toString();
         const initialLate = employee.lateDays?.toString() || '0';
-        const initialAbsent = employee.absentDays?.toString() || (totalWorkingDays - parseInt(initialPresent, 10)).toString();
+        const initialAbsent = (FIXED_WORKING_DAYS - parseInt(initialPresent, 10)).toString();
         
         setPresent(initialPresent);
         setAbsent(initialAbsent);
@@ -118,7 +99,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, existingPayslip, totalWorkingDays, perDaySalaryForFine]);
+  }, [isOpen, employee, existingPayslip, perDaySalaryForFine]);
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
@@ -127,6 +108,22 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       setFine(calculatedFine.toFixed(2));
     }
   }, [late, perDaySalaryForFine]);
+
+  const handlePresentChange = (value: string) => {
+    const newPresent = parseInt(value, 10);
+    if (!isNaN(newPresent) && newPresent >= 0 && newPresent <= FIXED_WORKING_DAYS) {
+      setPresent(newPresent.toString());
+      setAbsent((FIXED_WORKING_DAYS - newPresent).toString());
+    }
+  };
+
+  const handleAbsentChange = (value: string) => {
+    const newAbsent = parseInt(value, 10);
+    if (!isNaN(newAbsent) && newAbsent >= 0 && newAbsent <= FIXED_WORKING_DAYS) {
+      setAbsent(newAbsent.toString());
+      setPresent((FIXED_WORKING_DAYS - newAbsent).toString());
+    }
+  };
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
@@ -187,11 +184,19 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
             <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                     <Label htmlFor="present-days">Present</Label>
-                    <Input id="present-days" type="number" value={present} onChange={e => setPresent(e.target.value)} required />
+                    <div className="flex items-center">
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-r-none" onClick={() => handlePresentChange(String(Math.max(0, parseInt(present, 10) - 1)))}><Minus className="h-4 w-4"/></Button>
+                        <Input id="present-days" type="number" value={present} onChange={e => handlePresentChange(e.target.value)} required className="text-center rounded-none"/>
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-l-none" onClick={() => handlePresentChange(String(Math.min(FIXED_WORKING_DAYS, parseInt(present, 10) + 1)))}><Plus className="h-4 w-4"/></Button>
+                    </div>
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor="absent-days">Absent</Label>
-                    <Input id="absent-days" type="number" value={absent} onChange={e => setAbsent(e.target.value)} required />
+                     <div className="flex items-center">
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-r-none" onClick={() => handleAbsentChange(String(Math.max(0, parseInt(absent, 10) - 1)))}><Minus className="h-4 w-4"/></Button>
+                        <Input id="absent-days" type="number" value={absent} onChange={e => handleAbsentChange(e.target.value)} required className="text-center rounded-none"/>
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-l-none" onClick={() => handleAbsentChange(String(Math.min(FIXED_WORKING_DAYS, parseInt(absent, 10) + 1)))}><Plus className="h-4 w-4"/></Button>
+                    </div>
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor="late-days">Late</Label>
