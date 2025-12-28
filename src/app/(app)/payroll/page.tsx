@@ -18,13 +18,13 @@ import {
   PaginationNext
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -134,7 +134,7 @@ export default function PayrollPage() {
     }
   }, [currentUser, router, fetchData]);
 
-  const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount, employeePerformanceCalculatedData } = useMemo(() => {
+  const { filteredEmployees, salarySheetCalculatedData, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = [...employees];
     
     if (statusFilter !== 'all') {
@@ -142,7 +142,6 @@ export default function PayrollPage() {
     }
 
     if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      // Filter for salary sheet: only include employees who joined on or before the selected month
       const endOfSelectedMonth = endOfMonth(selectedDate);
       results = results.filter(employee => {
         try {
@@ -165,17 +164,6 @@ export default function PayrollPage() {
     }
 
     // Calculations
-    const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const daysInMonth = getDaysInMonth(selectedDate);
-    const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
-    let totalWorkingDays = 0;
-    for (let i = 1; i <= daysInMonth; i++) {
-        const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-        if (!weekendDayIndexes.includes(getDay(currentDate))) {
-            totalWorkingDays++;
-        }
-    }
-    
     const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
@@ -187,7 +175,7 @@ export default function PayrollPage() {
       const presentDays = userAttendanceInRange.length;
       const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
       const onTimeDays = presentDays - lateDays;
-      const absentDays = (totalWorkingDays - presentDays);
+      const absentDays = (30 - presentDays);
 
       if (payslip) {
         return {
@@ -195,7 +183,7 @@ export default function PayrollPage() {
           presentDays: payslip.presentDays,
           absentDays: payslip.absentDays,
           lateDays: payslip.lateDays,
-          onTimeDays, // add this
+          onTimeDays,
           providentFund: (employee.salary || 0) * 0.07,
           fine: payslip.fine,
           incentive: payslip.incentive,
@@ -237,30 +225,18 @@ export default function PayrollPage() {
       };
     });
 
-    const paid = calculatedData.filter(data => data.paymentStatus === 'Paid').reduce((total, data) => total + data.payableAmount, 0);
     const unpaid = calculatedData.filter(data => data.paymentStatus === 'Unpaid').reduce((total, data) => total + data.payableAmount, 0);
     const providentFundTotal = calculatedData.reduce((total, data) => total + data.providentFund, 0);
     const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0) + (data.advance || 0), 0);
     const payableTotal = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
 
-    const performanceData = calculatedData.map(employee => {
-        const efficiencyScore = totalWorkingDays > 0 ? Math.round((employee.presentDays / totalWorkingDays) * 100) : 0;
-        return {
-          ...employee,
-          efficiencyScore,
-        };
-    }).sort((a, b) => b.efficiencyScore - a.efficiencyScore);
-
-
     return { 
       filteredEmployees: results,
       salarySheetCalculatedData: calculatedData,
-      totalPaidAmount: paid,
       totalUnpaidAmount: unpaid,
       totalProvidentFund: providentFundTotal,
       totalFineAmount: fineTotal,
       totalPayableAmount: payableTotal,
-      employeePerformanceCalculatedData: performanceData
     };
 
   }, [employees, searchTerm, statusFilter, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
@@ -524,82 +500,6 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const employeePerformanceContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-            </div>
-             <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
-                  <SelectValue placeholder="Select Month" />
-              </SelectTrigger>
-              <SelectContent>
-                  {months.map(month => (
-                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-             <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
-                  <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                  {availableYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="space-y-3">
-            <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_2fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
-                <span>Employee</span>
-                <span>Designation</span>
-                <span className="text-center">On Time</span>
-                <span className="text-center">Late</span>
-                <span className="text-center">Efficiency Score</span>
-            </div>
-            {isLoading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_2fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
-                    </div>
-                ))
-            ) : employeePerformanceCalculatedData.length > 0 ? (
-                employeePerformanceCalculatedData.map((employee) => (
-                    <div key={employee.id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_2fr] items-center gap-4 p-3 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border"><AvatarImage src={allUsers.find(u => u.id === employee.userId)?.avatarUrl || undefined} /><AvatarFallback>{getInitials(employee.name)}</AvatarFallback></Avatar>
-                            <span className="font-medium text-gray-800">{employee.name}</span>
-                        </div>
-                        <span>{employee.designation}</span>
-                        <span className="text-center font-medium text-green-600">{employee.onTimeDays}</span>
-                        <span className="text-center font-medium text-yellow-600">{employee.lateDays}</span>
-                        <div className="flex items-center gap-2">
-                           <Progress value={employee.efficiencyScore} className="h-2" indicatorClassName={employee.efficiencyScore >= 80 ? 'bg-green-500' : employee.efficiencyScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'}/>
-                           <span className="text-xs font-semibold">{employee.efficiencyScore}%</span>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <div className="text-center py-16 text-gray-500">No performance data available for this period.</div>
-            )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   const salarySheetContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
@@ -794,8 +694,6 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      case 'employee_performance':
-        return employeePerformanceContent;
       case 'attendees_report':
         return attendeesReportContent;
       default:
@@ -817,7 +715,6 @@ export default function PayrollPage() {
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
-          <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
         </TabsList>
         <div className="mt-6">
@@ -838,7 +735,7 @@ export default function PayrollPage() {
           selectedDate={selectedDate}
         />
       )}
-      {employeeToIncrement && (
+       {employeeToIncrement && (
         <IncrementSalaryDialog
           isOpen={!!employeeToIncrement}
           onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
