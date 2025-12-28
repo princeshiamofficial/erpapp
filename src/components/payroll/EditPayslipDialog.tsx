@@ -111,7 +111,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   const handlePresentChange = (value: string) => {
     const newPresent = parseInt(value, 10);
-    if (!isNaN(newPresent) && newPresent >= 0 && newPresent <= FIXED_WORKING_DAYS) {
+    if (!isNaN(newPresent) && newPresent >= 0) {
       setPresent(newPresent.toString());
       setAbsent((FIXED_WORKING_DAYS - newPresent).toString());
     }
@@ -119,7 +119,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   const handleAbsentChange = (value: string) => {
     const newAbsent = parseInt(value, 10);
-    if (!isNaN(newAbsent) && newAbsent >= 0 && newAbsent <= FIXED_WORKING_DAYS) {
+    if (!isNaN(newAbsent)) { // Allow negative numbers for absent
       setAbsent(newAbsent.toString());
       setPresent((FIXED_WORKING_DAYS - newAbsent).toString());
     }
@@ -185,17 +185,17 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
                 <div className="space-y-1">
                     <Label htmlFor="present-days">Present</Label>
                     <div className="flex items-center">
-                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-r-none" onClick={() => handlePresentChange(String(Math.max(0, parseInt(present, 10) - 1)))}><Minus className="h-4 w-4"/></Button>
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-r-none" onClick={() => handlePresentChange(String(parseInt(present, 10) - 1))}><Minus className="h-4 w-4"/></Button>
                         <Input id="present-days" type="number" value={present} onChange={e => handlePresentChange(e.target.value)} required className="text-center rounded-none"/>
-                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-l-none" onClick={() => handlePresentChange(String(Math.min(FIXED_WORKING_DAYS, parseInt(present, 10) + 1)))}><Plus className="h-4 w-4"/></Button>
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-l-none" onClick={() => handlePresentChange(String(parseInt(present, 10) + 1))}><Plus className="h-4 w-4"/></Button>
                     </div>
                 </div>
                  <div className="space-y-1">
                     <Label htmlFor="absent-days">Absent</Label>
                      <div className="flex items-center">
-                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-r-none" onClick={() => handleAbsentChange(String(Math.max(0, parseInt(absent, 10) - 1)))}><Minus className="h-4 w-4"/></Button>
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-r-none" onClick={() => handleAbsentChange(String(parseInt(absent, 10) - 1))}><Minus className="h-4 w-4"/></Button>
                         <Input id="absent-days" type="number" value={absent} onChange={e => handleAbsentChange(e.target.value)} required className="text-center rounded-none"/>
-                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-l-none" onClick={() => handleAbsentChange(String(Math.min(FIXED_WORKING_DAYS, parseInt(absent, 10) + 1)))}><Plus className="h-4 w-4"/></Button>
+                        <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-l-none" onClick={() => handleAbsentChange(String(parseInt(absent, 10) + 1))}><Plus className="h-4 w-4"/></Button>
                     </div>
                 </div>
                  <div className="space-y-1">
