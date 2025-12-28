@@ -844,6 +844,97 @@ export default function PayrollPage() {
           selectedDate={selectedDate}
         />
       )}
+      {employeeToIncrement && (
+        <IncrementSalaryDialog
+          isOpen={!!employeeToIncrement}
+          onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
+          employee={employeeToIncrement}
+          onSalaryIncremented={fetchData}
+        />
+      )}
+      {leaveToManage && currentUser && (
+        <ManageLeaveDialog
+            isOpen={!!leaveToManage}
+            onOpenChange={(open) => !open && setLeaveToManage(null)}
+            employee={leaveToManage}
+            currentUser={currentUser}
+            onLeaveUpdated={fetchData}
+        />
+      )}
+      {historyToView && (
+        <Sheet open={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)}>
+          <SheetContent className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>History for {historyToView.name}</SheetTitle>
+              <SheetDescription>View salary increment and leave history.</SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="h-[calc(100vh-8rem)] py-4">
+              <div className="space-y-6">
+                <div>
+                  <h4 className="font-semibold text-md mb-2">Salary History</h4>
+                  {historyToView.salaryHistory && historyToView.salaryHistory.length > 0 ? (
+                     historyToView.salaryHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((inc) => (
+                      <div key={inc.date} className="text-sm p-2 border-b group relative">
+                        <p>Increment on <span className="font-medium">{format(new Date(inc.date), 'd MMM, yyyy')}</span></p>
+                        <p className="text-xs text-muted-foreground">
+                          From {formatCurrency(inc.previousSalary)} to {formatCurrency(inc.newSalary)} (+{formatCurrency(inc.incrementAmount)})
+                        </p>
+                         <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                            onClick={() => setIncrementToDelete({ employeeId: historyToView.id, increment: inc })}
+                        >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No salary history.</p>
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-semibold text-md mb-2">Leave History</h4>
+                   {historyToView.leaveHistory && historyToView.leaveHistory.length > 0 ? (
+                     historyToView.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(leave => (
+                      <div key={leave.id} className="text-sm p-2 border-b">
+                        <p>{leave.days} day(s) on <span className="font-medium">{format(new Date(leave.date), 'd MMM, yyyy')}</span></p>
+                        <p className="text-xs text-muted-foreground">Reason: {leave.reason}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No leave history.</p>
+                  )}
+                </div>
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
+      )}
+      
+       {incrementToDelete && (
+          <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                          <AlertTriangle className="h-6 w-6 text-destructive" />
+                          Are you sure?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                          This will permanently delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'MMMM yyyy')}</span>. The employee's salary will revert to its previous value. This action cannot be undone.
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingIncrement}>
+                          {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Reverting...</> : "Yes, Delete Increment"}
+                      </AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
+      )}
     </div>
   );
 }
+
+    
