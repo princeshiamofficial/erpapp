@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -44,6 +43,8 @@ import Image from 'next/image';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
@@ -233,13 +234,13 @@ export default function PayrollPage() {
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-      const dailySalary = effectiveSalary / 30;
-      const salaryForDaysWorked = dailySalary * presentDays;
-
-      const automaticFine = Math.floor(lateDays / 3) * dailySalary;
+      const perDaySalaryForFine = effectiveSalary / 30; // Always divide by 30 for fine calculation
+      const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
+      
+      const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
+      const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
       
       const providentFund = effectiveSalary * 0.07;
-      const trainingFee = 0;
       
       const payableAmount = salaryForDaysWorked - automaticFine - providentFund;
 
@@ -251,9 +252,9 @@ export default function PayrollPage() {
         providentFund,
         fine: automaticFine,
         incentive: 0,
-        payableAmount: payableAmount,
-        paymentStatus: 'Unpaid',
-        trainingFee,
+        payableAmount: Math.max(0, payableAmount), // Ensure payable amount is not negative
+        paymentStatus: 'Unpaid' as 'Paid' | 'Unpaid',
+        trainingFee: 0,
         advance: 0,
       };
     });
@@ -386,6 +387,13 @@ export default function PayrollPage() {
       value: i.toString(),
       label: format(new Date(0, i), 'MMMM'),
   })), []);
+  
+  const getInitials = (name: string): string => {
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+  };
 
   const employeeListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -430,7 +438,7 @@ export default function PayrollPage() {
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                       <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -441,11 +449,21 @@ export default function PayrollPage() {
                     </TableRow>
                   ))
                 ) : paginatedEmployees.length > 0 ? (
-                   paginatedEmployees.map((employee, index) => (
+                   paginatedEmployees.map((employee, index) => {
+                    const user = allUsers.find(u => u.id === employee.userId);
+                     return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
                           <TableCell>{employee.employeeId}</TableCell>
-                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
+                                    <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
+                                </Avatar>
+                                <span>{employee.name}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{employee.mobileNo}</TableCell>
                           <TableCell>{format(new Date(employee.dob), 'yyyy-MM-dd')}</TableCell>
@@ -485,10 +503,10 @@ export default function PayrollPage() {
                               </DropdownMenu>
                           </TableCell>
                       </TableRow>
-                   ))
+                   )})
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center h-48 text-gray-500">
+                    <TableCell colSpan={11} className="text-center h-48 text-gray-500">
                       <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                        No employees found.
                     </TableCell>
@@ -628,7 +646,7 @@ export default function PayrollPage() {
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -641,9 +659,19 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data) => (
+                salarySheetCalculatedData.map((data) => {
+                    const user = allUsers.find(u => u.id === data.userId);
+                    return (
                     <TableRow key={data.id}>
-                        <TableCell className="font-medium">{data.name}</TableCell>
+                        <TableCell className="font-medium">
+                           <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={user?.avatarUrl || undefined} alt={data.name} />
+                                    <AvatarFallback>{getInitials(data.name)}</AvatarFallback>
+                                </Avatar>
+                                <span>{data.name}</span>
+                            </div>
+                        </TableCell>
                         <TableCell>{data.presentDays}</TableCell>
                         <TableCell>{data.absentDays}</TableCell>
                         <TableCell>{data.lateDays}</TableCell>
@@ -670,7 +698,8 @@ export default function PayrollPage() {
                           </Button>
                         </TableCell>
                     </TableRow>
-                  ))
+                    )
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={10} className="h-48 text-center text-gray-500">
@@ -691,66 +720,6 @@ export default function PayrollPage() {
     </Card>
   );
   
-  const attendeesReportContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Filter by date..."
-                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                type="date"
-                value={attendanceDateFilter}
-                onChange={(e) => setAttendanceDateFilter(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>In Time</TableHead>
-                <TableHead>Out Time</TableHead>
-                <TableHead>Hours Worked</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
-                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                    No attendance data recorded for the selected period.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
@@ -827,7 +796,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6 bg-transparent">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -855,6 +824,81 @@ export default function PayrollPage() {
           weekendDays={weekendDays}
         />
       )}
+      {employeeToIncrement && (
+         <IncrementSalaryDialog
+            isOpen={!!employeeToIncrement}
+            onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
+            employee={employeeToIncrement}
+            onSalaryIncremented={fetchData}
+         />
+      )}
+      {leaveToManage && currentUser && (
+        <ManageLeaveDialog
+            isOpen={!!leaveToManage}
+            onOpenChange={(open) => !open && setLeaveToManage(null)}
+            employee={leaveToManage}
+            currentUser={currentUser}
+            onLeaveUpdated={fetchData}
+        />
+      )}
+      {historyToView && (
+        <Sheet open={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)}>
+            <SheetContent className="sm:max-w-xl">
+                <SheetHeader>
+                    <SheetTitle>History for {historyToView.name}</SheetTitle>
+                    <SheetDescription>View salary increment and leave history.</SheetDescription>
+                </SheetHeader>
+                <div className="py-4 space-y-6">
+                    <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary"/>Salary History</h4>
+                        <ScrollArea className="h-48 border rounded-md p-2">
+                           {historyToView.salaryHistory && historyToView.salaryHistory.length > 0 ? (
+                            historyToView.salaryHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((inc, i) => (
+                               <div key={i} className="text-sm p-1.5 border-b last:border-b-0" onDoubleClick={() => setIncrementToDelete({ employeeId: historyToView.id, increment: inc })}>
+                                   <p>Effective <span className="font-semibold">{format(new Date(inc.date), 'd MMM, yyyy')}</span>: Salary changed to <span className="font-semibold">{formatCurrency(inc.newSalary)}</span>.</p>
+                                   <p className="text-xs text-muted-foreground">Previous: {formatCurrency(inc.previousSalary)} | Increment: {formatCurrency(inc.incrementAmount)}</p>
+                               </div>
+                            ))
+                           ) : <p className="text-sm text-muted-foreground text-center py-10">No salary history.</p>}
+                        </ScrollArea>
+                    </div>
+                     <div>
+                        <h4 className="font-semibold mb-2 flex items-center gap-2"><Calendar className="h-5 w-5 text-primary"/>Leave History</h4>
+                        <ScrollArea className="h-48 border rounded-md p-2">
+                            {historyToView.leaveHistory && historyToView.leaveHistory.length > 0 ? (
+                                historyToView.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(leave => (
+                                    <div key={leave.id} className="text-sm p-1.5 border-b last:border-b-0">
+                                        <p><span className="font-semibold">{leave.days} day(s)</span> leave on <span className="font-semibold">{format(new Date(leave.date), 'd MMM, yyyy')}</span>.</p>
+                                        <p className="text-xs text-muted-foreground italic">Reason: {leave.reason}</p>
+                                    </div>
+                                ))
+                            ) : <p className="text-sm text-muted-foreground text-center py-10">No leave history.</p>}
+                        </ScrollArea>
+                    </div>
+                </div>
+            </SheetContent>
+        </Sheet>
+      )}
+      {incrementToDelete && (
+          <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive"/>Revert Salary Increment?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Are you sure you want to delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span>? This will revert the salary and cannot be undone.
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleConfirmDeleteIncrement} disabled={isDeletingIncrement} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        {isDeletingIncrement ? <><Loader2 className="h-4 w-4 animate-spin mr-2"/>Reverting...</> : "Yes, Revert"}
+                      </AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
+      )}
     </div>
   );
 }
+
+    
