@@ -474,11 +474,11 @@ export default function PayrollPage() {
                   ))
                 ) : paginatedEmployees.length > 0 ? (
                    paginatedEmployees.map((employee, index) => {
-                    const user = allUsers.find(u => u.id === employee.userId);
+                    const user = allUsers.find(u => u.id === (employee as Employee).userId);
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
+                          <TableCell>{(employee as Employee).nationalId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
@@ -488,12 +488,12 @@ export default function PayrollPage() {
                                 <span>{employee.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{employee.designation}</TableCell>
-                          <TableCell>{employee.mobileNo}</TableCell>
-                          <TableCell>{format(new Date(employee.dob), 'yyyy-MM-dd')}</TableCell>
-                          <TableCell className="font-medium text-gray-800">{formatCurrency(employee.salary)}</TableCell>
-                          <TableCell>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</TableCell>
-                          <TableCell><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></TableCell>
+                          <TableCell>{(employee as Employee).designation}</TableCell>
+                          <TableCell>{(employee as Employee).mobileNo}</TableCell>
+                          <TableCell>{format(new Date((employee as Employee).dob), 'yyyy-MM-dd')}</TableCell>
+                          <TableCell className="font-medium text-gray-800">{formatCurrency((employee as Employee).salary)}</TableCell>
+                          <TableCell>{format(new Date((employee as Employee).joiningDate), 'yyyy-MM-dd')}</TableCell>
+                          <TableCell><Badge className={cn((employee as Employee).status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{(employee as Employee).status}</Badge></TableCell>
                           <TableCell className="text-center">
                                <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -503,23 +503,23 @@ export default function PayrollPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem className="cursor-pointer" onSelect={() => setHistoryToView(employee)}>
+                                  <DropdownMenuItem className="cursor-pointer" onSelect={() => setHistoryToView(employee as Employee)}>
                                     <Eye className="mr-2 h-4 w-4" />
                                     <span>View</span>
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => setEmployeeToEdit(employee)} className="cursor-pointer">
+                                  <DropdownMenuItem onSelect={() => setEmployeeToEdit(employee as Employee)} className="cursor-pointer">
                                     <Pencil className="mr-2 h-4 w-4" />
                                     <span>Edit</span>
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => setEmployeeToIncrement(employee)} className="cursor-pointer">
+                                  <DropdownMenuItem onSelect={() => setEmployeeToIncrement(employee as Employee)} className="cursor-pointer">
                                     <TrendingUp className="mr-2 h-4 w-4"/>
                                     <span>Increment Salary</span>
                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onSelect={() => setLeaveToManage(employee)} className="cursor-pointer">
+                                   <DropdownMenuItem onSelect={() => setLeaveToManage(employee as Employee)} className="cursor-pointer">
                                     <Calendar className="mr-2 h-4 w-4" />
                                     <span>Manage Leave</span>
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => setEmployeeToDelete(employee)} className="cursor-pointer text-destructive focus:text-destructive">
+                                  <DropdownMenuItem onSelect={() => setEmployeeToDelete(employee as Employee)} className="cursor-pointer text-destructive focus:text-destructive">
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Delete</span>
                                   </DropdownMenuItem>
@@ -595,7 +595,7 @@ export default function PayrollPage() {
                             <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
                             <span className="font-medium text-gray-800">{employee.name}</span>
                         </div>
-                        <span>{employee.designation}</span>
+                        <span>{(employee as Employee).designation}</span>
                         <span className="text-center font-medium">120</span> {/* Placeholder Data */}
                         <div className="flex items-center gap-2">
                            <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
@@ -734,8 +734,8 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
-                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
+                    <TableCell colSpan={9} className="text-right font-bold">Total Unpaid</TableCell>
+                    <TableCell className="font-bold text-right">{formatCurrency(totalUnpaidAmount)}</TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
@@ -946,3 +946,4 @@ export default function PayrollPage() {
     </div>
   );
 }
+
