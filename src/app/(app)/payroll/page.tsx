@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -66,7 +66,7 @@ export default function PayrollPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState("salary_sheet");
+  const [activeTab, setActiveTab] = useState("summary");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -628,76 +628,38 @@ export default function PayrollPage() {
     </Card>
   );
   
-  const attendeesReportContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Filter by date..."
-                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                type="date"
-                value={attendanceDateFilter}
-                onChange={(e) => setAttendanceDateFilter(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>In Time</TableHead>
-                <TableHead>Out Time</TableHead>
-                <TableHead>Hours Worked</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
-                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                    No attendance data recorded for the selected period.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+  const summaryContent = (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="shadow-md">
+            <CardHeader><CardTitle>Total Payable</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-bold">{formatCurrency(totalPayableAmount)}</p></CardContent>
+        </Card>
+        <Card className="shadow-md">
+            <CardHeader><CardTitle>Total Unpaid</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-bold text-destructive">{formatCurrency(totalUnpaidAmount)}</p></CardContent>
+        </Card>
+        <Card className="shadow-md">
+            <CardHeader><CardTitle>Total Fines & Advances</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-bold">{formatCurrency(totalFineAmount)}</p></CardContent>
+        </Card>
+        <Card className="shadow-md">
+            <CardHeader><CardTitle>Total Provident Fund</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-bold">{formatCurrency(totalProvidentFund)}</p></CardContent>
+        </Card>
+      </div>
   );
+
 
   const renderActiveTab = () => {
     switch (activeTab) {
+      case 'summary':
+        return summaryContent;
       case 'salary_sheet':
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      case 'attendees_report':
-        return attendeesReportContent;
       default:
-        return employeeListContent;
+        return summaryContent;
     }
   };
 
@@ -713,9 +675,9 @@ export default function PayrollPage() {
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
+          <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
-          <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
@@ -827,3 +789,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
