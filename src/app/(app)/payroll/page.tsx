@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,9 +14,9 @@ import {
   PaginationContent,
   PaginationItem,
   PaginationLink,
-  PaginationNext,
+  PaginationEllipsis,
   PaginationPrevious,
-  PaginationEllipsis
+  PaginationNext
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt } from 'lucide-react';
@@ -468,7 +469,7 @@ export default function PayrollPage() {
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.employeeId}</TableCell>
+                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
