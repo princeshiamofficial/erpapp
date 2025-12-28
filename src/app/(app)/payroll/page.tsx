@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -18,7 +19,7 @@ import {
   PaginationNext
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt, Landmark as ProvidentFundIcon, AlertCircle as FineIcon } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -627,25 +628,53 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-  
+
   const summaryContent = (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="shadow-md">
-            <CardHeader><CardTitle>Total Payable</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{formatCurrency(totalPayableAmount)}</p></CardContent>
-        </Card>
-        <Card className="shadow-md">
-            <CardHeader><CardTitle>Total Unpaid</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-bold text-destructive">{formatCurrency(totalUnpaidAmount)}</p></CardContent>
-        </Card>
-        <Card className="shadow-md">
-            <CardHeader><CardTitle>Total Fines & Advances</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{formatCurrency(totalFineAmount)}</p></CardContent>
-        </Card>
-        <Card className="shadow-md">
-            <CardHeader><CardTitle>Total Provident Fund</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{formatCurrency(totalProvidentFund)}</p></CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-700/20">
+                <Wallet className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Payable</p>
+                <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalPayableAmount)}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-red-100 dark:bg-red-700/20">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Unpaid</p>
+                <p className="text-2xl font-bold text-destructive font-mono">{formatCurrency(totalUnpaidAmount)}</p>
+              </div>
+            </div>
+          </Card>
+           <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-700/20">
+                <FineIcon className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Fines & Advances</p>
+                <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalFineAmount)}</p>
+              </div>
+            </div>
+          </Card>
+           <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 rounded-full bg-green-100 dark:bg-green-700/20">
+                <ProvidentFundIcon className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Provident Fund</p>
+                <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalProvidentFund)}</p>
+              </div>
+            </div>
+          </Card>
       </div>
   );
 
@@ -695,6 +724,7 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
+          existingPayslip={existingPayslipData}
         />
       )}
        {employeeToIncrement && (
@@ -778,9 +808,9 @@ export default function PayrollPage() {
                       </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                      <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingIncrement}>
-                          {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Reverting...</> : "Yes, Delete Increment"}
+                      <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeleting}>
+                          {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Reverting...</> : "Yes, Delete Increment"}
                       </AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
