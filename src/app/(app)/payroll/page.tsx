@@ -66,7 +66,7 @@ export default function PayrollPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState("summary");
+  const [activeTab, setActiveTab] = useState("salary_sheet");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -652,14 +652,14 @@ export default function PayrollPage() {
 
   const renderActiveTab = () => {
     switch (activeTab) {
-      case 'summary':
-        return summaryContent;
       case 'salary_sheet':
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      default:
+      case 'summary':
         return summaryContent;
+      default:
+        return salarySheetContent;
     }
   };
 
@@ -675,9 +675,9 @@ export default function PayrollPage() {
     <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
-          <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
+          <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
@@ -789,5 +789,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
