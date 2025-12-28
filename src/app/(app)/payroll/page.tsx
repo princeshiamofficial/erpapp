@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -24,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isBefore } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -181,7 +182,16 @@ export default function PayrollPage() {
     }
 
     if (activeTab === 'salary_sheet' || activeTab === 'summary') {
-      // No change needed here, we want all employees for the list, and will filter for salary sheet display
+      // Filter for salary sheet: only include employees who joined on or before the selected month
+      const endOfSelectedMonth = endOfMonth(selectedDate);
+      results = results.filter(employee => {
+        try {
+          const joiningDate = parseISO(employee.joiningDate);
+          return !isAfter(joiningDate, endOfSelectedMonth);
+        } catch (e) {
+          return false;
+        }
+      });
     }
 
     if (searchTerm) {
@@ -818,7 +828,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-transparent">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -936,5 +946,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
