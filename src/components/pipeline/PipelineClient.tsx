@@ -157,7 +157,7 @@ export function PipelineClient() {
   }, [fetchLeadsAndUsers]);
 
   useEffect(() => {
-    const crms = allUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN');
+    const crms = allUsers.filter(u => u.role === 'CRM');
     setAllCrmUsers(crms);
   }, [allUsers]);
 
