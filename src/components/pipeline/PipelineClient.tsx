@@ -263,12 +263,12 @@ export function PipelineClient() {
   
   const filteredCrmUsersForDropdown = useMemo(() => {
     const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
-    const baseUsers = [allCrmsOption, ...sourceCrmOptions];
+    const baseUsers = [allCrmsOption, ...allCrmUsers.filter(u => !u.isBanned)];
     if (!crmSearchQuery) return baseUsers;
     return baseUsers.filter(user =>
       user.name.toLowerCase().includes(crmSearchQuery.toLowerCase())
     );
-  }, [sourceCrmOptions, crmSearchQuery]);
+  }, [allCrmUsers, crmSearchQuery]);
 
   const leadsByCategory = useMemo(() => {
     const grouped: Record<LeadCategory, Lead[]> = {
