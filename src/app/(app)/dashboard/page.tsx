@@ -243,6 +243,10 @@ export default function DashboardPage() {
   if (!currentUser) {
     return null; // Redirect is handled by the useEffect above
   }
+  
+  if (currentUser.role === 'VENDOR') {
+    return <div />; // Render a blank page for vendors
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -849,6 +853,7 @@ function DashboardContent() {
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
+        if (currentUser?.role === 'ADMIN') return false; // Hide for ADMIN role
         if (!card.roles) return true;
         return card.roles.includes(currentUser?.role || '');
     });
@@ -939,7 +944,7 @@ function DashboardContent() {
   
   const canSeeAdminCharts = useMemo(() => {
     if (!currentUser) return false;
-    return ['SYSTEM_ADMIN'].includes(currentUser.role);
+    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
   const recentFeedback = useMemo(() => {
@@ -1072,20 +1077,23 @@ function DashboardContent() {
               </Card>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
-              {summaryCardData.map((card) => (
-                <SummaryCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                  icon={card.icon}
-                  iconColorClass={card.iconColorClass}
-                  circleBgClass={card.circleBgClass}
-                  isLoading={isLoadingContent}
-                  currentUser={currentUser}
-                />
-              ))}
-            </div>
+            {currentUser?.role !== 'ADMIN' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
+                {summaryCardData.map((card) => (
+                  <SummaryCard
+                    key={card.title}
+                    title={card.title}
+                    value={card.value}
+                    icon={card.icon}
+                    iconColorClass={card.iconColorClass}
+                    circleBgClass={card.circleBgClass}
+                    isLoading={isLoadingContent}
+                    currentUser={currentUser}
+                  />
+                ))}
+              </div>
+            )}
+
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
               <Card className="shadow-xl bg-card lg:col-span-3 rounded-lg">
@@ -1290,7 +1298,9 @@ function DashboardContent() {
               allCrmUsers={allCrmUsers}
             />
           )}
-          <OrderAnalysisClient allOrders={allOrders} />
+          {canSeeAdminCharts && (
+            <OrderAnalysisClient allOrders={allOrders} />
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-6 mt-6 print:hidden lg:grid-cols-2">
@@ -1515,4 +1525,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
