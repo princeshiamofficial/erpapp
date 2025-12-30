@@ -383,8 +383,8 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <div className="h-full flex flex-col">
-        <div className="sticky top-0 z-20 bg-background pt-4 pb-2">
+      <>
+        <div className="sticky top-0 z-20 bg-transparent pt-4 pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
               <Package className="h-5 w-5 text-primary"/>
@@ -397,7 +397,7 @@ export default function StockManagementPage() {
                         placeholder={`Search products...`}
                         value={modelSearchTerm}
                         onChange={(e) => setModelSearchTerm(e.target.value)}
-                        className="pl-9 bg-background/50 h-9"
+                        className="pl-9 bg-black text-white h-9"
                     />
                 </div>
             </div>
@@ -474,7 +474,7 @@ export default function StockManagementPage() {
                 </div>
             )}
         </div>
-      </div>
+      </>
     );
     
     const soldHistoryContent = (
@@ -563,10 +563,11 @@ export default function StockManagementPage() {
                             <TabsTrigger value="stock">Stock</TabsTrigger>
                             <TabsTrigger value="sold_history">Sold History</TabsTrigger>
                         </TabsList>
+                        
                         <TabsContent value="stock" className="mt-4 flex-1 flex flex-col min-h-0">
-                             <div className="flex-1 overflow-y-auto custom-scrollbar -m-4">
-                               {stockContent}
-                             </div>
+                           <div className="flex-1 overflow-y-auto custom-scrollbar -m-4">
+                             {stockContent}
+                           </div>
                         </TabsContent>
                         <TabsContent value="sold_history" className="mt-4">
                             {soldHistoryContent}
@@ -659,7 +660,9 @@ export default function StockManagementPage() {
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle>
+                             <DialogTitle>
+                                Are you absolutely sure?
+                             </DialogTitle>
                             <AlertDialogDescription>This action cannot be undone. This will permanently delete the product "<span className="font-semibold">{itemToDelete.name}</span>".</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -689,3 +692,5 @@ export default function StockManagementPage() {
         </>
     );
 }
+
+```
