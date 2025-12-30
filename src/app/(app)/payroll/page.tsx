@@ -588,7 +588,9 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(data.providentFund)}</TableCell>
                         <TableCell>{formatCurrency(data.fine)}</TableCell>
                         <TableCell>{formatCurrency(data.incentive)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
+                        <TableCell className="font-semibold">
+                          <spoiler-span>{formatCurrency(data.payableAmount)}</spoiler-span>
+                        </TableCell>
                         <TableCell>
                           <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                         </TableCell>
@@ -820,5 +822,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
