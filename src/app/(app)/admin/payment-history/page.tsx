@@ -37,6 +37,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 
 
 const ITEMS_PER_PAGE = 25;
@@ -63,6 +65,9 @@ type PaymentHistoryEntry = BillReport & { orderId?: string };
 
 export default function PaymentHistoryPage() {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const router = useRouter();
+
   const [allPayments, setAllPayments] = useState<PaymentHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,8 +98,13 @@ export default function PaymentHistoryPage() {
   }, [toast]);
 
   useEffect(() => {
+    if (!currentUser) return;
+    if (currentUser.role !== 'SYSTEM_ADMIN') {
+        router.replace('/dashboard');
+        return;
+    }
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, currentUser, router]);
 
   const filteredAndSortedPayments = useMemo(() => {
     let results = [...allPayments];
@@ -275,6 +285,18 @@ export default function PaymentHistoryPage() {
       </TableRow>
     );
   };
+
+  if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
+    return (
+        <div className="flex h-[calc(100vh-10rem)] w-full items-center justify-center text-center">
+            <div>
+                <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
+                <h2 className="mt-4 text-xl font-semibold">Access Denied</h2>
+                <p className="mt-2 text-muted-foreground">You must be a System Administrator to view this page.</p>
+            </div>
+        </div>
+    );
+  }
 
 
   return (
