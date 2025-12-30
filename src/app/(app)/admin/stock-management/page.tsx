@@ -382,24 +382,7 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
-          <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary"/>
-              Products
-            </h2>
-          <div className="flex items-center gap-2">
-              <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                      placeholder={`Search products...`}
-                      value={modelSearchTerm}
-                      onChange={(e) => setModelSearchTerm(e.target.value)}
-                      className="pl-9 bg-background/50 h-9"
-                  />
-              </div>
-          </div>
-        </div>
+      <>
         <div className="p-0">
             {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -471,7 +454,7 @@ export default function StockManagementPage() {
                 </div>
             )}
         </div>
-      </div>
+      </>
     );
     
     const soldHistoryContent = (
@@ -553,6 +536,27 @@ export default function StockManagementPage() {
                         </CardContent>
                     </Card>
                 </div>
+
+                <div className="sticky top-[150px] z-30 bg-background pt-4 pb-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2 p-4 bg-card rounded-lg shadow-md border">
+                    <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
+                      <Package className="h-5 w-5 text-primary"/>
+                      Products
+                    </h2>
+                    <div className="flex items-center gap-2">
+                        <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={`Search products...`}
+                                value={modelSearchTerm}
+                                onChange={(e) => setModelSearchTerm(e.target.value)}
+                                className="pl-9 bg-background/50 h-9"
+                            />
+                        </div>
+                    </div>
+                  </div>
+                </div>
+
                 
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList>
@@ -676,4 +680,5 @@ export default function StockManagementPage() {
             </Dialog>
         </>
     );
-}
+
+    
