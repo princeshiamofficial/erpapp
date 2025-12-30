@@ -413,8 +413,8 @@ export default function StockManagementPage() {
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
             {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
                 </div>
             ) : filteredModels.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground">
@@ -423,11 +423,11 @@ export default function StockManagementPage() {
                     <p className="text-sm">{modelSearchTerm ? `No products match "${modelSearchTerm}".` : "Add a product to get started."}</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {filteredModels.map(item => {
                         const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
                         return (
-                            <Card key={item.id} className="overflow-hidden shadow-sm hover:shadow-lg transition-shadow group">
+                            <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
                                 <CardContent className="p-0">
                                     <div className="relative">
                                         <NextImage
@@ -437,10 +437,10 @@ export default function StockManagementPage() {
                                             height={300}
                                             className="object-cover w-full h-40 bg-muted"
                                         />
-                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 border-none text-white">
+                                                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 border-2 border-white/20 text-white">
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -454,24 +454,24 @@ export default function StockManagementPage() {
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
+                                         <div className={cn(
+                                            "absolute bottom-2 right-2 text-xs font-bold flex items-center gap-1.5 p-1.5 rounded-full backdrop-blur-sm",
+                                            (item.stockCount ?? 0) > 0 ? "bg-green-500/20 text-green-100 border border-green-400/50" : "bg-red-500/20 text-red-100 border border-red-400/50"
+                                        )}>
+                                            <Box className="h-4 w-4" />
+                                            Stock: {item.stockCount ?? 0}
+                                        </div>
                                     </div>
-                                    <div className="p-3 space-y-2">
-                                        <h4 className="font-semibold text-sm truncate" title={item.name}>{item.name}</h4>
-                                        <div className="flex justify-between items-center text-xs text-muted-foreground">
-                                            <span>Buy: <span className="font-mono text-foreground">{formatCurrency(item.buyingPrice)}</span></span>
-                                            <span>Sell: <span className="font-mono text-foreground">{formatCurrency(item.sellingPrice)}</span></span>
+                                    <div className="p-4 space-y-3">
+                                        <h4 className="font-bold text-md truncate text-foreground" title={item.name}>{item.name}</h4>
+                                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                            <span>Buy: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.buyingPrice)}</span></span>
+                                            <span>Sell: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.sellingPrice)}</span></span>
                                         </div>
                                         <div className="flex justify-between items-center pt-2 border-t border-dashed">
-                                            <div className={cn(
-                                                "text-sm font-bold flex items-center gap-1.5",
-                                                (item.stockCount ?? 0) > 0 ? "text-green-600" : "text-destructive"
-                                            )}>
-                                                <Box className="h-4 w-4" />
-                                                Stock: {item.stockCount ?? 0}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                                <ShoppingCart className="h-4 w-4" />
-                                                Sold: {quantitySold}
+                                            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                <ShoppingCart className="h-4 w-4 text-primary" />
+                                                <span className="font-semibold">{quantitySold}</span> Sold
                                             </div>
                                         </div>
                                     </div>
