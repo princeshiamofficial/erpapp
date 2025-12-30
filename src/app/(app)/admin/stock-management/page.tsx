@@ -397,7 +397,7 @@ export default function StockManagementPage() {
                         placeholder="Search products..."
                         value={modelSearchTerm}
                         onChange={(e) => setModelSearchTerm(e.target.value)}
-                        className="pl-9 bg-black text-white h-9"
+                        className="pl-9 bg-background/50 h-9"
                     />
                 </div>
             </div>
@@ -658,7 +658,8 @@ export default function StockManagementPage() {
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                             <DialogTitle>
+                             <DialogTitle className="flex items-center gap-2">
+                                <AlertTriangle className="h-6 w-6 text-destructive" />
                                 Are you absolutely sure?
                              </DialogTitle>
                             <AlertDialogDescription>This action cannot be undone. This will permanently delete the product "<span className="font-semibold">{itemToDelete.name}</span>".</AlertDialogDescription>
@@ -674,6 +675,11 @@ export default function StockManagementPage() {
             <Dialog open={!!imageToView} onOpenChange={() => setImageToView(null)}>
               <DialogContent className="max-w-3xl p-2">
                 {imageToView && (
+                    <DialogHeader>
+                      <DialogTitle className="sr-only">Product Image View</DialogTitle>
+                    </DialogHeader>
+                )}
+                {imageToView && (
                   <NextImage
                     src={imageToView}
                     alt="Product full view"
@@ -687,3 +693,5 @@ export default function StockManagementPage() {
         </>
     );
 }
+
+    
