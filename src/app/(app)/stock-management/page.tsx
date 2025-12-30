@@ -35,10 +35,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import type { ServiceModelItem, TrackingLink, SoldHistoryEntry } from '@/types';
+import type { ServiceModelItem, TrackingLink, SoldHistoryEntry, User } from '@/types';
 import { getStockItems } from '@/lib/stock-service'; 
 import { getSoldHistory, deleteSoldHistoryEntry } from '@/lib/sold-history-service';
-import { getOrders } from '@/lib/order-service'; // Import getOrders
+import { getOrders } from '@/lib/order-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -100,7 +100,7 @@ export default function StockManagementPage() {
     const [activeTab, setActiveTab] = useState("stock");
     const [stockItems, setStockItems] = useState<ServiceModelItem[]>([]);
     const [soldHistory, setSoldHistory] = useState<SoldHistoryEntry[]>([]);
-    const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); // New state for orders
+    const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); 
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -132,11 +132,11 @@ export default function StockManagementPage() {
             const [fetchedItems, fetchedSoldHistory, fetchedOrders] = await Promise.all([
                 getStockItems(),
                 getSoldHistory(),
-                getOrders(), // Fetch orders
+                getOrders(), 
             ]);
             setStockItems(fetchedItems);
             setSoldHistory(fetchedSoldHistory);
-            setAllOrders(fetchedOrders); // Set orders state
+            setAllOrders(fetchedOrders); 
         } catch (error) {
             console.error("Error fetching stock data:", error);
             toast({ title: "Error", description: "Could not load stock data.", variant: "destructive" });
@@ -379,111 +379,98 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Package className="h-5 w-5 text-primary"/>Stock Items</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available products and their inventory.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder={`Search products...`}
-                        value={modelSearchTerm}
-                        onChange={(e) => setModelSearchTerm(e.target.value)}
-                        className="pl-9 bg-background/50 h-9"
-                    />
-                </div>
-            </div>
+      <div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary"/>
+              Stock Items
+            </h2>
           </div>
-        </CardHeader>
-        <CardContent className="p-0 max-h-[calc(100vh-450px)] overflow-y-auto">
-          <div className="overflow-x-auto">
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead className="w-12 pl-4">SL</TableHead>
-                          <TableHead className="min-w-[64px]">Image</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Buying Price</TableHead>
-                          <TableHead>Selling Price</TableHead>
-                          <TableHead className="text-center">Stock</TableHead>
-                          <TableHead className="text-center">Sold</TableHead>
-                          <TableHead className="pr-4 text-right">Actions</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                   {isLoading ? (
-                      [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-16 w-full rounded-md" /></TableCell></TableRow>)
-                    ) : filteredModels.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="p-6 text-center text-muted-foreground">
-                          <Package className="mx-auto h-10 w-10 opacity-50 mb-2" />
-                          No {modelSearchTerm ? `products found for "${modelSearchTerm}"` : `products found.`}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredModels.map((item, index) => {
+          <div className="flex items-center gap-2">
+              <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      placeholder={`Search products...`}
+                      value={modelSearchTerm}
+                      onChange={(e) => setModelSearchTerm(e.target.value)}
+                      className="pl-9 bg-background/50 h-9"
+                  />
+              </div>
+          </div>
+        </div>
+        <div className="p-0">
+            {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
+                </div>
+            ) : filteredModels.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground">
+                    <Package className="mx-auto h-12 w-12 opacity-50 mb-4" />
+                    <h3 className="text-lg font-semibold">No Products Found</h3>
+                    <p className="text-sm">{modelSearchTerm ? `No products match "${modelSearchTerm}".` : "Add a product to get started."}</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {filteredModels.map(item => {
                         const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
                         return (
-                        <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="pl-4 font-mono text-muted-foreground">{String(index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>
-                              <NextImage
-                                  src={item.imageUrl || `https://placehold.co/64x64.png`}
-                                  alt={item.name}
-                                  width={48}
-                                  height={48}
-                                  className="rounded-md object-cover bg-muted"
-                                  data-ai-hint="product photo"
-                                  unoptimized={!item.imageUrl?.startsWith('https://colorhutbd.xyz')}
-                              />
-                          </TableCell>
-                          <TableCell>
-                             <span className="font-medium text-foreground">{item.name}</span>
-                          </TableCell>
-                          <TableCell className="font-mono">{formatCurrency(item.buyingPrice)}</TableCell>
-                          <TableCell className="font-mono">{formatCurrency(item.sellingPrice)}</TableCell>
-                          <TableCell className="text-center">
-                                <span className={cn(
-                                    "text-sm font-semibold flex items-center justify-center gap-1 p-1 rounded-full",
-                                    item.stockCount !== undefined && item.stockCount > 0 ? "text-green-600" : "text-destructive"
-                                )}>
-                                    <Box className="h-4 w-4" />
-                                    {item.stockCount ?? 0}
-                                </span>
-                          </TableCell>
-                           <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mt-1">
-                                {quantitySold}
-                              </div>
-                          </TableCell>
-                          <TableCell className="pr-4 text-right">
-                             <div className="flex items-center justify-end gap-2">
-                              <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit item`} className="h-8 w-8">
-                                  <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => openDeleteDialog(item)} 
-                                  title={`Delete item`} 
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                              >
-                                  <Trash2 className="h-4 w-4" />
-                              </Button>
-                              </div>
-                          </TableCell>
-                        </TableRow>
-                      )})
-                    )}
-                  </TableBody>
-              </Table>
-          </div>
-        </CardContent>
-      </Card>
+                            <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
+                                <CardContent className="p-0">
+                                    <div className="relative">
+                                        <NextImage
+                                            src={item.imageUrl || `https://placehold.co/600x600/e2e8f0/e2e8f0`}
+                                            alt={item.name}
+                                            width={300}
+                                            height={300}
+                                            className="object-cover w-full h-40 bg-muted"
+                                        />
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 border-2 border-white/20 text-white">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => openEditDialog(item)} className="cursor-pointer">
+                                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => openDeleteDialog(item)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                         <div className={cn(
+                                            "absolute bottom-2 right-2 text-xs font-bold flex items-center gap-1.5 p-1.5 rounded-full backdrop-blur-sm",
+                                            (item.stockCount ?? 0) > 0 ? "bg-green-500/20 text-green-100 border border-green-400/50" : "bg-red-500/20 text-red-100 border border-red-400/50"
+                                        )}>
+                                            <Box className="h-4 w-4" />
+                                            Stock: {item.stockCount ?? 0}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 space-y-3">
+                                        <h4 className="font-bold text-md truncate text-foreground" title={item.name}>{item.name}</h4>
+                                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                            <span>Buy: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.buyingPrice)}</span></span>
+                                            <span>Sell: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.sellingPrice)}</span></span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-dashed">
+                                            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                <ShoppingCart className="h-4 w-4 text-primary" />
+                                                <span className="font-semibold">{quantitySold}</span> Sold
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+      </div>
     );
     
     const soldHistoryContent = (
@@ -547,7 +534,7 @@ export default function StockManagementPage() {
     return (
         <>
             <div className="p-4 sm:p-6 min-h-full space-y-6">
-                <Card className="shadow-lg rounded-xl">
+                <Card className="shadow-lg rounded-xl sticky top-24 z-30">
                     <CardContent className="p-2">
                         <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
                             <StatCard title="Active Product" value={activeProducts.toString()} unit="Products" icon={Package} iconBg="bg-green-500" />
