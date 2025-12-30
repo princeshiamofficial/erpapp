@@ -403,7 +403,7 @@ export default function StockManagementPage() {
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar -m-4 p-4">
+        <ScrollArea className="flex-1 -m-4 p-4 custom-scrollbar">
             {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
@@ -473,7 +473,7 @@ export default function StockManagementPage() {
                     })}
                 </div>
             )}
-        </div>
+        </ScrollArea>
       </div>
     );
     
@@ -673,9 +673,6 @@ export default function StockManagementPage() {
 
             <Dialog open={!!imageToView} onOpenChange={() => setImageToView(null)}>
               <DialogContent className="max-w-3xl p-2">
-                <DialogHeader>
-                  <DialogTitle className="sr-only">Product Image</DialogTitle>
-                </DialogHeader>
                 {imageToView && (
                   <NextImage
                     src={imageToView}
