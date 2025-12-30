@@ -383,7 +383,7 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <>
+      <div className="flex-1 flex flex-col min-h-0">
         <div className="sticky top-0 z-20 bg-transparent pt-4 pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
@@ -394,7 +394,7 @@ export default function StockManagementPage() {
                 <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder={`Search products...`}
+                        placeholder="Search products..."
                         value={modelSearchTerm}
                         onChange={(e) => setModelSearchTerm(e.target.value)}
                         className="pl-9 bg-black text-white h-9"
@@ -403,7 +403,7 @@ export default function StockManagementPage() {
             </div>
           </div>
         </div>
-        <div className="p-4 flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto custom-scrollbar -m-4 p-4">
             {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
@@ -474,7 +474,7 @@ export default function StockManagementPage() {
                 </div>
             )}
         </div>
-      </>
+      </div>
     );
     
     const soldHistoryContent = (
@@ -537,8 +537,8 @@ export default function StockManagementPage() {
 
     return (
         <>
-            <div className="h-screen flex flex-col p-4 sm:p-6">
-                <div className="sticky top-0 z-30 mb-6">
+            <div className="h-full flex flex-col p-4 sm:p-6 space-y-6">
+                <div className="sticky top-0 z-30">
                     <Card className="shadow-lg rounded-xl">
                         <CardContent className="p-2">
                             <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
@@ -565,11 +565,9 @@ export default function StockManagementPage() {
                         </TabsList>
                         
                         <TabsContent value="stock" className="mt-4 flex-1 flex flex-col min-h-0">
-                           <div className="flex-1 overflow-y-auto custom-scrollbar -m-4">
                              {stockContent}
-                           </div>
                         </TabsContent>
-                        <TabsContent value="sold_history" className="mt-4">
+                        <TabsContent value="sold_history" className="mt-4 flex-1">
                             {soldHistoryContent}
                         </TabsContent>
                     </Tabs>
@@ -692,5 +690,3 @@ export default function StockManagementPage() {
         </>
     );
 }
-
-```
