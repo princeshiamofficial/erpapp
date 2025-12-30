@@ -420,7 +420,7 @@ export default function StockManagementPage() {
                                 <CardContent className="p-0">
                                     <div className="relative cursor-pointer" onClick={() => item.imageUrl && setImageToView(item.imageUrl)}>
                                         <NextImage
-                                            src={item.imageUrl || `https://placehold.co/600x600/e2e8f0/e2e8f0`}
+                                            src={item.imageUrl || `https://colorhutbd.xyz/image/product-not-found.jpg`}
                                             alt={item.name}
                                             width={300}
                                             height={300}
@@ -634,7 +634,7 @@ export default function StockManagementPage() {
                             <div className="space-y-1">
                                 <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
                                 <div className="flex items-center gap-4 mt-1">
-                                    {imagePreviewUrl ? <NextImage src={imagePreviewUrl} alt="Product preview" width={80} height={80} className="rounded-md object-cover border bg-muted" unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')} onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`; (e.target as HTMLImageElement).alt = 'Error loading image'; }} /> : <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
+                                    {imagePreviewUrl ? <NextImage src={imagePreviewUrl} alt="Product preview" width={80} height={80} className="rounded-md object-cover border bg-muted" unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')} onError={(e) => { (e.target as HTMLImageElement).src = `https://colorhutbd.xyz/image/product-not-found.jpg`; (e.target as HTMLImageElement).alt = 'Error loading image'; }} /> : <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
                                     <div className="flex flex-col gap-2">
                                         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}><UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}</Button>
                                         {imagePreviewUrl && <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}><Trash2 className="mr-1 h-3 w-3" /> Remove Image</Button>}
