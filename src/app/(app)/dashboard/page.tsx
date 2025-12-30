@@ -309,7 +309,7 @@ function DashboardContent() {
   });
 
   const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [] } = queryData || {};
-  const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM'), [allUsers]);
+  const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
     if (!selectedDateRange?.from || !selectedDateRange?.to) return null;
