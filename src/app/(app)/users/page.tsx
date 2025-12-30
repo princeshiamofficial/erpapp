@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -355,14 +354,20 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button 
-            size="lg" 
-            onClick={() => setIsAddUserDialogOpen(true)} 
-            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10"
+          <AddUserDialog
+            onUserAdded={handleUserAdded}
+            currentUser={currentUser}
+            isOpen={isAddUserDialogOpen}
+            onOpenChange={setIsAddUserDialogOpen}
           >
-            <PlusCircle className="mr-2 h-5 w-5" />
-            Add New User
-          </Button>
+            <Button 
+              size="lg" 
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10"
+            >
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Add New User
+            </Button>
+          </AddUserDialog>
         </div>
       </div>
       
@@ -402,7 +407,8 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-6 w-[80px]">Avatar</TableHead>
+                  <TableHead className="pl-6 w-[50px]">SL</TableHead>
+                  <TableHead className="w-[80px]">Avatar</TableHead>
                   <TableHead className="min-w-[150px]">Name</TableHead>
                   <TableHead className="min-w-[200px]">Email</TableHead>
                   <TableHead className="min-w-[120px]">Role</TableHead>
@@ -415,7 +421,8 @@ export default function UsersPage() {
                 {isLoadingUsers ? (
                   [...Array(3)].map((_, i) => (
                     <TableRow key={`skel-user-${i}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                      <TableCell className="pl-6"><Skeleton className="h-5 w-8" /></TableCell>
+                      <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
@@ -427,9 +434,10 @@ export default function UsersPage() {
                     </TableRow>
                   ))
                 ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => (
+                  filteredUsers.map((user, index) => (
                   <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="pl-6">
+                    <TableCell className="pl-6 font-mono text-muted-foreground">{index + 1}</TableCell>
+                    <TableCell>
                       <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
                         <AvatarImage src={user.avatarUrl || undefined} alt={user.name} data-ai-hint="user face" />
                         <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
@@ -532,7 +540,7 @@ export default function UsersPage() {
                 ))
                  ) : (
                     <TableRow>
-                        <TableCell colSpan={showBanStatusColumn ? 7 : 6} className="text-center py-12 h-[300px]">
+                        <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
                              <svg
                                 width="64"
                                 height="64"
@@ -578,14 +586,14 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {currentUser && isAddUserDialogOpen && (
-        <AddUserDialog 
-          onUserAdded={handleUserAdded}
-          currentUser={currentUser}
-          isOpen={isAddUserDialogOpen}
-          onOpenChange={setIsAddUserDialogOpen}
-        />
-      )}
+      <AddUserDialog 
+        onUserAdded={handleUserAdded}
+        currentUser={currentUser}
+        isOpen={isAddUserDialogOpen}
+        onOpenChange={setIsAddUserDialogOpen}
+      >
+        {/* The AddUserDialog is triggered by a button in the header, not here directly */}
+      </AddUserDialog>
 
       {isEditInfoDialogOpen && userToEditInfo && (
         <EditUserInfoDialog
