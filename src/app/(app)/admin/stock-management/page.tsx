@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -51,6 +50,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseISO, format } from 'date-fns';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const AddEditSoldEntryDialog = dynamic(() => import('@/components/stock/AddEditSoldEntryDialog').then(mod => mod.AddEditSoldEntryDialog));
 
@@ -382,7 +382,7 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <>
+      <div className="flex flex-col h-full">
         <div className="sticky top-[150px] z-30 bg-background pt-4 pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2 p-4 bg-card rounded-lg shadow-md border">
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
@@ -402,78 +402,80 @@ export default function StockManagementPage() {
             </div>
           </div>
         </div>
-        <div className="p-0">
-            {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
-                </div>
-            ) : filteredModels.length === 0 ? (
-                <div className="py-16 text-center text-muted-foreground">
-                    <Package className="mx-auto h-12 w-12 opacity-50 mb-4" />
-                    <h3 className="text-lg font-semibold">No Products Found</h3>
-                    <p className="text-sm">{modelSearchTerm ? `No products match "${modelSearchTerm}".` : "Add a product to get started."}</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {filteredModels.map(item => {
-                        const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
-                        return (
-                            <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
-                                <CardContent className="p-0">
-                                    <div className="relative cursor-pointer" onClick={() => item.imageUrl && setImageToView(item.imageUrl)}>
-                                        <NextImage
-                                            src={item.imageUrl || `https://colorhutbd.xyz/image/product-not-found.jpg`}
-                                            alt={item.name}
-                                            width={300}
-                                            height={300}
-                                            className="object-cover w-full h-40 bg-muted"
-                                        />
-                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 border-2 border-white/20 text-white">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onSelect={() => openEditDialog(item)} className="cursor-pointer">
-                                                        <Edit className="mr-2 h-4 w-4" /> Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => openDeleteDialog(item)} className="cursor-pointer text-destructive focus:text-destructive">
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                         <div className={cn(
-                                            "absolute bottom-2 right-2 text-xs font-bold flex items-center gap-1.5 p-1.5 rounded-full backdrop-blur-sm",
-                                            (item.stockCount ?? 0) > 0 ? "bg-green-500/20 text-green-100 border border-green-400/50" : "bg-red-500/20 text-red-100 border border-red-400/50"
-                                        )}>
-                                            <Box className="h-4 w-4" />
-                                            Stock: {item.stockCount ?? 0}
-                                        </div>
-                                    </div>
-                                    <div className="p-4 space-y-3">
-                                        <h4 className="font-bold text-md truncate text-foreground" title={item.name}>{item.name}</h4>
-                                        <div className="flex justify-between items-center text-sm text-muted-foreground">
-                                            <span>Buy: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.buyingPrice)}</span></span>
-                                            <span>Sell: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.sellingPrice)}</span></span>
-                                        </div>
-                                        <div className="flex justify-between items-center pt-2 border-t border-dashed">
-                                            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-                                                <ShoppingCart className="h-4 w-4 text-primary" />
-                                                <span className="font-semibold">{quantitySold}</span> Sold
+        <ScrollArea className="flex-1">
+            <div className="p-0">
+                {isLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
+                    </div>
+                ) : filteredModels.length === 0 ? (
+                    <div className="py-16 text-center text-muted-foreground">
+                        <Package className="mx-auto h-12 w-12 opacity-50 mb-4" />
+                        <h3 className="text-lg font-semibold">No Products Found</h3>
+                        <p className="text-sm">{modelSearchTerm ? `No products match "${modelSearchTerm}".` : "Add a product to get started."}</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        {filteredModels.map(item => {
+                            const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
+                            return (
+                                <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
+                                    <CardContent className="p-0">
+                                        <div className="relative cursor-pointer" onClick={() => item.imageUrl && setImageToView(item.imageUrl)}>
+                                            <NextImage
+                                                src={item.imageUrl || `https://colorhutbd.xyz/image/product-not-found.jpg`}
+                                                alt={item.name}
+                                                width={300}
+                                                height={300}
+                                                className="object-cover w-full h-40 bg-muted"
+                                            />
+                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 border-2 border-white/20 text-white">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => openEditDialog(item)} className="cursor-pointer">
+                                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => openDeleteDialog(item)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                            <div className={cn(
+                                                "absolute bottom-2 right-2 text-xs font-bold flex items-center gap-1.5 p-1.5 rounded-full backdrop-blur-sm",
+                                                (item.stockCount ?? 0) > 0 ? "bg-green-500/20 text-green-100 border border-green-400/50" : "bg-red-500/20 text-red-100 border border-red-400/50"
+                                            )}>
+                                                <Box className="h-4 w-4" />
+                                                Stock: {item.stockCount ?? 0}
                                             </div>
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )
-                    })}
-                </div>
-            )}
-        </div>
-      </>
+                                        <div className="p-4 space-y-3">
+                                            <h4 className="font-bold text-md truncate text-foreground" title={item.name}>{item.name}</h4>
+                                            <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                                <span>Buy: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.buyingPrice)}</span></span>
+                                                <span>Sell: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.sellingPrice)}</span></span>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-2 border-t border-dashed">
+                                                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                    <ShoppingCart className="h-4 w-4 text-primary" />
+                                                    <span className="font-semibold">{quantitySold}</span> Sold
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
+        </ScrollArea>
+      </div>
     );
     
     const soldHistoryContent = (
@@ -536,7 +538,7 @@ export default function StockManagementPage() {
 
     return (
         <>
-            <div className="p-4 sm:p-6 min-h-full space-y-6">
+            <div className="p-4 sm:p-6 min-h-screen flex flex-col space-y-6">
                 <div className="sticky top-24 z-30">
                     <Card className="shadow-lg rounded-xl">
                         <CardContent className="p-2">
@@ -556,12 +558,12 @@ export default function StockManagementPage() {
                     </Card>
                 </div>
                 
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                     <TabsList>
                         <TabsTrigger value="stock">Stock</TabsTrigger>
                         <TabsTrigger value="sold_history">Sold History</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="stock" className="mt-4">
+                    <TabsContent value="stock" className="mt-4 flex-1">
                         {stockContent}
                     </TabsContent>
                     <TabsContent value="sold_history" className="mt-4">
