@@ -384,12 +384,10 @@ export default function StockManagementPage() {
     const stockContent = (
       <div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
-          <div>
-            <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
+          <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
               <Package className="h-5 w-5 text-primary"/>
-              Stock Items
+              Products
             </h2>
-          </div>
           <div className="flex items-center gap-2">
               <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -537,22 +535,24 @@ export default function StockManagementPage() {
     return (
         <>
             <div className="p-4 sm:p-6 min-h-full space-y-6">
-                <Card className="shadow-lg rounded-xl sticky top-24 z-30">
-                    <CardContent className="p-2">
-                        <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
-                            <StatCard title="Active Product" value={activeProducts.toString()} unit="Products" icon={Package} iconBg="bg-green-500" />
-                            <StatCard title="Total Inventory Value" value={formatCurrency(totalValue)} unit="BDT" icon={BarChart} iconBg="bg-blue-500" />
-                            <StatCard title="Winning Product" value={winningProduct} icon={Star} iconBg="bg-orange-400" />
-                            <StatCard title="Product Sold" value={totalSold.toLocaleString()} unit="Items" icon={ShoppingCart} iconBg="bg-purple-500"/>
-                            <div className="flex-1 p-4 flex items-center justify-center">
-                                <Button className="w-full h-12" onClick={openAddDialog}>
-                                    <PlusCircle className="mr-2 h-5 w-5" />
-                                    Add Products
-                                </Button>
+                <div className="sticky top-20 z-30">
+                    <Card className="shadow-lg rounded-xl">
+                        <CardContent className="p-2">
+                            <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
+                                <StatCard title="Active Product" value={activeProducts.toString()} unit="Products" icon={Package} iconBg="bg-green-500" />
+                                <StatCard title="Total Inventory Value" value={formatCurrency(totalValue)} unit="BDT" icon={BarChart} iconBg="bg-blue-500" />
+                                <StatCard title="Winning Product" value={winningProduct} icon={Star} iconBg="bg-orange-400" />
+                                <StatCard title="Product Sold" value={totalSold.toLocaleString()} unit="Items" icon={ShoppingCart} iconBg="bg-purple-500"/>
+                                <div className="flex-1 p-4 flex items-center justify-center">
+                                    <Button className="w-full h-12" onClick={openAddDialog}>
+                                        <PlusCircle className="mr-2 h-5 w-5" />
+                                        Add Products
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
                 
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                     <TabsList>
