@@ -395,7 +395,7 @@ export default function StockManagementPage() {
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Package className="h-5 w-5 text-primary"/>Stock Items</CardTitle>
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Package className="h-5 w-5 text-primary"/></CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available products and their inventory.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
