@@ -383,7 +383,7 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <div>
+      <div className="h-full flex flex-col">
         <div className="sticky top-0 z-20 bg-background pt-4 pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
@@ -403,7 +403,7 @@ export default function StockManagementPage() {
             </div>
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-4 flex-1 overflow-y-auto">
             {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
@@ -557,20 +557,22 @@ export default function StockManagementPage() {
                     </Card>
                 </div>
                 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                    <TabsList>
-                        <TabsTrigger value="stock">Stock</TabsTrigger>
-                        <TabsTrigger value="sold_history">Sold History</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="stock" className="mt-4 flex-1 flex flex-col min-h-0">
-                         <ScrollArea className="flex-1 -m-4">
-                           {stockContent}
-                         </ScrollArea>
-                    </TabsContent>
-                    <TabsContent value="sold_history" className="mt-4">
-                        {soldHistoryContent}
-                    </TabsContent>
-                </Tabs>
+                <div className="flex-1 flex flex-col min-h-0">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                        <TabsList>
+                            <TabsTrigger value="stock">Stock</TabsTrigger>
+                            <TabsTrigger value="sold_history">Sold History</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="stock" className="mt-4 flex-1 flex flex-col min-h-0">
+                             <div className="flex-1 overflow-y-auto custom-scrollbar -m-4">
+                               {stockContent}
+                             </div>
+                        </TabsContent>
+                        <TabsContent value="sold_history" className="mt-4">
+                            {soldHistoryContent}
+                        </TabsContent>
+                    </Tabs>
+                </div>
             </div>
                 
             <AddEditSoldEntryDialog
@@ -670,13 +672,18 @@ export default function StockManagementPage() {
 
             <Dialog open={!!imageToView} onOpenChange={() => setImageToView(null)}>
               <DialogContent className="max-w-3xl p-2">
-                <NextImage
-                  src={imageToView || ''}
-                  alt="Product full view"
-                  width={800}
-                  height={800}
-                  className="rounded-md object-contain w-full h-auto max-h-[80vh]"
-                />
+                <DialogHeader>
+                  <DialogTitle className="sr-only">Product Image</DialogTitle>
+                </DialogHeader>
+                {imageToView && (
+                  <NextImage
+                    src={imageToView}
+                    alt="Product full view"
+                    width={800}
+                    height={800}
+                    className="rounded-md object-contain w-full h-auto max-h-[80vh]"
+                  />
+                )}
               </DialogContent>
             </Dialog>
         </>
