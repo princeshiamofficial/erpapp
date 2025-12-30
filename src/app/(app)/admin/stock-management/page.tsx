@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -382,7 +383,7 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <>
+      <div>
         <div className="sticky top-0 z-20 bg-background pt-4 pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
@@ -473,7 +474,7 @@ export default function StockManagementPage() {
                 </div>
             )}
         </div>
-      </>
+      </div>
     );
     
     const soldHistoryContent = (
@@ -536,7 +537,7 @@ export default function StockManagementPage() {
 
     return (
         <>
-            <div className="p-4 sm:p-6 h-[calc(100vh-4.5rem)] flex flex-col">
+            <div className="h-screen flex flex-col p-4 sm:p-6">
                 <div className="sticky top-0 z-30 mb-6">
                     <Card className="shadow-lg rounded-xl">
                         <CardContent className="p-2">
@@ -556,7 +557,7 @@ export default function StockManagementPage() {
                     </Card>
                 </div>
                 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                     <TabsList>
                         <TabsTrigger value="stock">Stock</TabsTrigger>
                         <TabsTrigger value="sold_history">Sold History</TabsTrigger>
