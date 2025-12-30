@@ -829,6 +829,7 @@ function DashboardContent() {
     }
   }
 
+  const isCrm = useMemo(() => currentUser?.role === 'CRM', [currentUser]);
 
   const summaryCardDefinitions = useMemo(() => {
     return [
@@ -844,9 +845,7 @@ function DashboardContent() {
       { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
       { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
     ];
-  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid, invoiceCodPaid]);
-
-  const isCrm = useMemo(() => currentUser?.role === 'CRM', [currentUser]);
+  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid, invoiceCodPaid, isCrm]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
@@ -1516,3 +1515,4 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
