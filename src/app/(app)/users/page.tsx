@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
@@ -54,6 +55,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Banned'>('Active');
   
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
@@ -228,9 +230,17 @@ export default function UsersPage() {
   const filteredUsers = useMemo(() => {
     const roleOrder: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "CO", "DESIGNER_REPRESENTATIVE", "LR"];
     
-    let searchFiltered = usersToDisplay;
+    let filtered = usersToDisplay;
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      const isBannedFilter = statusFilter === 'Banned';
+      filtered = filtered.filter(user => (user.isBanned || false) === isBannedFilter);
+    }
+
+    // Filter by search term
     if (searchTerm) {
-      searchFiltered = usersToDisplay.filter(user => 
+      filtered = filtered.filter(user => 
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.role.toLowerCase().replace(/_/g, ' ').includes(searchTerm.toLowerCase()) ||
@@ -238,23 +248,21 @@ export default function UsersPage() {
       );
     }
     
-    return searchFiltered.sort((a, b) => {
+    // Sort the results
+    return filtered.sort((a, b) => {
       const roleAIndex = roleOrder.indexOf(a.role);
       const roleBIndex = roleOrder.indexOf(b.role);
       
-      // If one role is not in our defined order, push it to the bottom
       if (roleAIndex === -1 && roleBIndex !== -1) return 1;
       if (roleAIndex !== -1 && roleBIndex === -1) return -1;
       
-      // Sort by the index in our roleOrder array
       if (roleAIndex !== roleBIndex) {
         return roleAIndex - roleBIndex;
       }
       
-      // If roles are the same, sort by name
       return a.name.localeCompare(b.name);
     });
-  }, [usersToDisplay, searchTerm]);
+  }, [usersToDisplay, searchTerm, statusFilter]);
 
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
@@ -347,7 +355,6 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Refresh button was here, hidden by user request */}
           <Button 
             size="lg" 
             onClick={() => setIsAddUserDialogOpen(true)} 
@@ -363,14 +370,31 @@ export default function UsersPage() {
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle className="text-card-foreground text-xl">All Users</CardTitle>
-             <div className="relative w-full sm:max-w-sm">
-                <Input 
-                    placeholder="Search users (name, email, role, company)..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="bg-background h-10 rounded-md shadow-sm w-full"
-                />
-            </div>
+             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                <div className="relative flex-grow w-full sm:w-auto sm:max-w-xs">
+                    <Input 
+                        placeholder="Search users..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="bg-background h-10 rounded-md shadow-sm w-full"
+                    />
+                </div>
+                {showBanStatusColumn && (
+                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Banned')}>
+                      <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-md bg-background">
+                          <div className="flex items-center gap-2">
+                              <Filter className="h-4 w-4 text-muted-foreground" />
+                              <SelectValue placeholder="Filter by status" />
+                          </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="Banned">Banned</SelectItem>
+                          <SelectItem value="all">All Users</SelectItem>
+                      </SelectContent>
+                  </Select>
+                )}
+             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
