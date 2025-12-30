@@ -844,8 +844,8 @@ function DashboardContent() {
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
+        if (currentUser?.role === 'ADMIN') return false; // Hide all cards for ADMIN
         if (!card.roles) return true;
-        if (currentUser?.role === 'ADMIN' && card.title === 'Delivered') return false;
         if (currentUser?.role === 'SYSTEM_ADMIN' && card.title === 'Delivered') return false;
         return card.roles.includes(currentUser?.role || '');
     });
@@ -1069,19 +1069,21 @@ function DashboardContent() {
               </Card>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
-              {summaryCardData.map((card) => (
-                <SummaryCard
-                  key={card.title}
-                  title={card.title}
-                  value={card.value}
-                  icon={card.icon}
-                  iconColorClass={card.iconColorClass}
-                  circleBgClass={card.circleBgClass}
-                  isLoading={isLoadingContent}
-                />
-              ))}
-            </div>
+            {currentUser?.role !== 'ADMIN' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
+                {summaryCardData.map((card) => (
+                  <SummaryCard
+                    key={card.title}
+                    title={card.title}
+                    value={card.value}
+                    icon={card.icon}
+                    iconColorClass={card.iconColorClass}
+                    circleBgClass={card.circleBgClass}
+                    isLoading={isLoadingContent}
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
               <Card className="shadow-xl bg-card lg:col-span-3 rounded-lg">
@@ -1116,8 +1118,8 @@ function DashboardContent() {
                           tickMargin={8}
                           tickFormatter={(value) => {
                             if (chartGranularity === 'hourly') {
-                              const hour = parseInt(value); 
-                              if (isNaN(hour)) return value; 
+                              const hour = parseInt(label); 
+                              if (isNaN(hour)) return label; 
                               if (hour === 0) return '12 AM';
                               if (hour === 12) return '12 PM';
                               if (hour < 12) return `${hour} AM`;
