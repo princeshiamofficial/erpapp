@@ -831,7 +831,6 @@ function DashboardContent() {
 
 
   const summaryCardDefinitions = useMemo(() => {
-    const isCrm = currentUser?.role === 'CRM';
     return [
       { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : formatCurrency(totalSales), icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, currentUser },
       { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : formatCurrency(invoiceDue), icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, currentUser },
@@ -847,11 +846,11 @@ function DashboardContent() {
     ];
   }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid, invoiceCodPaid]);
 
+  const isCrm = useMemo(() => currentUser?.role === 'CRM', [currentUser]);
+
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
-        if (currentUser?.role === 'ADMIN') return false; // Hide all cards for ADMIN
         if (!card.roles) return true;
-        if (currentUser?.role === 'SYSTEM_ADMIN' && card.title === 'Delivered') return false;
         return card.roles.includes(currentUser?.role || '');
     });
   }, [currentUser, summaryCardDefinitions]);
@@ -941,7 +940,7 @@ function DashboardContent() {
   
   const canSeeAdminCharts = useMemo(() => {
     if (!currentUser) return false;
-    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
+    return ['SYSTEM_ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
   const recentFeedback = useMemo(() => {
@@ -1074,22 +1073,20 @@ function DashboardContent() {
               </Card>
             </div>
             
-            {currentUser?.role !== 'ADMIN' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
-                {summaryCardData.map((card) => (
-                  <SummaryCard
-                    key={card.title}
-                    title={card.title}
-                    value={card.value}
-                    icon={card.icon}
-                    iconColorClass={card.iconColorClass}
-                    circleBgClass={card.circleBgClass}
-                    isLoading={isLoadingContent}
-                    currentUser={currentUser}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
+              {summaryCardData.map((card) => (
+                <SummaryCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.value}
+                  icon={card.icon}
+                  iconColorClass={card.iconColorClass}
+                  circleBgClass={card.circleBgClass}
+                  isLoading={isLoadingContent}
+                  currentUser={currentUser}
+                />
+              ))}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
               <Card className="shadow-xl bg-card lg:col-span-3 rounded-lg">
@@ -1287,15 +1284,16 @@ function DashboardContent() {
           
         </div>
         
-        {!isDesignerRepOrLrOrCo && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
-              <SalesPerformanceClient
-                allOrders={salesPerformanceOrders}
-                allCrmUsers={allCrmUsers}
-              />
-              <OrderAnalysisClient allOrders={allOrders} />
-            </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
+          {canSeeAdminCharts && (
+            <SalesPerformanceClient
+              allOrders={salesPerformanceOrders}
+              allCrmUsers={allCrmUsers}
+            />
+          )}
+          <OrderAnalysisClient allOrders={allOrders} />
+        </div>
+
         <div className="grid grid-cols-1 gap-6 mt-6 print:hidden lg:grid-cols-2">
            {!isDesignerRepOrLrOrCo && (
               <Card className="shadow-xl bg-card rounded-lg">
@@ -1358,18 +1356,20 @@ function DashboardContent() {
                 </CardContent>
               </Card>
            )}
-            <Card className="shadow-xl bg-card rounded-lg min-h-[480px]">
-                <CardHeader>
-                    <CardTitle className="flex items-center text-xl text-foreground">
-                        <LineChartIcon className="mr-2 h-6 w-6 text-primary" />
-                        Sales KPI
-                    </CardTitle>
-                    <CardDescription>Key Performance Indicators for sales activity.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {/* Content for the new card will go here */}
-                </CardContent>
-            </Card>
+           {canSeeAdminCharts && (
+              <Card className="shadow-xl bg-card rounded-lg min-h-[480px]">
+                  <CardHeader>
+                      <CardTitle className="flex items-center text-xl text-foreground">
+                          <LineChartIcon className="mr-2 h-6 w-6 text-primary" />
+                          Sales KPI
+                      </CardTitle>
+                      <CardDescription>Key Performance Indicators for sales activity.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      {/* Content for the new card will go here */}
+                  </CardContent>
+              </Card>
+           )}
             {(isDesignerRepOrLrOrCo) && ( <div className="lg:col-span-1"></div>)}
         </div>
         
