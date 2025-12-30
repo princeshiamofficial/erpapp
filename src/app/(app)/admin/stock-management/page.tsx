@@ -24,7 +24,8 @@ import {
     RefreshCw,
     Search,
     Edit,
-    MoreVertical
+    MoreVertical,
+    X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -125,6 +126,8 @@ export default function StockManagementPage() {
 
     const [soldEntryToDelete, setSoldEntryToDelete] = useState<SoldHistoryEntry | null>(null);
     const [isDeletingSoldEntry, setIsDeletingSoldEntry] = useState(false);
+
+    const [imageToView, setImageToView] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -417,7 +420,7 @@ export default function StockManagementPage() {
                         return (
                             <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
                                 <CardContent className="p-0">
-                                    <div className="relative">
+                                    <div className="relative cursor-pointer" onClick={() => item.imageUrl && setImageToView(item.imageUrl)}>
                                         <NextImage
                                             src={item.imageUrl || `https://placehold.co/600x600/e2e8f0/e2e8f0`}
                                             alt={item.name}
@@ -534,7 +537,7 @@ export default function StockManagementPage() {
     return (
         <>
             <div className="p-4 sm:p-6 min-h-full space-y-6">
-                <Card className="shadow-lg rounded-xl">
+                <Card className="shadow-lg rounded-xl sticky top-24 z-30">
                     <CardContent className="p-2">
                         <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
                             <StatCard title="Active Product" value={activeProducts.toString()} unit="Products" icon={Package} iconBg="bg-green-500" />
@@ -659,6 +662,18 @@ export default function StockManagementPage() {
                     </AlertDialog>
                 )}
             </div>
+
+            <Dialog open={!!imageToView} onOpenChange={() => setImageToView(null)}>
+              <DialogContent className="max-w-3xl p-2">
+                <NextImage
+                  src={imageToView || ''}
+                  alt="Product full view"
+                  width={800}
+                  height={800}
+                  className="rounded-md object-contain w-full h-auto max-h-[80vh]"
+                />
+              </DialogContent>
+            </Dialog>
         </>
     );
 }
