@@ -849,7 +849,7 @@ function DashboardContent() {
       { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
       { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
     ];
-  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid, invoiceCodPaid, isCrm]);
+  }, [isCrm, filteredOrders.length, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoiceCodPaid, deliveredCount, netValue, totalPurchase, isLoadingData, currentUser]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
@@ -865,6 +865,16 @@ function DashboardContent() {
   }, [selectedCrmId, allCrmUsers]);
 
   const chartDataKey = currentUser?.role === 'CRM' ? 'orders' : 'sales';
+  
+  const canSeeAdminCharts = useMemo(() => {
+    if (!currentUser) return false;
+    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
+  }, [currentUser]);
+
+  const canSeeSystemAdminCharts = useMemo(() => {
+    if (!currentUser) return false;
+    return currentUser.role === 'SYSTEM_ADMIN';
+  }, [currentUser]);
 
 
   const CustomTooltipContent = ({ active, payload, label }: any) => {
@@ -942,11 +952,6 @@ function DashboardContent() {
     return allOrders;
   }, [allOrders, currentUser, selectedCrmId]);
   
-  const canSeeAdminCharts = useMemo(() => {
-    if (!currentUser) return false;
-    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
-  }, [currentUser]);
-
   const recentFeedback = useMemo(() => {
     if (!allFeedback || !currentUser) return [];
 
@@ -1292,7 +1297,7 @@ function DashboardContent() {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
-          {canSeeAdminCharts && (
+          {canSeeSystemAdminCharts && (
             <SalesPerformanceClient
               allOrders={salesPerformanceOrders}
               allCrmUsers={allCrmUsers}
@@ -1365,7 +1370,7 @@ function DashboardContent() {
                 </CardContent>
               </Card>
            )}
-           {canSeeAdminCharts && (
+           {canSeeSystemAdminCharts && (
               <Card className="shadow-xl bg-card rounded-lg min-h-[480px]">
                   <CardHeader>
                       <CardTitle className="flex items-center text-xl text-foreground">
