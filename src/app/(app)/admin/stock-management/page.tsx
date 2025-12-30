@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -382,8 +383,8 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <div className="flex flex-col h-full">
-        <div className="sticky top-[150px] z-30 bg-background pt-4 pb-2">
+      <>
+        <div className="sticky top-[calc(theme(spacing.24)+theme(spacing.20))] z-20 bg-background pt-4 pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2 p-4 bg-card rounded-lg shadow-md border">
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
               <Package className="h-5 w-5 text-primary"/>
@@ -402,80 +403,78 @@ export default function StockManagementPage() {
             </div>
           </div>
         </div>
-        <ScrollArea className="flex-1">
-            <div className="p-0">
-                {isLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                        {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
-                    </div>
-                ) : filteredModels.length === 0 ? (
-                    <div className="py-16 text-center text-muted-foreground">
-                        <Package className="mx-auto h-12 w-12 opacity-50 mb-4" />
-                        <h3 className="text-lg font-semibold">No Products Found</h3>
-                        <p className="text-sm">{modelSearchTerm ? `No products match "${modelSearchTerm}".` : "Add a product to get started."}</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                        {filteredModels.map(item => {
-                            const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
-                            return (
-                                <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
-                                    <CardContent className="p-0">
-                                        <div className="relative cursor-pointer" onClick={() => item.imageUrl && setImageToView(item.imageUrl)}>
-                                            <NextImage
-                                                src={item.imageUrl || `https://colorhutbd.xyz/image/product-not-found.jpg`}
-                                                alt={item.name}
-                                                width={300}
-                                                height={300}
-                                                className="object-cover w-full h-40 bg-muted"
-                                            />
-                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 border-2 border-white/20 text-white">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onSelect={() => openEditDialog(item)} className="cursor-pointer">
-                                                            <Edit className="mr-2 h-4 w-4" /> Edit
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => openDeleteDialog(item)} className="cursor-pointer text-destructive focus:text-destructive">
-                                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                            <div className={cn(
-                                                "absolute bottom-2 right-2 text-xs font-bold flex items-center gap-1.5 p-1.5 rounded-full backdrop-blur-sm",
-                                                (item.stockCount ?? 0) > 0 ? "bg-green-500/20 text-green-100 border border-green-400/50" : "bg-red-500/20 text-red-100 border border-red-400/50"
-                                            )}>
-                                                <Box className="h-4 w-4" />
-                                                Stock: {item.stockCount ?? 0}
+        <div className="p-4">
+            {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
+                </div>
+            ) : filteredModels.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground">
+                    <Package className="mx-auto h-12 w-12 opacity-50 mb-4" />
+                    <h3 className="text-lg font-semibold">No Products Found</h3>
+                    <p className="text-sm">{modelSearchTerm ? `No products match "${modelSearchTerm}".` : "Add a product to get started."}</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {filteredModels.map(item => {
+                        const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
+                        return (
+                            <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
+                                <CardContent className="p-0">
+                                    <div className="relative cursor-pointer" onClick={() => item.imageUrl && setImageToView(item.imageUrl)}>
+                                        <NextImage
+                                            src={item.imageUrl || `https://colorhutbd.xyz/image/product-not-found.jpg`}
+                                            alt={item.name}
+                                            width={300}
+                                            height={300}
+                                            className="object-cover w-full h-40 bg-muted"
+                                        />
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 border-2 border-white/20 text-white">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => openEditDialog(item)} className="cursor-pointer">
+                                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => openDeleteDialog(item)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                        <div className={cn(
+                                            "absolute bottom-2 right-2 text-xs font-bold flex items-center gap-1.5 p-1.5 rounded-full backdrop-blur-sm",
+                                            (item.stockCount ?? 0) > 0 ? "bg-green-500/20 text-green-100 border border-green-400/50" : "bg-red-500/20 text-red-100 border border-red-400/50"
+                                        )}>
+                                            <Box className="h-4 w-4" />
+                                            Stock: {item.stockCount ?? 0}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 space-y-3">
+                                        <h4 className="font-bold text-md truncate text-foreground" title={item.name}>{item.name}</h4>
+                                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                            <span>Buy: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.buyingPrice)}</span></span>
+                                            <span>Sell: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.sellingPrice)}</span></span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-dashed">
+                                            <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                <ShoppingCart className="h-4 w-4 text-primary" />
+                                                <span className="font-semibold">{quantitySold}</span> Sold
                                             </div>
                                         </div>
-                                        <div className="p-4 space-y-3">
-                                            <h4 className="font-bold text-md truncate text-foreground" title={item.name}>{item.name}</h4>
-                                            <div className="flex justify-between items-center text-sm text-muted-foreground">
-                                                <span>Buy: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.buyingPrice)}</span></span>
-                                                <span>Sell: <span className="font-mono text-foreground font-semibold">{formatCurrency(item.sellingPrice)}</span></span>
-                                            </div>
-                                            <div className="flex justify-between items-center pt-2 border-t border-dashed">
-                                                <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-                                                    <ShoppingCart className="h-4 w-4 text-primary" />
-                                                    <span className="font-semibold">{quantitySold}</span> Sold
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
-                    </div>
-                )}
-            </div>
-        </ScrollArea>
-      </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+      </>
     );
     
     const soldHistoryContent = (
@@ -538,7 +537,7 @@ export default function StockManagementPage() {
 
     return (
         <>
-            <div className="p-4 sm:p-6 min-h-screen flex flex-col space-y-6">
+            <div className="p-4 sm:p-6 h-[calc(100vh-4.5rem)] flex flex-col space-y-6">
                 <div className="sticky top-24 z-30">
                     <Card className="shadow-lg rounded-xl">
                         <CardContent className="p-2">
@@ -563,109 +562,109 @@ export default function StockManagementPage() {
                         <TabsTrigger value="stock">Stock</TabsTrigger>
                         <TabsTrigger value="sold_history">Sold History</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="stock" className="mt-4 flex-1">
+                    <TabsContent value="stock" className="mt-4 flex-1 flex flex-col">
                         {stockContent}
                     </TabsContent>
                     <TabsContent value="sold_history" className="mt-4">
                         {soldHistoryContent}
                     </TabsContent>
                 </Tabs>
-                
-                <AddEditSoldEntryDialog
-                    isOpen={isSoldEntryDialogOpen}
-                    onOpenChange={setIsSoldEntryDialogOpen}
-                    onSave={fetchData}
-                    entryToEdit={soldEntryToEdit}
-                    stockItems={stockItems}
-                    allOrders={allOrders}
-                />
-                
-                {soldEntryToDelete && (
-                    <AlertDialog open={!!soldEntryToDelete} onOpenChange={() => setSoldEntryToDelete(null)}>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Sold Entry?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Are you sure you want to delete the sales record for {soldEntryToDelete.quantity}x "{soldEntryToDelete.productName}"? This action cannot be undone.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setSoldEntryToDelete(null)} disabled={isDeletingSoldEntry}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleConfirmDeleteSoldEntry} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingSoldEntry}>
-                                  {isDeletingSoldEntry ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete"}
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                )}
-
-
-                <Dialog open={isAddEditDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsAddEditDialogOpen(open); }}>
-                    <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Product</DialogTitle>
-                            <DialogDescription>{editingItem ? 'Update the details of this product.' : 'Enter details for the new product.'}</DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
-                            <div className="space-y-1">
-                                <Label htmlFor="itemName">Name</Label>
-                                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
-                                    <Input id="itemBuyingPrice" type="number" value={itemBuyingPrice} onChange={(e) => setItemBuyingPrice(e.target.value)} required disabled={isSubmitting} placeholder="e.g., 1000.00" min="0" step="0.01" />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
-                                    <Input id="itemSellingPrice" type="number" value={itemSellingPrice} onChange={(e) => setItemSellingPrice(e.target.value)} required disabled={isSubmitting} placeholder="e.g., 1500.00" min="0" step="0.01" />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
-                                <Input 
-                                    id="itemStockCount"
-                                    type="number"
-                                    value={itemStockCount}
-                                    onChange={(e) => setItemStockCount(e.target.value)}
-                                    required
-                                    disabled={isSubmitting}
-                                    placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"}
-                                    step="1"
-                                />
-                                 <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new stock items.'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
-                                <div className="flex items-center gap-4 mt-1">
-                                    {imagePreviewUrl ? <NextImage src={imagePreviewUrl} alt="Product preview" width={80} height={80} className="rounded-md object-cover border bg-muted" unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')} onError={(e) => { (e.target as HTMLImageElement).src = `https://colorhutbd.xyz/image/product-not-found.jpg`; (e.target as HTMLImageElement).alt = 'Error loading image'; }} /> : <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
-                                    <div className="flex flex-col gap-2">
-                                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}><UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}</Button>
-                                        {imagePreviewUrl && <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}><Trash2 className="mr-1 h-3 w-3" /> Remove Image</Button>}
-                                    </div>
-                                </div>
-                                <Input id="modelImageFile" type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/jpeg,image/png,image/gif" />
-                            </div>
-                            <DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : (editingItem ? "Save Changes" : "Add Product")}</Button></DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-
-                {itemToDelete && (
-                    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>This action cannot be undone. This will permanently delete the product "<span className="font-semibold">{itemToDelete.name}</span>".</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setItemToDelete(null)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteSubmit} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmitting}>{isSubmitting ? "Deleting..." : `Yes, delete product`}</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                )}
             </div>
+                
+            <AddEditSoldEntryDialog
+                isOpen={isSoldEntryDialogOpen}
+                onOpenChange={setIsSoldEntryDialogOpen}
+                onSave={fetchData}
+                entryToEdit={soldEntryToEdit}
+                stockItems={stockItems}
+                allOrders={allOrders}
+            />
+            
+            {soldEntryToDelete && (
+                <AlertDialog open={!!soldEntryToDelete} onOpenChange={() => setSoldEntryToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Sold Entry?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to delete the sales record for {soldEntryToDelete.quantity}x "{soldEntryToDelete.productName}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setSoldEntryToDelete(null)} disabled={isDeletingSoldEntry}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleConfirmDeleteSoldEntry} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingSoldEntry}>
+                                {isDeletingSoldEntry ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+
+
+            <Dialog open={isAddEditDialogOpen} onOpenChange={(open) => { if (!isSubmitting) setIsAddEditDialogOpen(open); }}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Product</DialogTitle>
+                        <DialogDescription>{editingItem ? 'Update the details of this product.' : 'Enter details for the new product.'}</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
+                        <div className="space-y-1">
+                            <Label htmlFor="itemName">Name</Label>
+                            <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
+                                <Input id="itemBuyingPrice" type="number" value={itemBuyingPrice} onChange={(e) => setItemBuyingPrice(e.target.value)} required disabled={isSubmitting} placeholder="e.g., 1000.00" min="0" step="0.01" />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
+                                <Input id="itemSellingPrice" type="number" value={itemSellingPrice} onChange={(e) => setItemSellingPrice(e.target.value)} required disabled={isSubmitting} placeholder="e.g., 1500.00" min="0" step="0.01" />
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
+                            <Input 
+                                id="itemStockCount"
+                                type="number"
+                                value={itemStockCount}
+                                onChange={(e) => setItemStockCount(e.target.value)}
+                                required
+                                disabled={isSubmitting}
+                                placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"}
+                                step="1"
+                            />
+                             <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new stock items.'}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
+                            <div className="flex items-center gap-4 mt-1">
+                                {imagePreviewUrl ? <NextImage src={imagePreviewUrl} alt="Product preview" width={80} height={80} className="rounded-md object-cover border bg-muted" unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')} onError={(e) => { (e.target as HTMLImageElement).src = `https://colorhutbd.xyz/image/product-not-found.jpg`; (e.target as HTMLImageElement).alt = 'Error loading image'; }} /> : <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
+                                <div className="flex flex-col gap-2">
+                                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}><UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}</Button>
+                                    {imagePreviewUrl && <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}><Trash2 className="mr-1 h-3 w-3" /> Remove Image</Button>}
+                                </div>
+                            </div>
+                            <Input id="modelImageFile" type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/jpeg,image/png,image/gif" />
+                        </div>
+                        <DialogFooter className="pt-4"><Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : (editingItem ? "Save Changes" : "Add Product")}</Button></DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {itemToDelete && (
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>This action cannot be undone. This will permanently delete the product "<span className="font-semibold">{itemToDelete.name}</span>".</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setItemToDelete(null)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSubmit} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmitting}>{isSubmitting ? "Deleting..." : `Yes, delete product`}</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
 
             <Dialog open={!!imageToView} onOpenChange={() => setImageToView(null)}>
               <DialogContent className="max-w-3xl p-2">
@@ -681,3 +680,4 @@ export default function StockManagementPage() {
         </>
     );
 }
+
