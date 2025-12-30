@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -384,8 +383,8 @@ export default function StockManagementPage() {
 
     const stockContent = (
       <>
-        <div className="sticky top-[calc(theme(spacing.24)+theme(spacing.20))] z-20 bg-background pt-4 pb-2">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2 p-4 bg-card rounded-lg shadow-md border">
+        <div className="sticky top-0 z-20 bg-background pt-4 pb-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
               <Package className="h-5 w-5 text-primary"/>
               Products
@@ -537,8 +536,8 @@ export default function StockManagementPage() {
 
     return (
         <>
-            <div className="p-4 sm:p-6 h-[calc(100vh-4.5rem)] flex flex-col space-y-6">
-                <div className="sticky top-24 z-30">
+            <div className="p-4 sm:p-6 h-[calc(100vh-4.5rem)] flex flex-col">
+                <div className="sticky top-0 z-30 mb-6">
                     <Card className="shadow-lg rounded-xl">
                         <CardContent className="p-2">
                             <div className="flex flex-col md:flex-row md:items-center md:divide-x md:divide-gray-200">
@@ -562,8 +561,10 @@ export default function StockManagementPage() {
                         <TabsTrigger value="stock">Stock</TabsTrigger>
                         <TabsTrigger value="sold_history">Sold History</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="stock" className="mt-4 flex-1 flex flex-col">
-                        {stockContent}
+                    <TabsContent value="stock" className="mt-4 flex-1 flex flex-col min-h-0">
+                         <ScrollArea className="flex-1 -m-4">
+                           {stockContent}
+                         </ScrollArea>
                     </TabsContent>
                     <TabsContent value="sold_history" className="mt-4">
                         {soldHistoryContent}
@@ -680,4 +681,3 @@ export default function StockManagementPage() {
         </>
     );
 }
-
