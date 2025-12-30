@@ -38,7 +38,7 @@ import { useRouter } from 'next/navigation';
 import type { ServiceModelItem, TrackingLink, SoldHistoryEntry, User } from '@/types';
 import { getStockItems } from '@/lib/stock-service'; 
 import { getSoldHistory, deleteSoldHistoryEntry } from '@/lib/sold-history-service';
-import { getOrders } from '@/lib/order-service'; // Import getOrders
+import { getOrders } from '@/lib/order-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -50,7 +50,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseISO, format } from 'date-fns';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
-import { getUsers } from '@/lib/user-service';
 
 const AddEditSoldEntryDialog = dynamic(() => import('@/components/stock/AddEditSoldEntryDialog').then(mod => mod.AddEditSoldEntryDialog));
 
@@ -102,7 +101,6 @@ export default function StockManagementPage() {
     const [stockItems, setStockItems] = useState<ServiceModelItem[]>([]);
     const [soldHistory, setSoldHistory] = useState<SoldHistoryEntry[]>([]);
     const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); 
-    const [allUsers, setAllUsers] = useState<User[]>([]); // To map user IDs to names
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -131,16 +129,14 @@ export default function StockManagementPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [fetchedItems, fetchedSoldHistory, fetchedOrders, fetchedUsers] = await Promise.all([
+            const [fetchedItems, fetchedSoldHistory, fetchedOrders] = await Promise.all([
                 getStockItems(),
                 getSoldHistory(),
                 getOrders(), 
-                getUsers(), // Fetch all users
             ]);
             setStockItems(fetchedItems);
             setSoldHistory(fetchedSoldHistory);
             setAllOrders(fetchedOrders); 
-            setAllUsers(fetchedUsers); // Set users state
         } catch (error) {
             console.error("Error fetching stock data:", error);
             toast({ title: "Error", description: "Could not load stock data.", variant: "destructive" });
@@ -148,14 +144,6 @@ export default function StockManagementPage() {
             setIsLoading(false);
         }
     }, [toast]);
-    
-    const userMap = useMemo(() => {
-        const map = new Map<string, string>();
-        allUsers.forEach(user => {
-            map.set(user.id, user.name);
-        });
-        return map;
-    }, [allUsers]);
 
     useEffect(() => {
         if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
@@ -391,27 +379,27 @@ export default function StockManagementPage() {
     }, [soldHistory]);
 
     const stockContent = (
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Package className="h-5 w-5 text-primary"/></CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available products and their inventory.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder={`Search products...`}
-                        value={modelSearchTerm}
-                        onChange={(e) => setModelSearchTerm(e.target.value)}
-                        className="pl-9 bg-background/50 h-9"
-                    />
-                </div>
-            </div>
+      <div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary"/>
+              Stock Items
+            </h2>
           </div>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center gap-2">
+              <div className="relative mt-0 sm:mt-0 w-full sm:w-auto">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      placeholder={`Search products...`}
+                      value={modelSearchTerm}
+                      onChange={(e) => setModelSearchTerm(e.target.value)}
+                      className="pl-9 bg-background/50 h-9"
+                  />
+              </div>
+          </div>
+        </div>
+        <div className="p-0">
             {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
@@ -481,8 +469,8 @@ export default function StockManagementPage() {
                     })}
                 </div>
             )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
     
     const soldHistoryContent = (
