@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -440,7 +439,9 @@ export default function PayrollPage() {
                           <TableCell>{(employee as Employee).designation}</TableCell>
                           <TableCell>{(employee as Employee).mobileNo}</TableCell>
                           <TableCell>{format(new Date((employee as Employee).dob), 'yyyy-MM-dd')}</TableCell>
-                          <TableCell className="font-medium text-gray-800">{formatCurrency((employee as Employee).salary)}</TableCell>
+                          <TableCell className="font-medium text-gray-800">
+                            <spoiler-span>{formatCurrency((employee as Employee).salary)}</spoiler-span>
+                          </TableCell>
                           <TableCell>{format(new Date((employee as Employee).joiningDate), 'yyyy-MM-dd')}</TableCell>
                           <TableCell><Badge className={cn((employee as Employee).status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{(employee as Employee).status}</Badge></TableCell>
                           <TableCell className="text-center">
@@ -628,54 +629,54 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-
+  
   const summaryContent = (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-700/20">
-                <Wallet className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Payable</p>
-                <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalPayableAmount)}</p>
-              </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-700/20">
+              <Wallet className="h-6 w-6 text-blue-600" />
             </div>
-          </Card>
-          <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-red-100 dark:bg-red-700/20">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Unpaid</p>
-                <p className="text-2xl font-bold text-destructive font-mono">{formatCurrency(totalUnpaidAmount)}</p>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Payable</p>
+              <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalPayableAmount)}</p>
             </div>
-          </Card>
-           <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-700/20">
-                <FineIcon className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Fines & Advances</p>
-                <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalFineAmount)}</p>
-              </div>
+          </div>
+        </Card>
+        <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-red-100 dark:bg-red-700/20">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
-          </Card>
-           <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 rounded-full bg-green-100 dark:bg-green-700/20">
-                <ProvidentFundIcon className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Provident Fund</p>
-                <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalProvidentFund)}</p>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Unpaid</p>
+              <p className="text-2xl font-bold text-destructive font-mono">{formatCurrency(totalUnpaidAmount)}</p>
             </div>
-          </Card>
-      </div>
+          </div>
+        </Card>
+         <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-700/20">
+              <FineIcon className="h-6 w-6 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Fines & Advances</p>
+              <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalFineAmount)}</p>
+            </div>
+          </div>
+        </Card>
+         <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-green-100 dark:bg-green-700/20">
+              <ProvidentFundIcon className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Provident Fund</p>
+              <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalProvidentFund)}</p>
+            </div>
+          </div>
+        </Card>
+    </div>
   );
 
 
@@ -701,7 +702,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -782,7 +783,7 @@ export default function PayrollPage() {
                      historyToView.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(leave => (
                       <div key={leave.id} className="text-sm p-2 border-b">
                         <p>{leave.days} day(s) on <span className="font-medium">{format(new Date(leave.date), 'd MMM, yyyy')}</span></p>
-                        <p className="text-xs text-muted-foreground">Reason: {leave.reason}</p>
+                        <p className="text-xs text-muted-foreground italic">Reason: {leave.reason}</p>
                       </div>
                     ))
                   ) : (
@@ -819,3 +820,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
