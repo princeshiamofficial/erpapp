@@ -181,7 +181,9 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
         </div>
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold text-foreground font-mono">{value}</p>
+          <p className="text-2xl font-bold text-foreground font-mono">
+            <spoiler-span>{value}</spoiler-span>
+          </p>
         </div>
       </div>
     </Card>
@@ -1506,4 +1508,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-

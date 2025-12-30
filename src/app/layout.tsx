@@ -4,6 +4,7 @@ import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { Providers } from './providers'; // Import the new client-side provider
 import 'leaflet/dist/leaflet.css';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Color Hut',
@@ -28,6 +29,11 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        <Script
+          type="module"
+          src="https://unpkg.com/spoilerjs/dist/components/spoiler-span.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );
