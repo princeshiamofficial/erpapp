@@ -157,9 +157,10 @@ interface SummaryCardProps {
   iconColorClass?: string;
   circleBgClass?: string;
   isLoading?: boolean;
+  currentUser: User | null;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading }) => {
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading, currentUser }) => {
   if (isLoading) {
     return (
       <Card className="bg-card p-4 shadow-md rounded-lg">
@@ -182,7 +183,11 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <p className="text-2xl font-bold text-foreground font-mono">
-            <spoiler-span>{value}</spoiler-span>
+            {currentUser?.role === 'SYSTEM_ADMIN' ? (
+              <spoiler-span>{value}</spoiler-span>
+            ) : (
+              value
+            )}
           </p>
         </div>
       </div>
@@ -828,17 +833,17 @@ function DashboardContent() {
   const summaryCardDefinitions = useMemo(() => {
     const isCrm = currentUser?.role === 'CRM';
     return [
-      { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : formatCurrency(totalSales), icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
-      { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : formatCurrency(invoiceDue), icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
-      { title: "Advance Paid", value: formatCurrency(invoicePaid), icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Invoice COD Paid", value: formatCurrency(invoiceCodPaid), icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'] },
-      { title: "Net", value: formatCurrency(netValue), icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Total purchase", value: formatCurrency(totalPurchase), icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : formatCurrency(totalSales), icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, currentUser },
+      { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : formatCurrency(invoiceDue), icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, currentUser },
+      { title: "Advance Paid", value: formatCurrency(invoicePaid), icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
+      { title: "Invoice COD Paid", value: formatCurrency(invoiceCodPaid), icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
+      { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'], currentUser },
+      { title: "Net", value: formatCurrency(netValue), icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
+      { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
+      { title: "Total purchase", value: formatCurrency(totalPurchase), icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
+      { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
+      { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
+      { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser },
     ];
   }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid, invoiceCodPaid]);
 
@@ -1080,6 +1085,7 @@ function DashboardContent() {
                     iconColorClass={card.iconColorClass}
                     circleBgClass={card.circleBgClass}
                     isLoading={isLoadingContent}
+                    currentUser={currentUser}
                   />
                 ))}
               </div>
