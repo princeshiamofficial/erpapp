@@ -623,7 +623,7 @@ export default function PayrollPage() {
             <TableFooter>
                 <TableRow>
                     <TableCell colSpan={9} className="text-right font-bold">Total Unpaid</TableCell>
-                    <TableCell className="font-bold text-right">{formatCurrency(totalUnpaidAmount)}</TableCell>
+                    <TableCell className="font-bold text-right"><spoiler-span>{formatCurrency(totalUnpaidAmount)}</spoiler-span></TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
@@ -641,7 +641,7 @@ export default function PayrollPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Payable</p>
-              <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalPayableAmount)}</p>
+              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalPayableAmount)}</spoiler-span></p>
             </div>
           </div>
         </Card>
@@ -652,7 +652,7 @@ export default function PayrollPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Unpaid</p>
-              <p className="text-2xl font-bold text-destructive font-mono">{formatCurrency(totalUnpaidAmount)}</p>
+              <p className="text-2xl font-bold text-destructive font-mono"><spoiler-span>{formatCurrency(totalUnpaidAmount)}</spoiler-span></p>
             </div>
           </div>
         </Card>
@@ -663,7 +663,7 @@ export default function PayrollPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Fines & Advances</p>
-              <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalFineAmount)}</p>
+              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalFineAmount)}</spoiler-span></p>
             </div>
           </div>
         </Card>
@@ -674,7 +674,7 @@ export default function PayrollPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Provident Fund</p>
-              <p className="text-2xl font-bold text-foreground font-mono">{formatCurrency(totalProvidentFund)}</p>
+              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalProvidentFund)}</spoiler-span></p>
             </div>
           </div>
         </Card>
