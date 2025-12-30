@@ -411,89 +411,76 @@ export default function StockManagementPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0 max-h-[calc(100vh-450px)] overflow-y-auto">
-          <div className="overflow-x-auto">
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead className="w-12 pl-4">SL</TableHead>
-                          <TableHead className="min-w-[64px]">Image</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Buying Price</TableHead>
-                          <TableHead>Selling Price</TableHead>
-                          <TableHead className="text-center">Stock</TableHead>
-                          <TableHead className="text-center">Sold</TableHead>
-                          <TableHead className="pr-4 text-right">Actions</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                   {isLoading ? (
-                      [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-16 w-full rounded-md" /></TableCell></TableRow>)
-                    ) : filteredModels.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="p-6 text-center text-muted-foreground">
-                          <Package className="mx-auto h-10 w-10 opacity-50 mb-2" />
-                          No {modelSearchTerm ? `products found for "${modelSearchTerm}"` : `products found.`}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredModels.map((item, index) => {
+        <CardContent className="p-4 sm:p-6">
+            {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-lg" />)}
+                </div>
+            ) : filteredModels.length === 0 ? (
+                <div className="py-16 text-center text-muted-foreground">
+                    <Package className="mx-auto h-12 w-12 opacity-50 mb-4" />
+                    <h3 className="text-lg font-semibold">No Products Found</h3>
+                    <p className="text-sm">{modelSearchTerm ? `No products match "${modelSearchTerm}".` : "Add a product to get started."}</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {filteredModels.map(item => {
                         const quantitySold = soldHistory.filter(s => s.productName === item.name).reduce((acc, s) => acc + s.quantity, 0);
                         return (
-                        <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="pl-4 font-mono text-muted-foreground">{String(index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>
-                              <NextImage
-                                  src={item.imageUrl || `https://placehold.co/64x64.png`}
-                                  alt={item.name}
-                                  width={48}
-                                  height={48}
-                                  className="rounded-md object-cover bg-muted"
-                                  data-ai-hint="product photo"
-                                  unoptimized={!item.imageUrl?.startsWith('https://colorhutbd.xyz')}
-                              />
-                          </TableCell>
-                          <TableCell>
-                             <span className="font-medium text-foreground">{item.name}</span>
-                          </TableCell>
-                          <TableCell className="font-mono">{formatCurrency(item.buyingPrice)}</TableCell>
-                          <TableCell className="font-mono">{formatCurrency(item.sellingPrice)}</TableCell>
-                          <TableCell className="text-center">
-                                <span className={cn(
-                                    "text-sm font-semibold flex items-center justify-center gap-1 p-1 rounded-full",
-                                    item.stockCount !== undefined && item.stockCount > 0 ? "text-green-600" : "text-destructive"
-                                )}>
-                                    <Box className="h-4 w-4" />
-                                    {item.stockCount ?? 0}
-                                </span>
-                          </TableCell>
-                           <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mt-1">
-                                {quantitySold}
-                              </div>
-                          </TableCell>
-                          <TableCell className="pr-4 text-right">
-                             <div className="flex items-center justify-end gap-2">
-                              <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit item`} className="h-8 w-8">
-                                  <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => openDeleteDialog(item)} 
-                                  title={`Delete item`} 
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                              >
-                                  <Trash2 className="h-4 w-4" />
-                              </Button>
-                              </div>
-                          </TableCell>
-                        </TableRow>
-                      )})
-                    )}
-                  </TableBody>
-              </Table>
-          </div>
+                            <Card key={item.id} className="overflow-hidden shadow-sm hover:shadow-lg transition-shadow group">
+                                <CardContent className="p-0">
+                                    <div className="relative">
+                                        <NextImage
+                                            src={item.imageUrl || `https://placehold.co/600x600/e2e8f0/e2e8f0`}
+                                            alt={item.name}
+                                            width={300}
+                                            height={300}
+                                            className="object-cover w-full h-40 bg-muted"
+                                        />
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 border-none text-white">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => openEditDialog(item)} className="cursor-pointer">
+                                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => openDeleteDialog(item)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 space-y-2">
+                                        <h4 className="font-semibold text-sm truncate" title={item.name}>{item.name}</h4>
+                                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                            <span>Buy: <span className="font-mono text-foreground">{formatCurrency(item.buyingPrice)}</span></span>
+                                            <span>Sell: <span className="font-mono text-foreground">{formatCurrency(item.sellingPrice)}</span></span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-dashed">
+                                            <div className={cn(
+                                                "text-sm font-bold flex items-center gap-1.5",
+                                                (item.stockCount ?? 0) > 0 ? "text-green-600" : "text-destructive"
+                                            )}>
+                                                <Box className="h-4 w-4" />
+                                                Stock: {item.stockCount ?? 0}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                <ShoppingCart className="h-4 w-4" />
+                                                Sold: {quantitySold}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )
+                    })}
+                </div>
+            )}
         </CardContent>
       </Card>
     );
@@ -525,7 +512,7 @@ export default function StockManagementPage() {
                     ) : soldHistoryData.length > 0 ? (
                         soldHistoryData.map((item, index) => (
                            <TableRow key={item.id}>
-                               <TableCell>{userMap.get(item.orderId) || item.orderId}</TableCell>
+                               <TableCell><Link href={`/track/${item.orderId}`} className="text-primary hover:underline font-mono text-xs">{item.orderId}</Link></TableCell>
                                <TableCell>{item.productName}</TableCell>
                                <TableCell>{item.quantity}</TableCell>
                                <TableCell>{formatCurrency(item.totalPrice)}</TableCell>
