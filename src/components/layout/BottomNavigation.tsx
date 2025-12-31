@@ -284,7 +284,7 @@ export function BottomNavigation() {
       <Sheet open={isBillingSheetOpen} onOpenChange={setIsBillingSheetOpen}>
         <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl flex flex-col p-0">
           <SheetHeader className="text-left p-4 border-b">
-            <SheetTitle className="flex items-center gap-2"><Receipt className="h-5 w-5 text-primary"/>Vendor Bills</SheetTitle>
+            <SheetTitle className="flex items-center gap-2"><Receipt className="h-5 w-5 text-primary"/>MY Bills</SheetTitle>
           </SheetHeader>
           <Tabs defaultValue="request" className="flex-1 flex flex-col">
             <TabsList className="mx-4 mt-2">
@@ -327,3 +327,5 @@ export function BottomNavigation() {
     </>
   );
 }
+
+    
