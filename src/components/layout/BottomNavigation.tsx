@@ -18,6 +18,7 @@ import {
     Stethoscope,
     Star,
     Hourglass,
+    Wallet, // New icon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
@@ -91,6 +92,7 @@ export function BottomNavigation() {
   
   const noticeItem = { href: "#", label: "Notice", icon: Bell };
   const leaveItem = { href: "#", label: "Leave", icon: CalendarPlus };
+  const billingItem = { href: "/finance-manager", label: "Billing", icon: Wallet };
   const isActive = (href: string) => pathname === href;
 
 
@@ -152,16 +154,42 @@ export function BottomNavigation() {
                 </Link>
             );
             })}
-             {/* Leave Button */}
-            <Button
-                variant="ghost"
-                onClick={() => setIsLeaveSheetOpen(true)}
-                className="relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors p-0 hover:bg-transparent hover:text-primary/80"
-                aria-label={leaveItem.label}
-            >
-                <leaveItem.icon className="h-6 w-6 mb-0.5" />
-                <span className="text-xs font-medium">{leaveItem.label}</span>
-            </Button>
+             {/* Conditional Leave/Billing Button */}
+            {currentUser.role === 'LR' ? (
+                <Link
+                    href={billingItem.href}
+                    className={cn(
+                        "relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors",
+                        isActive(billingItem.href) ? "text-primary" : "hover:text-primary/80"
+                    )}
+                    aria-label={billingItem.label}
+                >
+                    <AnimatePresence>
+                        {isActive(billingItem.href) && (
+                        <motion.div
+                            layoutId="active-nav-indicator"
+                            className="absolute inset-x-0 bottom-0 h-1 bg-primary rounded-t-full"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        />
+                        )}
+                    </AnimatePresence>
+                    <billingItem.icon className="h-6 w-6 mb-0.5" />
+                    <span className="text-xs font-medium">{billingItem.label}</span>
+                </Link>
+            ) : (
+                <Button
+                    variant="ghost"
+                    onClick={() => setIsLeaveSheetOpen(true)}
+                    className="relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors p-0 hover:bg-transparent hover:text-primary/80"
+                    aria-label={leaveItem.label}
+                >
+                    <leaveItem.icon className="h-6 w-6 mb-0.5" />
+                    <span className="text-xs font-medium">{leaveItem.label}</span>
+                </Button>
+            )}
         </div>
       </div>
       
