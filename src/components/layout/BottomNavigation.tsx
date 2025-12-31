@@ -19,6 +19,7 @@ import {
     Star,
     Hourglass,
     Wallet, // New icon
+    Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
@@ -32,6 +33,9 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getVendorBills } from "@/lib/vendor-bill-service";
+import type { VendorBill } from "@/types";
+import { format, parseISO } from "date-fns";
 
 
 const navItems = [
@@ -60,6 +64,21 @@ const leaveTypes = [
   { label: "Probationary Leave", icon: Hourglass },
 ];
 
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'N/A';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+const formatDate = (dateString: string | undefined) => {
+  if (!dateString) return "Loading date...";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch (e) {
+    return "Invalid Date";
+  }
+};
+
 
 export function BottomNavigation() {
   const pathname = usePathname();
@@ -67,12 +86,20 @@ export function BottomNavigation() {
   const { currentUser, isLoading } = useAuth();
   const [isNoticeSheetOpen, setIsNoticeSheetOpen] = useState(false);
   const [isLeaveSheetOpen, setIsLeaveSheetOpen] = useState(false);
+  const [isBillingSheetOpen, setIsBillingSheetOpen] = useState(false);
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
+  const [vendorBills, setVendorBills] = useState<VendorBill[]>([]);
 
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    if (currentUser?.role === 'LR') {
+        getVendorBills().then(bills => {
+            const unpaidBills = bills.filter(b => b.status !== 'Paid');
+            setVendorBills(unpaidBills);
+        });
+    }
+  }, [currentUser]);
 
   if (!isClient || isLoading) {
     // Render a static placeholder on the server to avoid hydration mismatch
@@ -92,7 +119,7 @@ export function BottomNavigation() {
   
   const noticeItem = { href: "#", label: "Notice", icon: Bell };
   const leaveItem = { href: "#", label: "Leave", icon: CalendarPlus };
-  const billingItem = { href: "/finance-manager", label: "Billing", icon: Wallet };
+  const billingItem = { href: "#billing", label: "Billing", icon: Wallet };
   const isActive = (href: string) => pathname === href;
 
 
@@ -156,29 +183,15 @@ export function BottomNavigation() {
             })}
              {/* Conditional Leave/Billing Button */}
             {currentUser.role === 'LR' ? (
-                <Link
-                    href={billingItem.href}
-                    className={cn(
-                        "relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors",
-                        isActive(billingItem.href) ? "text-primary" : "hover:text-primary/80"
-                    )}
+                <Button
+                    variant="ghost"
+                    onClick={() => setIsBillingSheetOpen(true)}
+                    className="relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors p-0 hover:bg-transparent hover:text-primary/80"
                     aria-label={billingItem.label}
                 >
-                    <AnimatePresence>
-                        {isActive(billingItem.href) && (
-                        <motion.div
-                            layoutId="active-nav-indicator"
-                            className="absolute inset-x-0 bottom-0 h-1 bg-primary rounded-t-full"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        />
-                        )}
-                    </AnimatePresence>
                     <billingItem.icon className="h-6 w-6 mb-0.5" />
                     <span className="text-xs font-medium">{billingItem.label}</span>
-                </Link>
+                </Button>
             ) : (
                 <Button
                     variant="ghost"
@@ -265,6 +278,40 @@ export function BottomNavigation() {
                 </SheetFooter>
             </form>
           </SheetContent>
+      </Sheet>
+
+      <Sheet open={isBillingSheetOpen} onOpenChange={setIsBillingSheetOpen}>
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl flex flex-col">
+          <SheetHeader className="text-left px-2">
+            <SheetTitle className="flex items-center gap-2"><Receipt className="h-5 w-5 text-primary"/>Vendor Bills</SheetTitle>
+            <SheetDescription>List of unpaid bills from vendors.</SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-3 py-4">
+              {vendorBills.length > 0 ? vendorBills.map(bill => (
+                <div key={bill.id} className="p-3 border rounded-lg bg-card">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold">{bill.vendorName}</p>
+                      <p className="text-xs text-muted-foreground">Bill ID: {bill.billId}</p>
+                    </div>
+                    <div className="text-right">
+                       <p className="font-bold text-lg text-red-600">{formatCurrency(bill.dueAmount)}</p>
+                       <p className="text-xs text-muted-foreground">Due</p>
+                    </div>
+                  </div>
+                   <div className="text-xs text-muted-foreground mt-2">
+                      Bill Date: {formatDate(bill.billDate)}
+                   </div>
+                </div>
+              )) : (
+                <div className="text-center text-muted-foreground py-16">
+                  No unpaid bills.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
       </Sheet>
     </>
   );
