@@ -36,6 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getVendorBills } from "@/lib/vendor-bill-service";
 import type { VendorBill } from "@/types";
 import { format, parseISO } from "date-fns";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 
 const navItems = [
@@ -281,36 +282,46 @@ export function BottomNavigation() {
       </Sheet>
 
       <Sheet open={isBillingSheetOpen} onOpenChange={setIsBillingSheetOpen}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl flex flex-col">
-          <SheetHeader className="text-left px-2">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl flex flex-col p-0">
+          <SheetHeader className="text-left p-4 border-b">
             <SheetTitle className="flex items-center gap-2"><Receipt className="h-5 w-5 text-primary"/>Vendor Bills</SheetTitle>
-            <SheetDescription>List of unpaid bills from vendors.</SheetDescription>
           </SheetHeader>
-          <ScrollArea className="flex-1 -mx-6 px-6">
-            <div className="space-y-3 py-4">
-              {vendorBills.length > 0 ? vendorBills.map(bill => (
-                <div key={bill.id} className="p-3 border rounded-lg bg-card">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-semibold">{bill.vendorName}</p>
-                      <p className="text-xs text-muted-foreground">Bill ID: {bill.billId}</p>
-                    </div>
-                    <div className="text-right">
-                       <p className="font-bold text-lg text-red-600">{formatCurrency(bill.dueAmount)}</p>
-                       <p className="text-xs text-muted-foreground">Due</p>
-                    </div>
-                  </div>
-                   <div className="text-xs text-muted-foreground mt-2">
-                      Bill Date: {formatDate(bill.billDate)}
-                   </div>
+          <Tabs defaultValue="request" className="flex-1 flex flex-col">
+            <TabsList className="mx-4 mt-2">
+              <TabsTrigger value="request" className="flex-1">Request</TabsTrigger>
+              <TabsTrigger value="history" className="flex-1">History</TabsTrigger>
+            </TabsList>
+            <TabsContent value="request" className="flex-1 overflow-y-auto">
+                <div className="p-4">
+                    <p className="text-center text-muted-foreground">Request form will be here.</p>
                 </div>
-              )) : (
-                <div className="text-center text-muted-foreground py-16">
-                  No unpaid bills.
+            </TabsContent>
+            <TabsContent value="history" className="flex-1 overflow-y-auto">
+                <div className="space-y-3 p-4">
+                  {vendorBills.length > 0 ? vendorBills.map(bill => (
+                    <div key={bill.id} className="p-3 border rounded-lg bg-card">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold">{bill.vendorName}</p>
+                          <p className="text-xs text-muted-foreground">Bill ID: {bill.billId}</p>
+                        </div>
+                        <div className="text-right">
+                           <p className="font-bold text-lg text-red-600">{formatCurrency(bill.dueAmount)}</p>
+                           <p className="text-xs text-muted-foreground">Due</p>
+                        </div>
+                      </div>
+                       <div className="text-xs text-muted-foreground mt-2">
+                          Bill Date: {formatDate(bill.billDate)}
+                       </div>
+                    </div>
+                  )) : (
+                    <div className="text-center text-muted-foreground py-16">
+                      No unpaid bills.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </ScrollArea>
+            </TabsContent>
+          </Tabs>
         </SheetContent>
       </Sheet>
     </>
