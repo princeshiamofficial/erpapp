@@ -36,6 +36,7 @@ import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
 import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
 import type { DateRange } from "react-day-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
@@ -108,6 +109,8 @@ export default function AttendancePage() {
       };
     });
     const [reportSearchTerm, setReportSearchTerm] = useState('');
+    
+    const [leaveYearFilter, setLeaveYearFilter] = useState(String(new Date().getFullYear()));
 
 
     const fetchData = useCallback(async () => {
@@ -322,6 +325,15 @@ export default function AttendancePage() {
         );
 
     }, [allUsers, employees, attendanceData, selectedWeekends, reportDateRange, reportSearchTerm]);
+    
+    const availableYears = useMemo(() => {
+      const currentYear = new Date().getFullYear();
+      const years = [];
+      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+          years.push(i);
+      }
+      return years.reverse();
+    }, []);
 
 
     const renderPagination = () => {
@@ -497,6 +509,16 @@ export default function AttendancePage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
               </div>
+               <Select value={leaveYearFilter} onValueChange={setLeaveYearFilter}>
+                    <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+                        <SelectValue placeholder="Select Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableYears.map(year => (
+                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
           </div>
         </CardHeader>
@@ -535,7 +557,7 @@ export default function AttendancePage() {
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.employeeId}</TableCell>
+                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{yearlyLeave}</TableCell>
@@ -934,6 +956,8 @@ export default function AttendancePage() {
 
     
 
+
+    
 
     
 
