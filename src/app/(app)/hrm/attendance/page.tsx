@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -281,12 +282,11 @@ export default function AttendancePage() {
           }
         }
         
-        const baseReport = allUsers.map(user => {
-            const employeeDetails = employees.find(e => e.userId === user.id);
-            if (!employeeDetails) return null;
+        const activeEmployees = employees.filter(e => e.status === 'Active');
 
+        const baseReport = activeEmployees.map(employee => {
             const userAttendanceInRange = attendanceData.filter(att => 
-                att.employeeId === user.id && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
+                att.employeeId === employee.userId && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
             );
             
             const totalPresentDays = userAttendanceInRange.length;
@@ -298,9 +298,9 @@ export default function AttendancePage() {
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
 
             return {
-                employeeId: user.id,
-                employeeName: user.name,
-                designation: employeeDetails.designation,
+                employeeId: employee.userId,
+                employeeName: employee.name,
+                designation: employee.designation,
                 totalWorkingDay: totalWorkingDays,
                 totalPresentDays,
                 totalAbsentDays: Math.max(0, totalAbsentDays),
