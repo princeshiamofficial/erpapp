@@ -538,7 +538,7 @@ export default function AttendancePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>ID No</TableHead>
+                  <TableHead>Employee ID</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Joining Date</TableHead>
@@ -992,3 +992,4 @@ export default function AttendancePage() {
     
 
     
+
