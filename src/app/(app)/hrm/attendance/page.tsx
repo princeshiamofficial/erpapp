@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -280,12 +279,17 @@ export default function AttendancePage() {
         const endDate = endOfDay(reportDateRange.to || reportDateRange.from);
         
         let totalWorkingDays = 0;
+        let totalFridays = 0;
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
         const numDays = differenceInDays(endDate, startDate) + 1;
 
         for (let i = 0; i < numDays; i++) {
           const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
-          if (!weekendDayIndexes.includes(getDay(currentDate))) {
+          const dayIndex = getDay(currentDate);
+          if (dayIndex === 5) { // 5 is Friday
+            totalFridays++;
+          }
+          if (!weekendDayIndexes.includes(dayIndex)) {
             totalWorkingDays++;
           }
         }
@@ -309,7 +313,7 @@ export default function AttendancePage() {
                 employeeId: employee.userId,
                 employeeName: employee.name,
                 designation: employee.designation,
-                totalWorkingDay: totalWorkingDays,
+                totalFridays,
                 totalPresentDays,
                 totalAbsentDays: Math.max(0, totalAbsentDays),
                 ontimeCheckInDays,
@@ -408,7 +412,6 @@ export default function AttendancePage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead>SL</TableHead>
-                        <TableHead>Employee ID</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>In Time</TableHead>
@@ -421,7 +424,7 @@ export default function AttendancePage() {
                          {isLoading ? (
                             [...Array(3)].map((_, index) => (
                                 <TableRow key={index}>
-                                    <TableCell colSpan={8}><Skeleton className="h-10 w-full" /></TableCell>
+                                    <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
                                 </TableRow>
                             ))
                         ) : filteredAttendance.length > 0 ? (
@@ -431,7 +434,6 @@ export default function AttendancePage() {
                                 return (
                                 <TableRow key={entry.id}>
                                     <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
-                                    <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
@@ -535,7 +537,7 @@ export default function AttendancePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>Employee ID</TableHead>
+                  <TableHead>ID No</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Joining Date</TableHead>
@@ -598,7 +600,7 @@ export default function AttendancePage() {
                    )})
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center h-48 text-gray-500">
+                    <TableCell colSpan={10} className="text-center h-48 text-gray-500">
                       <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                        No employees to manage leave for.
                     </TableCell>
@@ -861,7 +863,7 @@ export default function AttendancePage() {
                         <TableHead className="text-white">SL</TableHead>
                         <TableHead className="text-white">Employee Name</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
-                        <TableHead className="text-white">Total Working Day</TableHead>
+                        <TableHead className="text-white">Total Friday</TableHead>
                         <TableHead className="text-white">Total Present</TableHead>
                         <TableHead className="text-white">Total Absent</TableHead>
                         <TableHead className="text-white">Ontime Check-In</TableHead>
@@ -883,7 +885,7 @@ export default function AttendancePage() {
                               <TableCell>{index + 1}</TableCell>
                               <TableCell className="font-medium">{data.employeeName}</TableCell>
                               <TableCell>{data.designation}</TableCell>
-                              <TableCell>{data.totalWorkingDay}</TableCell>
+                              <TableCell>{data.totalFridays}</TableCell>
                               <TableCell>{data.totalPresentDays}</TableCell>
                               <TableCell>{data.totalAbsentDays}</TableCell>
                               <TableCell>{data.ontimeCheckInDays}</TableCell>
@@ -983,5 +985,7 @@ export default function AttendancePage() {
 
 
 
+
+    
 
     
