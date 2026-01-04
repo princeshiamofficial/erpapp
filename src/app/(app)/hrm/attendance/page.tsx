@@ -430,7 +430,7 @@ export default function AttendancePage() {
                                 const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
-                                    <TableCell>{filteredAttendance.length - index}</TableCell>
+                                    <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -862,12 +862,12 @@ export default function AttendancePage() {
                         <TableHead className="text-white">Employee Name</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
                         <TableHead className="text-white">Total Working Day</TableHead>
-                        <TableHead className="text-white">Total Present Days</TableHead>
-                        <TableHead className="text-white">Total Absent Days</TableHead>
-                        <TableHead className="text-white">Ontime CheckIN Days</TableHead>
-                        <TableHead className="text-white">Late CheckIN Days</TableHead>
-                        <TableHead className="text-white">Ontime Checkout Days</TableHead>
-                        <TableHead className="text-white">Early Checkout Days</TableHead>
+                        <TableHead className="text-white">Total Present</TableHead>
+                        <TableHead className="text-white">Total Absent</TableHead>
+                        <TableHead className="text-white">Ontime Check-In</TableHead>
+                        <TableHead className="text-white">Late Check-In</TableHead>
+                        <TableHead className="text-white">Ontime Checkout</TableHead>
+                        <TableHead className="text-white">Early Checkout</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -982,3 +982,6 @@ export default function AttendancePage() {
     
 
 
+
+
+    
