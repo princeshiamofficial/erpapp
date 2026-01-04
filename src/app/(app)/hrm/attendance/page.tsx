@@ -30,7 +30,7 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
@@ -532,6 +532,7 @@ export default function AttendancePage() {
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Yearly Leave</TableHead>
+                  <TableHead>Leave Taken ({leaveYearFilter})</TableHead>
                   <TableHead>Available</TableHead>
                   <TableHead className="text-center">Action</TableHead>
                 </TableRow>
@@ -546,14 +547,19 @@ export default function AttendancePage() {
                       <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : paginatedEmployees.length > 0 ? (
                    paginatedEmployees.map((employee, index) => {
                      const yearlyLeave = employee.yearlyLeave || 12;
-                     const leaveTaken = employee.leaveTaken || 0;
-                     const availableLeave = yearlyLeave - leaveTaken;
+                     const leaveTakenForYear = (employee.leaveHistory || [])
+                        .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+                        .reduce((sum, leave) => sum + leave.days, 0);
+
+                     const availableLeave = yearlyLeave - leaveTakenForYear;
+                     
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
@@ -561,6 +567,7 @@ export default function AttendancePage() {
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.designation}</TableCell>
                           <TableCell>{yearlyLeave}</TableCell>
+                          <TableCell className="font-semibold text-red-600">{leaveTakenForYear}</TableCell>
                           <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
                           <TableCell className="text-center">
                             <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee)}>Manage</Button>
@@ -569,7 +576,7 @@ export default function AttendancePage() {
                    )})
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-48 text-gray-500">
+                    <TableCell colSpan={8} className="text-center h-48 text-gray-500">
                       <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                        No employees to manage leave for.
                     </TableCell>
@@ -956,6 +963,8 @@ export default function AttendancePage() {
 
     
 
+
+    
 
     
 
