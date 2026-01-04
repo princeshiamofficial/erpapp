@@ -412,7 +412,7 @@ export default function AttendancePage() {
                                 return (
                                 <TableRow key={entry.id}>
                                     <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
-                                    <TableCell>{employee?.employeeId || 'N/A'}</TableCell>
+                                    <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
@@ -934,5 +934,7 @@ export default function AttendancePage() {
 
     
 
+
+    
 
     
