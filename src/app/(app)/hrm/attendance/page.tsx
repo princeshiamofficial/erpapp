@@ -409,7 +409,7 @@ export default function AttendancePage() {
                                 const user = allUsers.find(u => u.id === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
-                                    <TableCell>{String(index + 1).padStart(2, '0')}</TableCell>
+                                    <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
@@ -933,4 +933,5 @@ export default function AttendancePage() {
 
 
     
+
 
