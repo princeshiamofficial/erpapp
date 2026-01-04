@@ -552,7 +552,18 @@ export default function AttendancePage() {
                   ))
                 ) : paginatedEmployees.length > 0 ? (
                    paginatedEmployees.map((employee, index) => {
-                     const yearlyLeave = employee.yearlyLeave || 12;
+                     const joiningDate = new Date(employee.joiningDate);
+                     const joiningYear = getYear(joiningDate);
+                     const selectedYear = parseInt(leaveYearFilter, 10);
+                     
+                     let yearlyLeave = employee.yearlyLeave || 12;
+                     
+                     if (joiningYear === selectedYear) {
+                       // Prorate leave for the joining year
+                       const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
+                       yearlyLeave = 12 - (joiningMonth + 1);
+                     }
+                     
                      const leaveTakenForYear = (employee.leaveHistory || [])
                         .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
                         .reduce((sum, leave) => sum + leave.days, 0);
