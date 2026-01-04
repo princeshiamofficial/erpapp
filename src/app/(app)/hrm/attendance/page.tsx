@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -836,7 +835,7 @@ export default function AttendancePage() {
             <Table>
                 <TableHeader className="bg-gray-800">
                     <TableRow className="hover:bg-gray-800">
-                        <TableHead className="text-white">#</TableHead>
+                        <TableHead className="text-white">SL</TableHead>
                         <TableHead className="text-white">Employee Name</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
                         <TableHead className="text-white">Total Working Day</TableHead>
@@ -956,18 +955,5 @@ export default function AttendancePage() {
         </div>
     );
 }
-
-    
-
-
-
-    
-
-
-    
-
-    
-
-    
 
     
