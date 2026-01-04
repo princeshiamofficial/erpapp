@@ -388,6 +388,7 @@ export default function AttendancePage() {
                 <Table>
                     <TableHeader>
                     <TableRow>
+                        <TableHead>SL</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>In Time</TableHead>
@@ -400,14 +401,15 @@ export default function AttendancePage() {
                          {isLoading ? (
                             [...Array(3)].map((_, index) => (
                                 <TableRow key={index}>
-                                    <TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell>
+                                    <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
                                 </TableRow>
                             ))
                         ) : filteredAttendance.length > 0 ? (
-                            filteredAttendance.map(entry => {
+                            filteredAttendance.map((entry, index) => {
                                 const user = allUsers.find(u => u.id === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
+                                    <TableCell>{index + 1}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
@@ -469,7 +471,7 @@ export default function AttendancePage() {
                             )})
                         ) : (
                              <TableRow>
-                                <TableCell colSpan={6} className="text-center h-48 text-gray-500">
+                                <TableCell colSpan={7} className="text-center h-48 text-gray-500">
                                     <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                                     No attendance data recorded for the selected period.
                                 </TableCell>
