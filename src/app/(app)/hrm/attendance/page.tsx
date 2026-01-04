@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -278,7 +279,6 @@ export default function AttendancePage() {
         const startDate = startOfDay(reportDateRange.from);
         const endDate = endOfDay(reportDateRange.to || reportDateRange.from);
         
-        let totalWorkingDays = 0;
         let totalFridays = 0;
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
         const numDays = differenceInDays(endDate, startDate) + 1;
@@ -289,9 +289,6 @@ export default function AttendancePage() {
           if (dayIndex === 5) { // 5 is Friday
             totalFridays++;
           }
-          if (!weekendDayIndexes.includes(dayIndex)) {
-            totalWorkingDays++;
-          }
         }
         
         const activeEmployees = employees.filter(e => e.status === 'Active');
@@ -301,10 +298,11 @@ export default function AttendancePage() {
                 att.employeeId === employee.userId && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
             );
             
-            const totalPresentDays = userAttendanceInRange.length;
-            const totalAbsentDays = totalWorkingDays - totalPresentDays;
+            const presentDays = userAttendanceInRange.length;
+            const totalPresentDays = presentDays + totalFridays;
             const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
+            const absentDays = 30 - totalPresentDays;
             
             const ontimeCheckoutDays = userAttendanceInRange.filter(att => att.checkOutTime && !att.earlyOutReason).length;
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
@@ -314,8 +312,9 @@ export default function AttendancePage() {
                 employeeName: employee.name,
                 designation: employee.designation,
                 totalFridays,
+                presentDays: presentDays,
                 totalPresentDays,
-                totalAbsentDays: Math.max(0, totalAbsentDays),
+                totalAbsentDays: Math.max(0, absentDays),
                 ontimeCheckInDays,
                 lateCheckInDays,
                 ontimeCheckoutDays,
@@ -864,6 +863,7 @@ export default function AttendancePage() {
                         <TableHead className="text-white">Employee Name</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
                         <TableHead className="text-white">Total Friday</TableHead>
+                        <TableHead className="text-white">Present</TableHead>
                         <TableHead className="text-white">Total Present</TableHead>
                         <TableHead className="text-white">Total Absent</TableHead>
                         <TableHead className="text-white">Ontime Check-In</TableHead>
@@ -876,7 +876,7 @@ export default function AttendancePage() {
                   {isLoading ? (
                       [...Array(5)].map((_, i) => (
                           <TableRow key={`skel-report-${i}`}>
-                              <TableCell colSpan={10}><Skeleton className="h-8 w-full"/></TableCell>
+                              <TableCell colSpan={11}><Skeleton className="h-8 w-full"/></TableCell>
                           </TableRow>
                       ))
                   ) : attendanceReportData.length > 0 ? (
@@ -886,6 +886,7 @@ export default function AttendancePage() {
                               <TableCell className="font-medium">{data.employeeName}</TableCell>
                               <TableCell>{data.designation}</TableCell>
                               <TableCell>{data.totalFridays}</TableCell>
+                              <TableCell>{data.presentDays}</TableCell>
                               <TableCell>{data.totalPresentDays}</TableCell>
                               <TableCell>{data.totalAbsentDays}</TableCell>
                               <TableCell>{data.ontimeCheckInDays}</TableCell>
@@ -896,7 +897,7 @@ export default function AttendancePage() {
                       ))
                   ) : (
                        <TableRow>
-                          <TableCell colSpan={10} className="text-center h-48 text-gray-500">
+                          <TableCell colSpan={11} className="text-center h-48 text-gray-500">
                               <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                               No attendance summary data available for this period.
                           </TableCell>
