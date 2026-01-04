@@ -530,6 +530,7 @@ export default function AttendancePage() {
                   <TableHead>Employee ID</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
+                  <TableHead>Joining Date</TableHead>
                   <TableHead>Yearly Leave</TableHead>
                   <TableHead>Leave Taken ({leaveYearFilter})</TableHead>
                   <TableHead>Available</TableHead>
@@ -544,6 +545,7 @@ export default function AttendancePage() {
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
@@ -559,9 +561,8 @@ export default function AttendancePage() {
                      let yearlyLeave = employee.yearlyLeave || 12;
                      
                      if (joiningYear === selectedYear) {
-                       // Prorate leave for the joining year
                        const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
-                       yearlyLeave = 12 - (joiningMonth + 1);
+                       yearlyLeave = 12 - joiningMonth;
                      }
                      
                      const leaveTakenForYear = (employee.leaveHistory || [])
@@ -573,20 +574,21 @@ export default function AttendancePage() {
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{employee.nationalId || 'N/A'}</TableCell>
+                          <TableCell>{(employee as Employee).nationalId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
-                          <TableCell>{employee.designation}</TableCell>
+                          <TableCell>{(employee as Employee).designation}</TableCell>
+                          <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
                           <TableCell>{yearlyLeave}</TableCell>
                           <TableCell className="font-semibold text-red-600">{leaveTakenForYear}</TableCell>
                           <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
                           <TableCell className="text-center">
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee)}>Manage</Button>
+                            <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee as Employee)}>Manage</Button>
                           </TableCell>
                       </TableRow>
                    )})
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center h-48 text-gray-500">
+                    <TableCell colSpan={9} className="text-center h-48 text-gray-500">
                       <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                        No employees to manage leave for.
                     </TableCell>
@@ -968,3 +970,4 @@ export default function AttendancePage() {
 }
 
     
+
