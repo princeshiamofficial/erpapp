@@ -30,7 +30,7 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
@@ -116,6 +116,9 @@ export default function AttendancePage() {
     const [selectedUserId, setSelectedUserId] = useState<string>('all');
     const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
 
+    const [attendanceMonth, setAttendanceMonth] = useState(String(new Date().getMonth()));
+    const [attendanceYear, setAttendanceYear] = useState(String(new Date().getFullYear()));
+
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -191,14 +194,15 @@ export default function AttendancePage() {
     
     const filteredAttendance = useMemo(() => {
         let results = attendanceData;
-        if (attendanceDateFilter) {
+        if (selectedUserId !== 'all') {
+            results = results.filter(entry => entry.employeeId === selectedUserId &&
+              isSameMonth(new Date(entry.date), new Date(parseInt(attendanceYear), parseInt(attendanceMonth)))
+            );
+        } else if (attendanceDateFilter) {
           results = results.filter(entry => entry.date === attendanceDateFilter);
         }
-        if (selectedUserId !== 'all') {
-            results = results.filter(entry => entry.employeeId === selectedUserId);
-        }
         return results;
-    }, [attendanceData, attendanceDateFilter, selectedUserId]);
+    }, [attendanceData, attendanceDateFilter, selectedUserId, attendanceMonth, attendanceYear]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
     const paginatedEmployees = useMemo(() => {
@@ -290,20 +294,6 @@ export default function AttendancePage() {
         const endDate = endOfDay(reportDateRange.to || reportDateRange.from);
         
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
-        const numDays = differenceInDays(endDate, startDate) + 1;
-        let totalFridays = 0;
-        let totalWorkingDays = 0;
-        
-        for (let i = 0; i < numDays; i++) {
-          const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
-          const dayIndex = getDay(currentDate);
-          if (dayIndex === 5) { // 5 is Friday
-            totalFridays++;
-          }
-          if (!weekendDayIndexes.includes(dayIndex)) {
-            totalWorkingDays++;
-          }
-        }
         
         const activeEmployees = employees.filter(e => e.status === 'Active');
 
@@ -311,6 +301,20 @@ export default function AttendancePage() {
             const userAttendanceInRange = attendanceData.filter(att => 
                 att.employeeId === employee.userId && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
             );
+            
+            let totalWorkingDays = 0;
+            let totalFridays = 0;
+            const numDays = differenceInDays(endDate, startDate) + 1;
+            for (let i = 0; i < numDays; i++) {
+                const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+                const dayIndex = getDay(currentDate);
+                if (dayIndex === 5) { // 5 is Friday
+                    totalFridays++;
+                }
+                if (!weekendDayIndexes.includes(dayIndex)) {
+                    totalWorkingDays++;
+                }
+            }
             
             const presentDays = userAttendanceInRange.length;
             const totalPresentDays = presentDays + totalFridays;
@@ -359,6 +363,12 @@ export default function AttendancePage() {
       return years.reverse();
     }, []);
 
+    const monthsForFilter = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
+      value: i.toString(),
+      label: format(new Date(0, i), 'MMMM'),
+    })), []);
+
+
     const nonBannedUsers = useMemo(() => allUsers.filter(u => !u.isBanned), [allUsers]);
 
     const renderPagination = () => {
@@ -406,7 +416,7 @@ export default function AttendancePage() {
             <CardHeader className="p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <CardTitle className="text-xl font-bold text-gray-800">Attendance History</CardTitle>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                     <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[200px] justify-between h-10 rounded-full">
@@ -435,16 +445,41 @@ export default function AttendancePage() {
                             </Command>
                         </PopoverContent>
                     </Popover>
-                    <div className="relative flex-grow sm:flex-grow-0">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                        placeholder="Filter by date..."
-                        className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                        type="date"
-                        value={attendanceDateFilter}
-                        onChange={(e) => setAttendanceDateFilter(e.target.value)}
-                    />
-                    </div>
+                    {selectedUserId === 'all' ? (
+                        <div className="relative flex-grow sm:flex-grow-0">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                                placeholder="Filter by date..."
+                                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                                type="date"
+                                value={attendanceDateFilter}
+                                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Select value={attendanceMonth} onValueChange={setAttendanceMonth}>
+                                <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
+                                    <SelectValue placeholder="Select Month" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {monthsForFilter.map(month => (
+                                        <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={attendanceYear} onValueChange={setAttendanceYear}>
+                                <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+                                    <SelectValue placeholder="Select Year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableYears.map(year => (
+                                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
                 </div>
             </CardHeader>
@@ -453,7 +488,7 @@ export default function AttendancePage() {
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead>SL</TableHead>
+                        <TableHead>{selectedUserId === 'all' ? 'SL' : 'Date'}</TableHead>
                         <TableHead>Employee ID</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
@@ -476,7 +511,7 @@ export default function AttendancePage() {
                                 const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
-                                    <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
+                                    <TableCell>{selectedUserId === 'all' ? String(filteredAttendance.length - index).padStart(2, '0') : format(parseISO(entry.date), 'dd-MMM-yyyy')}</TableCell>
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -603,7 +638,6 @@ export default function AttendancePage() {
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                     </TableRow>
                   ))
@@ -615,11 +649,11 @@ export default function AttendancePage() {
                      
                      let yearlyLeave = employee.yearlyLeave || 12;
                      
-                      if (joiningYear === selectedYear) {
+                     if (joiningYear === selectedYear) {
                          const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
                          yearlyLeave = 12 - joiningMonth;
                       } else if (joiningYear > selectedYear) {
-                         yearlyLeave = 0; // No leave if they haven't joined yet
+                         yearlyLeave = 0;
                       }
                      
                      const leaveTakenForYear = (employee.leaveHistory || [])
@@ -645,7 +679,7 @@ export default function AttendancePage() {
                    )})
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center h-48 text-gray-500">
+                    <TableCell colSpan={9} className="text-center h-48 text-gray-500">
                       <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                        No employees to manage leave for.
                     </TableCell>
@@ -1036,5 +1070,6 @@ export default function AttendancePage() {
     
 
     
+
 
 
