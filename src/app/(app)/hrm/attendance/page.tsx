@@ -190,7 +190,7 @@ export default function AttendancePage() {
         setCurrentPage(1);
     }, [searchTerm, activeTab]);
     
-    const handleWeekendChange = (day: string, checked: boolean | 'indeterminate') => {
+    const handleWeekendChange = (day: string, checked: boolean | "indeterminate") => {
         if (checked) {
             setSelectedWeekends(prev => [...prev, day]);
         } else {
@@ -393,8 +393,6 @@ export default function AttendancePage() {
                         <TableHead>In Time</TableHead>
                         <TableHead>Out Time</TableHead>
                         <TableHead>Hours Worked</TableHead>
-                        <TableHead>Late Reason</TableHead>
-                        <TableHead>Early Out Reason</TableHead>
                         <TableHead>Location</TableHead>
                     </TableRow>
                     </TableHeader>
@@ -402,7 +400,7 @@ export default function AttendancePage() {
                          {isLoading ? (
                             [...Array(3)].map((_, index) => (
                                 <TableRow key={index}>
-                                    <TableCell colSpan={8}><Skeleton className="h-10 w-full" /></TableCell>
+                                    <TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell>
                                 </TableRow>
                             ))
                         ) : filteredAttendance.length > 0 ? (
@@ -427,8 +425,6 @@ export default function AttendancePage() {
                                     <TableCell>{format(new Date(entry.checkInTime), 'h:mm a')}</TableCell>
                                     <TableCell>{entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : '-'}</TableCell>
                                     <TableCell>{entry.hoursWorked || '-'}</TableCell>
-                                    <TableCell>{entry.lateReason || '-'}</TableCell>
-                                    <TableCell>{entry.earlyOutReason || '-'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Button 
@@ -473,7 +469,7 @@ export default function AttendancePage() {
                             )})
                         ) : (
                              <TableRow>
-                                <TableCell colSpan={8} className="text-center h-48 text-gray-500">
+                                <TableCell colSpan={6} className="text-center h-48 text-gray-500">
                                     <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                                     No attendance data recorded for the selected period.
                                 </TableCell>
@@ -929,6 +925,9 @@ export default function AttendancePage() {
 
     
 
+
+
+    
 
 
     
