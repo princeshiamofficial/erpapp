@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -18,13 +19,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, ClipboardList, PlusCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import type { Employee, LeaveRecord, User } from '@/types';
 import { addLeaveRecordAction, deleteLeaveRecordAction } from '@/app/(app)/payroll/actions';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, getYear } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 interface ManageLeaveDialogProps {
@@ -42,11 +44,20 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
   const [editedLeaveTaken, setEditedLeaveTaken] = useState<string>('');
   const [recordToDelete, setRecordToDelete] = useState<LeaveRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [leaveYearFilter, setLeaveYearFilter] = useState(String(new Date().getFullYear()));
   const { toast } = useToast();
 
   const yearlyLeave = useMemo(() => employee?.yearlyLeave ?? 12, [employee]);
-  const leaveTaken = useMemo(() => employee?.leaveTaken ?? 0, [employee]);
-  const availableLeave = useMemo(() => yearlyLeave - leaveTaken, [yearlyLeave, leaveTaken]);
+
+  const leaveTakenForYear = useMemo(() => {
+    if (!employee?.leaveHistory) return 0;
+    return employee.leaveHistory
+      .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+      .reduce((sum, leave) => sum + leave.days, 0);
+  }, [employee?.leaveHistory, leaveYearFilter]);
+  
+  const availableLeave = useMemo(() => yearlyLeave - leaveTakenForYear, [yearlyLeave, leaveTakenForYear]);
+  
   const canAdminEdit = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN';
 
   useEffect(() => {
@@ -55,10 +66,23 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
       setLeaveReason('');
       setEditedLeaveTaken('');
       setRecordToDelete(null);
+      setLeaveYearFilter(String(new Date().getFullYear()));
     } else if (employee) {
-      setEditedLeaveTaken(leaveTaken.toString());
+      // When dialog opens, recalculate leave taken for the current year filter
+      const leaveTakenForSelectedYear = (employee.leaveHistory || [])
+        .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+        .reduce((sum, leave) => sum + leave.days, 0);
+      setEditedLeaveTaken(leaveTakenForSelectedYear.toString());
     }
-  }, [isOpen, employee, leaveTaken]);
+  }, [isOpen, employee, leaveYearFilter]);
+  
+  const filteredLeaveHistory = useMemo(() => {
+    if (!employee?.leaveHistory) return [];
+    return employee.leaveHistory
+      .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [employee?.leaveHistory, leaveYearFilter]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,8 +98,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     }
     
     setIsSubmitting(true);
-    // For simplicity, we record this as a single event, even for multiple days.
-    // The "date" is the first selected date.
+    
     const newLeaveRecord: Omit<LeaveRecord, 'id'> = {
       date: selectedDates![0].toISOString(),
       days,
@@ -84,7 +107,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
       recordedByUserName: currentUser.name,
     };
     
-    const finalLeaveTaken = editedLeaveTaken !== leaveTaken.toString() ? parseInt(editedLeaveTaken, 10) : undefined;
+    const finalLeaveTaken = editedLeaveTaken !== leaveTakenForYear.toString() ? parseInt(editedLeaveTaken, 10) : undefined;
     
     const result = await addLeaveRecordAction(employee.id, newLeaveRecord, finalLeaveTaken);
     setIsSubmitting(false);
@@ -112,6 +135,15 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
         toast({ title: "Error", description: result.error, variant: "destructive" });
     }
   };
+  
+   const availableYears = useMemo(() => {
+      const currentYear = new Date().getFullYear();
+      const years = [];
+      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+          years.push(i);
+      }
+      return years.reverse();
+    }, []);
 
   return (
     <>
@@ -146,13 +178,25 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
             
             <Separator />
 
-            <h4 className="text-md font-semibold pt-2 flex items-center">
-              <ClipboardList className="mr-2 h-5 w-5 text-primary" />
-              Leave History
-            </h4>
+            <div className="flex justify-between items-center">
+                 <h4 className="text-md font-semibold flex items-center">
+                    <ClipboardList className="mr-2 h-5 w-5 text-primary" />
+                    Leave History
+                </h4>
+                <Select value={leaveYearFilter} onValueChange={setLeaveYearFilter}>
+                    <SelectTrigger className="w-[120px] h-9 text-xs">
+                        <SelectValue placeholder="Select Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableYears.map(year => (
+                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
             <ScrollArea className="h-40 border rounded-md p-2 bg-muted/50">
-              {employee?.leaveHistory && employee.leaveHistory.length > 0 ? (
-                  employee.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(record => (
+              {filteredLeaveHistory.length > 0 ? (
+                  filteredLeaveHistory.map(record => (
                       <div
                         key={record.id}
                         className="text-sm p-1.5 border-b last:border-b-0 hover:bg-muted/80 rounded-sm"
@@ -164,7 +208,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                       </div>
                   ))
               ) : (
-                  <div className="text-center text-sm text-muted-foreground py-10">No leave history recorded.</div>
+                  <div className="text-center text-sm text-muted-foreground py-10">No leave history recorded for {leaveYearFilter}.</div>
               )}
             </ScrollArea>
             
@@ -241,3 +285,4 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     </>
   );
 }
+
