@@ -164,7 +164,15 @@ export default function AttendancePage() {
     }, [currentUser, router, fetchData]);
     
     const filteredEmployees = useMemo(() => {
-        let results = employees.filter(employee => employee.status === 'Active');
+        let results = employees.filter(employee => {
+            if (employee.status !== 'Active') return false;
+            try {
+                const joiningYear = getYear(new Date(employee.joiningDate));
+                return joiningYear <= parseInt(leaveYearFilter, 10);
+            } catch {
+                return false;
+            }
+        });
     
         if (searchTerm) {
           const lowercasedFilter = searchTerm.toLowerCase();
@@ -175,7 +183,7 @@ export default function AttendancePage() {
           );
         }
         return results;
-    }, [employees, searchTerm]);
+    }, [employees, searchTerm, leaveYearFilter]);
     
     const filteredAttendance = useMemo(() => {
         if (!attendanceDateFilter) return attendanceData;
@@ -191,7 +199,7 @@ export default function AttendancePage() {
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, activeTab]);
+    }, [searchTerm, activeTab, leaveYearFilter]);
     
     const handleWeekendChange = (day: string, checked: boolean | "indeterminate") => {
         if (checked) {
@@ -422,7 +430,7 @@ export default function AttendancePage() {
                                 const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
-                                    <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
+                                    <TableCell>{filteredAttendance.length - index}</TableCell>
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -560,10 +568,12 @@ export default function AttendancePage() {
                      
                      let yearlyLeave = employee.yearlyLeave || 12;
                      
-                     if (joiningYear === selectedYear) {
-                       const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
-                       yearlyLeave = 12 - joiningMonth;
-                     }
+                      if (joiningYear === selectedYear) {
+                         const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
+                         yearlyLeave = 12 - joiningMonth;
+                      } else if (joiningYear > selectedYear) {
+                         yearlyLeave = 0; // No leave if they haven't joined yet
+                      }
                      
                      const leaveTakenForYear = (employee.leaveHistory || [])
                         .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
@@ -970,4 +980,5 @@ export default function AttendancePage() {
 }
 
     
+
 
