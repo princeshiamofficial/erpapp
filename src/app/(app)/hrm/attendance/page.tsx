@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -37,6 +37,8 @@ import { saveWeekendSettingsAction } from './actions';
 import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
 import type { DateRange } from "react-day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
@@ -111,6 +113,8 @@ export default function AttendancePage() {
     const [reportSearchTerm, setReportSearchTerm] = useState('');
     
     const [leaveYearFilter, setLeaveYearFilter] = useState(String(new Date().getFullYear()));
+    const [selectedUserId, setSelectedUserId] = useState<string>('all');
+    const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
 
 
     const fetchData = useCallback(async () => {
@@ -186,9 +190,15 @@ export default function AttendancePage() {
     }, [employees, searchTerm, leaveYearFilter]);
     
     const filteredAttendance = useMemo(() => {
-        if (!attendanceDateFilter) return attendanceData;
-        return attendanceData.filter(entry => entry.date === attendanceDateFilter);
-    }, [attendanceData, attendanceDateFilter]);
+        let results = attendanceData;
+        if (attendanceDateFilter) {
+          results = results.filter(entry => entry.date === attendanceDateFilter);
+        }
+        if (selectedUserId !== 'all') {
+            results = results.filter(entry => entry.employeeId === selectedUserId);
+        }
+        return results;
+    }, [attendanceData, attendanceDateFilter, selectedUserId]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
     const paginatedEmployees = useMemo(() => {
@@ -279,15 +289,19 @@ export default function AttendancePage() {
         const startDate = startOfDay(reportDateRange.from);
         const endDate = endOfDay(reportDateRange.to || reportDateRange.from);
         
-        let totalFridays = 0;
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
         const numDays = differenceInDays(endDate, startDate) + 1;
-
+        let totalFridays = 0;
+        let totalWorkingDays = 0;
+        
         for (let i = 0; i < numDays; i++) {
           const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
           const dayIndex = getDay(currentDate);
           if (dayIndex === 5) { // 5 is Friday
             totalFridays++;
+          }
+          if (!weekendDayIndexes.includes(dayIndex)) {
+            totalWorkingDays++;
           }
         }
         
@@ -302,7 +316,7 @@ export default function AttendancePage() {
             const totalPresentDays = presentDays + totalFridays;
             const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
-            const absentDays = 30 - totalPresentDays;
+            const absentDays = totalWorkingDays - presentDays;
             
             const ontimeCheckoutDays = userAttendanceInRange.filter(att => att.checkOutTime && !att.earlyOutReason).length;
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
@@ -312,7 +326,7 @@ export default function AttendancePage() {
                 employeeName: employee.name,
                 designation: employee.designation,
                 totalFridays,
-                presentDays: presentDays,
+                presentDays,
                 totalPresentDays,
                 totalAbsentDays: Math.max(0, absentDays),
                 ontimeCheckInDays,
@@ -345,6 +359,7 @@ export default function AttendancePage() {
       return years.reverse();
     }, []);
 
+    const nonBannedUsers = useMemo(() => allUsers.filter(u => !u.isBanned), [allUsers]);
 
     const renderPagination = () => {
         const pageNumbers = [];
@@ -392,6 +407,34 @@ export default function AttendancePage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <CardTitle className="text-xl font-bold text-gray-800">Attendance History</CardTitle>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[200px] justify-between h-10 rounded-full">
+                                {selectedUserId === 'all' ? 'All Employees' : nonBannedUsers.find(u => u.id === selectedUserId)?.name || 'Select Employee'}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search employee..." />
+                                <CommandList>
+                                    <CommandEmpty>No user found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem onSelect={() => { setSelectedUserId('all'); setIsUserPopoverOpen(false); }}>
+                                            <Check className={cn("mr-2 h-4 w-4", selectedUserId === 'all' ? "opacity-100" : "opacity-0")} />
+                                            All Employees
+                                        </CommandItem>
+                                        {nonBannedUsers.map((user) => (
+                                            <CommandItem key={user.id} onSelect={() => { setSelectedUserId(user.id); setIsUserPopoverOpen(false); }}>
+                                                <Check className={cn("mr-2 h-4 w-4", selectedUserId === user.id ? "opacity-100" : "opacity-0")} />
+                                                {user.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                     <div className="relative flex-grow sm:flex-grow-0">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
@@ -498,7 +541,7 @@ export default function AttendancePage() {
                              <TableRow>
                                 <TableCell colSpan={8} className="text-center h-48 text-gray-500">
                                     <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                                    No attendance data recorded for the selected period.
+                                    No attendance data recorded for the selected criteria.
                                 </TableCell>
                             </TableRow>
                         )}
@@ -560,6 +603,7 @@ export default function AttendancePage() {
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                     </TableRow>
                   ))
@@ -587,7 +631,7 @@ export default function AttendancePage() {
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{(employee as Employee).nationalId || 'N/A'}</TableCell>
+                          <TableCell>{(employee as Employee).employeeId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{(employee as Employee).designation}</TableCell>
                           <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
@@ -868,8 +912,8 @@ export default function AttendancePage() {
                         <TableHead className="text-white">Present</TableHead>
                         <TableHead className="text-white">Total Present</TableHead>
                         <TableHead className="text-white">Total Absent</TableHead>
-                        <TableHead className="text-white">Ontime Check-In</TableHead>
-                        <TableHead className="text-white">Late Check-In</TableHead>
+                        <TableHead className="text-white">Ontime CheckIn</TableHead>
+                        <TableHead className="text-white">Late CheckIn</TableHead>
                         <TableHead className="text-white">Ontime Checkout</TableHead>
                         <TableHead className="text-white">Early Checkout</TableHead>
                     </TableRow>
@@ -992,4 +1036,5 @@ export default function AttendancePage() {
     
 
     
+
 
