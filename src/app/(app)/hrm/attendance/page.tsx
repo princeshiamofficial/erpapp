@@ -389,6 +389,7 @@ export default function AttendancePage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead>SL</TableHead>
+                        <TableHead>Employee ID</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>In Time</TableHead>
@@ -401,15 +402,17 @@ export default function AttendancePage() {
                          {isLoading ? (
                             [...Array(3)].map((_, index) => (
                                 <TableRow key={index}>
-                                    <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
+                                    <TableCell colSpan={8}><Skeleton className="h-10 w-full" /></TableCell>
                                 </TableRow>
                             ))
                         ) : filteredAttendance.length > 0 ? (
                             filteredAttendance.map((entry, index) => {
                                 const user = allUsers.find(u => u.id === entry.employeeId);
+                                const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
                                     <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
+                                    <TableCell>{employee?.employeeId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
@@ -471,7 +474,7 @@ export default function AttendancePage() {
                             )})
                         ) : (
                              <TableRow>
-                                <TableCell colSpan={7} className="text-center h-48 text-gray-500">
+                                <TableCell colSpan={8} className="text-center h-48 text-gray-500">
                                     <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                                     No attendance data recorded for the selected period.
                                 </TableCell>
@@ -933,5 +936,3 @@ export default function AttendancePage() {
 
 
     
-
-
