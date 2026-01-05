@@ -201,7 +201,7 @@ export default function AttendancePage() {
         } else if (attendanceDateFilter) {
           results = results.filter(entry => entry.date === attendanceDateFilter);
         }
-        return results;
+        return results.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [attendanceData, attendanceDateFilter, selectedUserId, attendanceMonth, attendanceYear]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
@@ -488,7 +488,8 @@ export default function AttendancePage() {
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead>{selectedUserId === 'all' ? 'SL' : 'Date'}</TableHead>
+                        <TableHead>SL</TableHead>
+                        {selectedUserId === 'all' ? null : <TableHead>Date</TableHead>}
                         <TableHead>Employee ID</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
@@ -502,7 +503,7 @@ export default function AttendancePage() {
                          {isLoading ? (
                             [...Array(3)].map((_, index) => (
                                 <TableRow key={index}>
-                                    <TableCell colSpan={8}><Skeleton className="h-10 w-full" /></TableCell>
+                                    <TableCell colSpan={9}><Skeleton className="h-10 w-full" /></TableCell>
                                 </TableRow>
                             ))
                         ) : filteredAttendance.length > 0 ? (
@@ -511,7 +512,8 @@ export default function AttendancePage() {
                                 const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
-                                    <TableCell>{selectedUserId === 'all' ? String(filteredAttendance.length - index).padStart(2, '0') : format(parseISO(entry.date), 'dd-MMM-yyyy')}</TableCell>
+                                    <TableCell>{String(index + 1).padStart(2, '0')}</TableCell>
+                                    {selectedUserId === 'all' ? null : <TableCell>{format(parseISO(entry.date), 'dd-MMM-yyyy')}</TableCell>}
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -574,7 +576,7 @@ export default function AttendancePage() {
                             )})
                         ) : (
                              <TableRow>
-                                <TableCell colSpan={8} className="text-center h-48 text-gray-500">
+                                <TableCell colSpan={9} className="text-center h-48 text-gray-500">
                                     <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                                     No attendance data recorded for the selected criteria.
                                 </TableCell>
@@ -1070,6 +1072,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
