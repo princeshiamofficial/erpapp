@@ -193,9 +193,11 @@ export default function AttendancePage() {
     }, [employees, searchTerm, leaveYearFilter]);
     
     const filteredAttendance = useMemo(() => {
-        let results = attendanceData.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        let results = [...attendanceData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
         if (selectedUserId !== 'all') {
-            results = results.filter(entry => entry.employeeId === selectedUserId &&
+            results = results.filter(entry => 
+              entry.employeeId === selectedUserId &&
               isSameMonth(new Date(entry.date), new Date(parseInt(attendanceYear), parseInt(attendanceMonth)))
             );
         } else if (attendanceDateFilter) {
@@ -508,7 +510,7 @@ export default function AttendancePage() {
                                 const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
-                                    <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
+                                    <TableCell>{filteredAttendance.length - index}</TableCell>
                                     {selectedUserId !== 'all' && <TableCell>{format(parseISO(entry.date), 'dd-MMM-yyyy')}</TableCell>}
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
@@ -946,7 +948,6 @@ export default function AttendancePage() {
                         <TableHead className="text-white">Total Absent</TableHead>
                         <TableHead className="text-white">Ontime CheckIn</TableHead>
                         <TableHead className="text-white">Late CheckIn</TableHead>
-                        <TableHead className="text-white">Ontime Checkout</TableHead>
                         <TableHead className="text-white">Early Checkout</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -969,7 +970,6 @@ export default function AttendancePage() {
                               <TableCell>{data.totalAbsentDays}</TableCell>
                               <TableCell>{data.ontimeCheckInDays}</TableCell>
                               <TableCell>{data.lateCheckInDays}</TableCell>
-                              <TableCell>{data.ontimeCheckoutDays}</TableCell>
                               <TableCell>{data.earlyCheckoutDays}</TableCell>
                           </TableRow>
                       ))
@@ -1068,4 +1068,5 @@ export default function AttendancePage() {
     
 
     
+
 
