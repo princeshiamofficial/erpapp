@@ -193,7 +193,7 @@ export default function AttendancePage() {
     }, [employees, searchTerm, leaveYearFilter]);
     
     const filteredAttendance = useMemo(() => {
-        let results = [...attendanceData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        let results = [...attendanceData];
 
         if (selectedUserId !== 'all') {
             results = results.filter(entry => 
@@ -298,6 +298,15 @@ export default function AttendancePage() {
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
         
         const activeEmployees = employees.filter(e => e.status === 'Active');
+        
+        let totalFridaysInRange = 0;
+        const numDaysForFridayCount = differenceInDays(endDate, startDate) + 1;
+        for (let i = 0; i < numDaysForFridayCount; i++) {
+            const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+            if (currentDate.getDay() === 5) { // 5 is Friday
+                totalFridaysInRange++;
+            }
+        }
 
         const baseReport = activeEmployees.map(employee => {
             const userAttendanceInRange = attendanceData.filter(att => 
@@ -314,7 +323,7 @@ export default function AttendancePage() {
             }
 
             const presentDays = userAttendanceInRange.length;
-            const totalPresentDays = presentDays; // Fridays are no longer automatically added.
+            const totalPresentDays = presentDays + totalFridaysInRange;
             const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
             
@@ -328,8 +337,9 @@ export default function AttendancePage() {
                 employeeName: employee.name,
                 designation: employee.designation,
                 presentDays,
+                totalFridays: totalFridaysInRange, // Add fridays count to returned object
                 totalPresentDays,
-                totalAbsentDays: Math.max(0, absentDays), // Corrected calculation.
+                totalAbsentDays: Math.max(0, absentDays), 
                 ontimeCheckInDays,
                 lateCheckInDays,
                 earlyCheckoutDays
@@ -951,6 +961,7 @@ export default function AttendancePage() {
                         <TableHead className="text-white">Employee Name</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
                         <TableHead className="text-white">Present</TableHead>
+                        <TableHead className="text-white">Total Friday</TableHead>
                         <TableHead className="text-white">Total Present</TableHead>
                         <TableHead className="text-white">Total Absent</TableHead>
                         <TableHead className="text-white">Ontime CheckIn</TableHead>
@@ -983,6 +994,7 @@ export default function AttendancePage() {
                               </TableCell>
                               <TableCell>{data.designation}</TableCell>
                               <TableCell>{data.presentDays}</TableCell>
+                              <TableCell>{data.totalFridays}</TableCell>
                               <TableCell>{data.totalPresentDays}</TableCell>
                               <TableCell>{data.totalAbsentDays}</TableCell>
                               <TableCell>{data.ontimeCheckInDays}</TableCell>
@@ -1085,6 +1097,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
