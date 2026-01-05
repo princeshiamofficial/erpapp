@@ -631,7 +631,7 @@ export default function AttendancePage() {
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                       <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
@@ -642,6 +642,7 @@ export default function AttendancePage() {
                   ))
                 ) : paginatedEmployees.length > 0 ? (
                    paginatedEmployees.map((employee, index) => {
+                     const user = allUsers.find(u => u.id === (employee as Employee).userId);
                      const joiningDate = new Date(employee.joiningDate);
                      const joiningYear = getYear(joiningDate);
                      const selectedYear = parseInt(leaveYearFilter, 10);
@@ -665,7 +666,15 @@ export default function AttendancePage() {
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
                           <TableCell>{(employee as Employee).nationalId || 'N/A'}</TableCell>
-                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
+                                    <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
+                                </Avatar>
+                                <span>{employee.name}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>{(employee as Employee).designation}</TableCell>
                           <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
                           <TableCell>{yearlyLeave}</TableCell>
@@ -939,8 +948,8 @@ export default function AttendancePage() {
                 <TableHeader className="bg-gray-800">
                     <TableRow className="hover:bg-gray-800">
                         <TableHead className="text-white">SL</TableHead>
-                        <TableHead className="text-white">Employee Name</TableHead>
                         <TableHead className="text-white">Employee ID</TableHead>
+                        <TableHead className="text-white">Employee Name</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
                         <TableHead className="text-white">Present</TableHead>
                         <TableHead className="text-white">Total Friday</TableHead>
@@ -959,11 +968,21 @@ export default function AttendancePage() {
                           </TableRow>
                       ))
                   ) : attendanceReportData.length > 0 ? (
-                      (attendanceReportData as any[]).map((data, index) => (
+                      (attendanceReportData as any[]).map((data, index) => {
+                          const user = allUsers.find(u => u.id === data.employeeId);
+                          return (
                           <TableRow key={data.employeeId} className="odd:bg-white even:bg-gray-50">
                               <TableCell>{index + 1}</TableCell>
-                              <TableCell className="font-medium">{data.employeeName}</TableCell>
                               <TableCell>{data.nationalId || 'N/A'}</TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={user?.avatarUrl || undefined} alt={data.employeeName} />
+                                        <AvatarFallback>{getInitials(data.employeeName)}</AvatarFallback>
+                                    </Avatar>
+                                    <span>{data.employeeName}</span>
+                                </div>
+                              </TableCell>
                               <TableCell>{data.designation}</TableCell>
                               <TableCell>{data.presentDays}</TableCell>
                               <TableCell>{data.totalFridays}</TableCell>
@@ -973,7 +992,7 @@ export default function AttendancePage() {
                               <TableCell>{data.lateCheckInDays}</TableCell>
                               <TableCell>{data.earlyCheckoutDays}</TableCell>
                           </TableRow>
-                      ))
+                      )})
                   ) : (
                        <TableRow>
                           <TableCell colSpan={11} className="text-center h-48 text-gray-500">
@@ -1069,6 +1088,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
