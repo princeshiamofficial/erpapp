@@ -369,7 +369,7 @@ export default function AttendancePage() {
     })), []);
 
 
-    const nonBannedUsers = useMemo(() => allUsers.filter(u => !u.isBanned), [allUsers]);
+    const nonBannedUsers = useMemo(() => allUsers.filter(u => !u.isBanned && u.role !== 'VENDOR'), [allUsers]);
 
     const renderPagination = () => {
         const pageNumbers = [];
@@ -649,9 +649,9 @@ export default function AttendancePage() {
                      
                      let yearlyLeave = employee.yearlyLeave || 12;
                      
-                     if (joiningYear === selectedYear) {
-                         const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
-                         yearlyLeave = 12 - joiningMonth;
+                      if (joiningYear === selectedYear) {
+                        const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
+                        yearlyLeave = 12 - joiningMonth;
                       } else if (joiningYear > selectedYear) {
                          yearlyLeave = 0;
                       }
@@ -1070,6 +1070,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
