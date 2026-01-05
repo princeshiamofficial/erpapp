@@ -201,7 +201,7 @@ export default function AttendancePage() {
         } else if (attendanceDateFilter) {
           results = results.filter(entry => entry.date === attendanceDateFilter);
         }
-        return results.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return results.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [attendanceData, attendanceDateFilter, selectedUserId, attendanceMonth, attendanceYear]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
@@ -489,7 +489,7 @@ export default function AttendancePage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead>SL</TableHead>
-                        {selectedUserId === 'all' ? null : <TableHead>Date</TableHead>}
+                        {selectedUserId !== 'all' && <TableHead>Date</TableHead>}
                         <TableHead>Employee ID</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
@@ -512,8 +512,8 @@ export default function AttendancePage() {
                                 const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
-                                    <TableCell>{String(index + 1).padStart(2, '0')}</TableCell>
-                                    {selectedUserId === 'all' ? null : <TableCell>{format(parseISO(entry.date), 'dd-MMM-yyyy')}</TableCell>}
+                                    <TableCell>{String(filteredAttendance.length - index).padStart(2, '0')}</TableCell>
+                                    {selectedUserId !== 'all' && <TableCell>{format(parseISO(entry.date), 'dd-MMM-yyyy')}</TableCell>}
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -1072,8 +1072,4 @@ export default function AttendancePage() {
     
 
     
-
-
-
-
 
