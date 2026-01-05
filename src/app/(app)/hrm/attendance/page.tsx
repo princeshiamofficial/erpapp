@@ -201,7 +201,7 @@ export default function AttendancePage() {
         } else if (attendanceDateFilter) {
           results = results.filter(entry => entry.date === attendanceDateFilter);
         }
-        return results.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return results.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [attendanceData, attendanceDateFilter, selectedUserId, attendanceMonth, attendanceYear]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
@@ -302,8 +302,8 @@ export default function AttendancePage() {
                 att.employeeId === employee.userId && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
             );
             
-            let totalWorkingDays = 0;
             let totalFridays = 0;
+            let totalWorkingDays = 0;
             const numDays = differenceInDays(endDate, startDate) + 1;
             for (let i = 0; i < numDays; i++) {
                 const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
@@ -1072,4 +1072,3 @@ export default function AttendancePage() {
     
 
     
-
