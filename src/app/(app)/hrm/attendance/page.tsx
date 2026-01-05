@@ -199,7 +199,7 @@ export default function AttendancePage() {
             results = results.filter(entry => 
               entry.employeeId === selectedUserId &&
               isSameMonth(new Date(entry.date), new Date(parseInt(attendanceYear), parseInt(attendanceMonth)))
-            );
+            ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         } else if (attendanceDateFilter) {
           results = results.filter(entry => entry.date === attendanceDateFilter);
         }
@@ -320,11 +320,11 @@ export default function AttendancePage() {
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
             const absentDays = 0;
             
-            const ontimeCheckoutDays = userAttendanceInRange.filter(att => att.checkOutTime && !att.earlyOutReason).length;
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
 
             return {
                 employeeId: employee.userId,
+                nationalId: employee.nationalId, // Added NID
                 employeeName: employee.name,
                 designation: employee.designation,
                 totalFridays,
@@ -333,7 +333,6 @@ export default function AttendancePage() {
                 totalAbsentDays: Math.max(0, absentDays),
                 ontimeCheckInDays,
                 lateCheckInDays,
-                ontimeCheckoutDays,
                 earlyCheckoutDays
             };
         }).filter(Boolean);
@@ -941,9 +940,10 @@ export default function AttendancePage() {
                     <TableRow className="hover:bg-gray-800">
                         <TableHead className="text-white">SL</TableHead>
                         <TableHead className="text-white">Employee Name</TableHead>
+                        <TableHead className="text-white">Employee ID</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
-                        <TableHead className="text-white">Total Friday</TableHead>
                         <TableHead className="text-white">Present</TableHead>
+                        <TableHead className="text-white">Total Friday</TableHead>
                         <TableHead className="text-white">Total Present</TableHead>
                         <TableHead className="text-white">Total Absent</TableHead>
                         <TableHead className="text-white">Ontime CheckIn</TableHead>
@@ -963,9 +963,10 @@ export default function AttendancePage() {
                           <TableRow key={data.employeeId} className="odd:bg-white even:bg-gray-50">
                               <TableCell>{index + 1}</TableCell>
                               <TableCell className="font-medium">{data.employeeName}</TableCell>
+                              <TableCell>{data.nationalId || 'N/A'}</TableCell>
                               <TableCell>{data.designation}</TableCell>
-                              <TableCell>{data.totalFridays}</TableCell>
                               <TableCell>{data.presentDays}</TableCell>
+                              <TableCell>{data.totalFridays}</TableCell>
                               <TableCell>{data.totalPresentDays}</TableCell>
                               <TableCell>{data.totalAbsentDays}</TableCell>
                               <TableCell>{data.ontimeCheckInDays}</TableCell>
@@ -1068,5 +1069,7 @@ export default function AttendancePage() {
     
 
     
+
+
 
 
