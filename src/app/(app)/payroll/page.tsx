@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -541,6 +542,7 @@ export default function PayrollPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name of Employee</TableHead>
+                <TableHead>Employee ID</TableHead>
                 <TableHead>Present</TableHead>
                 <TableHead>Absent</TableHead>
                 <TableHead>Late</TableHead>
@@ -557,6 +559,7 @@ export default function PayrollPage() {
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -582,6 +585,7 @@ export default function PayrollPage() {
                                 <span>{data.name}</span>
                             </div>
                         </TableCell>
+                        <TableCell>{data.nationalId || 'N/A'}</TableCell>
                         <TableCell>{data.presentDays}</TableCell>
                         <TableCell>{data.absentDays}</TableCell>
                         <TableCell>{data.lateDays}</TableCell>
@@ -614,7 +618,7 @@ export default function PayrollPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-48 text-center text-gray-500">
+                  <TableCell colSpan={11} className="h-48 text-center text-gray-500">
                     No salary sheet data available for the selected period.
                   </TableCell>
                 </TableRow>
@@ -622,7 +626,7 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">Total Unpaid</TableCell>
+                    <TableCell colSpan={10} className="text-right font-bold">Total Unpaid</TableCell>
                     <TableCell className="font-bold text-right"><spoiler-span>{formatCurrency(totalUnpaidAmount)}</spoiler-span></TableCell>
                 </TableRow>
             </TableFooter>
@@ -691,7 +695,7 @@ export default function PayrollPage() {
       case 'summary':
         return summaryContent;
       default:
-        return salarySheetContent;
+        return employeeListContent;
     }
   };
 
