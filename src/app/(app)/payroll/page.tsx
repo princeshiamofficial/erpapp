@@ -541,6 +541,7 @@ export default function PayrollPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>SL</TableHead>
                 <TableHead>Name of Employee</TableHead>
                 <TableHead>Employee ID</TableHead>
                 <TableHead>Present</TableHead>
@@ -558,6 +559,7 @@ export default function PayrollPage() {
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                     <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -572,10 +574,11 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data) => {
+                salarySheetCalculatedData.map((data, index) => {
                     const user = allUsers.find(u => u.id === data.userId);
                     return (
                     <TableRow key={data.id}>
+                        <TableCell>{index + 1}</TableCell>
                         <TableCell className="font-medium">
                            <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
@@ -618,7 +621,7 @@ export default function PayrollPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-48 text-center text-gray-500">
+                  <TableCell colSpan={12} className="h-48 text-center text-gray-500">
                     No salary sheet data available for the selected period.
                   </TableCell>
                 </TableRow>
@@ -626,7 +629,7 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={10} className="text-right font-bold">Total Unpaid</TableCell>
+                    <TableCell colSpan={11} className="text-right font-bold">Total Unpaid</TableCell>
                     <TableCell className="font-bold text-right"><spoiler-span>{formatCurrency(totalUnpaidAmount)}</spoiler-span></TableCell>
                 </TableRow>
             </TableFooter>
@@ -692,8 +695,10 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      case 'summary':
-        return summaryContent;
+      case 'employee_performance':
+        return employeePerformanceContent;
+      case 'attendees_report':
+        return attendeesReportContent;
       default:
         return employeeListContent;
     }
@@ -708,7 +713,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 pb-4 sm:pb-6 lg:pb-8">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -826,3 +831,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
