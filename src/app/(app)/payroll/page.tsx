@@ -638,7 +638,7 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-  
+
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
@@ -687,7 +687,7 @@ export default function PayrollPage() {
         </Card>
     </div>
   );
-
+  
   const attendeesReportContent = <p>Attendees Report Content</p>;
   const employeePerformanceContent = <p>Employee Performance Content</p>;
 
@@ -697,6 +697,8 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
+      case 'summary':
+        return summaryContent;
       case 'employee_performance':
         return employeePerformanceContent;
       case 'attendees_report':
@@ -715,7 +717,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="space-y-6 bg-transparent">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
