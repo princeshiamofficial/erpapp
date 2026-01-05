@@ -327,7 +327,7 @@ export default function AttendancePage() {
             const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
             
-            const absentDays = totalWorkingDays - presentDays;
+            const absentDays = totalWorkingDays - presentDays - totalFridaysInRange;
             
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
 
@@ -966,7 +966,6 @@ export default function AttendancePage() {
                         <TableHead className="text-white">Total Absent</TableHead>
                         <TableHead className="text-white">Ontime CheckIn</TableHead>
                         <TableHead className="text-white">Late CheckIn</TableHead>
-                        <TableHead className="text-white">Early Checkout</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -999,7 +998,6 @@ export default function AttendancePage() {
                               <TableCell>{data.totalAbsentDays}</TableCell>
                               <TableCell>{data.ontimeCheckInDays}</TableCell>
                               <TableCell>{data.lateCheckInDays}</TableCell>
-                              <TableCell>{data.earlyCheckoutDays}</TableCell>
                           </TableRow>
                       )})
                   ) : (
@@ -1097,6 +1095,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
