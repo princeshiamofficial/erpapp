@@ -444,7 +444,7 @@ export default function PayrollPage() {
                             <spoiler-span>{formatCurrency((employee as Employee).salary)}</spoiler-span>
                           </TableCell>
                           <TableCell>{format(new Date((employee as Employee).joiningDate), 'yyyy-MM-dd')}</TableCell>
-                          <TableCell><Badge className={cn((employee as Employee).status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{(employee as Employee).status}</Badge></TableCell>
+                          <TableCell><Badge className={cn((employee as Employee).status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></TableCell>
                           <TableCell className="text-center">
                                <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -542,8 +542,8 @@ export default function PayrollPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>SL</TableHead>
-                <TableHead>Name of Employee</TableHead>
                 <TableHead>Employee ID</TableHead>
+                <TableHead>Name of Employee</TableHead>
                 <TableHead>Present</TableHead>
                 <TableHead>Absent</TableHead>
                 <TableHead>Late</TableHead>
@@ -560,8 +560,8 @@ export default function PayrollPage() {
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -579,6 +579,7 @@ export default function PayrollPage() {
                     return (
                     <TableRow key={data.id}>
                         <TableCell>{index + 1}</TableCell>
+                        <TableCell>{data.nationalId}</TableCell>
                         <TableCell className="font-medium">
                            <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
@@ -588,7 +589,6 @@ export default function PayrollPage() {
                                 <span>{data.name}</span>
                             </div>
                         </TableCell>
-                        <TableCell>{data.nationalId || 'N/A'}</TableCell>
                         <TableCell>{data.presentDays}</TableCell>
                         <TableCell>{data.absentDays}</TableCell>
                         <TableCell>{data.lateDays}</TableCell>
@@ -688,6 +688,8 @@ export default function PayrollPage() {
     </div>
   );
 
+  const attendeesReportContent = <p>Attendees Report Content</p>;
+  const employeePerformanceContent = <p>Employee Performance Content</p>;
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -713,7 +715,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -831,5 +833,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
