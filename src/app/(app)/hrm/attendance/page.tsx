@@ -193,7 +193,7 @@ export default function AttendancePage() {
     }, [employees, searchTerm, leaveYearFilter]);
     
     const filteredAttendance = useMemo(() => {
-        let results = attendanceData;
+        let results = attendanceData.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         if (selectedUserId !== 'all') {
             results = results.filter(entry => entry.employeeId === selectedUserId &&
               isSameMonth(new Date(entry.date), new Date(parseInt(attendanceYear), parseInt(attendanceMonth)))
@@ -201,7 +201,7 @@ export default function AttendancePage() {
         } else if (attendanceDateFilter) {
           results = results.filter(entry => entry.date === attendanceDateFilter);
         }
-        return results.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return results;
     }, [attendanceData, attendanceDateFilter, selectedUserId, attendanceMonth, attendanceYear]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
@@ -303,7 +303,6 @@ export default function AttendancePage() {
             );
             
             let totalFridays = 0;
-            let totalWorkingDays = 0;
             const numDays = differenceInDays(endDate, startDate) + 1;
             for (let i = 0; i < numDays; i++) {
                 const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
@@ -311,16 +310,13 @@ export default function AttendancePage() {
                 if (dayIndex === 5) { // 5 is Friday
                     totalFridays++;
                 }
-                if (!weekendDayIndexes.includes(dayIndex)) {
-                    totalWorkingDays++;
-                }
             }
             
             const presentDays = userAttendanceInRange.length;
             const totalPresentDays = presentDays + totalFridays;
             const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
-            const absentDays = totalWorkingDays - presentDays;
+            const absentDays = 0;
             
             const ontimeCheckoutDays = userAttendanceInRange.filter(att => att.checkOutTime && !att.earlyOutReason).length;
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
@@ -667,7 +663,7 @@ export default function AttendancePage() {
                      return (
                       <TableRow key={employee.id}>
                           <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{(employee as Employee).employeeId || 'N/A'}</TableCell>
+                          <TableCell>{(employee as Employee).nationalId || 'N/A'}</TableCell>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{(employee as Employee).designation}</TableCell>
                           <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
@@ -1072,3 +1068,4 @@ export default function AttendancePage() {
     
 
     
+
