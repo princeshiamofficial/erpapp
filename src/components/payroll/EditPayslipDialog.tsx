@@ -131,8 +131,11 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   };
 
   const providentFund = useMemo(() => {
-    return (employee.salary || 0) * 0.07;
-  }, [employee.salary]);
+    if (employee.providentFundStatus === 'Active') {
+        return (employee.salary || 0) * 0.07;
+    }
+    return 0;
+  }, [employee.salary, employee.providentFundStatus]);
 
   const payableAmount = useMemo(() => {
     const incentiveNum = parseFloat(incentive) || 0;
