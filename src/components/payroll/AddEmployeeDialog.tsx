@@ -22,6 +22,7 @@ import type { Employee, User } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 
 interface AddEmployeeDialogProps {
@@ -42,6 +43,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
   const [joiningDate, setJoiningDate] = useState('');
   const [nationalId, setNationalId] = useState('');
   const [accountNo, setAccountNo] = useState('');
+  const [providentFundStatus, setProvidentFundStatus] = useState<'Active' | 'Inactive'>('Active');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -54,6 +56,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
         setEmail('');
         setNationalId('');
         setAccountNo('');
+        setProvidentFundStatus('Active');
     }
   }, [isOpen]);
 
@@ -93,6 +96,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
       status: 'Active',
       nationalId: nationalId || undefined,
       accountNo: accountNo || undefined,
+      providentFundStatus,
     };
     
     const result = await addEmployeeAction(newEmployeeData);
@@ -221,6 +225,15 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
                 <Input id="joiningDate" type="date" value={joiningDate} onChange={e => setJoiningDate(e.target.value)} required disabled={isSubmitting} />
               </div>
           </div>
+           <div className="flex items-center space-x-2">
+            <Switch
+                id="pf-status"
+                checked={providentFundStatus === 'Active'}
+                onCheckedChange={(checked) => setProvidentFundStatus(checked ? 'Active' : 'Inactive')}
+                disabled={isSubmitting}
+            />
+            <Label htmlFor="pf-status">Provident Fund Active</Label>
+           </div>
           <DialogFooter className="pt-4 border-t border-border/30">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>

@@ -74,6 +74,7 @@ export interface Employee {
   leaveHistory?: LeaveRecord[];
   nationalId?: string; // New Field for National ID
   accountNo?: string;  // New Field for Bank Account Number
+  providentFundStatus?: 'Active' | 'Inactive';
 }
 
 export interface Vendor {

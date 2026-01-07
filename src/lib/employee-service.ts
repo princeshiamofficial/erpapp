@@ -102,6 +102,7 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
             yearlyLeave: employeeData.yearlyLeave || 12,
             leaveTaken: employeeData.leaveTaken || 0,
             leaveHistory: employeeData.leaveHistory || [],
+            providentFundStatus: employeeData.providentFundStatus || 'Active', // Default to Active
         };
 
         const newDoc = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents`, {

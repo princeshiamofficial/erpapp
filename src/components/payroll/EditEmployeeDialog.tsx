@@ -20,6 +20,7 @@ import { updateEmployeeAction } from '@/app/(app)/payroll/actions';
 import { Loader2 } from 'lucide-react';
 import type { Employee } from '@/types';
 import { format } from 'date-fns';
+import { Switch } from '@/components/ui/switch';
 
 interface EditEmployeeDialogProps {
   employee: Employee;
@@ -39,6 +40,7 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
     const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
     const [nationalId, setNationalId] = useState('');
     const [accountNo, setAccountNo] = useState('');
+    const [providentFundStatus, setProvidentFundStatus] = useState<'Active' | 'Inactive'>('Active');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
 
@@ -52,6 +54,7 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
             setSalary((employee.salary || '').toString());
             setNationalId(employee.nationalId || '');
             setAccountNo(employee.accountNo || '');
+            setProvidentFundStatus(employee.providentFundStatus || 'Active');
             try {
               setDob(format(new Date(employee.dob), 'yyyy-MM-dd'));
               setJoiningDate(format(new Date(employee.joiningDate), 'yyyy-MM-dd'));
@@ -78,6 +81,7 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
             salary: numericSalary,
             nationalId: nationalId || undefined,
             accountNo: accountNo || undefined,
+            providentFundStatus: providentFundStatus,
         };
 
         const result = await updateEmployeeAction(employee.id, updates);
@@ -155,17 +159,27 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
                             <Input id="edit-joiningDate" type="date" value={joiningDate} onChange={e => setJoiningDate(e.target.value)} required />
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="edit-status">Status</Label>
-                        <Select value={status} onValueChange={(v) => setStatus(v as 'Active' | 'Inactive')}>
-                          <SelectTrigger id="edit-status">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Active">Active</SelectItem>
-                            <SelectItem value="Inactive">Inactive</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <Label htmlFor="edit-status">Status</Label>
+                            <Select value={status} onValueChange={(v) => setStatus(v as 'Active' | 'Inactive')}>
+                              <SelectTrigger id="edit-status" className="w-[180px]">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Active">Active</SelectItem>
+                                <SelectItem value="Inactive">Inactive</SelectItem>
+                              </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center space-x-2 pt-6">
+                            <Switch
+                                id="pf-status-edit"
+                                checked={providentFundStatus === 'Active'}
+                                onCheckedChange={(checked) => setProvidentFundStatus(checked ? 'Active' : 'Inactive')}
+                            />
+                            <Label htmlFor="pf-status-edit">Provident Fund</Label>
+                        </div>
                     </div>
                     <DialogFooter className="pt-4 border-t">
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
