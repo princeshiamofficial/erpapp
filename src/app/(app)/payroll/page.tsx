@@ -402,6 +402,7 @@ export default function PayrollPage() {
                   <TableHead>Salary</TableHead>
                   <TableHead>Joining Date</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>PF Status</TableHead>
                   <TableHead className="text-center">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -417,6 +418,7 @@ export default function PayrollPage() {
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-8 w-8 mx-auto rounded-md" /></TableCell>
                     </TableRow>
@@ -445,6 +447,11 @@ export default function PayrollPage() {
                           </TableCell>
                           <TableCell>{format(new Date((employee as Employee).joiningDate), 'yyyy-MM-dd')}</TableCell>
                           <TableCell><Badge className={cn((employee as Employee).status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></TableCell>
+                          <TableCell>
+                            <Badge className={cn((employee as Employee).providentFundStatus === 'Active' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200', 'border')}>
+                              {(employee as Employee).providentFundStatus || 'N/A'}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-center">
                                <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -503,6 +510,55 @@ export default function PayrollPage() {
     </Card>
   );
 
+  const summaryContent = (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-700/20">
+              <Wallet className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Payable</p>
+              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalPayableAmount)}</spoiler-span></p>
+            </div>
+          </div>
+        </Card>
+        <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-red-100 dark:bg-red-700/20">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Unpaid</p>
+              <p className="text-2xl font-bold text-destructive font-mono"><spoiler-span>{formatCurrency(totalUnpaidAmount)}</spoiler-span></p>
+            </div>
+          </div>
+        </Card>
+         <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-700/20">
+              <FineIcon className="h-6 w-6 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Fine / Advance</p>
+              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalFineAmount)}</spoiler-span></p>
+            </div>
+          </div>
+        </Card>
+         <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 rounded-full bg-green-100 dark:bg-green-700/20">
+              <ProvidentFundIcon className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Provident Fund</p>
+              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalProvidentFund)}</spoiler-span></p>
+            </div>
+          </div>
+        </Card>
+    </div>
+  );
+  
   const salarySheetContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
@@ -548,7 +604,7 @@ export default function PayrollPage() {
                 <TableHead>Absent</TableHead>
                 <TableHead>Late</TableHead>
                 <TableHead>Provident Fund</TableHead>
-                <TableHead>Fine</TableHead>
+                <TableHead>Fine / Advance</TableHead>
                 <TableHead>Incentive</TableHead>
                 <TableHead>Payable Amount</TableHead>
                 <TableHead>Status</TableHead>
@@ -593,7 +649,7 @@ export default function PayrollPage() {
                         <TableCell>{data.absentDays}</TableCell>
                         <TableCell>{data.lateDays}</TableCell>
                         <TableCell>{formatCurrency(data.providentFund)}</TableCell>
-                        <TableCell>{formatCurrency(data.fine)}</TableCell>
+                        <TableCell>{formatCurrency((data.fine || 0) + (data.advance || 0))}</TableCell>
                         <TableCell>{formatCurrency(data.incentive)}</TableCell>
                         <TableCell className="font-semibold">
                           <spoiler-span>{formatCurrency(data.payableAmount)}</spoiler-span>
@@ -639,58 +695,6 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const summaryContent = (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-700/20">
-              <Wallet className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Payable</p>
-              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalPayableAmount)}</spoiler-span></p>
-            </div>
-          </div>
-        </Card>
-        <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 rounded-full bg-red-100 dark:bg-red-700/20">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Unpaid</p>
-              <p className="text-2xl font-bold text-destructive font-mono"><spoiler-span>{formatCurrency(totalUnpaidAmount)}</spoiler-span></p>
-            </div>
-          </div>
-        </Card>
-         <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-700/20">
-              <FineIcon className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Fines & Advances</p>
-              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalFineAmount)}</spoiler-span></p>
-            </div>
-          </div>
-        </Card>
-         <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 rounded-full bg-green-100 dark:bg-green-700/20">
-              <ProvidentFundIcon className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Provident Fund</p>
-              <p className="text-2xl font-bold text-foreground font-mono"><spoiler-span>{formatCurrency(totalProvidentFund)}</spoiler-span></p>
-            </div>
-          </div>
-        </Card>
-    </div>
-  );
-  
-  const attendeesReportContent = <p>Attendees Report Content</p>;
-  const employeePerformanceContent = <p>Employee Performance Content</p>;
-
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'salary_sheet':
@@ -699,10 +703,6 @@ export default function PayrollPage() {
         return employeeListContent;
       case 'summary':
         return summaryContent;
-      case 'employee_performance':
-        return employeePerformanceContent;
-      case 'attendees_report':
-        return attendeesReportContent;
       default:
         return employeeListContent;
     }
