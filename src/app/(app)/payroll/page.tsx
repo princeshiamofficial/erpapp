@@ -448,7 +448,7 @@ export default function PayrollPage() {
                           <TableCell>{format(new Date((employee as Employee).joiningDate), 'yyyy-MM-dd')}</TableCell>
                           <TableCell><Badge className={cn((employee as Employee).status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></TableCell>
                           <TableCell>
-                            <Badge className={cn((employee as Employee).providentFundStatus === 'Active' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200', 'border')}>
+                            <Badge className={cn((employee as Employee).providentFundStatus === 'Active' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>
                               {(employee as Employee).providentFundStatus || 'N/A'}
                             </Badge>
                           </TableCell>
@@ -622,7 +622,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
@@ -835,3 +835,4 @@ export default function PayrollPage() {
     </div>
   );
 }
+
