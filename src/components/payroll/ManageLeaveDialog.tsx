@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -47,7 +46,24 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
   const [leaveYearFilter, setLeaveYearFilter] = useState(String(new Date().getFullYear()));
   const { toast } = useToast();
 
-  const yearlyLeave = useMemo(() => employee?.yearlyLeave ?? 12, [employee]);
+  const yearlyLeave = useMemo(() => {
+    if (!employee?.joiningDate) return employee?.yearlyLeave ?? 12;
+
+    const joiningDate = new Date(employee.joiningDate);
+    const joiningYear = getYear(joiningDate);
+    const selectedYear = parseInt(leaveYearFilter, 10);
+    let baseYearlyLeave = employee.yearlyLeave || 12;
+
+    if (joiningYear === selectedYear) {
+      const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
+      baseYearlyLeave = 12 - joiningMonth;
+    } else if (joiningYear > selectedYear) {
+      baseYearlyLeave = 0;
+    }
+    
+    return baseYearlyLeave;
+  }, [employee?.joiningDate, employee?.yearlyLeave, leaveYearFilter]);
+
 
   const leaveTakenForYear = useMemo(() => {
     if (!employee?.leaveHistory) return 0;
@@ -285,4 +301,3 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     </>
   );
 }
-
