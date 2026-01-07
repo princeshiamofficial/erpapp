@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -25,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getYear, getDay } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -218,7 +217,7 @@ export default function PayrollPage() {
         onTimeDays,
         providentFund,
         fine: automaticFine,
-        incentive: 0,
+        incentive: employee.incentive || 0,
         payableAmount: Math.max(0, payableAmount), // Ensure payable amount is not negative
         paymentStatus: 'Unpaid' as 'Paid' | 'Unpaid',
         trainingFee: 0,
@@ -694,7 +693,7 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-
+  
   const attendeesReportContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
@@ -763,6 +762,8 @@ export default function PayrollPage() {
         return employeeListContent;
       case 'summary':
         return summaryContent;
+      case 'employees_wallet':
+        return <div className="text-center p-8">Employees Wallet Content Coming Soon...</div>;
       default:
         return employeeListContent;
     }
@@ -777,7 +778,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 bg-transparent">
+    <div className="space-y-6 bg-transparent p-4 sm:p-6 lg:p-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -801,6 +802,7 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
+          existingPayslip={existingPayslipData}
         />
       )}
        {employeeToIncrement && (
@@ -857,7 +859,7 @@ export default function PayrollPage() {
                    {historyToView.leaveHistory && historyToView.leaveHistory.length > 0 ? (
                      historyToView.leaveHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(leave => (
                       <div key={leave.id} className="text-sm p-2 border-b">
-                        <p>{leave.days} day(s) on <span className="font-medium">{format(new Date(leave.date), 'd MMM, yyyy')}</span></p>
+                        <p>{leave.days} day(s) on <span className="font-medium">{format(parseISO(leave.date), 'd MMM, yyyy')}</span></p>
                         <p className="text-xs text-muted-foreground italic">Reason: {leave.reason}</p>
                       </div>
                     ))
@@ -895,4 +897,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-

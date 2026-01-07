@@ -92,7 +92,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * perDaySalaryForFine;
         setFine(calculatedFine.toFixed(2));
         
-        setIncentive('0');
+        setIncentive(employee.incentive?.toString() || '0');
         setTrainingFee('0');
         setAdvance('0');
         setPaymentStatus('Unpaid');
