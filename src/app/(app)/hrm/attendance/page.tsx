@@ -107,7 +107,7 @@ export default function AttendancePage() {
       const now = new Date();
       return {
         from: startOfMonth(now),
-        to: endOfMonth(now),
+        to: endOfDay(now),
       };
     });
     const [reportSearchTerm, setReportSearchTerm] = useState('');
@@ -1095,6 +1095,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
