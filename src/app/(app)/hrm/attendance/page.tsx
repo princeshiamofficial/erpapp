@@ -623,7 +623,6 @@ export default function AttendancePage() {
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Joining Date</TableHead>
-                  <TableHead>Yearly Leave</TableHead>
                   <TableHead>Leave Taken</TableHead>
                   <TableHead>Available</TableHead>
                   <TableHead className="text-center">Action</TableHead>
@@ -680,7 +679,6 @@ export default function AttendancePage() {
                           </TableCell>
                           <TableCell>{(employee as Employee).designation}</TableCell>
                           <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
-                          <TableCell>{yearlyLeave}</TableCell>
                           <TableCell className="font-semibold text-red-600">{leaveTakenForYear}</TableCell>
                           <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
                           <TableCell className="text-center">
@@ -1089,14 +1087,3 @@ export default function AttendancePage() {
     
 
     
-
-
-
-
-
-
-
-
-
-
-
