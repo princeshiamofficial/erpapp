@@ -13,12 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 
-const TeamPerformanceReport = () => {
-    const searchParams = useSearchParams();
-    const team = searchParams.get('team') as UserRole | 'all';
-    const dateFrom = searchParams.get('from');
-    const dateTo = searchParams.get('to');
-
+// This is a wrapper component that uses the hook and passes props down.
+function TeamPerformanceReportContent({ team, dateFrom, dateTo }: { team: UserRole | 'all' | null, dateFrom: string | null, dateTo: string | null }) {
     const [allTasks, setAllTasks] = useState<TaskEntry[]>([]);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
@@ -261,10 +257,14 @@ const TeamPerformanceReport = () => {
             `}</style>
         </>
     );
-};
-
-export default TeamPerformanceReport;
+}
 
 
+export default function TeamPerformanceReportPage() {
+    const searchParams = useSearchParams();
+    const team = searchParams.get('team') as UserRole | 'all' | null;
+    const dateFrom = searchParams.get('from');
+    const dateTo = searchParams.get('to');
 
-
+    return <TeamPerformanceReportContent team={team} dateFrom={dateFrom} dateTo={dateTo} />
+}
