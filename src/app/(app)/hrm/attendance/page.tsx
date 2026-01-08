@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -30,7 +30,7 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, differenceInMonths, isSameDay } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, isSameDay } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
@@ -39,6 +39,7 @@ import type { DateRange } from "react-day-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import Papa from 'papaparse';
 
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
@@ -195,7 +196,7 @@ export default function AttendancePage() {
     const individualAttendanceHistoryData = useMemo(() => {
         if (selectedUserId === 'all') {
              return attendanceData
-                .filter(entry => entry.date === attendanceDateFilter)
+                .filter(entry => isSameDay(parseISO(entry.date), parseISO(attendanceDateFilter)))
                 .map(entry => ({...entry, date: parseISO(entry.date)}));
         }
 
@@ -399,6 +400,42 @@ export default function AttendancePage() {
 
     }, [allUsers, employees, attendanceData, selectedWeekends, reportDateRange, reportSearchTerm]);
     
+    const handleExportIndividualAttendance = () => {
+        if (!individualAttendanceHistoryData || individualAttendanceHistoryData.length === 0) {
+          toast({ title: "No Data to Export", description: "There is no attendance data for the selected employee and period." });
+          return;
+        }
+        
+        const employeeName = selectedUserId !== 'all' ? allUsers.find(u => u.id === selectedUserId)?.name : 'All_Employees';
+        const dateRange = selectedUserId === 'all' 
+            ? attendanceDateFilter 
+            : `${format(new Date(parseInt(attendanceYear), parseInt(attendanceMonth)), 'MMMM_yyyy')}`;
+
+        const filename = `Attendance_History_${employeeName}_${dateRange}.csv`;
+
+        const dataToExport = individualAttendanceHistoryData.map(entry => ({
+            'Date': format(entry.date, 'yyyy-MM-dd'),
+            'Day': format(entry.date, 'EEEE'),
+            'Employee ID': allUsers.find(u => u.id === entry.employeeId)?.employeeId || entry.employeeId,
+            'Employee Name': entry.employeeName,
+            'Status': entry.status,
+            'In Time': entry.checkInTime ? format(new Date(entry.checkInTime), 'h:mm a') : 'N/A',
+            'Out Time': entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : 'N/A',
+            'Hours Worked': entry.hoursWorked || 'N/A',
+            'Location': entry.location || 'N/A',
+        }));
+
+        const csv = Papa.unparse(dataToExport);
+        const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    
     const availableYears = useMemo(() => {
       const currentYear = new Date().getFullYear();
       const years = [];
@@ -524,6 +561,12 @@ export default function AttendancePage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                    )}
+                    {selectedUserId !== 'all' && (
+                        <Button variant="outline" onClick={handleExportIndividualAttendance} className="h-10 rounded-full border-gray-200 bg-white">
+                            <Download className="mr-2 h-4 w-4"/>
+                            Export CSV
+                        </Button>
                     )}
                 </div>
                 </div>
@@ -1136,6 +1179,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
