@@ -59,4 +59,4 @@ export function DeleteEmployeeDialog({ employee, onConfirmDelete, isDeleting, is
   );
 }
 
-
+export default DeleteEmployeeDialog;

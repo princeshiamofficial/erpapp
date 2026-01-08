@@ -250,9 +250,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                     value={phone}
                     onChange={handlePhoneChange}
                     required
-                    pattern="0\d{10}"
                     maxLength={11}
-                    title="Phone number must be an 11-digit number starting with 0."
                     placeholder="01xxxxxxxxx"
                     className={cn(phoneError && "border-destructive focus-visible:ring-destructive")}
                 />

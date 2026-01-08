@@ -24,7 +24,8 @@ import {
     RefreshCw,
     Search,
     Edit,
-    MoreVertical
+    MoreVertical,
+    X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,8 +51,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseISO, format } from 'date-fns';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-const AddEditSoldEntryDialog = dynamic(() => import('@/components/stock/AddEditSoldEntryDialog').then(mod => mod.AddEditSoldEntryDialog));
+const AddEditSoldEntryDialog = dynamic(() => import('@/components/stock/AddEditSoldEntryDialog').then(mod => mod.AddEditSoldEntryDialog), { ssr: false });
 
 const formatCurrency = (value?: number) => {
     if (value === undefined || value === null) return 'N/A';
@@ -125,6 +127,8 @@ export default function StockManagementPage() {
 
     const [soldEntryToDelete, setSoldEntryToDelete] = useState<SoldHistoryEntry | null>(null);
     const [isDeletingSoldEntry, setIsDeletingSoldEntry] = useState(false);
+
+    const [imageToView, setImageToView] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -384,7 +388,7 @@ export default function StockManagementPage() {
           <div>
             <h2 className="text-card-foreground text-xl font-bold flex items-center gap-2">
               <Package className="h-5 w-5 text-primary"/>
-              Stock Items
+              Products
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -417,9 +421,9 @@ export default function StockManagementPage() {
                         return (
                             <Card key={item.id} className="overflow-hidden shadow-lg border-border/20 rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group bg-card">
                                 <CardContent className="p-0">
-                                    <div className="relative">
+                                    <div className="relative cursor-pointer" onClick={() => item.imageUrl && setImageToView(item.imageUrl)}>
                                         <NextImage
-                                            src={item.imageUrl || `https://placehold.co/600x600/e2e8f0/e2e8f0`}
+                                            src={item.imageUrl || `https://colorhutbd.xyz/image/product-not-found.jpg`}
                                             alt={item.name}
                                             width={300}
                                             height={300}
@@ -442,7 +446,7 @@ export default function StockManagementPage() {
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
-                                         <div className={cn(
+                                        <div className={cn(
                                             "absolute bottom-2 right-2 text-xs font-bold flex items-center gap-1.5 p-1.5 rounded-full backdrop-blur-sm",
                                             (item.stockCount ?? 0) > 0 ? "bg-green-500/20 text-green-100 border border-green-400/50" : "bg-red-500/20 text-red-100 border border-red-400/50"
                                         )}>
@@ -631,7 +635,7 @@ export default function StockManagementPage() {
                             <div className="space-y-1">
                                 <Label htmlFor="modelImageFile">Product Image (Optional)</Label>
                                 <div className="flex items-center gap-4 mt-1">
-                                    {imagePreviewUrl ? <NextImage src={imagePreviewUrl} alt="Product preview" width={80} height={80} className="rounded-md object-cover border bg-muted" unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')} onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`; (e.target as HTMLImageElement).alt = 'Error loading image'; }} /> : <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
+                                    {imagePreviewUrl ? <NextImage src={imagePreviewUrl} alt="Product preview" width={80} height={80} className="rounded-md object-cover border bg-muted" unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')} onError={(e) => { (e.target as HTMLImageElement).src = `https://colorhutbd.xyz/image/product-not-found.jpg`; (e.target as HTMLImageElement).alt = 'Error loading image'; }} /> : <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed"><ImageIcon className="h-8 w-8 text-muted-foreground" /></div>}
                                     <div className="flex flex-col gap-2">
                                         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}><UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}</Button>
                                         {imagePreviewUrl && <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}><Trash2 className="mr-1 h-3 w-3" /> Remove Image</Button>}
@@ -648,7 +652,10 @@ export default function StockManagementPage() {
                     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle>
+                                 <DialogTitle className="flex items-center gap-2">
+                                    <AlertTriangle className="h-6 w-6 text-destructive" />
+                                    Are you absolutely sure?
+                                 </DialogTitle>
                                 <AlertDialogDescription>This action cannot be undone. This will permanently delete the product "<span className="font-semibold">{itemToDelete.name}</span>".</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -658,6 +665,25 @@ export default function StockManagementPage() {
                         </AlertDialogContent>
                     </AlertDialog>
                 )}
+
+                <Dialog open={!!imageToView} onOpenChange={() => setImageToView(null)}>
+                  <DialogContent className="max-w-3xl p-2">
+                    {imageToView && (
+                        <DialogHeader>
+                          <DialogTitle className="sr-only">Product Image View</DialogTitle>
+                        </DialogHeader>
+                    )}
+                    {imageToView && (
+                      <NextImage
+                        src={imageToView}
+                        alt="Product full view"
+                        width={800}
+                        height={800}
+                        className="rounded-md object-contain w-full h-auto max-h-[80vh]"
+                      />
+                    )}
+                  </DialogContent>
+                </Dialog>
             </div>
         </>
     );

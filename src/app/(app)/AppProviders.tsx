@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { GlobalSettings, User } from '@/types';
 import { Construction } from 'lucide-react';
 
-const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog));
+const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog), { ssr: false });
 
 const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => {
   return (
