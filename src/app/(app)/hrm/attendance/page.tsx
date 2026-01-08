@@ -651,13 +651,22 @@ export default function AttendancePage() {
                      const joiningDate = new Date(employee.joiningDate);
                      
                      let totalLeaveAccrued = 0;
-                     if (joiningDate <= now) {
-                        const monthsDiff = differenceInMonths(now, joiningDate);
-                        totalLeaveAccrued = monthsDiff > 0 ? monthsDiff : 0;
-                     }
+                     if (isAfter(now, joiningDate)) {
+                        const joiningMonth = getMonth(joiningDate);
+                        const currentMonth = getMonth(now);
+                        const joiningYear = getYear(joiningDate);
+                        const currentYear = getYear(now);
+
+                        if (currentYear > joiningYear) {
+                            totalLeaveAccrued += (12 - (joiningMonth + 1)); // Months for the joining year
+                            totalLeaveAccrued += (currentYear - joiningYear - 1) * 12; // Full years in between
+                            totalLeaveAccrued += currentMonth + 1; // Months for the current year
+                        } else { // Same year
+                            totalLeaveAccrued += currentMonth - joiningMonth;
+                        }
+                    }
                      
                      const leaveTaken = (employee.leaveHistory || []).reduce((sum, leave) => sum + leave.days, 0);
-
                      const availableLeave = totalLeaveAccrued - leaveTaken;
                      
                      return (
@@ -1084,5 +1093,6 @@ export default function AttendancePage() {
     
 
     
+
 
 

@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, ClipboardList, PlusCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import type { Employee, LeaveRecord, User } from '@/types';
 import { addLeaveRecordAction, deleteLeaveRecordAction } from '@/app/(app)/payroll/actions';
-import { format, parseISO, getYear, getMonth, differenceInMonths } from 'date-fns';
+import { format, parseISO, getYear, getMonth, differenceInMonths, isAfter } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -54,12 +54,29 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     const joiningDate = new Date(employee.joiningDate);
     const now = new Date();
     
-    if (joiningDate > now) return 0;
+    if (isAfter(joiningDate, now)) return 0;
     
-    const monthsDiff = differenceInMonths(now, joiningDate);
-
-    // No leave for the joining month, 1 for each month after.
-    return monthsDiff > 0 ? monthsDiff : 0;
+    const joiningMonth = getMonth(joiningDate);
+    const joiningYear = getYear(joiningDate);
+    const currentMonth = getMonth(now);
+    const currentFullYear = getYear(now);
+    
+    let accrued = 0;
+    
+    // For years between joining and current year
+    if (currentFullYear > joiningYear) {
+      // Months left in the joining year
+      accrued += (12 - (joiningMonth + 1));
+      // Full years in between
+      accrued += (currentFullYear - joiningYear - 1) * 12;
+      // Months in the current year
+      accrued += currentMonth; // We don't add 1 because we don't count the current month until it's over
+    } else { // Same year
+      // Only count full months passed since joining
+      accrued += currentMonth - (joiningMonth + 1);
+    }
+    
+    return Math.max(0, accrued + 1);
   }, [employee?.joiningDate]);
 
 
@@ -273,4 +290,3 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     </>
   );
 }
-
