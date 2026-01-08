@@ -142,7 +142,7 @@ export default function SalaryTransferPage() {
       'Name of the Employees': emp.name,
       'Designation': emp.designation,
       'Accounts No.': emp.accountNo || 'N/A',
-      'Amount': emp.payableAmount,
+      'Amount': Math.floor(emp.payableAmount),
     }));
 
     const csv = Papa.unparse(dataToExport);
