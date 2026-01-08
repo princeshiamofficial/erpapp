@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, isSameDay } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -192,19 +192,49 @@ export default function AttendancePage() {
         return results;
     }, [employees, searchTerm]);
     
-    const filteredAttendance = useMemo(() => {
-        let results = [...attendanceData];
-
-        if (selectedUserId !== 'all') {
-            results = results.filter(entry => 
-              entry.employeeId === selectedUserId &&
-              isSameMonth(new Date(entry.date), new Date(parseInt(attendanceYear), parseInt(attendanceMonth)))
-            ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        } else if (attendanceDateFilter) {
-          results = results.filter(entry => entry.date === attendanceDateFilter);
+    const individualAttendanceHistoryData = useMemo(() => {
+        if (selectedUserId === 'all') {
+             return attendanceData
+                .filter(entry => entry.date === attendanceDateFilter)
+                .map(entry => ({...entry, date: parseISO(entry.date)}));
         }
-        return results;
-    }, [attendanceData, attendanceDateFilter, selectedUserId, attendanceMonth, attendanceYear]);
+
+        const targetDate = new Date(parseInt(attendanceYear), parseInt(attendanceMonth));
+        const daysInMonth = getDaysInMonth(targetDate);
+        const dailyData: (AttendanceRecord & { date: Date } | { date: Date, status: 'Absent' })[] = [];
+        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const currentDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
+            if (isAfter(currentDate, new Date())) {
+                break;
+            }
+            
+            const attendanceRecord = attendanceData.find(entry => 
+                entry.employeeId === selectedUserId &&
+                isSameDay(parseISO(entry.date), currentDate)
+            );
+            
+            if (attendanceRecord) {
+                dailyData.push({ ...attendanceRecord, date: parseISO(attendanceRecord.date) });
+            } else {
+                const dayOfWeek = getDay(currentDate);
+                if (!weekendDayIndexes.includes(dayOfWeek)) {
+                     dailyData.push({
+                        id: `${selectedUserId}_${format(currentDate, 'yyyy-MM-dd')}`,
+                        date: currentDate,
+                        status: 'Absent',
+                        employeeId: selectedUserId,
+                        employeeName: allUsers.find(u => u.id === selectedUserId)?.name || 'Unknown',
+                        checkInTime: '',
+                    });
+                }
+            }
+        }
+        
+        return dailyData.sort((a,b) => b!.date.getTime() - a!.date.getTime());
+    }, [attendanceData, attendanceMonth, attendanceYear, selectedUserId, selectedWeekends, allUsers, attendanceDateFilter]);
+
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
     const paginatedEmployees = useMemo(() => {
@@ -496,7 +526,7 @@ export default function AttendancePage() {
                     <TableRow>
                         <TableHead>SL</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>Day</TableHead>
+                        {selectedUserId !== 'all' && <TableHead>Day</TableHead>}
                         <TableHead>Employee ID</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
@@ -513,17 +543,17 @@ export default function AttendancePage() {
                                     <TableCell colSpan={10}><Skeleton className="h-10 w-full" /></TableCell>
                                 </TableRow>
                             ))
-                        ) : filteredAttendance.length > 0 ? (
-                            filteredAttendance.map((entry, index) => {
+                        ) : individualAttendanceHistoryData.length > 0 ? (
+                            individualAttendanceHistoryData.map((entry, index) => {
                                 const user = allUsers.find(u => u.id === entry.employeeId);
                                 const employee = employees.find(e => e.userId === entry.employeeId);
-                                const entryDate = parseISO(entry.date);
+                                const entryDate = entry.date;
                                 const isFriday = getDay(entryDate) === 5;
                                 return (
-                                <TableRow key={entry.id} className={cn(isFriday && "bg-red-50 dark:bg-red-900/20")}>
-                                    <TableCell>{filteredAttendance.length - index}</TableCell>
+                                <TableRow key={entry.id || index} className={cn(isFriday && "bg-red-50 dark:bg-red-900/20")}>
+                                    <TableCell>{individualAttendanceHistoryData.length - index}</TableCell>
                                     <TableCell>{format(entryDate, 'dd-MMM-yyyy')}</TableCell>
-                                    <TableCell>{format(entryDate, 'EEEE')}</TableCell>
+                                    {selectedUserId !== 'all' && <TableCell>{format(entryDate, 'EEEE')}</TableCell>}
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -539,7 +569,7 @@ export default function AttendancePage() {
                                             {entry.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>{format(new Date(entry.checkInTime), 'h:mm a')}</TableCell>
+                                    <TableCell>{entry.checkInTime ? format(new Date(entry.checkInTime), 'h:mm a') : '-'}</TableCell>
                                     <TableCell>{entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : '-'}</TableCell>
                                     <TableCell>{entry.hoursWorked || '-'}</TableCell>
                                     <TableCell>
@@ -1097,6 +1127,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
