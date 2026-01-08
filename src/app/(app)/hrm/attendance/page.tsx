@@ -112,7 +112,6 @@ export default function AttendancePage() {
     });
     const [reportSearchTerm, setReportSearchTerm] = useState('');
     
-    const [leaveYearFilter, setLeaveYearFilter] = useState(String(new Date().getFullYear()));
     const [selectedUserId, setSelectedUserId] = useState<string>('all');
     const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
 
@@ -174,8 +173,9 @@ export default function AttendancePage() {
         let results = employees.filter(employee => {
             if (employee.status !== 'Active') return false;
             try {
+                const currentYear = new Date().getFullYear();
                 const joiningYear = getYear(new Date(employee.joiningDate));
-                return joiningYear <= parseInt(leaveYearFilter, 10);
+                return joiningYear <= currentYear;
             } catch {
                 return false;
             }
@@ -190,7 +190,7 @@ export default function AttendancePage() {
           );
         }
         return results;
-    }, [employees, searchTerm, leaveYearFilter]);
+    }, [employees, searchTerm]);
     
     const filteredAttendance = useMemo(() => {
         let results = [...attendanceData];
@@ -215,7 +215,7 @@ export default function AttendancePage() {
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, activeTab, leaveYearFilter]);
+    }, [searchTerm, activeTab]);
     
     const handleWeekendChange = (day: string, checked: boolean | "indeterminate") => {
         if (checked) {
@@ -600,21 +600,16 @@ export default function AttendancePage() {
         <CardHeader className="p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="text-xl font-bold text-gray-800">Leave Management</CardTitle>
-             <div className="flex items-center gap-2 w-full sm:w-auto">
-               <div className="relative flex-grow sm:flex-grow-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-grow sm:flex-grow-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                <Input
+                  placeholder="Search employee..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                />
               </div>
-               <Select value={leaveYearFilter} onValueChange={setLeaveYearFilter}>
-                    <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
-                        <SelectValue placeholder="Select Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableYears.map(year => (
-                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
             </div>
           </div>
         </CardHeader>
@@ -629,7 +624,7 @@ export default function AttendancePage() {
                   <TableHead>Designation</TableHead>
                   <TableHead>Joining Date</TableHead>
                   <TableHead>Yearly Leave</TableHead>
-                  <TableHead>Leave Taken ({leaveYearFilter})</TableHead>
+                  <TableHead>Leave Taken</TableHead>
                   <TableHead>Available</TableHead>
                   <TableHead className="text-center">Action</TableHead>
                 </TableRow>
@@ -652,20 +647,20 @@ export default function AttendancePage() {
                 ) : paginatedEmployees.length > 0 ? (
                    paginatedEmployees.map((employee, index) => {
                      const user = allUsers.find(u => u.id === (employee as Employee).userId);
+                     const currentYear = new Date().getFullYear();
                      const joiningDate = new Date(employee.joiningDate);
                      const joiningYear = getYear(joiningDate);
-                     const selectedYear = parseInt(leaveYearFilter, 10);
                      
                      let yearlyLeave = 0;
-                     if (joiningYear < selectedYear) {
-                       yearlyLeave = 12;
-                     } else if (joiningYear === selectedYear) {
-                       const joiningMonth = getMonth(joiningDate); // 0-indexed
+                     if (joiningYear < currentYear) {
+                       yearlyLeave = 12; // Full leave for previous years
+                     } else if (joiningYear === currentYear) {
+                       const joiningMonth = getMonth(joiningDate); // 0-indexed (Jan=0)
                        yearlyLeave = 11 - joiningMonth; // Leave starts accruing from the month *after* joining
                      }
                      
                      const leaveTakenForYear = (employee.leaveHistory || [])
-                        .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+                        .filter(leave => getYear(new Date(leave.date)) === currentYear)
                         .reduce((sum, leave) => sum + leave.days, 0);
 
                      const availableLeave = yearlyLeave - leaveTakenForYear;
@@ -1094,6 +1089,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 

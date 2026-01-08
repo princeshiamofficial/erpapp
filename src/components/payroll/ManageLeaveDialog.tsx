@@ -44,37 +44,37 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
   const [editedLeaveTaken, setEditedLeaveTaken] = useState<string>('');
   const [recordToDelete, setRecordToDelete] = useState<LeaveRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [leaveYearFilter, setLeaveYearFilter] = useState(String(new Date().getFullYear()));
   const { toast } = useToast();
+
+  const currentYear = new Date().getFullYear();
 
   const yearlyLeave = useMemo(() => {
     if (!employee?.joiningDate) return employee?.yearlyLeave ?? 12;
 
     const joiningDate = new Date(employee.joiningDate);
     const joiningYear = getYear(joiningDate);
-    const selectedYear = parseInt(leaveYearFilter, 10);
     
-    if (joiningYear > selectedYear) {
-      return 0; // Joined after the selected year
+    if (joiningYear < currentYear) {
+      return 12; // Full leave for previous years
     }
-    if (joiningYear < selectedYear) {
-      return 12; // Joined in a previous year
+    if (joiningYear > currentYear) {
+        return 0; // Joined in a future year
     }
     
-    // Joined in the selected year
+    // Joined in the current year
     const joiningMonth = getMonth(joiningDate); // 0-indexed (Jan=0)
-    // Leave starts from the month *after* joining
+    // Leave starts accruing from the month *after* joining
     return 11 - joiningMonth;
 
-  }, [employee?.joiningDate, employee?.yearlyLeave, leaveYearFilter]);
+  }, [employee?.joiningDate, employee?.yearlyLeave, currentYear]);
 
 
   const leaveTakenForYear = useMemo(() => {
     if (!employee?.leaveHistory) return 0;
     return employee.leaveHistory
-      .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+      .filter(leave => getYear(new Date(leave.date)) === currentYear)
       .reduce((sum, leave) => sum + leave.days, 0);
-  }, [employee?.leaveHistory, leaveYearFilter]);
+  }, [employee?.leaveHistory, currentYear]);
   
   const availableLeave = useMemo(() => yearlyLeave - leaveTakenForYear, [yearlyLeave, leaveTakenForYear]);
   
@@ -86,22 +86,20 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
       setLeaveReason('');
       setEditedLeaveTaken('');
       setRecordToDelete(null);
-      setLeaveYearFilter(String(new Date().getFullYear()));
     } else if (employee) {
-      // When dialog opens, recalculate leave taken for the current year filter
       const leaveTakenForSelectedYear = (employee.leaveHistory || [])
-        .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+        .filter(leave => getYear(new Date(leave.date)) === currentYear)
         .reduce((sum, leave) => sum + leave.days, 0);
       setEditedLeaveTaken(leaveTakenForSelectedYear.toString());
     }
-  }, [isOpen, employee, leaveYearFilter]);
+  }, [isOpen, employee, currentYear]);
   
   const filteredLeaveHistory = useMemo(() => {
     if (!employee?.leaveHistory) return [];
     return employee.leaveHistory
-      .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
+      .filter(leave => getYear(new Date(leave.date)) === currentYear)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [employee?.leaveHistory, leaveYearFilter]);
+  }, [employee?.leaveHistory, currentYear]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -156,14 +154,6 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     }
   };
   
-   const availableYears = useMemo(() => {
-      const currentYear = new Date().getFullYear();
-      const years = [];
-      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
-          years.push(i);
-      }
-      return years.reverse();
-    }, []);
 
   return (
     <>
@@ -201,18 +191,8 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
             <div className="flex justify-between items-center">
                  <h4 className="text-md font-semibold flex items-center">
                     <ClipboardList className="mr-2 h-5 w-5 text-primary" />
-                    Leave History
+                    Leave History ({currentYear})
                 </h4>
-                <Select value={leaveYearFilter} onValueChange={setLeaveYearFilter}>
-                    <SelectTrigger className="w-[120px] h-9 text-xs">
-                        <SelectValue placeholder="Select Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableYears.map(year => (
-                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
             </div>
             <ScrollArea className="h-40 border rounded-md p-2 bg-muted/50">
               {filteredLeaveHistory.length > 0 ? (
@@ -228,7 +208,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                       </div>
                   ))
               ) : (
-                  <div className="text-center text-sm text-muted-foreground py-10">No leave history recorded for {leaveYearFilter}.</div>
+                  <div className="text-center text-sm text-muted-foreground py-10">No leave history recorded for {currentYear}.</div>
               )}
             </ScrollArea>
             
