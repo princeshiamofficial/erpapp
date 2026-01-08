@@ -54,13 +54,12 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     const joiningDate = new Date(employee.joiningDate);
     const now = new Date();
     
-    // Only calculate if joining date is in the past or present
     if (joiningDate > now) return 0;
     
-    const monthsSinceJoining = differenceInMonths(now, joiningDate);
+    const monthsDiff = differenceInMonths(now, joiningDate);
 
-    // Leave accrues from the month *after* joining
-    return Math.max(0, monthsSinceJoining);
+    // No leave for the joining month, 1 for each month after.
+    return monthsDiff > 0 ? monthsDiff : 0;
   }, [employee?.joiningDate]);
 
 
@@ -274,3 +273,4 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     </>
   );
 }
+

@@ -619,10 +619,11 @@ export default function AttendancePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>SL</TableHead>
-                  <TableHead>Employee ID</TableHead>
+                  <TableHead>ID</TableHead>
                   <TableHead>Name of Employee</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Joining Date</TableHead>
+                  <TableHead>Total Accrued</TableHead>
                   <TableHead>Leave Taken</TableHead>
                   <TableHead>Available</TableHead>
                   <TableHead className="text-center">Action</TableHead>
@@ -650,11 +651,9 @@ export default function AttendancePage() {
                      const joiningDate = new Date(employee.joiningDate);
                      
                      let totalLeaveAccrued = 0;
-                     // Only calculate if joining date is in the past or present
                      if (joiningDate <= now) {
-                        const monthsSinceJoining = differenceInMonths(now, joiningDate);
-                        // Accrues from the month *after* joining
-                        totalLeaveAccrued = Math.max(0, monthsSinceJoining);
+                        const monthsDiff = differenceInMonths(now, joiningDate);
+                        totalLeaveAccrued = monthsDiff > 0 ? monthsDiff : 0;
                      }
                      
                      const leaveTaken = (employee.leaveHistory || []).reduce((sum, leave) => sum + leave.days, 0);
@@ -676,6 +675,7 @@ export default function AttendancePage() {
                           </TableCell>
                           <TableCell>{(employee as Employee).designation}</TableCell>
                           <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
+                          <TableCell className="font-semibold text-blue-600">{totalLeaveAccrued}</TableCell>
                           <TableCell className="font-semibold text-red-600">{leaveTaken}</TableCell>
                           <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
                           <TableCell className="text-center">
@@ -1084,4 +1084,5 @@ export default function AttendancePage() {
     
 
     
+
 
