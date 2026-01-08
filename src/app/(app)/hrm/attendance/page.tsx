@@ -30,7 +30,7 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
@@ -656,14 +656,13 @@ export default function AttendancePage() {
                      const joiningYear = getYear(joiningDate);
                      const selectedYear = parseInt(leaveYearFilter, 10);
                      
-                     let yearlyLeave = employee.yearlyLeave || 12;
-                     
-                      if (joiningYear === selectedYear) {
-                        const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
-                        yearlyLeave = 12 - joiningMonth;
-                      } else if (joiningYear > selectedYear) {
-                         yearlyLeave = 0;
-                      }
+                     let yearlyLeave = 0;
+                     if (joiningYear < selectedYear) {
+                       yearlyLeave = 12;
+                     } else if (joiningYear === selectedYear) {
+                       const joiningMonth = getMonth(joiningDate); // 0-indexed
+                       yearlyLeave = 11 - joiningMonth; // Leave starts accruing from the month *after* joining
+                     }
                      
                      const leaveTakenForYear = (employee.leaveHistory || [])
                         .filter(leave => getYear(new Date(leave.date)) === parseInt(leaveYearFilter, 10))
@@ -1095,6 +1094,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 

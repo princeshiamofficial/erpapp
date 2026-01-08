@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -18,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, ClipboardList, PlusCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import type { Employee, LeaveRecord, User } from '@/types';
 import { addLeaveRecordAction, deleteLeaveRecordAction } from '@/app/(app)/payroll/actions';
-import { format, parseISO, getYear } from 'date-fns';
+import { format, parseISO, getYear, getMonth } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -52,16 +53,19 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     const joiningDate = new Date(employee.joiningDate);
     const joiningYear = getYear(joiningDate);
     const selectedYear = parseInt(leaveYearFilter, 10);
-    let baseYearlyLeave = employee.yearlyLeave || 12;
-
-    if (joiningYear === selectedYear) {
-      const joiningMonth = joiningDate.getMonth(); // 0-indexed (Jan=0)
-      baseYearlyLeave = 12 - joiningMonth;
-    } else if (joiningYear > selectedYear) {
-      baseYearlyLeave = 0;
+    
+    if (joiningYear > selectedYear) {
+      return 0; // Joined after the selected year
+    }
+    if (joiningYear < selectedYear) {
+      return 12; // Joined in a previous year
     }
     
-    return baseYearlyLeave;
+    // Joined in the selected year
+    const joiningMonth = getMonth(joiningDate); // 0-indexed (Jan=0)
+    // Leave starts from the month *after* joining
+    return 11 - joiningMonth;
+
   }, [employee?.joiningDate, employee?.yearlyLeave, leaveYearFilter]);
 
 
