@@ -11,10 +11,11 @@ import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import type { Employee, Payslip, AttendanceRecord } from '@/types';
 import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth, isAfter, startOfMonth } from 'date-fns';
-import { Printer } from 'lucide-react';
+import { Printer, Download } from 'lucide-react';
 import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
+import Papa from 'papaparse';
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
@@ -125,9 +126,46 @@ export default function SalaryTransferPage() {
   const handlePrint = () => {
     window.print();
   };
+  
+  const handleExport = () => {
+    if (unpaidEmployeesData.length === 0) {
+      toast({
+        title: "No Data to Export",
+        description: "There are no unpaid salaries to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const dataToExport = unpaidEmployeesData.map((emp, index) => ({
+      'Sl. No.': index + 1,
+      'ID No.': emp.nationalId || 'N/A',
+      'Name of the Employees': emp.name,
+      'Designation': emp.designation,
+      'Accounts No.': emp.accountNo || 'N/A',
+      'Amount': emp.payableAmount,
+    }));
+
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `salary_transfer_${format(selectedDate, 'MMM_yyyy')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-6 printable-area bg-transparent p-4 sm:p-6 lg:p-8">
+      <div className="flex justify-end gap-2 no-print">
+        <Button onClick={handleExport} variant="outline" disabled={isLoading}>
+          <Download className="mr-2 h-4 w-4" /> Export as CSV
+        </Button>
+        <Button onClick={handlePrint}>
+          <Printer className="mr-2 h-4 w-4" /> Print
+        </Button>
+      </div>
       <Card className="print:border-0 print:shadow-none print:bg-transparent">
         <CardHeader className="text-center print:text-black">
           <CardTitle className="text-xl font-bold pt-2">COMPANY NAME: COLOR HUT</CardTitle>
