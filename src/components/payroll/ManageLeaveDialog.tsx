@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, ClipboardList, PlusCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import type { Employee, LeaveRecord, User } from '@/types';
 import { addLeaveRecordAction, deleteLeaveRecordAction } from '@/app/(app)/payroll/actions';
-import { format, parseISO, getYear, getMonth } from 'date-fns';
+import { format, parseISO, getYear, getMonth, differenceInMonths } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -48,35 +48,29 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
 
   const currentYear = new Date().getFullYear();
 
-  const yearlyLeave = useMemo(() => {
-    if (!employee?.joiningDate) return employee?.yearlyLeave ?? 12;
-
+  const totalLeaveAccrued = useMemo(() => {
+    if (!employee?.joiningDate) return 0;
+    
     const joiningDate = new Date(employee.joiningDate);
-    const joiningYear = getYear(joiningDate);
+    const now = new Date();
     
-    if (joiningYear < currentYear) {
-      return 12; // Full leave for previous years
-    }
-    if (joiningYear > currentYear) {
-        return 0; // Joined in a future year
-    }
+    // Only calculate if joining date is in the past or present
+    if (joiningDate > now) return 0;
     
-    // Joined in the current year
-    const joiningMonth = getMonth(joiningDate); // 0-indexed (Jan=0)
-    // Leave starts accruing from the month *after* joining
-    return 11 - joiningMonth;
+    const monthsSinceJoining = differenceInMonths(now, joiningDate);
 
-  }, [employee?.joiningDate, employee?.yearlyLeave, currentYear]);
+    // Leave accrues from the month *after* joining
+    return Math.max(0, monthsSinceJoining);
+  }, [employee?.joiningDate]);
 
 
-  const leaveTakenForYear = useMemo(() => {
+  const leaveTaken = useMemo(() => {
     if (!employee?.leaveHistory) return 0;
-    return employee.leaveHistory
-      .filter(leave => getYear(new Date(leave.date)) === currentYear)
-      .reduce((sum, leave) => sum + leave.days, 0);
-  }, [employee?.leaveHistory, currentYear]);
+    // Sum up all leave days regardless of year
+    return employee.leaveHistory.reduce((sum, leave) => sum + leave.days, 0);
+  }, [employee?.leaveHistory]);
   
-  const availableLeave = useMemo(() => yearlyLeave - leaveTakenForYear, [yearlyLeave, leaveTakenForYear]);
+  const availableLeave = useMemo(() => totalLeaveAccrued - leaveTaken, [totalLeaveAccrued, leaveTaken]);
   
   const canAdminEdit = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN';
 
@@ -87,19 +81,14 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
       setEditedLeaveTaken('');
       setRecordToDelete(null);
     } else if (employee) {
-      const leaveTakenForSelectedYear = (employee.leaveHistory || [])
-        .filter(leave => getYear(new Date(leave.date)) === currentYear)
-        .reduce((sum, leave) => sum + leave.days, 0);
-      setEditedLeaveTaken(leaveTakenForSelectedYear.toString());
+      setEditedLeaveTaken(leaveTaken.toString());
     }
-  }, [isOpen, employee, currentYear]);
+  }, [isOpen, employee, leaveTaken]);
   
   const filteredLeaveHistory = useMemo(() => {
     if (!employee?.leaveHistory) return [];
-    return employee.leaveHistory
-      .filter(leave => getYear(new Date(leave.date)) === currentYear)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [employee?.leaveHistory, currentYear]);
+    return employee.leaveHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [employee?.leaveHistory]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +114,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
       recordedByUserName: currentUser.name,
     };
     
-    const finalLeaveTaken = editedLeaveTaken !== leaveTakenForYear.toString() ? parseInt(editedLeaveTaken, 10) : undefined;
+    const finalLeaveTaken = editedLeaveTaken !== leaveTaken.toString() ? parseInt(editedLeaveTaken, 10) : undefined;
     
     const result = await addLeaveRecordAction(employee.id, newLeaveRecord, finalLeaveTaken);
     setIsSubmitting(false);
@@ -166,8 +155,8 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
           <div className="py-4 space-y-4">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-sm text-muted-foreground">Yearly Total</p>
-                <p className="text-2xl font-bold">{yearlyLeave}</p>
+                <p className="text-sm text-muted-foreground">Total Accrued</p>
+                <p className="text-2xl font-bold">{totalLeaveAccrued}</p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="leave-taken-edit" className="text-sm text-muted-foreground">Taken</Label>
@@ -191,7 +180,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
             <div className="flex justify-between items-center">
                  <h4 className="text-md font-semibold flex items-center">
                     <ClipboardList className="mr-2 h-5 w-5 text-primary" />
-                    Leave History ({currentYear})
+                    Leave History
                 </h4>
             </div>
             <ScrollArea className="h-40 border rounded-md p-2 bg-muted/50">
@@ -208,7 +197,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                       </div>
                   ))
               ) : (
-                  <div className="text-center text-sm text-muted-foreground py-10">No leave history recorded for {currentYear}.</div>
+                  <div className="text-center text-sm text-muted-foreground py-10">No leave history recorded.</div>
               )}
             </ScrollArea>
             

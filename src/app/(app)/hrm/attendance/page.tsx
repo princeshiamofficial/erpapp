@@ -30,7 +30,7 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, differenceInMonths } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
@@ -646,23 +646,20 @@ export default function AttendancePage() {
                 ) : paginatedEmployees.length > 0 ? (
                    paginatedEmployees.map((employee, index) => {
                      const user = allUsers.find(u => u.id === (employee as Employee).userId);
-                     const currentYear = new Date().getFullYear();
+                     const now = new Date();
                      const joiningDate = new Date(employee.joiningDate);
-                     const joiningYear = getYear(joiningDate);
                      
-                     let yearlyLeave = 0;
-                     if (joiningYear < currentYear) {
-                       yearlyLeave = 12; // Full leave for previous years
-                     } else if (joiningYear === currentYear) {
-                       const joiningMonth = getMonth(joiningDate); // 0-indexed (Jan=0)
-                       yearlyLeave = 11 - joiningMonth; // Leave starts accruing from the month *after* joining
+                     let totalLeaveAccrued = 0;
+                     // Only calculate if joining date is in the past or present
+                     if (joiningDate <= now) {
+                        const monthsSinceJoining = differenceInMonths(now, joiningDate);
+                        // Accrues from the month *after* joining
+                        totalLeaveAccrued = Math.max(0, monthsSinceJoining);
                      }
                      
-                     const leaveTakenForYear = (employee.leaveHistory || [])
-                        .filter(leave => getYear(new Date(leave.date)) === currentYear)
-                        .reduce((sum, leave) => sum + leave.days, 0);
+                     const leaveTaken = (employee.leaveHistory || []).reduce((sum, leave) => sum + leave.days, 0);
 
-                     const availableLeave = yearlyLeave - leaveTakenForYear;
+                     const availableLeave = totalLeaveAccrued - leaveTaken;
                      
                      return (
                       <TableRow key={employee.id}>
@@ -679,7 +676,7 @@ export default function AttendancePage() {
                           </TableCell>
                           <TableCell>{(employee as Employee).designation}</TableCell>
                           <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
-                          <TableCell className="font-semibold text-red-600">{leaveTakenForYear}</TableCell>
+                          <TableCell className="font-semibold text-red-600">{leaveTaken}</TableCell>
                           <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
                           <TableCell className="text-center">
                             <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee as Employee)}>Manage</Button>
@@ -688,7 +685,7 @@ export default function AttendancePage() {
                    )})
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center h-48 text-gray-500">
+                    <TableCell colSpan={8} className="text-center h-48 text-gray-500">
                       <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                        No employees to manage leave for.
                     </TableCell>
@@ -1087,3 +1084,4 @@ export default function AttendancePage() {
     
 
     
+
