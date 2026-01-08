@@ -495,7 +495,8 @@ export default function AttendancePage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead>SL</TableHead>
-                        {selectedUserId !== 'all' && <TableHead>Date</TableHead>}
+                        <TableHead>Date</TableHead>
+                        <TableHead>Day</TableHead>
                         <TableHead>Employee ID</TableHead>
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
@@ -509,17 +510,20 @@ export default function AttendancePage() {
                          {isLoading ? (
                             [...Array(3)].map((_, index) => (
                                 <TableRow key={index}>
-                                    <TableCell colSpan={9}><Skeleton className="h-10 w-full" /></TableCell>
+                                    <TableCell colSpan={10}><Skeleton className="h-10 w-full" /></TableCell>
                                 </TableRow>
                             ))
                         ) : filteredAttendance.length > 0 ? (
                             filteredAttendance.map((entry, index) => {
                                 const user = allUsers.find(u => u.id === entry.employeeId);
                                 const employee = employees.find(e => e.userId === entry.employeeId);
+                                const entryDate = parseISO(entry.date);
+                                const isFriday = getDay(entryDate) === 5;
                                 return (
-                                <TableRow key={entry.id}>
+                                <TableRow key={entry.id} className={cn(isFriday && "bg-red-50 dark:bg-red-900/20")}>
                                     <TableCell>{filteredAttendance.length - index}</TableCell>
-                                    {selectedUserId !== 'all' && <TableCell>{format(parseISO(entry.date), 'dd-MMM-yyyy')}</TableCell>}
+                                    <TableCell>{format(entryDate, 'dd-MMM-yyyy')}</TableCell>
+                                    <TableCell>{format(entryDate, 'EEEE')}</TableCell>
                                     <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -582,7 +586,7 @@ export default function AttendancePage() {
                             )})
                         ) : (
                              <TableRow>
-                                <TableCell colSpan={9} className="text-center h-48 text-gray-500">
+                                <TableCell colSpan={10} className="text-center h-48 text-gray-500">
                                     <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                                     No attendance data recorded for the selected criteria.
                                 </TableCell>
@@ -1093,6 +1097,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
