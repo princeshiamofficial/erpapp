@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, isSameDay } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -30,7 +30,7 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, differenceInMonths } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, differenceInMonths, isSameDay } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
@@ -201,7 +201,7 @@ export default function AttendancePage() {
 
         const targetDate = new Date(parseInt(attendanceYear), parseInt(attendanceMonth));
         const daysInMonth = getDaysInMonth(targetDate);
-        const dailyData: (AttendanceRecord & { date: Date } | { date: Date, status: 'Absent' })[] = [];
+        const dailyData: (AttendanceRecord | { date: Date, status: 'Absent' | 'Weekend', employeeId: string, employeeName: string, id: string, checkInTime: string })[] = [];
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
         for (let i = 1; i <= daysInMonth; i++) {
@@ -219,7 +219,16 @@ export default function AttendancePage() {
                 dailyData.push({ ...attendanceRecord, date: parseISO(attendanceRecord.date) });
             } else {
                 const dayOfWeek = getDay(currentDate);
-                if (!weekendDayIndexes.includes(dayOfWeek)) {
+                if (weekendDayIndexes.includes(dayOfWeek)) {
+                     dailyData.push({
+                        id: `${selectedUserId}_${format(currentDate, 'yyyy-MM-dd')}`,
+                        date: currentDate,
+                        status: 'Weekend',
+                        employeeId: selectedUserId,
+                        employeeName: allUsers.find(u => u.id === selectedUserId)?.name || 'Unknown',
+                        checkInTime: '',
+                    });
+                } else {
                      dailyData.push({
                         id: `${selectedUserId}_${format(currentDate, 'yyyy-MM-dd')}`,
                         date: currentDate,
@@ -232,7 +241,7 @@ export default function AttendancePage() {
             }
         }
         
-        return dailyData.sort((a,b) => b!.date.getTime() - a!.date.getTime());
+        return dailyData.sort((a,b) => b.date.getTime() - a.date.getTime());
     }, [attendanceData, attendanceMonth, attendanceYear, selectedUserId, selectedWeekends, allUsers, attendanceDateFilter]);
 
 
@@ -1127,6 +1136,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
