@@ -5,41 +5,32 @@ import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 const COLLECTION_NAME = 'leads';
 
-// Get all leads with pagination handling
+// Get all leads
 export const getLeads = async (): Promise<Lead[]> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
     
-    const allLeads: Lead[] = [];
-    let offset = 0;
-    const limit = 4444; // Fetch in batches
-    let hasMore = true;
-
-    while (hasMore) {
-      // The v3 API supports limit, offset, orderBy, and direction, so this should work.
-      const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=${limit}&offset=${offset}&orderBy=date&direction=desc`);
-      
-      if (response && Array.isArray(response.documents)) {
-        const leadsFromPage = response.documents.map((doc: { id: string, data: any }) => ({
+    // Simplify the fetch call, remove pagination and server-side ordering to fix 500 error.
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
+    
+    if (response && Array.isArray(response.documents)) {
+        const allLeads = response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
         } as Lead));
-        allLeads.push(...leadsFromPage);
         
-        // The v3 API pagination response might be different. Let's assume it has total and limit.
-        hasMore = (response.offset + response.limit) < response.total;
-        offset += limit;
-      } else {
-        hasMore = false;
-      }
+        // Perform sorting on the client side for consistency and to avoid server errors.
+        return allLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
     
-    return allLeads;
+    return [];
   } catch (error) {
-    console.error("Error fetching leads via API v3 with pagination:", error);
+    // Catching the error here to prevent the app from crashing on a 500 response.
+    console.error("Error fetching leads via API v3:", error);
     return [];
   }
 };
+
 
 // Get a single lead by ID
 export const getLeadById = async (leadId: string): Promise<Lead | null> => {
@@ -48,6 +39,9 @@ export const getLeadById = async (leadId: string): Promise<Lead | null> => {
         const doc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`);
         return { id: doc.id, ...doc.data } as Lead;
     } catch (error) {
+        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+            return null; // Gracefully handle not found
+        }
         console.error(`Error fetching lead by ID ${leadId} via API v3:`, error);
         return null;
     }
