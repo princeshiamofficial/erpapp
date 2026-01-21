@@ -11,7 +11,7 @@ export const getLeads = async (): Promise<Lead[]> => {
     // the API should gracefully return an empty list or a 'not found' error which we now handle.
     // await ensureCollectionExistsV3(COLLECTION_NAME);
     
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444`);
     
     if (response && Array.isArray(response.documents)) {
         const allLeads = response.documents.map((doc: { id: string, data: any }) => ({

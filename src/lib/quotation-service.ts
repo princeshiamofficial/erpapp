@@ -10,7 +10,7 @@ const QUOTATIONS_COLLECTION = 'quotations';
 export const getQuotations = async (): Promise<TrackingLink[]> => {
   try {
     await ensureCollectionExistsV3(QUOTATIONS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${QUOTATIONS_COLLECTION}/documents?limit=9999`);
+    const response = await fetchFromApiV3(`collections/${QUOTATIONS_COLLECTION}/documents?limit=4444`);
     
     if (response && Array.isArray(response.documents)) {
         const quotations = response.documents.map((doc: { id: string, data: any }) => ({
@@ -77,7 +77,7 @@ export const addQuotation = async (quotationData: {
 
     const quotationPrefix = 'QTN-';
     
-    const allQuotationsResponse = await fetchFromApiV3(`collections/${QUOTATIONS_COLLECTION}/documents?limit=9999`);
+    const allQuotationsResponse = await fetchFromApiV3(`collections/${QUOTATIONS_COLLECTION}/documents?limit=4444`);
     let newSequence = 1;
     if (allQuotationsResponse && Array.isArray(allQuotationsResponse.documents)) {
         const quotationIds = allQuotationsResponse.documents.map((doc: any) => doc.id);
