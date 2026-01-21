@@ -1,5 +1,3 @@
-
-
 import type { Lead, LeadCategory, LeadStatusType } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
@@ -8,9 +6,11 @@ const COLLECTION_NAME = 'leads';
 // Get all leads
 export const getLeads = async (): Promise<Lead[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
+    // The ensureCollectionExistsV3 call was causing a 500 error on this specific collection.
+    // By fetching documents directly, we can bypass this. If the collection doesn't exist,
+    // the API should gracefully return an empty list or a 'not found' error which we now handle.
+    // await ensureCollectionExistsV3(COLLECTION_NAME);
     
-    // Simplify the fetch call, remove pagination and server-side ordering to fix 500 error.
     const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
     
     if (response && Array.isArray(response.documents)) {
@@ -25,7 +25,12 @@ export const getLeads = async (): Promise<Lead[]> => {
     
     return [];
   } catch (error) {
-    // Catching the error here to prevent the app from crashing on a 500 response.
+    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+      // This is a valid state if the collection hasn't been created yet. Return empty array.
+      console.log("Leads collection not found, which is an expected state if no leads have been created.");
+      return [];
+    }
+    // Catching other errors here to prevent the app from crashing on a 500 response.
     console.error("Error fetching leads via API v3:", error);
     return [];
   }
