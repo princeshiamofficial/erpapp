@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo } from 'react';
@@ -32,7 +31,7 @@ interface LeadListViewProps {
   onDeleteLead: (lead: Lead) => void;
   onTransferLead: (lead: Lead) => void;
   onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void; 
-  allCrmUsers: User[];
+  allUsers: User[];
   isSelectionMode?: boolean;
   selectedLeadIds?: Set<string>;
   onSelectionChange?: (leadId: string, isSelected: boolean) => void;
@@ -52,7 +51,7 @@ const getInitials = (name: string | undefined) => {
   if (!name) return '??';
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
 const getStatusBadgeClass = (status: string) => {
@@ -67,7 +66,7 @@ const getStatusBadgeClass = (status: string) => {
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
-export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allCrmUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => {}, onSelectAll = () => {} }: LeadListViewProps) {
+export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => {}, onSelectAll = () => {} }: LeadListViewProps) {
   const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
   const canDelete = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
   const canTransfer = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
@@ -137,7 +136,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                         ))
                     ) : leads.length > 0 ? (
                         leads.map(lead => {
-                            const crmUser = allCrmUsers.find(u => u.id === lead.crmId);
+                            const crmUser = allUsers.find(u => u.id === lead.crmId);
                             const scheduleDate = lead.schedule ? parseISO(lead.schedule) : null;
                             const isPast = scheduleDate ? isBefore(scheduleDate, startOfDay(new Date())) && !isToday(scheduleDate) : false;
                             const isDuplicatePhone = lead.phone && duplicatePhoneNumbers.has(lead.phone);
@@ -169,7 +168,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                     <TableCell>
                                         <Badge variant="secondary">{lead.category}</Badge>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="whitespace-nowrap">
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8 text-xs">
                                                 <AvatarImage src={crmUser?.avatarUrl || undefined} alt={lead.crmName} />

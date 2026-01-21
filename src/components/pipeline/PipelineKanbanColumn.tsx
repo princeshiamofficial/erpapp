@@ -31,7 +31,7 @@ interface PipelineKanbanColumnProps {
   onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
   onTransferLead: (lead: Lead) => void; 
-  allCrmUsers: User[];
+  allUsers: User[];
 }
 
 const LEADS_PER_PAGE = 20;
@@ -49,7 +49,7 @@ export function PipelineKanbanColumn({
   onViewLead,
   onDeleteLead,
   onTransferLead, 
-  allCrmUsers,
+  allUsers,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const [visibleCount, setVisibleCount] = useState(LEADS_PER_PAGE);
@@ -114,7 +114,7 @@ export function PipelineKanbanColumn({
                             onViewLead={onViewLead}
                             onDeleteLead={onDeleteLead}
                             onTransferLead={onTransferLead}
-                            allCrmUsers={allCrmUsers}
+                            allUsers={allUsers}
                             headerBgClass={headerBgClass}
                         />
                     </motion.div>

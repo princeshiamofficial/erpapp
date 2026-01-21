@@ -409,14 +409,21 @@ export function PipelineClient() {
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
-      let startPage = Math.max(1, currentPage - 2); let endPage = Math.min(totalPages, currentPage + 2);
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
 
       if (currentPage < 3) endPage = maxPagesToShow;
       else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
       
-      if (startPage > 1) { pageNumbers.push(1); if (startPage > 2) pageNumbers.push('...'); }
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) pageNumbers.push('...');
+      }
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
-      if (endPage < totalPages) { if (endPage < totalPages - 1) pageNumbers.push('...'); pageNumbers.push(totalPages); }
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
     }
     return pageNumbers.map((page, index) => (
         <PaginationItem key={index}>
@@ -551,7 +558,7 @@ export function PipelineClient() {
                   key={col.category} id={col.category} title={col.title} icon={col.icon}
                   leads={leadsByCategory[col.category] || []} headerBgClass={col.headerBgClass}
                   isLoading={isLoading} currentUser={currentUser}
-                  onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allCrmUsers={allCrmUsers}
+                  onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allUsers={allUsers}
                 />
               ))}
             </div>
@@ -561,7 +568,7 @@ export function PipelineClient() {
             <LeadListView
                leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
                onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
-               onUpdateLeadCategory={handleUpdateLeadCategory} allCrmUsers={allCrmUsers}
+               onUpdateLeadCategory={handleUpdateLeadCategory} allUsers={allUsers}
                isSelectionMode={isSelectionMode}
                selectedLeadIds={selectedLeadIds}
                onSelectionChange={handleSelectionChange}
@@ -587,7 +594,7 @@ export function PipelineClient() {
         )}
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} allCrmUsers={allCrmUsers} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} allUsers={allUsers} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />

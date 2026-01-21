@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { Lead, User } from '@/types';
@@ -32,7 +31,7 @@ interface LeadCardProps {
   onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
   onTransferLead: (lead: Lead) => void; 
-  allCrmUsers: User[]; // Pass all CRM users
+  allUsers: User[];
   headerBgClass: string; 
 }
 
@@ -53,14 +52,14 @@ const formatDateSafe = (dateString?: string) => {
 };
 
 
-export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onDeleteLead, onTransferLead, allCrmUsers, headerBgClass }: LeadCardProps) {
+export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onDeleteLead, onTransferLead, allUsers, headerBgClass }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
     disabled: isOverlay,
   });
   
-  const crmUser = allCrmUsers.find(u => u.id === lead.crmId);
+  const crmUser = allUsers.find(u => u.id === lead.crmId);
 
   const style = !isOverlay && transform ? {
     transform: CSS.Translate.toString(transform),
