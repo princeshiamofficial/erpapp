@@ -1,79 +1,92 @@
 import type { Lead, LeadCategory, LeadStatusType } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { format, subMonths, parseISO } from 'date-fns';
 
-const COLLECTION_NAME = 'pipelineLeads';
+const getLeadCollectionName = (date: Date): string => `leads-${format(date, 'MM-yyyy')}`;
 
-// Get all leads
+const getMonthsToFetch = (count: number = 24): Date[] => {
+    const months: Date[] = [];
+    const today = new Date();
+    for (let i = 0; i < count; i++) {
+        months.push(subMonths(today, i));
+    }
+    return months;
+};
+
+// Get all leads from the last 24 months
 export const getLeads = async (): Promise<Lead[]> => {
-  try {
-    // The ensureCollectionExistsV3 call was causing a 500 error on this specific collection.
-    // By fetching documents directly, we can bypass this. If the collection doesn't exist,
-    // the API should gracefully return an empty list or a 'not found' error which we now handle.
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4000`);
-    
-    if (response && Array.isArray(response.documents)) {
-        const allLeads = response.documents.map((doc: { id: string, data: any }) => ({
+  const months = getMonthsToFetch();
+  const allLeads: Lead[] = [];
+
+  for (const month of months) {
+    const collectionName = getLeadCollectionName(month);
+    try {
+      // API will return an empty list or error if it doesn't exist, which we handle.
+      const response = await fetchFromApiV3(`collections/${collectionName}/documents?limit=4000`);
+      if (response && Array.isArray(response.documents)) {
+        const leadsFromMonth = response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
         } as Lead));
-        
-        // Perform sorting on the client side for consistency and to avoid server errors.
-        return allLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        allLeads.push(...leadsFromMonth);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+        // This is expected if a month's collection has no leads. Continue to the next month.
+        continue;
+      }
+      console.error(`Error fetching leads from ${collectionName} via API v3:`, error);
     }
-    
-    return [];
-  } catch (error) {
-    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-      // This is a valid state if the collection hasn't been created yet. Return empty array.
-      console.log("Leads collection not found, which is an expected state if no leads have been created.");
-      return [];
-    }
-    // Catching other errors here to prevent the app from crashing on a 500 response.
-    console.error("Error fetching leads via API v3:", error);
-    return [];
   }
+  
+  // Sort all collected leads by date descending
+  return allLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
 
-// Get a single lead by ID
+// Get a single lead by ID by searching recent collections
 export const getLeadById = async (leadId: string): Promise<Lead | null> => {
     if (!leadId) return null;
-    try {
-        const doc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`);
-        return { id: doc.id, ...doc.data } as Lead;
-    } catch (error) {
-        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-            return null; // Gracefully handle not found
+    const months = getMonthsToFetch();
+
+    for (const month of months) {
+        const collectionName = getLeadCollectionName(month);
+        try {
+            const doc = await fetchFromApiV3(`collections/${collectionName}/documents/${leadId}`);
+            if (doc && doc.data) {
+                return { id: doc.id, ...doc.data } as Lead;
+            }
+        } catch (error) {
+            if (!(error instanceof Error && error.message.toLowerCase().includes('not found'))) {
+              console.warn(`Error searching for lead ${leadId} in ${collectionName}:`, error);
+            }
         }
-        console.error(`Error fetching lead by ID ${leadId} via API v3:`, error);
-        return null;
     }
+
+    console.warn(`Lead with ID ${leadId} not found in any of the last 24 monthly collections.`);
+    return null;
 };
 
 
-// Add a new lead
+// Add a new lead to the appropriate monthly collection
 export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME); 
+    const leadDate = parseISO(leadData.date);
+    const collectionName = getLeadCollectionName(leadDate);
+    await ensureCollectionExistsV3(collectionName); 
+
     const dataWithStatus = {
         ...leadData,
-        status: 'New Lead' as LeadStatusType, // Set default status for new leads
+        status: 'New Lead' as LeadStatusType,
         customerType: leadData.customerType || null,
     };
-    const payload = {
-        data: dataWithStatus
-    };
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
+    const payload = { data: dataWithStatus };
+    const newDoc = await fetchFromApiV3(`collections/${collectionName}/documents`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
 
-    return {
-        id: newDoc.id,
-        ...newDoc.data
-    } as Lead;
+    return { id: newDoc.id, ...newDoc.data } as Lead;
   } catch (error) {
     console.error("Error adding lead via API v3:", error);
     if (error instanceof Error) throw error; 
@@ -81,31 +94,42 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
   }
 };
 
-// Update a lead
+// Update a lead, handling potential moves between collections if the date changes month/year
 export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id'>>): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    
     const existingLead = await getLeadById(leadId);
     if (!existingLead) {
         throw new Error("Lead to update not found.");
     }
     
-    const finalData = {
-        ...existingLead,
-        ...updates,
-        id: undefined, // Don't try to write the id field back into the data object
-    };
+    const originalDate = parseISO(existingLead.date);
+    const newDate = updates.date ? parseISO(updates.date) : originalDate;
+
+    const originalCollection = getLeadCollectionName(originalDate);
+    const newCollection = getLeadCollectionName(newDate);
+
+    const finalData = { ...existingLead, ...updates, id: undefined };
     delete finalData.id;
 
-    const payload = {
-        data: finalData
-    };
-
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-    });
+    if (originalCollection === newCollection) {
+        // Simple update in the same collection
+        await fetchFromApiV3(`collections/${originalCollection}/documents/${leadId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ data: finalData })
+        });
+    } else {
+        // It's a move. Create in new, delete from old.
+        await ensureCollectionExistsV3(newCollection);
+        // Create with the same ID in the new collection
+        await fetchFromApiV3(`collections/${newCollection}/documents/${leadId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ data: finalData })
+        });
+        // Delete from the old collection
+        await fetchFromApiV3(`collections/${originalCollection}/documents/${leadId}`, {
+            method: 'DELETE'
+        });
+    }
     return true;
   } catch (error) {
     console.error(`Error updating lead ${leadId} via API v3:`, error);
@@ -113,11 +137,16 @@ export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id
   }
 };
 
-// Delete a lead
+// Delete a lead by finding it first
 export const deleteLead = async (leadId: string): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
+    const leadToDelete = await getLeadById(leadId);
+    if (!leadToDelete) {
+        console.warn(`Lead ${leadId} not found for deletion. Assuming already deleted.`);
+        return true; // If not found, it's effectively deleted.
+    }
+    const collectionName = getLeadCollectionName(parseISO(leadToDelete.date));
+    await fetchFromApiV3(`collections/${collectionName}/documents/${leadId}`, {
         method: 'DELETE'
     });
     return true;
