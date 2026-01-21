@@ -1,7 +1,7 @@
 import type { Lead, LeadCategory, LeadStatusType } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
-const COLLECTION_NAME = 'leads';
+const COLLECTION_NAME = 'pipelineLeads';
 
 // Get all leads
 export const getLeads = async (): Promise<Lead[]> => {
@@ -9,7 +9,7 @@ export const getLeads = async (): Promise<Lead[]> => {
     // The ensureCollectionExistsV3 call was causing a 500 error on this specific collection.
     // By fetching documents directly, we can bypass this. If the collection doesn't exist,
     // the API should gracefully return an empty list or a 'not found' error which we now handle.
-    // await ensureCollectionExistsV3(COLLECTION_NAME);
+    await ensureCollectionExistsV3(COLLECTION_NAME);
     
     const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4000`);
     
@@ -56,7 +56,7 @@ export const getLeadById = async (leadId: string): Promise<Lead | null> => {
 // Add a new lead
 export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> => {
   try {
-    // await ensureCollectionExistsV3(COLLECTION_NAME); 
+    await ensureCollectionExistsV3(COLLECTION_NAME); 
     const dataWithStatus = {
         ...leadData,
         status: 'New Lead' as LeadStatusType, // Set default status for new leads
