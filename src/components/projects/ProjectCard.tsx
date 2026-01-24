@@ -246,7 +246,12 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     ? `${project.name.substring(0, 35)}...` 
     : project.name;
 
-  const canAssignDrPermission = (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM');
+  const canAssignDrPermission = 
+    (currentUser?.role === 'SYSTEM_ADMIN' || 
+    currentUser?.role === 'ADMIN' || 
+    currentUser?.role === 'CRM' ||
+    (currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader));
+
   const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design' || project.status === 'CO Clearance');
 
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -204,22 +203,27 @@ export function ProjectsKanbanClient() {
   const filteredProjects = useMemo(() => {
     let baseProjects = projects;
     
-    // Filter for hash-based public view
     if (hashId) {
       baseProjects = baseProjects.filter(project => project.id === hashId);
     } else {
-        // Apply role-based filters only if not in single-project (hash) view
         if (currentUser?.role === 'CRM') {
             if (currentUser.isLeader) {
                 if (projectOwnerFilter === 'my') {
                     baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
                 }
-                // 'all' filter means we don't filter by user, so use 'projects'
             } else {
                 baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
             }
         } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-          baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
+            if (currentUser.isLeader) {
+                baseProjects = projects.filter(project => 
+                    project.designerRepresentativeId || 
+                    project.status === 'CR Clearance' || 
+                    project.status === 'CO Clearance'
+                );
+            } else {
+                baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
+            }
         }
     }
 
@@ -634,7 +638,6 @@ export function ProjectsKanbanClient() {
         <AssignDrDialog
           isOpen={isAssignDrDialogOpen}
           onOpenChange={(open) => {
-            setIsAssignDrDialogOpen(open);
             if (!open) setSelectedOrderForDrAssignment(null);
           }}
           order={selectedOrderForDrAssignment} 
