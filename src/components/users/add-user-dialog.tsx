@@ -1,10 +1,17 @@
 
-
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -247,14 +254,13 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>Select an existing user or fill in the details manually.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
            <div className="space-y-1">
              <Label htmlFor="select-user">Select Existing User (Optional)</Label>
              <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
@@ -394,6 +400,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                     type="button"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
+                    className="w-full"
                     disabled={isSubmitting}
                   >
                     <UploadCloud className="mr-2 h-4 w-4" /> {selectedFile ? "Change" : "Upload"}
@@ -416,12 +423,10 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
               </div>
                <p className="text-xs text-muted-foreground pt-1">
                   Optional. Max 2MB.
-                  {selectedFile && <span className="block mt-0.5">Selected: {selectedFile.name}</span>}
+                  {selectedFile && <span className="block mt-1">Selected: {selectedFile.name}</span>}
                 </p>
             </div>
-
-          </div>
-          <DialogFooter className="pt-4 border-t border-border/30">
+           <DialogFooter className="pt-4 border-t border-border/30">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</> : "Add User"}
