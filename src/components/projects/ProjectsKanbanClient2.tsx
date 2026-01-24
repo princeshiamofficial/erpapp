@@ -1,9 +1,10 @@
 
+      
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings } from '@/types'; 
+import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, UserRole } from '@/types'; 
 import { 
   ClipboardCheck,
   ClipboardX,
@@ -223,9 +224,15 @@ export function ProjectsKanbanClient() {
     fetchData();
   }, [fetchData, currentUser]);
   
-  const allCrmAndDrUsers = useMemo(() => {
-    return allUsers.filter(u => ['CRM', 'DESIGNER_REPRESENTATIVE'].includes(u.role));
-  }, [allUsers]);
+  const usersForFilter = useMemo(() => {
+    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+      return allUsers.filter(u => ['CRM', 'DESIGNER_REPRESENTATIVE'].includes(u.role));
+    }
+    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader) {
+      return allUsers.filter(u => u.role === 'DESIGNER_REPRESENTATIVE');
+    }
+    return [];
+  }, [allUsers, currentUser]);
 
   const selectedUser = useMemo(() => {
     if (selectedUserIdFilter === 'all') return null;
@@ -233,17 +240,20 @@ export function ProjectsKanbanClient() {
   }, [selectedUserIdFilter, allUsers]);
 
   const selectedUserName = useMemo(() => {
-    if (selectedUserIdFilter === 'all') return 'All Users';
+    if (selectedUserIdFilter === 'all') {
+      if(currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader) return 'All DRs';
+      return 'All Users';
+    }
     return selectedUser?.name || 'Select User';
-  }, [selectedUserIdFilter, selectedUser]);
+  }, [selectedUserIdFilter, selectedUser, currentUser]);
   
 
   const filteredUsersForDropdown = useMemo(() => {
-    if (!userSearchQuery) return allCrmAndDrUsers;
-    return allCrmAndDrUsers.filter(user =>
+    if (!userSearchQuery) return usersForFilter;
+    return usersForFilter.filter(user =>
       user.name.toLowerCase().includes(userSearchQuery.toLowerCase())
     );
-  }, [allCrmAndDrUsers, userSearchQuery]);
+  }, [usersForFilter, userSearchQuery]);
 
   const filteredProjects = useMemo(() => {
     let baseProjects = projects;
@@ -268,13 +278,17 @@ export function ProjectsKanbanClient() {
             }
         } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
             if (currentUser.isLeader) {
-                baseProjects = projects.filter(project => 
-                    project.designerRepresentativeId || 
-                    project.status === 'CR Clearance' || 
+                if (selectedUserIdFilter !== 'all') {
+                  baseProjects = projects.filter(project => project.designerRepresentativeId === selectedUserIdFilter);
+                } else {
+                  baseProjects = projects.filter(project => 
+                    project.designerRepresentativeId ||
+                    project.status === 'CR Clearance' ||
                     project.status === 'CO Clearance'
-                );
+                  );
+                }
             } else {
-                baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
+              baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
             }
         }
     }
@@ -564,10 +578,11 @@ export function ProjectsKanbanClient() {
     toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
   };
   
-  const isAdmin = useMemo(() => {
+  const canFilterUsers = useMemo(() => {
     if (!currentUser) return false;
-    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
+    return currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader);
   }, [currentUser]);
+
 
   if (isLoading) {
     return <KanbanSkeleton />;
@@ -597,7 +612,7 @@ export function ProjectsKanbanClient() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-card border-border/50 focus:border-primary"
             />
-            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+            {canFilterUsers && (
               <Popover open={isUserFilterOpen} onOpenChange={setIsUserFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={isUserFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10">
@@ -622,7 +637,7 @@ export function ProjectsKanbanClient() {
                              <CommandItem onSelect={() => { setSelectedUserIdFilter('all'); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
                                   <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")}/>
                                   <UsersIcon className="h-5 w-5 text-muted-foreground" />
-                                  <span>All Users</span>
+                                  <span>{currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? 'All DRs' : 'All Users'}</span>
                               </CommandItem>
                               {filteredUsersForDropdown.map((user) => (
                                   <CommandItem key={user.id} value={user.name} onSelect={() => { setSelectedUserIdFilter(user.id); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
@@ -632,7 +647,9 @@ export function ProjectsKanbanClient() {
                                         <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                                       </Avatar>
                                       <span className="truncate">{user.name}</span>
-                                      <span className="text-xs text-muted-foreground ml-auto">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})</span>
+                                      {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') &&
+                                        <span className="text-xs text-muted-foreground ml-auto">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})</span>
+                                      }
                                   </CommandItem>
                               ))}
                           </CommandGroup>
@@ -655,7 +672,7 @@ export function ProjectsKanbanClient() {
                 {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
               </SelectContent>
             </Select>
-            {isAdmin && (
+            {currentUser?.role === 'SYSTEM_ADMIN' && (
               <Button
                   variant="outline"
                   onClick={handleExport}
@@ -669,7 +686,7 @@ export function ProjectsKanbanClient() {
           </div>
         )}
         
-        {currentUser?.isLeader && (currentUser?.role === 'CRM' || currentUser.role === 'DESIGNER_REPRESENTATIVE') && !isReadOnly && (
+        {(currentUser?.role === 'CRM' && currentUser.isLeader) && !isReadOnly && (
           <div className="px-4 sm:px-0">
             <Select value={projectOwnerFilter} onValueChange={(value) => setProjectOwnerFilter(value as 'my' | 'all')}>
               <SelectTrigger className="w-full sm:w-[180px]">
@@ -677,7 +694,7 @@ export function ProjectsKanbanClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="my">My Projects</SelectItem>
-                <SelectItem value="all">{currentUser.role === 'CRM' ? 'All CRM Projects' : 'All DR Projects'}</SelectItem>
+                <SelectItem value="all">All CRM Projects</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -836,3 +853,5 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
+
+    
