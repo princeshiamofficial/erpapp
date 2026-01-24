@@ -17,7 +17,10 @@ import {
   Search,
   EyeOff,
   Download,
-  Loader2
+  Loader2,
+  User as UserIcon,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +60,9 @@ import Papa from 'papaparse';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, subDays, startOfDay, endOfDay } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -139,6 +145,10 @@ export function ProjectsKanbanClient() {
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>();
 
+  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
+  const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -199,6 +209,21 @@ export function ProjectsKanbanClient() {
     fetchData();
   }, [fetchData, currentUser]);
   
+  const allCrmAndDrUsers = useMemo(() => {
+    return allUsers.filter(u => ['CRM', 'DESIGNER_REPRESENTATIVE'].includes(u.role));
+  }, [allUsers]);
+
+  const selectedUserName = useMemo(() => {
+    if (selectedUserIdFilter === 'all') return 'All Users';
+    return allUsers.find(u => u.id === selectedUserIdFilter)?.name || 'Select User';
+  }, [selectedUserIdFilter, allUsers]);
+
+  const filteredUsersForDropdown = useMemo(() => {
+    if (!userSearchQuery) return allCrmAndDrUsers;
+    return allCrmAndDrUsers.filter(user =>
+      user.name.toLowerCase().includes(userSearchQuery.toLowerCase())
+    );
+  }, [allCrmAndDrUsers, userSearchQuery]);
 
   const filteredProjects = useMemo(() => {
     let baseProjects = projects;
@@ -206,7 +231,14 @@ export function ProjectsKanbanClient() {
     if (hashId) {
       baseProjects = baseProjects.filter(project => project.id === hashId);
     } else {
-        if (currentUser?.role === 'CRM') {
+        if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+            if (selectedUserIdFilter !== 'all') {
+                baseProjects = baseProjects.filter(project => 
+                    project.assigneeId === selectedUserIdFilter || 
+                    project.designerRepresentativeId === selectedUserIdFilter
+                );
+            }
+        } else if (currentUser?.role === 'CRM') {
             if (currentUser.isLeader) {
                 if (projectOwnerFilter === 'my') {
                     baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
@@ -249,7 +281,7 @@ export function ProjectsKanbanClient() {
       }
       return matchesSearchTerm && matchesCategory && matchesDate;
     });
-  }, [projects, debouncedSearchTerm, categoryFilter, selectedDateRange, currentUser, projectOwnerFilter, hashId]);
+  }, [projects, debouncedSearchTerm, categoryFilter, selectedDateRange, currentUser, projectOwnerFilter, hashId, selectedUserIdFilter]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
@@ -538,14 +570,45 @@ export function ProjectsKanbanClient() {
         )}
 
         {!isReadOnly && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-4 sm:px-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 px-4 sm:px-0">
             <Input
               placeholder="Search projects (ID, Name, Assignee, DR)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-card border-border/50 focus:border-primary"
             />
-             <DateRangePicker 
+            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+              <Popover open={isUserFilterOpen} onOpenChange={setIsUserFilterOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={isUserFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10">
+                    <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span className="truncate">{selectedUserName}</span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                   <Command>
+                      <CommandInput placeholder="Search user..." value={userSearchQuery} onValueChange={setUserSearchQuery} />
+                      <CommandList>
+                          <CommandEmpty>No user found.</CommandEmpty>
+                          <CommandGroup>
+                             <CommandItem onSelect={() => { setSelectedUserIdFilter('all'); setIsUserFilterOpen(false); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")}/>
+                                  All Users
+                              </CommandItem>
+                              {filteredUsersForDropdown.map((user) => (
+                                  <CommandItem key={user.id} value={user.name} onSelect={() => { setSelectedUserIdFilter(user.id); setIsUserFilterOpen(false); }}>
+                                      <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
+                                      {user.name} ({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})
+                                  </CommandItem>
+                              ))}
+                          </CommandGroup>
+                      </CommandList>
+                   </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+            <DateRangePicker 
                 initialRange={selectedDateRange} 
                 onDateRangeChange={handleDateRangeChange}
                 className="bg-card border-border/50 focus:border-primary"
@@ -573,7 +636,7 @@ export function ProjectsKanbanClient() {
           </div>
         )}
         
-        {currentUser?.isLeader && currentUser?.role === 'CRM' && !isReadOnly && (
+        {currentUser?.isLeader && (currentUser?.role === 'CRM' || currentUser.role === 'DESIGNER_REPRESENTATIVE') && !isReadOnly && (
           <div className="px-4 sm:px-0">
             <Select value={projectOwnerFilter} onValueChange={(value) => setProjectOwnerFilter(value as 'my' | 'all')}>
               <SelectTrigger className="w-full sm:w-[180px]">
@@ -581,7 +644,7 @@ export function ProjectsKanbanClient() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="my">My Projects</SelectItem>
-                <SelectItem value="all">All Projects</SelectItem>
+                <SelectItem value="all">{currentUser.role === 'CRM' ? 'All CRM Projects' : 'All DR Projects'}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -639,6 +702,7 @@ export function ProjectsKanbanClient() {
           isOpen={isAssignDrDialogOpen}
           onOpenChange={(open) => {
             if (!open) setSelectedOrderForDrAssignment(null);
+            setIsAssignDrDialogOpen(open);
           }}
           order={selectedOrderForDrAssignment} 
           currentUser={currentUser}
@@ -740,3 +804,4 @@ export function ProjectsKanbanClient() {
   );
 }
 
+    
