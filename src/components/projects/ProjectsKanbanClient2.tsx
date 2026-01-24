@@ -1,5 +1,4 @@
 
-      
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -225,10 +224,11 @@ export function ProjectsKanbanClient() {
   }, [fetchData, currentUser]);
   
   const usersForFilter = useMemo(() => {
-    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+    if (!currentUser) return [];
+    if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
       return allUsers.filter(u => ['CRM', 'DESIGNER_REPRESENTATIVE'].includes(u.role));
     }
-    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader) {
+    if (currentUser.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader) {
       return allUsers.filter(u => u.role === 'DESIGNER_REPRESENTATIVE');
     }
     return [];
@@ -255,6 +255,24 @@ export function ProjectsKanbanClient() {
     );
   }, [usersForFilter, userSearchQuery]);
 
+  const visibleKanbanColumns = useMemo(() => {
+    if (isReadOnly) { // Show all columns in read-only mode
+        return KANBAN_COLUMNS_CONFIG;
+    }
+    if (!currentUser || !globalSettings?.projectStageAccess) {
+      return [];
+    }
+    if (currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'CRM' && currentUser.isLeader)) {
+      return KANBAN_COLUMNS_CONFIG;
+    }
+    
+    const userPermissions = globalSettings.projectStageAccess;
+    return KANBAN_COLUMNS_CONFIG.filter(column => 
+      userPermissions[column.status]?.includes(currentUser.role)
+    );
+  }, [currentUser, globalSettings, isReadOnly]);
+
+
   const filteredProjects = useMemo(() => {
     let baseProjects = projects;
     
@@ -263,10 +281,12 @@ export function ProjectsKanbanClient() {
     } else {
         if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
             if (selectedUserIdFilter !== 'all') {
-                baseProjects = baseProjects.filter(project => 
-                    project.assigneeId === selectedUserIdFilter || 
-                    project.designerRepresentativeId === selectedUserIdFilter
-                );
+                const user = allUsers.find(u => u.id === selectedUserIdFilter);
+                if (user?.role === 'CRM') {
+                   baseProjects = projects.filter(project => project.assigneeId === selectedUserIdFilter);
+                } else if (user?.role === 'DESIGNER_REPRESENTATIVE') {
+                   baseProjects = projects.filter(project => project.designerRepresentativeId === selectedUserIdFilter);
+                }
             }
         } else if (currentUser?.role === 'CRM') {
             if (currentUser.isLeader) {
@@ -278,15 +298,16 @@ export function ProjectsKanbanClient() {
             }
         } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
             if (currentUser.isLeader) {
-                if (selectedUserIdFilter !== 'all') {
-                  baseProjects = projects.filter(project => project.designerRepresentativeId === selectedUserIdFilter);
-                } else {
-                  baseProjects = projects.filter(project => 
-                    project.designerRepresentativeId ||
-                    project.status === 'CR Clearance' ||
-                    project.status === 'CO Clearance'
-                  );
-                }
+              const allowedStatusesForDr = globalSettings?.projectStageAccess?.['DESIGNER_REPRESENTATIVE'] || [];
+              if (selectedUserIdFilter !== 'all') {
+                baseProjects = projects.filter(project => 
+                  project.designerRepresentativeId === selectedUserIdFilter
+                );
+              } else {
+                baseProjects = projects.filter(project => 
+                  project.designerRepresentativeId && allowedStatusesForDr.includes(project.status)
+                );
+              }
             } else {
               baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
             }
@@ -315,7 +336,7 @@ export function ProjectsKanbanClient() {
       }
       return matchesSearchTerm && matchesCategory && matchesDate;
     });
-  }, [projects, debouncedSearchTerm, categoryFilter, selectedDateRange, currentUser, projectOwnerFilter, hashId, selectedUserIdFilter]);
+  }, [projects, debouncedSearchTerm, categoryFilter, selectedDateRange, currentUser, projectOwnerFilter, hashId, selectedUserIdFilter, allUsers, globalSettings]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
@@ -342,24 +363,6 @@ export function ProjectsKanbanClient() {
   ) => {
     setSelectedDateRange(range);
   };
-
-
-  const visibleKanbanColumns = useMemo(() => {
-    if (isReadOnly) { // Show all columns in read-only mode
-        return KANBAN_COLUMNS_CONFIG;
-    }
-    if (!currentUser || !globalSettings?.projectStageAccess) {
-      return [];
-    }
-    if (currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'CRM' && currentUser.isLeader)) {
-      return KANBAN_COLUMNS_CONFIG;
-    }
-    
-    const userPermissions = globalSettings.projectStageAccess;
-    return KANBAN_COLUMNS_CONFIG.filter(column => 
-      userPermissions[column.status]?.includes(currentUser.role)
-    );
-  }, [currentUser, globalSettings, isReadOnly]);
 
   const handleDragStart = (event: DragStartEvent) => {
     if (isReadOnly) return;
