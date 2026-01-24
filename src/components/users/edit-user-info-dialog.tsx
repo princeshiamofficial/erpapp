@@ -42,7 +42,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
   const { toast } = useToast();
 
   const isVendor = user.role === 'VENDOR';
-  const isCrm = user.role === 'CRM';
+  const isCrmOrDr = user.role === 'CRM' || user.role === 'DESIGNER_REPRESENTATIVE';
 
   useEffect(() => {
     if (isOpen && user) {
@@ -91,7 +91,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
       name: name.trim(),
       email: email.trim(),
       companyName: companyName.trim() || null,
-      isLeader: isCrm ? isLeader : undefined,
+      isLeader: isCrmOrDr ? isLeader : undefined,
     };
     
     if (isVendor) {
@@ -159,12 +159,12 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
               />
             </div>
 
-            {isCrm && (
+            {isCrmOrDr && (
               <div className="flex items-center justify-between space-x-2 rounded-lg border p-3 shadow-sm bg-muted/30">
                 <div className="space-y-0.5">
                   <Label htmlFor="leader-switch-edit">Team Leader Status</Label>
                   <p className="text-xs text-muted-foreground">
-                    Enable if this CRM user is a team leader.
+                    Enable if this user is a team leader.
                   </p>
                 </div>
                 <Switch

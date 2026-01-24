@@ -15,6 +15,12 @@ import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
 import { addUser as addUserToFirestoreService } from '@/lib/user-service';
 import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+
 
 interface AddUserDialogProps {
   onUserAdded: () => void;
@@ -43,6 +49,10 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const { toast } = useToast();
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [isLeader, setIsLeader] = useState(false);
+  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const allUsers: User[] = []; // Assuming this will be populated if needed, or passed as prop.
 
   const resetForm = useCallback(() => {
     setName('');
@@ -72,6 +82,19 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     }
   }, [isOpen, resetForm, defaultRole]);
   
+  useEffect(() => {
+    if (selectedUserId) {
+        const selectedUser = allUsers.find(u => u.id === selectedUserId);
+        if (selectedUser) {
+            setName(selectedUser.name);
+            setEmail(selectedUser.email || '');
+        }
+    } else {
+        setName('');
+        setEmail('');
+    }
+  }, [selectedUserId, allUsers]);
+
   useEffect(() => {
     let objectUrl: string | null = null;
     if (selectedFile) {
@@ -200,7 +223,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       weeklyOrderTarget: 0,  
       isBanned: false, 
       fcmToken: null, 
-      isLeader: role === 'CRM' ? isLeader : undefined,
+      isLeader: (role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE') ? isLeader : undefined,
     };
 
     const createdUser = await addUserToFirestoreService(newUserFirestoreData);
@@ -213,28 +236,77 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
        toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
     }
   };
+  
+  const filteredUsersForDropdown = useMemo(() => {
+    if (!userSearchQuery) return allUsers;
+    return allUsers.filter(user =>
+      user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      (user.email && user.email.toLowerCase().includes(userSearchQuery.toLowerCase()))
+    );
+  }, [allUsers, userSearchQuery]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>Enter the details for the new user. Default password is 'password'.</DialogDescription>
+          <DialogDescription>Select an existing user or fill in the details manually.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name-add" className="text-right">Name</Label>
-              <Input id="name-add" ref={nameInputRef} value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" required />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email-add" className="text-right">Email</Label>
-              <Input id="email-add" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" required />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="password-add" className="text-right">Password</Label>
-              <div className="col-span-3 relative">
+           <div className="space-y-1">
+             <Label htmlFor="select-user">Select Existing User (Optional)</Label>
+             <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isUserPopoverOpen}
+                  className="w-full justify-between"
+                  disabled={isSubmitting}
+                >
+                  <span className="truncate">{selectedUserId ? allUsers.find(u => u.id === selectedUserId)?.name : "Select a user..."}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                 <Command filter={() => 1}>
+                    <CommandInput placeholder="Search user..." value={userSearchQuery} onValueChange={setUserSearchQuery} />
+                    <CommandList>
+                        <CommandEmpty>No users available.</CommandEmpty>
+                        <CommandGroup>
+                            {filteredUsersForDropdown.map(user => (
+                                <CommandItem
+                                    key={user.id}
+                                    value={user.id}
+                                    onSelect={(currentValue) => {
+                                        setSelectedUserId(currentValue === selectedUserId ? null : currentValue);
+                                        setIsUserPopoverOpen(false);
+                                    }}
+                                >
+                                    <Check className={cn("mr-2 h-4 w-4", selectedUserId === user.id ? "opacity-100" : "opacity-0")} />
+                                    {user.name} ({user.email})
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                 </Command>
+              </PopoverContent>
+             </Popover>
+           </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" ref={nameInputRef} value={name} onChange={e => setName(e.target.value)} required disabled={!!selectedUserId || isSubmitting} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={!!selectedUserId || isSubmitting} />
+          </div>
+           <div className="space-y-1">
+            <Label htmlFor="password-add">Password</Label>
+              <div className="relative">
                 <Input 
                   id="password-add" 
                   type={showPassword ? "text" : "password"} 
@@ -255,10 +327,10 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                 </Button>
               </div>
             </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role-add" className="text-right">Role</Label>
+           <div className="space-y-1">
+              <Label htmlFor="role-add">Role</Label>
               <Select value={role} onValueChange={(value) => setRole(value as UserRole)} required>
-                <SelectTrigger id="role-add" className="col-span-3">
+                <SelectTrigger id="role-add">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,96 +341,90 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
               </Select>
             </div>
             
-            {role === 'CRM' && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="leader-switch" className="text-right">Leader</Label>
-                <div className="col-span-3 flex items-center space-x-2">
+            {(role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE') && (
+              <div className="flex items-center space-x-2 pt-2">
                   <Switch
                     id="leader-switch"
                     checked={isLeader}
                     onCheckedChange={setIsLeader}
                   />
                   <Label htmlFor="leader-switch" className="text-sm font-normal text-muted-foreground">
-                    Mark this CRM user as a team leader.
+                    Mark this user as a team leader.
                   </Label>
-                </div>
               </div>
             )}
 
             {role === 'VENDOR' && (
               <>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="companyName-add" className="text-right">Business Name</Label>
-                  <Input id="companyName-add" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="col-span-3" placeholder="Vendor's Business Name" required/>
+                 <div className="space-y-1">
+                  <Label htmlFor="companyName-add">Business Name</Label>
+                  <Input id="companyName-add" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Vendor's Business Name" required/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="phone-add" className="text-right">Phone</Label>
-                  <Input id="phone-add" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="col-span-3" placeholder="Vendor's Phone Number" required/>
+                <div className="space-y-1">
+                  <Label htmlFor="phone-add">Phone</Label>
+                  <Input id="phone-add" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Vendor's Phone Number" required/>
                 </div>
-                <div className="grid grid-cols-4 items-start gap-4">
-                   <Label htmlFor="address-add" className="text-right pt-2">Address</Label>
-                   <Textarea id="address-add" value={address} onChange={(e) => setAddress(e.target.value)} className="col-span-3" placeholder="Vendor's Address" required/>
+                <div className="space-y-1">
+                   <Label htmlFor="address-add">Address</Label>
+                   <Textarea id="address-add" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Vendor's Address" required/>
                 </div>
               </>
             )}
 
-            <div className="grid grid-cols-4 items-start gap-4 mt-2">
-              <Label htmlFor="avatarFile-add" className="text-right pt-2">Avatar</Label>
-              <div className="col-span-3 space-y-2">
-                <div className="flex items-center gap-4">
-                  {previewUrl ? (
-                    <Image
-                      src={previewUrl}
-                      alt="Avatar preview"
-                      width={64}
-                      height={64}
-                      unoptimized
-                      className="rounded-full object-cover border border-muted"
-                      data-ai-hint="user avatar"
-                    />
-                  ) : (
-                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center border border-dashed">
-                      <UserCircle className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-2">
-                     <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isSubmitting}
-                    >
-                      <UploadCloud className="mr-2 h-4 w-4" /> {selectedFile ? "Change" : "Upload"}
-                    </Button>
-                    <Input
-                      id="avatarFile-add"
-                      type="file"
-                      accept="image/*"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      className="hidden"
-                      disabled={isSubmitting}
-                    />
-                    {selectedFile && (
-                      <Button type="button" variant="ghost" size="sm" onClick={handleRemovePreview} className="text-xs text-muted-foreground hover:text-destructive" disabled={isSubmitting}>
-                        <XCircle className="mr-1 h-3 w-3" /> Clear
-                      </Button>
-                    )}
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="avatarFile-add" className="text-sm font-medium">Avatar</Label>
+              <div className="flex items-center gap-4">
+                {previewUrl ? (
+                  <Image
+                    src={previewUrl}
+                    alt="Avatar preview"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="rounded-full object-cover border border-muted"
+                    data-ai-hint="user avatar"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center border border-dashed">
+                    <UserCircle className="h-8 w-8 text-muted-foreground" />
                   </div>
+                )}
+                <div className="flex flex-col gap-2">
+                   <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isSubmitting}
+                  >
+                    <UploadCloud className="mr-2 h-4 w-4" /> {selectedFile ? "Change" : "Upload"}
+                  </Button>
+                  <Input
+                    id="avatarFile-add"
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    disabled={isSubmitting}
+                  />
+                  {selectedFile && (
+                    <Button type="button" variant="ghost" size="sm" onClick={handleRemovePreview} className="text-xs text-muted-foreground hover:text-destructive" disabled={isSubmitting}>
+                      <XCircle className="mr-1 h-3 w-3" /> Clear
+                    </Button>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground pt-1">
+              </div>
+               <p className="text-xs text-muted-foreground pt-1">
                   Optional. Max 2MB.
                   {selectedFile && <span className="block mt-0.5">Selected: {selectedFile.name}</span>}
                 </p>
-              </div>
             </div>
 
           </div>
           <DialogFooter className="pt-4 border-t border-border/30">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
-              {isSubmitting ? "Adding User..." : "Add User"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</> : "Add User"}
             </Button>
           </DialogFooter>
         </form>
