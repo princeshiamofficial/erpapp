@@ -21,6 +21,10 @@ import {
   User as UserIcon,
   ChevronsUpDown,
   Check,
+  LayoutGrid,
+  List,
+  Calendar as CalendarIcon,
+  Users as UsersIcon,
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +67,8 @@ import { isWithinInterval, subDays, startOfDay, endOfDay } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -109,6 +115,14 @@ function KanbanSkeleton() {
       </div>
   );
 }
+
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
 
 // No initial props are needed now, as the component fetches its own data.
 export function ProjectsKanbanClient() {
@@ -213,10 +227,16 @@ export function ProjectsKanbanClient() {
     return allUsers.filter(u => ['CRM', 'DESIGNER_REPRESENTATIVE'].includes(u.role));
   }, [allUsers]);
 
+  const selectedUser = useMemo(() => {
+    if (selectedUserIdFilter === 'all') return null;
+    return allUsers.find(u => u.id === selectedUserIdFilter);
+  }, [selectedUserIdFilter, allUsers]);
+
   const selectedUserName = useMemo(() => {
     if (selectedUserIdFilter === 'all') return 'All Users';
-    return allUsers.find(u => u.id === selectedUserIdFilter)?.name || 'Select User';
-  }, [selectedUserIdFilter, allUsers]);
+    return selectedUser?.name || 'Select User';
+  }, [selectedUserIdFilter, selectedUser]);
+  
 
   const filteredUsersForDropdown = useMemo(() => {
     if (!userSearchQuery) return allCrmAndDrUsers;
@@ -549,7 +569,7 @@ export function ProjectsKanbanClient() {
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
-  if (isLoading && projects.length === 0) {
+  if (isLoading) {
     return <KanbanSkeleton />;
   }
 
@@ -581,7 +601,14 @@ export function ProjectsKanbanClient() {
               <Popover open={isUserFilterOpen} onOpenChange={setIsUserFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={isUserFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10">
-                    <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {selectedUser ? (
+                       <Avatar className="mr-2 h-6 w-6">
+                            <AvatarImage src={selectedUser.avatarUrl || undefined} />
+                            <AvatarFallback className="text-xs">{getInitials(selectedUser.name)}</AvatarFallback>
+                        </Avatar>
+                    ) : (
+                        <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    )}
                     <span className="truncate">{selectedUserName}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -592,14 +619,20 @@ export function ProjectsKanbanClient() {
                       <CommandList>
                           <CommandEmpty>No user found.</CommandEmpty>
                           <CommandGroup>
-                             <CommandItem onSelect={() => { setSelectedUserIdFilter('all'); setIsUserFilterOpen(false); }}>
+                             <CommandItem onSelect={() => { setSelectedUserIdFilter('all'); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
                                   <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")}/>
-                                  All Users
+                                  <UsersIcon className="h-5 w-5 text-muted-foreground" />
+                                  <span>All Users</span>
                               </CommandItem>
                               {filteredUsersForDropdown.map((user) => (
-                                  <CommandItem key={user.id} value={user.name} onSelect={() => { setSelectedUserIdFilter(user.id); setIsUserFilterOpen(false); }}>
+                                  <CommandItem key={user.id} value={user.name} onSelect={() => { setSelectedUserIdFilter(user.id); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
                                       <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
-                                      {user.name} ({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})
+                                      <Avatar className="h-6 w-6">
+                                        <AvatarImage src={user.avatarUrl || undefined} />
+                                        <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+                                      </Avatar>
+                                      <span className="truncate">{user.name}</span>
+                                      <span className="text-xs text-muted-foreground ml-auto">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})</span>
                                   </CommandItem>
                               ))}
                           </CommandGroup>
@@ -803,5 +836,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
-    
