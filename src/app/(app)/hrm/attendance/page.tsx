@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, Download } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, Download, Briefcase, CheckCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -40,6 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import Papa from 'papaparse';
+import { Separator } from '@/components/ui/separator';
 
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
@@ -118,6 +119,7 @@ export default function AttendancePage() {
 
     const [attendanceMonth, setAttendanceMonth] = useState(String(new Date().getMonth()));
     const [attendanceYear, setAttendanceYear] = useState(String(new Date().getFullYear()));
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
 
     const fetchData = useCallback(async () => {
@@ -245,6 +247,56 @@ export default function AttendancePage() {
         return dailyData.sort((a,b) => b.date.getTime() - a.date.getTime());
     }, [attendanceData, attendanceMonth, attendanceYear, selectedUserId, selectedWeekends, allUsers, attendanceDateFilter]);
 
+
+    const attendanceSummary = useMemo(() => {
+        if (selectedUserId === 'all' || !selectedDate || !employees.length) {
+            return null;
+        }
+
+        const selectedEmployee = employees.find(e => e.userId === selectedUserId);
+        if (!selectedEmployee) return null;
+
+        const targetDate = new Date(parseInt(attendanceYear), parseInt(attendanceMonth));
+        const daysInMonth = getDaysInMonth(targetDate);
+        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
+
+        let totalWorkingDays = 0;
+        let totalFridays = 0;
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+            const currentDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
+            if (isAfter(currentDate, new Date())) {
+                continue; // Don't count future days
+            }
+            const dayOfWeek = getDay(currentDate);
+
+            if (dayOfWeek === 5) { // 5 is Friday
+                totalFridays++;
+            }
+            
+            if (!weekendDayIndexes.includes(dayOfWeek)) {
+                totalWorkingDays++;
+            }
+        }
+        
+        const presentDays = individualAttendanceHistoryData.filter(
+            (entry) => entry.status === 'On Time' || entry.status === 'Late'
+        ).length;
+        
+        const totalLeave = selectedEmployee.leaveHistory?.filter(leave => 
+            isSameMonth(parseISO(leave.date), targetDate)
+        ).reduce((sum, leave) => sum + leave.days, 0) || 0;
+
+        const totalAbsent = totalWorkingDays - presentDays - totalLeave;
+
+        return {
+            totalFridays,
+            totalPresent: presentDays,
+            totalAbsent: Math.max(0, totalAbsent),
+            totalLeave
+        };
+
+    }, [selectedUserId, selectedDate, attendanceYear, attendanceMonth, employees, individualAttendanceHistoryData, selectedWeekends]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
     const paginatedEmployees = useMemo(() => {
@@ -572,6 +624,49 @@ export default function AttendancePage() {
                 </div>
             </CardHeader>
             <CardContent className="p-6 pt-0">
+                {selectedUserId !== 'all' && attendanceSummary && (
+                    <>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Friday</CardTitle>
+                                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{attendanceSummary.totalFridays}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Present</CardTitle>
+                                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-green-600">{attendanceSummary.totalPresent}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Absent</CardTitle>
+                                    <UserRoundX className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-red-600">{attendanceSummary.totalAbsent}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Leave</CardTitle>
+                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-blue-600">{attendanceSummary.totalLeave}</div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <Separator className="my-6" />
+                    </>
+                )}
                 <div className="overflow-x-auto">
                 <Table>
                     <TableHeader>
@@ -1108,8 +1203,8 @@ export default function AttendancePage() {
                 return settingsContent;
             case 'office_time':
                 return officeTimeContent;
-            case 'attendance_report':
-                return attendanceReportContent;
+            case 'attendees_report':
+                return attendanceHistoryContent;
             default:
                 return attendanceHistoryContent;
         }
@@ -1179,6 +1274,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
