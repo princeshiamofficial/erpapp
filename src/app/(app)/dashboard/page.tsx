@@ -892,8 +892,8 @@ function DashboardContent() {
                 {label ? (
                   chartGranularity === 'hourly' ? 
                   (() => {
-                      const hour = parseInt(value); 
-                      if (isNaN(hour)) return value; 
+                      const hour = parseInt(label); 
+                      if (isNaN(hour)) return label; 
                       if (hour === 0) return '12 AM';
                       if (hour === 12) return '12 PM';
                       if (hour < 12) return `${hour} AM`;
@@ -1531,3 +1531,4 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     return null;
 }
 
+    
