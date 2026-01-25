@@ -648,58 +648,70 @@ export default function AttendancePage() {
                 {selectedUserId !== 'all' && attendanceSummary && (
                     <>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Friday</CardTitle>
-                                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{attendanceSummary.totalFridays}</div>
+                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
+                                <CardContent className="p-4 flex items-center space-x-4">
+                                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/20">
+                                        <CalendarDays className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">Total Friday</p>
+                                        <p className="text-2xl font-bold text-foreground">{attendanceSummary.totalFridays}</p>
+                                    </div>
                                 </CardContent>
                             </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Present</CardTitle>
-                                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-green-600">{attendanceSummary.totalPresent}</div>
+                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
+                                <CardContent className="p-4 flex items-center space-x-4">
+                                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/20">
+                                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">Total Present</p>
+                                        <p className="text-2xl font-bold text-green-600">{attendanceSummary.totalPresent}</p>
+                                    </div>
                                 </CardContent>
                             </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Absent</CardTitle>
-                                    <UserRoundX className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-red-600">{attendanceSummary.totalAbsent}</div>
+                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
+                                <CardContent className="p-4 flex items-center space-x-4">
+                                    <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/20">
+                                        <UserRoundX className="h-6 w-6 text-red-600 dark:text-red-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">Total Absent</p>
+                                        <p className="text-2xl font-bold text-red-600">{attendanceSummary.totalAbsent}</p>
+                                    </div>
                                 </CardContent>
                             </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Leave</CardTitle>
-                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-blue-600">{attendanceSummary.totalLeave}</div>
+                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
+                                <CardContent className="p-4 flex items-center space-x-4">
+                                    <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900/20">
+                                        <Briefcase className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">Total Leave</p>
+                                        <p className="text-2xl font-bold text-indigo-600">{attendanceSummary.totalLeave}</p>
+                                    </div>
                                 </CardContent>
                             </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Late</CardTitle>
-                                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-yellow-600">{attendanceSummary.totalLate}</div>
+                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
+                                <CardContent className="p-4 flex items-center space-x-4">
+                                    <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/20">
+                                        <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">Total Late</p>
+                                        <p className="text-2xl font-bold text-yellow-600">{attendanceSummary.totalLate}</p>
+                                    </div>
                                 </CardContent>
                             </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Working Hours</CardTitle>
-                                    <Clock className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{attendanceSummary.totalWorkingHours}</div>
+                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
+                                <CardContent className="p-4 flex items-center space-x-4">
+                                    <div className="p-3 rounded-full bg-sky-100 dark:bg-sky-900/20">
+                                        <Clock className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground">Working Hours</p>
+                                        <p className="text-2xl font-bold text-foreground">{attendanceSummary.totalWorkingHours}</p>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -923,8 +935,8 @@ export default function AttendancePage() {
                 )}
               </TableBody>
             </Table>
-          </div>
-           {totalPages > 1 && (
+        </div>
+        {totalPages > 1 && (
             <div className="mt-6 flex justify-center">
                  <Pagination><PaginationContent>
                     <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
@@ -933,9 +945,9 @@ export default function AttendancePage() {
                 </PaginationContent></Pagination>
             </div>
         )}
-        </CardContent>
-      </Card>
-    );
+      </CardContent>
+    </Card>
+  );
 
     const settingsContent = (
       <div className="space-y-6">
@@ -1314,6 +1326,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
