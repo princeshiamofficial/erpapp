@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, Download, Briefcase, CheckCircle } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, Download, Briefcase, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -289,11 +289,32 @@ export default function AttendancePage() {
 
         const totalAbsent = totalWorkingDays - presentDays - totalLeave;
 
+        const totalLate = individualAttendanceHistoryData.filter(entry => entry.status === 'Late').length;
+
+        let totalMinutesWorked = 0;
+        individualAttendanceHistoryData.forEach(entry => {
+            if (entry.hoursWorked && typeof entry.hoursWorked === 'string') {
+                const parts = entry.hoursWorked.split(':');
+                if (parts.length === 2) {
+                    const hours = parseInt(parts[0], 10);
+                    const minutes = parseInt(parts[1], 10);
+                    if (!isNaN(hours) && !isNaN(minutes)) {
+                        totalMinutesWorked += (hours * 60) + minutes;
+                    }
+                }
+            }
+        });
+        const totalHours = Math.floor(totalMinutesWorked / 60);
+        const remainingMinutes = totalMinutesWorked % 60;
+        const totalWorkingHours = `${String(totalHours).padStart(2, '0')}:${String(remainingMinutes).padStart(2, '0')}`;
+
         return {
             totalFridays,
             totalPresent: presentDays,
             totalAbsent: Math.max(0, totalAbsent),
-            totalLeave
+            totalLeave,
+            totalLate,
+            totalWorkingHours,
         };
 
     }, [selectedUserId, selectedDate, attendanceYear, attendanceMonth, employees, individualAttendanceHistoryData, selectedWeekends]);
@@ -626,7 +647,7 @@ export default function AttendancePage() {
             <CardContent className="p-6 pt-0">
                 {selectedUserId !== 'all' && attendanceSummary && (
                     <>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Total Friday</CardTitle>
@@ -661,6 +682,24 @@ export default function AttendancePage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold text-blue-600">{attendanceSummary.totalLeave}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Late</CardTitle>
+                                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-yellow-600">{attendanceSummary.totalLate}</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Working Hours</CardTitle>
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{attendanceSummary.totalWorkingHours}</div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -843,7 +882,8 @@ export default function AttendancePage() {
                             totalLeaveAccrued += (currentYear - joiningYear - 1) * 12; // Full years in between
                             totalLeaveAccrued += currentMonth + 1; // Months for the current year
                         } else { // Same year
-                            totalLeaveAccrued += currentMonth - joiningMonth;
+                            // Only count full months passed since joining
+                            totalLeaveAccrued += currentMonth - (joiningMonth + 1);
                         }
                     }
                      
@@ -1274,6 +1314,7 @@ export default function AttendancePage() {
     
 
     
+
 
 
 
