@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,10 +22,6 @@ import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
 import { addUser as addUserToFirestoreService } from '@/lib/user-service';
 import { Switch } from '@/components/ui/switch'; // Import Switch
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
-import { Check, ChevronsUpDown } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 
 
@@ -56,10 +52,6 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const { toast } = useToast();
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [isLeader, setIsLeader] = useState(false);
-  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [userSearchQuery, setUserSearchQuery] = useState("");
-  const allUsers: User[] = []; // Assuming this will be populated if needed, or passed as prop.
 
   const resetForm = useCallback(() => {
     setName('');
@@ -88,19 +80,6 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
        }, 100);
     }
   }, [isOpen, resetForm, defaultRole]);
-  
-  useEffect(() => {
-    if (selectedUserId) {
-        const selectedUser = allUsers.find(u => u.id === selectedUserId);
-        if (selectedUser) {
-            setName(selectedUser.name);
-            setEmail(selectedUser.email || '');
-        }
-    } else {
-        setName('');
-        setEmail('');
-    }
-  }, [selectedUserId, allUsers]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -243,14 +222,6 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
        toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
     }
   };
-  
-  const filteredUsersForDropdown = useMemo(() => {
-    if (!userSearchQuery) return allUsers;
-    return allUsers.filter(user =>
-      user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-      (user.email && user.email.toLowerCase().includes(userSearchQuery.toLowerCase()))
-    );
-  }, [allUsers, userSearchQuery]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -258,57 +229,16 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>Select an existing user or fill in the details manually.</DialogDescription>
+          <DialogDescription>Fill in the details for the new user.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-           <div className="space-y-1">
-             <Label htmlFor="select-user">Select Existing User (Optional)</Label>
-             <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={isUserPopoverOpen}
-                  className="w-full justify-between"
-                  disabled={isSubmitting}
-                >
-                  <span className="truncate">{selectedUserId ? allUsers.find(u => u.id === selectedUserId)?.name : "Select a user..."}</span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                 <Command filter={() => 1}>
-                    <CommandInput placeholder="Search user..." value={userSearchQuery} onValueChange={setUserSearchQuery} />
-                    <CommandList>
-                        <CommandEmpty>No users available.</CommandEmpty>
-                        <CommandGroup>
-                            {filteredUsersForDropdown.map(user => (
-                                <CommandItem
-                                    key={user.id}
-                                    value={user.id}
-                                    onSelect={(currentValue) => {
-                                        setSelectedUserId(currentValue === selectedUserId ? null : currentValue);
-                                        setIsUserPopoverOpen(false);
-                                    }}
-                                >
-                                    <Check className={cn("mr-2 h-4 w-4", selectedUserId === user.id ? "opacity-100" : "opacity-0")} />
-                                    {user.name} ({user.email})
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                 </Command>
-              </PopoverContent>
-             </Popover>
-           </div>
-
           <div className="space-y-1">
             <Label htmlFor="name">Name</Label>
-            <Input id="name" ref={nameInputRef} value={name} onChange={e => setName(e.target.value)} required disabled={!!selectedUserId || isSubmitting} />
+            <Input id="name" ref={nameInputRef} value={name} onChange={e => setName(e.target.value)} required disabled={isSubmitting} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={!!selectedUserId || isSubmitting} />
+            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={isSubmitting} />
           </div>
            <div className="space-y-1">
             <Label htmlFor="password-add">Password</Label>
