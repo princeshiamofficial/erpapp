@@ -53,6 +53,7 @@ export interface CrmPerformanceData {
 export default function LeaderboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [performanceData, setPerformanceData] = useState<CrmPerformanceData[]>([]);
   const [drPerformanceData, setDrPerformanceData] = useState<CrmPerformanceData[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -185,6 +186,12 @@ export default function LeaderboardPage() {
           getGlobalSettings(),
         ]);
 
+        if (fetchedSettings.isLeaderboardRestrictedToAdmin && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+            router.replace('/dashboard');
+            toast({ title: "Access Restricted", description: "The leaderboard is currently only available to administrators.", variant: "destructive" });
+            return;
+        }
+
         setAllUsers(fetchedUsers);
         setAllOrders(fetchedOrders);
         setGlobalSettings(fetchedSettings);
@@ -202,7 +209,7 @@ export default function LeaderboardPage() {
     if (currentUser && !isAuthLoading) {
       fetchData();
     }
-  }, [currentUser, isAuthLoading, toast]);
+  }, [currentUser, isAuthLoading, toast, router]);
 
 
   useEffect(() => {

@@ -1,5 +1,4 @@
 
-
 export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN" | "VENDOR" | "LR" | "CO";
 
 export interface User {
@@ -259,6 +258,7 @@ export interface GlobalSettings {
   rolesAllowedToDeleteOrders?: UserRole[];
   rolesAllowedToViewFinancials?: UserRole[];
   isPaymentValidationEnabled?: boolean; // New setting
+  isLeaderboardRestrictedToAdmin?: boolean; // New setting
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;

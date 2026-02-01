@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -21,16 +20,17 @@ import {
   updateProjectStageAccessAction,
   updatePipelineAccessAction,
   updateLeadCategoryAccessAction,
-  updatePaymentValidationAction, // Import new action
+  updatePaymentValidationAction,
+  updateLeaderboardRestrictionAction,
 } from '../crm-target-settings/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Switch } from '@/components/ui/switch';
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
@@ -51,7 +51,8 @@ export default function CustomAccessPage() {
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
   const [leadCategoryAccess, setLeadCategoryAccess] = useState<Record<LeadCategory, LeadCategoryAccessSettings>>({} as Record<LeadCategory, LeadCategoryAccessSettings>);
   const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
-  const [isPaymentValidationEnabled, setIsPaymentValidationEnabled] = useState(true); // New state for payment validation
+  const [isPaymentValidationEnabled, setIsPaymentValidationEnabled] = useState(true); 
+  const [isLeaderboardRestricted, setIsLeaderboardRestricted] = useState(false);
   const [crmUsers, setCrmUsers] = useState<User[]>([]);
   const [crmSearchTerm, setCrmSearchTerm] = useState('');
 
@@ -59,7 +60,8 @@ export default function CustomAccessPage() {
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
-  const [isSubmittingPaymentValidation, setIsSubmittingPaymentValidation] = useState(false); // New state for submitting payment validation
+  const [isSubmittingPaymentValidation, setIsSubmittingPaymentValidation] = useState(false); 
+  const [isSubmittingLeaderboardRestriction, setIsSubmittingLeaderboardRestriction] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
@@ -80,7 +82,8 @@ export default function CustomAccessPage() {
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
       setLeadCategoryAccess(globalSettings.leadCategoryAccess || ({} as Record<LeadCategory, LeadCategoryAccessSettings>));
       setPipelineAccess(new Set(globalSettings.pipelineAccess?.canViewAllLeads ?? []));
-      setIsPaymentValidationEnabled(globalSettings.isPaymentValidationEnabled ?? true); // Fetch new setting
+      setIsPaymentValidationEnabled(globalSettings.isPaymentValidationEnabled ?? true); 
+      setIsLeaderboardRestricted(globalSettings.isLeaderboardRestrictedToAdmin ?? false);
       setCrmUsers(allUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -141,6 +144,18 @@ export default function CustomAccessPage() {
         toast({ title: "Update Failed", description: result.error || "Could not update payment validation setting.", variant: "destructive" });
     }
     setIsSubmittingPaymentValidation(false);
+  };
+
+  const handleToggleLeaderboardRestriction = async (restricted: boolean) => {
+    setIsSubmittingLeaderboardRestriction(true);
+    const result = await updateLeaderboardRestrictionAction(restricted);
+    if (result.success) {
+        setIsLeaderboardRestricted(restricted);
+        toast({ title: "Settings Updated", description: `Leaderboard access is now ${restricted ? 'restricted to admins' : 'open to all permitted roles'}.` });
+    } else {
+        toast({ title: "Update Failed", description: result.error || "Could not update leaderboard restriction setting.", variant: "destructive" });
+    }
+    setIsSubmittingLeaderboardRestriction(false);
   };
 
   const handleProjectStageAccessChange = (stage: ProjectStatusType, role: UserRole, checked: boolean | "indeterminate") => {
@@ -303,31 +318,59 @@ export default function CustomAccessPage() {
             </CardFooter>
         </Card>
 
-        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Payment Validation</CardTitle>
-                <CardDescription className="text-muted-foreground text-sm mt-0.5">Enable or disable the 45% payment check before moving projects to Logistics.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-                {isLoading ? (
-                    <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
-                ) : (
-                    <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                        <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                            <span>Enforce 45% Payment for Logistics</span>
-                            <span className="font-normal leading-snug text-muted-foreground text-xs">If disabled, this check will be skipped.</span>
-                        </Label>
-                        <Switch
-                            id="paymentValidationSwitch"
-                            checked={isPaymentValidationEnabled}
-                            onCheckedChange={handleTogglePaymentValidation}
-                            disabled={isSubmittingPaymentValidation}
-                            aria-label="Toggle payment validation enforcement"
-                        />
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+        <div className="space-y-8">
+            <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+                <CardHeader className="border-b p-5">
+                    <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Payment Validation</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm mt-0.5">Enable or disable the 45% payment check before moving projects to Logistics.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                    {isLoading ? (
+                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
+                    ) : (
+                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                            <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                                <span>Enforce 45% Payment for Logistics</span>
+                                <span className="font-normal leading-snug text-muted-foreground text-xs">If disabled, this check will be skipped.</span>
+                            </Label>
+                            <Switch
+                                id="paymentValidationSwitch"
+                                checked={isPaymentValidationEnabled}
+                                onCheckedChange={handleTogglePaymentValidation}
+                                disabled={isSubmittingPaymentValidation}
+                                aria-label="Toggle payment validation enforcement"
+                            />
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+                <CardHeader className="border-b p-5">
+                    <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Award className="h-6 w-6 text-primary" /> Leaderboard Access</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm mt-0.5">Restrict leaderboard visibility to administrators only.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                    {isLoading ? (
+                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
+                    ) : (
+                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                            <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                                <span>Restrict Leaderboard to Admins</span>
+                                <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, non-admin users cannot see the leaderboard.</span>
+                            </Label>
+                            <Switch
+                                id="leaderboardRestrictionSwitch"
+                                checked={isLeaderboardRestricted}
+                                onCheckedChange={handleToggleLeaderboardRestriction}
+                                disabled={isSubmittingLeaderboardRestriction}
+                                aria-label="Toggle leaderboard restriction"
+                            />
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
       </div>
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">

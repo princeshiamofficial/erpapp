@@ -173,10 +173,28 @@ export function SidebarNavigation() {
       if (item.href === "/finance-manager" && !canUserLogExpense) {
         shouldShowItem = false;
       }
+
+      // Special check for Leaderboard restriction
+      if (item.href === "/leaderboard" && globalSettings?.isLeaderboardRestrictedToAdmin) {
+        if (userRole !== 'ADMIN' && userRole !== 'SYSTEM_ADMIN') {
+          shouldShowItem = false;
+        }
+      }
       
       // If it's a header, check if any sub-item should be shown
       if (item.isHeader && item.subItems) {
-        shouldShowItem = item.subItems.some(sub => sub.roles.includes(userRole));
+        shouldShowItem = item.subItems.some(sub => {
+            const roleMatch = sub.roles.includes(userRole);
+            if (!roleMatch) return false;
+            
+            if (sub.href === "/finance-manager" && !canUserLogExpense) return false;
+            
+            if (sub.href === "/leaderboard" && globalSettings?.isLeaderboardRestrictedToAdmin) {
+                return (userRole === 'ADMIN' || userRole === 'SYSTEM_ADMIN');
+            }
+            
+            return true;
+        });
       }
 
       if (!shouldShowItem) return null;
@@ -220,6 +238,13 @@ export function SidebarNavigation() {
                       if (!subItem.roles.includes(userRole) || (subItem.href === "/finance-manager" && !canUserLogExpense)) {
                         return null;
                       }
+                      
+                      if (subItem.href === "/leaderboard" && globalSettings?.isLeaderboardRestrictedToAdmin) {
+                        if (userRole !== 'ADMIN' && userRole !== 'SYSTEM_ADMIN') {
+                          return null;
+                        }
+                      }
+
                       const isSubActive = subItem.href && (pathname === subItem.href || pathname.startsWith(subItem.href));
                       
                       const linkProps = subItem.external 

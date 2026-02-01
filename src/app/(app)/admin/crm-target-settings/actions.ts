@@ -1,5 +1,4 @@
 
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -18,8 +17,9 @@ import {
   setRoleBasedTargets,
   setPipelineAccess,
   setLeadCategoryAccess,
-  setPaymentValidationStatus, // Import new service function
+  setPaymentValidationStatus, 
   setTelegramSettings,
+  setLeaderboardRestriction,
 } from "@/lib/settings-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
@@ -79,7 +79,7 @@ export async function updateRolesAllowedToDeleteOrdersAction(roles: UserRole[]):
     const success = await setRolesAllowedToDeleteOrders(roles);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
-      revalidatePath("/(app)/orders"); // Revalidate orders page as permissions changed
+      revalidatePath("/(app)/orders"); 
       return { success: true };
     }
     return { success: false, error: "Failed to update order deletion permissions in database." };
@@ -94,7 +94,7 @@ export async function updateRolesAllowedToViewFinancialsAction(roles: UserRole[]
     const success = await setRolesAllowedToViewFinancials(roles);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
-      revalidatePath("/track/[trackingId]", "layout"); // Revalidate tracking page to reflect changes
+      revalidatePath("/track/[trackingId]", "layout"); 
       return { success: true };
     }
     return { success: false, error: "Failed to update financial visibility permissions in database." };
@@ -115,6 +115,22 @@ export async function updatePaymentValidationAction(enabled: boolean): Promise<{
     return { success: false, error: "Failed to update payment validation setting in database." };
   } catch (error) {
     console.error("Error in updatePaymentValidationAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateLeaderboardRestrictionAction(restricted: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setLeaderboardRestriction(restricted);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/(app)/leaderboard");
+      revalidatePath("/(app)", "layout"); 
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update leaderboard restriction setting." };
+  } catch (error) {
+    console.error("Error in updateLeaderboardRestrictionAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
@@ -142,9 +158,6 @@ export async function updatePipelineAccessAction(permissions: PipelineAccessSett
 
 export async function updateToastSoundUrlAction(soundUrl: string | null): Promise<{ success: boolean; error?: string }> {
   try {
-    if (soundUrl && !soundUrl.startsWith('http://') && !soundUrl.startsWith('https://') && !soundUrl.startsWith('/')) {
-      // return { success: false, error: "Invalid sound URL format. Must be a valid URL or a relative path starting with '/'." };
-    }
     const success = await setToastSoundUrl(soundUrl);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
@@ -159,9 +172,6 @@ export async function updateToastSoundUrlAction(soundUrl: string | null): Promis
 
 export async function updateLeaderboardBackgroundImageUrlAction(imageUrl: string | null): Promise<{ success: boolean; error?: string }> {
   try {
-    if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://') && !imageUrl.startsWith('/')) {
-      // return { success: false, error: "Invalid image URL format. Must be a valid URL or a relative path." };
-    }
     const success = await setLeaderboardBackgroundImageUrl(imageUrl);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
