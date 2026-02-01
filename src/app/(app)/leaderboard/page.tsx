@@ -26,21 +26,25 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LOGISTICS_STATUS_ID } from '@/lib/status-service';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Progress } from '@/components/ui/progress';
+import dynamic from 'next/dynamic';
 
-// CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
+const SalesPerformanceClient = dynamic(() => import('@/components/leaderboard/SalesPerformanceClient').then(mod => mod.SalesPerformanceClient), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[400px] w-full" />
+});
+
+// CrmPerformanceData type
 export interface CrmPerformanceData {
   userId: string;
   userName: string;
   userAvatar?: string;
   ordersCompleted: number; // This is the "points" for CRs
-  reorderCount: number; // New field for ROD
+  reorderCount: number; 
   target: number;
   designsAssigned?: number; // Specific for DRs
   designsDone?: number; // Specific for DRs
@@ -49,7 +53,6 @@ export interface CrmPerformanceData {
   trend?: 'up' | 'down' | 'same';
   pointChange?: number;
 }
-
 
 export default function LeaderboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
@@ -70,7 +73,6 @@ export default function LeaderboardPage() {
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Today");
   const [selectedPredefinedRange, setSelectedPredefinedRange] = useState<PredefinedRange | "custom" | null>("today");
 
-
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
@@ -88,7 +90,6 @@ export default function LeaderboardPage() {
       setActiveTab('cr_board');
     }
   }, [currentUser]);
-
 
   const [currentLeaderboardBackground, setCurrentLeaderboardBackground] = useState<string | null | undefined>(undefined);
 
@@ -142,27 +143,26 @@ export default function LeaderboardPage() {
         target = Math.round(dailyTarget * numDaysInRange);
       }
 
-
       return {
         userId: user.id,
         userName: user.name,
         userAvatar: user.avatarUrl || undefined,
         ordersCompleted: ordersCompleted,
-        reorderCount: 0, // This is no longer used for calculation
+        reorderCount: 0,
         designsAssigned,
         designsDone,
         target: target,
         role: user.role,
         trend: 'same',
         pointChange: 0,
-      };
+      } as CrmPerformanceData;
     });
     
     const sortKey = roleToCalculate === 'DESIGNER_REPRESENTATIVE' ? 'designsDone' : 'ordersCompleted';
 
     performanceDataList.sort((a, b) => {
-        const aTotal = (a[sortKey] ?? 0);
-        const bTotal = (b[sortKey] ?? 0);
+        const aTotal = (a[sortKey as keyof CrmPerformanceData] as number || 0);
+        const bTotal = (b[sortKey as keyof CrmPerformanceData] as number || 0);
         return bTotal - aTotal || a.userName.localeCompare(b.userName);
     });
     performanceDataList.forEach((user, index) => {
@@ -212,17 +212,14 @@ export default function LeaderboardPage() {
     }
   }, [currentUser, isAuthLoading, toast, router]);
 
-
   useEffect(() => {
     if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange?.from || !selectedDateRange?.to) return;
     
-    // Determine the duration and start of the previous period
     const rangeDuration = differenceInDays(selectedDateRange.to, selectedDateRange.from);
     const previousPeriodStart = sub(selectedDateRange.from, { days: rangeDuration + 1 });
-    const previousPeriodEnd = endOfDay(sub(selectedDateRange.to, { days: rangeDuration + 1 })); // Ensure end of day
+    const previousPeriodEnd = endOfDay(sub(selectedDateRange.to, { days: rangeDuration + 1 }));
     const previousPeriodRange = { from: previousPeriodStart, to: previousPeriodEnd };
 
-    // Calculate for CR
     let crData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'CRM', selectedPredefinedRange);
     const prevCrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'CRM', selectedPredefinedRange);
     
@@ -239,7 +236,6 @@ export default function LeaderboardPage() {
         };
     });
 
-    // Calculate for DR
     let drData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'DESIGNER_REPRESENTATIVE', selectedPredefinedRange);
     const prevDrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'DESIGNER_REPRESENTATIVE', selectedPredefinedRange);
     const prevDrMap = new Map(prevDrData.map(d => [d.userId, d]));
@@ -258,7 +254,6 @@ export default function LeaderboardPage() {
 
   }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, calculatePerformance, selectedPredefinedRange]);
   
-
   const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(displayLabel);
@@ -270,17 +265,11 @@ export default function LeaderboardPage() {
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
-  const isAdmin = useMemo(() => {
-    if (!currentUser) return false;
-    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
-  }, [currentUser]);
-
   const isLoadingContent = isAuthLoading || isLoadingData || !selectedDateRange;
 
   if (isLoadingContent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
-
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')"}}
@@ -338,7 +327,6 @@ export default function LeaderboardPage() {
         <header className="relative z-10 flex items-center justify-center text-center py-4 px-4 sm:px-6 mb-4 sm:mb-6">
           <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
           <div className="absolute right-4 sm:right-6 flex items-center gap-2">
-              
               {selectedDateRange && (
                   <DateRangePicker 
                     initialRange={selectedDateRange} 
