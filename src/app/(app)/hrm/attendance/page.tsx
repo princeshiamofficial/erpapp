@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -647,18 +646,7 @@ export default function AttendancePage() {
             <CardContent className="p-6 pt-0">
                 {selectedUserId !== 'all' && attendanceSummary && (
                     <>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
-                                <CardContent className="p-4 flex items-center space-x-4">
-                                    <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/20">
-                                        <CalendarDays className="h-6 w-6 text-blue-600 dark:text-blue-300" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">Total Friday</p>
-                                        <p className="text-2xl font-bold text-foreground">{attendanceSummary.totalFridays}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
                             <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
                                 <CardContent className="p-4 flex items-center space-x-4">
                                     <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/20">
@@ -1317,22 +1305,3 @@ export default function AttendancePage() {
         </div>
     );
 }
-
-    
-
-
-
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-
