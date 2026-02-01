@@ -263,7 +263,6 @@ export default function AttendancePage() {
         const daysInMonth = getDaysInMonth(targetDate);
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
-        let totalFridays = 0;
         let totalWorkingDays = 0;
         
         for (let i = 1; i <= daysInMonth; i++) {
@@ -272,10 +271,6 @@ export default function AttendancePage() {
                 continue; 
             }
             const dayOfWeek = getDay(currentDate);
-
-            if (dayOfWeek === 5) { 
-                totalFridays++;
-            }
             
             if (!weekendDayIndexes.includes(dayOfWeek)) {
                 totalWorkingDays++;
@@ -312,7 +307,6 @@ export default function AttendancePage() {
         const totalWorkingHours = `${String(totalHours).padStart(2, '0')}:${String(remainingMinutes).padStart(2, '0')}`;
 
         return {
-            totalFridays,
             totalPresent: presentDays,
             totalAbsent: Math.max(0, totalAbsent),
             totalLeave,
@@ -1260,6 +1254,8 @@ export default function AttendancePage() {
                 return settingsContent;
             case 'office_time':
                 return officeTimeContent;
+            case 'attendance_report':
+                return attendanceReportContent;
             case 'attendees_report':
                 return attendanceHistoryContent;
             default:
