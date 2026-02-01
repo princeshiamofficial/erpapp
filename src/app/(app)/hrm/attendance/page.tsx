@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -49,6 +48,7 @@ const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDial
 const AttendanceTypeDialog = dynamic(() => import('@/components/hrm/AttendanceTypeDialog').then(mod => mod.AttendanceTypeDialog));
 const AddEditHolidayDialog = dynamic(() => import('@/components/hrm/AddEditHolidayDialog').then(mod => mod.AddEditHolidayDialog));
 const AddEditOfficeTimeDialog = dynamic(() => import('@/components/hrm/AddEditOfficeTimeDialog').then(mod => mod.AddEditOfficeTimeDialog));
+const EditAttendanceDialog = dynamic(() => import('@/components/hrm/EditAttendanceDialog').then(mod => mod.EditAttendanceDialog));
 
 
 const ITEMS_PER_PAGE = 25;
@@ -60,7 +60,7 @@ const getInitials = (name: string) => {
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent') => {
+const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent' | 'Weekend') => {
   switch (status) {
     case 'On Time':
       return 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200';
@@ -68,6 +68,8 @@ const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent') => {
       return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200';
     case 'Absent':
       return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
+    case 'Weekend':
+      return 'bg-blue-50 text-blue-700 border-blue-100';
     default:
       return 'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200';
   }
@@ -92,12 +94,10 @@ export default function AttendancePage() {
     const [selectedWeekends, setSelectedWeekends] = useState<string[]>([]);
     const [isAttendanceTypeDialogOpen, setIsAttendanceTypeDialogOpen] = useState(false);
     
-    // State for Holiday Dialog
     const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
-    const [holidayToEdit, setHolidayToEdit] = useState(null); // Will hold holiday data for editing
-    const [holidays, setHolidays] = useState([{id: '1', title: 'National Mourning Day', date: '19 Nov 2006'}]); // Mock data
+    const [holidayToEdit, setHolidayToEdit] = useState(null); 
+    const [holidays, setHolidays] = useState([{id: '1', title: 'National Mourning Day', date: '19 Nov 2006'}]); 
 
-    // State for Office Time Dialog
     const [isOfficeTimeDialogOpen, setIsOfficeTimeDialogOpen] = useState(false);
     const [officeTimeToEdit, setOfficeTimeToEdit] = useState<OfficeTime | null>(null);
     const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
@@ -119,6 +119,11 @@ export default function AttendancePage() {
     const [attendanceMonth, setAttendanceMonth] = useState(String(new Date().getMonth()));
     const [attendanceYear, setAttendanceYear] = useState(String(new Date().getFullYear()));
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+    const [attendanceToEdit, setAttendanceToEdit] = useState<any | null>(null);
+    const [isEditAttendanceDialogOpen, setIsEditAttendanceDialogOpen] = useState(false);
+
+    const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
 
 
     const fetchData = useCallback(async () => {
@@ -154,7 +159,6 @@ export default function AttendancePage() {
           setAttendanceData(uniqueAttendance);
           setAllUsers(fetchedUsers);
           setSelectedWeekends(fetchedWeekendSettings.days);
-          // In a real app, you would fetch holidays here too.
         } catch (error) {
           console.error("Failed to fetch page data:", error);
           toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
@@ -259,17 +263,17 @@ export default function AttendancePage() {
         const daysInMonth = getDaysInMonth(targetDate);
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
-        let totalWorkingDays = 0;
         let totalFridays = 0;
+        let totalWorkingDays = 0;
         
         for (let i = 1; i <= daysInMonth; i++) {
             const currentDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
             if (isAfter(currentDate, new Date())) {
-                continue; // Don't count future days
+                continue; 
             }
             const dayOfWeek = getDay(currentDate);
 
-            if (dayOfWeek === 5) { // 5 is Friday
+            if (dayOfWeek === 5) { 
                 totalFridays++;
             }
             
@@ -354,12 +358,11 @@ export default function AttendancePage() {
     };
 
     const handleHolidaySaved = () => {
-        // In a real app, you would refetch the holidays list
         toast({
             title: "Success",
             description: "Holiday list has been updated."
         });
-        fetchData(); // Re-fetch all data, including holidays
+        fetchData(); 
         setIsHolidayDialogOpen(false);
         setHolidayToEdit(null);
     }
@@ -375,7 +378,7 @@ export default function AttendancePage() {
     };
 
     const handleOfficeTimeSaved = () => {
-      fetchData(); // Refetch all data including office times
+      fetchData(); 
       setIsOfficeTimeDialogOpen(false);
       setOfficeTimeToEdit(null);
     };
@@ -415,7 +418,7 @@ export default function AttendancePage() {
         const numDaysForFridayCount = differenceInDays(endDate, startDate) + 1;
         for (let i = 0; i < numDaysForFridayCount; i++) {
             const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
-            if (currentDate.getDay() === 5) { // 5 is Friday
+            if (currentDate.getDay() === 5) { 
                 totalFridaysInRange++;
             }
         }
@@ -449,7 +452,7 @@ export default function AttendancePage() {
                 employeeName: employee.name,
                 designation: employee.designation,
                 presentDays,
-                totalFridays: totalFridaysInRange, // Add fridays count to returned object
+                totalFridays: totalFridaysInRange, 
                 totalPresentDays,
                 totalAbsentDays: Math.max(0, absentDays), 
                 ontimeCheckInDays,
@@ -736,7 +739,20 @@ export default function AttendancePage() {
                                 const entryDate = entry.date;
                                 const isFriday = getDay(entryDate) === 5;
                                 return (
-                                <TableRow key={entry.id || index} className={cn(isFriday && "bg-red-50 dark:bg-red-900/20")}>
+                                <TableRow 
+                                    key={entry.id || index} 
+                                    className={cn(
+                                        "transition-colors",
+                                        isAdmin && "cursor-pointer hover:bg-muted/50",
+                                        isFriday && "bg-red-50 dark:bg-red-900/20"
+                                    )}
+                                    onDoubleClick={() => {
+                                        if (isAdmin) {
+                                            setAttendanceToEdit(entry);
+                                            setIsEditAttendanceDialogOpen(true);
+                                        }
+                                    }}
+                                >
                                     <TableCell>{individualAttendanceHistoryData.length - index}</TableCell>
                                     <TableCell>{format(entryDate, 'dd-MMM-yyyy')}</TableCell>
                                     {selectedUserId !== 'all' && <TableCell>{format(entryDate, 'EEEE')}</TableCell>}
@@ -764,7 +780,8 @@ export default function AttendancePage() {
                                                 variant="outline" 
                                                 size="sm"
                                                 disabled={!entry.checkInLocation?.lat || !entry.checkInLocation?.lng}
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     if (entry.checkInLocation?.lat && entry.checkInLocation?.lng) {
                                                         setViewingLocation({ 
                                                             lat: entry.checkInLocation.lat, 
@@ -782,7 +799,8 @@ export default function AttendancePage() {
                                                 variant="outline" 
                                                 size="sm"
                                                 disabled={!entry.checkOutLocation?.lat || !entry.checkOutLocation?.lng}
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     if (entry.checkOutLocation?.lat && entry.checkOutLocation?.lng) {
                                                         setViewingLocation({ 
                                                             lat: entry.checkOutLocation.lat, 
@@ -878,11 +896,10 @@ export default function AttendancePage() {
                         const currentYear = getYear(now);
 
                         if (currentYear > joiningYear) {
-                            totalLeaveAccrued += (12 - (joiningMonth + 1)); // Months for the joining year
-                            totalLeaveAccrued += (currentYear - joiningYear - 1) * 12; // Full years in between
-                            totalLeaveAccrued += currentMonth + 1; // Months for the current year
-                        } else { // Same year
-                            // Only count full months passed since joining
+                            totalLeaveAccrued += (12 - (joiningMonth + 1)); 
+                            totalLeaveAccrued += (currentYear - joiningYear - 1) * 12; 
+                            totalLeaveAccrued += currentMonth + 1; 
+                        } else { 
                             totalLeaveAccrued += currentMonth - (joiningMonth + 1);
                         }
                     }
@@ -1301,6 +1318,12 @@ export default function AttendancePage() {
                 onOpenChange={setIsOfficeTimeDialogOpen}
                 onOfficeTimeSaved={handleOfficeTimeSaved}
                 officeTime={officeTimeToEdit}
+             />
+             <EditAttendanceDialog
+                isOpen={isEditAttendanceDialogOpen}
+                onOpenChange={setIsEditAttendanceDialogOpen}
+                onAttendanceSaved={fetchData}
+                attendance={attendanceToEdit}
              />
         </div>
     );
