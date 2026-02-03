@@ -101,6 +101,12 @@ function AppShell({
   useEffect(() => {
     if (!isLoading && !currentUser && !isSuspendedDialogOpen) {
       router.replace('/login');
+    } else if (!isLoading && currentUser) {
+      // Guard for custom roles: They cannot access internal (app) routes
+      const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
+      if (!systemRoles.includes(currentUser.role)) {
+        router.replace('/attendance');
+      }
     }
   }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
 

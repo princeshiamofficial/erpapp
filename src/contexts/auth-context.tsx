@@ -114,21 +114,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
   }, []);
 
-  // useEffect(() => {
-  //   let intervalId: NodeJS.Timeout | undefined;
-  //   if (currentUser && currentUser.id && !isSuspendedDialogOpen) {
-  //     const CHECK_INTERVAL = 1 * 60 * 1000; 
-  //     console.log(`AuthContext: Starting polling for user ${currentUser.id} status. Interval: ${CHECK_INTERVAL}ms`);
-  //     intervalId = setInterval(refreshCurrentUser, CHECK_INTERVAL);
-  //   }
-  //   return () => {
-  //     if (intervalId) {
-  //       console.log("AuthContext: Clearing user status polling interval.");
-  //       clearInterval(intervalId);
-  //     }
-  //   };
-  // }, [currentUser, refreshCurrentUser, isSuspendedDialogOpen]);
-
   const login = async (email: string, pass: string): Promise<boolean> => {
     console.log(`AuthContext: Login attempt for email: ${email}`);
     setIsLoading(true);
@@ -153,7 +138,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser(userToStore as User);
             localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
             setIsLoading(false);
-            if (userToStore.role === 'LR') {
+            
+            // Redirect logic based on role
+            const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
+            if (!systemRoles.includes(userToStore.role)) {
+              router.push('/attendance');
+            } else if (userToStore.role === 'LR') {
               router.push('/projects');
             } else {
               router.push('/dashboard');

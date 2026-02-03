@@ -12,8 +12,14 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
       if (currentUser) {
-        // 'LR' role now goes to dashboard by default as per the change.
-        router.replace('/dashboard');
+        // System roles go to dashboard (or special-cased dashboard)
+        const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
+        if (!systemRoles.includes(currentUser.role)) {
+          // Custom roles are restricted to attendance only
+          router.replace('/attendance');
+        } else {
+          router.replace('/dashboard');
+        }
       } else {
         router.replace('/login');
       }
