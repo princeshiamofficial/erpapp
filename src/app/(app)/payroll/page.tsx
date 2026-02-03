@@ -17,15 +17,15 @@ import {
   PaginationPrevious,
   PaginationEllipsis
 } from "@/components/ui/pagination";
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, ListFilter } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Landmark as ProvidentFundIcon, AlertCircle as FineIcon } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord, ProvidentFundRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getYear, getDay } from 'date-fns';
-import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth, getProvidentFundRecordsAction } from '@/app/(app)/payroll/actions';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, endOfMonth, startOfMonth, parseISO } from 'date-fns';
+import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import {
@@ -39,10 +39,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
-import Image from 'next/image';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
@@ -93,10 +91,7 @@ export default function PayrollPage() {
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [salarySheetData, setSalarySheetData] = useState<Payslip[]>([]);
-  const [pfRecords, setPfRecords] = useState<ProvidentFundRecord[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
-  
-  const [viewingPfEmployee, setViewingPfEmployee] = useState<Employee | null>(null);
 
 
   const fetchData = useCallback(async () => {
@@ -108,22 +103,19 @@ export default function PayrollPage() {
         fetchedUsers,
         fetchedAttendance, 
         fetchedSalarySheet,
-        fetchedWeekendSettings,
-        fetchedPfRecords
+        fetchedWeekendSettings
       ] = await Promise.all([
         getEmployees(),
         getUsers(),
         getAttendanceForMonth(selectedDate), 
         getSalarySheetForMonth(monthStr),
-        getWeekendSettings(),
-        getProvidentFundRecordsAction()
+        getWeekendSettings()
       ]);
       setEmployees(fetchedEmployees);
       setAllUsers(fetchedUsers);
       setAttendanceData(fetchedAttendance);
       setSalarySheetData(fetchedSalarySheet);
       setWeekendDays(fetchedWeekendSettings.days);
-      setPfRecords(fetchedPfRecords);
     } catch (error) {
       console.error("Failed to fetch page data:", error);
       toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
@@ -169,7 +161,6 @@ export default function PayrollPage() {
       );
     }
 
-    // Calculations
     const calculatedData = results.filter(e => e.status === 'Active').map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
@@ -205,14 +196,10 @@ export default function PayrollPage() {
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-      const perDaySalaryForFine = effectiveSalary / 30; // Always divide by 30 for fine calculation
+      const perDaySalaryForFine = effectiveSalary / 30;
       const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
-      
-      const perDaySalaryForAbsence = 30 > 0 ? effectiveSalary / 30 : 0;
-      const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
-      
+      const salaryForDaysWorked = (effectiveSalary / 30) * presentDays;
       const providentFund = employee.providentFundStatus === 'Active' ? (effectiveSalary * 0.07) : 0;
-      
       const payableAmount = salaryForDaysWorked - automaticFine - providentFund;
 
       return {
@@ -224,7 +211,7 @@ export default function PayrollPage() {
         providentFund,
         fine: automaticFine,
         incentive: employee.incentive || 0,
-        payableAmount: Math.max(0, payableAmount), // Ensure payable amount is not negative
+        payableAmount: Math.max(0, payableAmount),
         paymentStatus: 'Unpaid' as 'Paid' | 'Unpaid',
         trainingFee: 0,
         advance: 0,
@@ -253,7 +240,7 @@ export default function PayrollPage() {
   },[filteredEmployees, activeTab]);
 
   const paginatedEmployees = useMemo(() => {
-    if (activeTab !== 'employee_list' && activeTab !== 'employees_wallet') return salarySheetCalculatedData;
+    if (activeTab !== 'employee_list') return salarySheetCalculatedData;
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return filteredEmployees.slice(startIndex, endIndex);
@@ -413,7 +400,7 @@ export default function PayrollPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  [...Array(ITEMS_PER_PAGE)].map((_, index) => (
+                  [...Array(10)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
@@ -634,7 +621,7 @@ export default function PayrollPage() {
                     <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
+              ) : (salarySheetCalculatedData && salarySheetCalculatedData.length > 0) ? (
                 salarySheetCalculatedData.map((data, index) => {
                     const user = allUsers.find(u => u.id === data.userId);
                     return (
@@ -701,145 +688,13 @@ export default function PayrollPage() {
   );
   
   const employeesWalletContent = (
-    <div className="space-y-6">
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <Wallet className="h-6 w-6 text-primary" /> Employees Wallet
-                        </CardTitle>
-                        <CardDescription>Track Provident Fund contributions and status for all active employees.</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="relative flex-grow sm:flex-grow-0">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                        </div>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>SL</TableHead>
-                                <TableHead>Employee Name</TableHead>
-                                <TableHead>Designation</TableHead>
-                                <TableHead className="text-right">Total Accrued</TableHead>
-                                <TableHead className="text-right">Total Paid</TableHead>
-                                <TableHead className="text-right">Balance Due</TableHead>
-                                <TableHead className="text-center">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                [...Array(5)].map((_, i) => (
-                                    <TableRow key={`pf-skel-${i}`}>
-                                        <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : paginatedEmployees.length > 0 ? (
-                                paginatedEmployees.map((employee, index) => {
-                                    const user = allUsers.find(u => u.id === employee.userId);
-                                    const userRecords = pfRecords.filter(r => r.employeeId === employee.employeeId);
-                                    const totalAccrued = userRecords.reduce((sum, r) => sum + r.amount, 0);
-                                    const totalPaid = userRecords.filter(r => r.status === 'Paid').reduce((sum, r) => sum + r.amount, 0);
-                                    const totalDue = totalAccrued - totalPaid;
-
-                                    return (
-                                        <TableRow key={employee.id}>
-                                            <TableCell>{index + 1}</TableCell>
-                                            <TableCell className="font-medium">
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
-                                                        <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span>{employee.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{employee.designation}</TableCell>
-                                            <TableCell className="text-right font-mono font-semibold"><spoiler-span>{formatCurrency(totalAccrued)}</spoiler-span></TableCell>
-                                            <TableCell className="text-right font-mono text-green-600 font-semibold"><spoiler-span>{formatCurrency(totalPaid)}</spoiler-span></TableCell>
-                                            <TableCell className="text-right font-mono text-destructive font-semibold"><spoiler-span>{formatCurrency(totalDue)}</spoiler-span></TableCell>
-                                            <TableCell className="text-center">
-                                                <Button variant="outline" size="sm" onClick={() => setViewingPfEmployee(employee)}>
-                                                    <History className="h-4 w-4 mr-2" /> View History
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No Provident Fund data found.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
-
-        {viewingPfEmployee && (
-            <Sheet open={!!viewingPfEmployee} onOpenChange={(open) => !open && setViewingPfEmployee(null)}>
-                <SheetContent className="sm:max-w-xl">
-                    <SheetHeader>
-                        <SheetTitle className="flex items-center gap-2"><ProvidentFundIcon className="h-5 w-5 text-primary"/>PF History: {viewingPfEmployee.name}</SheetTitle>
-                        <SheetDescription>Detailed month-by-month Provident Fund contributions.</SheetDescription>
-                    </SheetHeader>
-                    <div className="py-6 space-y-6">
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                            <div className="p-3 border rounded-lg bg-muted/30">
-                                <p className="text-xs text-muted-foreground uppercase font-semibold">Accrued</p>
-                                <p className="text-lg font-bold"><spoiler-span>{formatCurrency(pfRecords.filter(r => r.employeeId === viewingPfEmployee.employeeId).reduce((sum, r) => sum + r.amount, 0))}</spoiler-span></p>
-                            </div>
-                            <div className="p-3 border rounded-lg bg-green-50">
-                                <p className="text-xs text-green-600 uppercase font-semibold">Received</p>
-                                <p className="text-lg font-bold text-green-700"><spoiler-span>{formatCurrency(pfRecords.filter(r => r.employeeId === viewingPfEmployee.employeeId && r.status === 'Paid').reduce((sum, r) => sum + r.amount, 0))}</spoiler-span></p>
-                            </div>
-                            <div className="p-3 border rounded-lg bg-red-50">
-                                <p className="text-xs text-red-600 uppercase font-semibold">Due</p>
-                                <p className="text-lg font-bold text-red-700"><spoiler-span>{formatCurrency(pfRecords.filter(r => r.employeeId === viewingPfEmployee.employeeId).reduce((sum, r) => sum + (r.status === 'Unpaid' ? r.amount : 0), 0))}</spoiler-span></p>
-                            </div>
-                        </div>
-                        <ScrollArea className="h-[calc(100vh-18rem)] border rounded-md">
-                            <Table>
-                                <TableHeader className="bg-muted sticky top-0 z-10">
-                                    <TableRow>
-                                        <TableHead>Month</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                        <TableHead className="text-right">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {pfRecords.filter(r => r.employeeId === viewingPfEmployee.employeeId).sort((a,b) => b.month.localeCompare(a.month)).map(record => (
-                                        <TableRow key={record.id}>
-                                            <TableCell className="font-medium">{format(parseISO(`${record.month}-01`), 'MMMM yyyy')}</TableCell>
-                                            <TableCell className="text-right font-mono"><spoiler-span>{formatCurrency(record.amount)}</spoiler-span></TableCell>
-                                            <TableCell className="text-right">
-                                                <Badge className={cn(record.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                                                    {record.status === 'Paid' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
-                                                    {record.status}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {pfRecords.filter(r => r.employeeId === viewingPfEmployee.employeeId).length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="text-center py-8 text-muted-foreground italic">No historical records found for this employee.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
-                    </div>
-                </SheetContent>
-            </Sheet>
-        )}
-    </div>
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardContent className="h-64 flex items-center justify-center text-center text-muted-foreground">
+        <Wallet className="h-12 w-12 mb-4 opacity-50" />
+        <p className="text-lg font-semibold">Employees Wallet</p>
+        <p className="text-sm">This feature is coming soon!</p>
+      </CardContent>
+    </Card>
   );
 
   const renderActiveTab = () => {
@@ -886,7 +741,7 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
           onSave={() => {
-            fetchData(); // Refetch data after saving
+            fetchData();
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}

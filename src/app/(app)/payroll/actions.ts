@@ -9,12 +9,12 @@ import {
   deleteEmployee as deleteEmployeeService,
   getEmployeeById,
   deleteSalaryIncrement as deleteSalaryIncrementService,
-  addLeaveRecord as addLeaveRecordService, // Import new service
+  addLeaveRecord as addLeaveRecordService,
   deleteLeaveRecord as deleteLeaveRecordService,
   getPayslipForMonth,
   updatePayslipInDb,
 } from "@/lib/employee-service";
-import { getProvidentFundRecords, updateProvidentFundRecord } from "@/lib/provident-fund-service";
+import { updateProvidentFundRecord } from "@/lib/provident-fund-service";
 
 export async function addEmployeeAction(
   employeeData: Omit<Employee, 'id' | 'employeeId'>
@@ -199,8 +199,4 @@ export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId:
     console.error("Error in deleteLeaveRecordAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
-}
-
-export async function getProvidentFundRecordsAction(employeeId?: string) {
-    return await getProvidentFundRecords(employeeId);
 }
