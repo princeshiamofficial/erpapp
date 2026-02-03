@@ -7,13 +7,13 @@ import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 const ROLES_COLLECTION = 'userRoles';
 
 const DEFAULT_ROLES: Omit<UserRoleDefinition, 'createdAt'>[] = [
-  { id: "SYSTEM_ADMIN", name: "SYSTEM ADMIN", isDefault: true },
-  { id: "ADMIN", name: "ADMIN", isDefault: true },
-  { id: "CRM", name: "CRM", isDefault: true },
-  { id: "DESIGNER_REPRESENTATIVE", name: "DESIGNER REPRESENTATIVE", isDefault: true },
-  { id: "VENDOR", name: "VENDOR", isDefault: true },
-  { id: "LR", name: "LR", isDefault: true },
-  { id: "CO", name: "CO", isDefault: true },
+  { id: "SYSTEM_ADMIN", name: "SYSTEM ADMIN", color: "#dc2626", isDefault: true },
+  { id: "ADMIN", name: "ADMIN", color: "#9333ea", isDefault: true },
+  { id: "CRM", name: "CRM", color: "#f97316", isDefault: true },
+  { id: "DESIGNER_REPRESENTATIVE", name: "DESIGNER REPRESENTATIVE", color: "#16a34a", isDefault: true },
+  { id: "VENDOR", name: "VENDOR", color: "#6b7280", isDefault: true },
+  { id: "LR", name: "LR", color: "#2563eb", isDefault: true },
+  { id: "CO", name: "CO", color: "#0891b2", isDefault: true },
 ];
 
 export const getRoles = async (): Promise<UserRoleDefinition[]> => {
@@ -46,7 +46,7 @@ export const getRoles = async (): Promise<UserRoleDefinition[]> => {
   }
 };
 
-export const addCustomRole = async (name: string): Promise<UserRoleDefinition | null> => {
+export const addCustomRole = async (name: string, color: string): Promise<UserRoleDefinition | null> => {
   if (!name.trim()) return null;
   const id = name.trim().toUpperCase().replace(/\s+/g, '_');
   
@@ -55,6 +55,7 @@ export const addCustomRole = async (name: string): Promise<UserRoleDefinition | 
     const roleData = {
       name: name.trim().toUpperCase(),
       id,
+      color: color || "#6b7280",
       isDefault: false,
       createdAt: new Date().toISOString(),
     };
@@ -71,13 +72,20 @@ export const addCustomRole = async (name: string): Promise<UserRoleDefinition | 
   }
 };
 
-export const updateCustomRole = async (id: string, name: string): Promise<boolean> => {
+export const updateCustomRole = async (id: string, name: string, color: string): Promise<boolean> => {
   if (!id || !name.trim()) return false;
   try {
     const existing = await fetchFromApiV3(`collections/${ROLES_COLLECTION}/documents/${id}`);
-    if (existing.data.isDefault) return false;
-
-    const updatedData = { ...existing.data, name: name.trim().toUpperCase() };
+    
+    const updatedData = { 
+      ...existing.data, 
+      name: name.trim().toUpperCase(),
+      color: color || existing.data.color || "#6b7280"
+    };
+    
+    // Only block name update for default roles if we strictly want to protect IDs/System functionality
+    // but color should always be editable by system admin
+    
     await fetchFromApiV3(`collections/${ROLES_COLLECTION}/documents/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ data: updatedData }),

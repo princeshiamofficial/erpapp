@@ -4,6 +4,7 @@ export type UserRole = string;
 export interface UserRoleDefinition {
   id: string;
   name: string;
+  color: string;
   isDefault: boolean;
   createdAt: string;
 }

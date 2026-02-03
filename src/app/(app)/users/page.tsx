@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { User, UserRole } from "@/types";
+import type { User, UserRole, UserRoleDefinition } from "@/types";
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,17 +25,18 @@ import {
 import { 
   getUsers, 
   updateUserRoleInFirestore, 
-  // deleteUserFromFirestore, // This will be called via server action
   updateUserPasswordInFirestore, 
   updateUserAvatarInFirestore, 
   updateUserTargetsInFirestore,
 } from '@/lib/user-service';
+import { getRoles } from '@/lib/user-role-service';
 import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction } from './actions'; 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getContrastTextColor } from '@/lib/status-service';
 
 const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
@@ -52,6 +53,7 @@ export default function UsersPage() {
   const { toast } = useToast();
   
   const [users, setUsers] = useState<User[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Banned'>('Active');
@@ -84,8 +86,12 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
     try {
-      const fetchedUsers = await getUsers();
+      const [fetchedUsers, fetchedRoles] = await Promise.all([
+        getUsers(),
+        getRoles()
+      ]);
       setUsers(fetchedUsers);
+      setAvailableRoles(fetchedRoles);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({ title: "Error", description: "Could not load users from database.", variant: "destructive" });
@@ -204,8 +210,6 @@ export default function UsersPage() {
         description: result.error || "Could not delete the user.",
         variant: "destructive",
       });
-      // Optionally keep dialog open:
-      // setIsDeleteUserDialogOpen(true); 
     }
   };
 
@@ -226,9 +230,11 @@ export default function UsersPage() {
     return displayableUsers;
   }, [users, currentUser]);
 
+  const roleDefinitionsMap = useMemo(() => {
+    return new Map(availableRoles.map(r => [r.id, r]));
+  }, [availableRoles]);
+
   const filteredUsers = useMemo(() => {
-    const roleOrder: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "CO", "DESIGNER_REPRESENTATIVE", "LR"];
-    
     let filtered = usersToDisplay;
 
     // Filter by status
@@ -247,10 +253,11 @@ export default function UsersPage() {
       );
     }
     
-    // Sort the results
+    // Sort the results by role priority then name
+    const rolePriority = availableRoles.map(r => r.id);
     return filtered.sort((a, b) => {
-      const roleAIndex = roleOrder.indexOf(a.role);
-      const roleBIndex = roleOrder.indexOf(b.role);
+      const roleAIndex = rolePriority.indexOf(a.role);
+      const roleBIndex = rolePriority.indexOf(b.role);
       
       if (roleAIndex === -1 && roleBIndex !== -1) return 1;
       if (roleAIndex !== -1 && roleBIndex === -1) return -1;
@@ -261,47 +268,11 @@ export default function UsersPage() {
       
       return a.name.localeCompare(b.name);
     });
-  }, [usersToDisplay, searchTerm, statusFilter]);
+  }, [usersToDisplay, searchTerm, statusFilter, availableRoles]);
 
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
-        <svg
-          width="64"
-          height="64"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mb-6", "h-16 w-16")}
-        >
-          <path
-            d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M17 4.5L7 9.5"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <h2 className="text-2xl font-semibold mb-2">Access Denied</h2>
-        <p className="text-muted-foreground">You must be an administrator to view this page.</p>
-        <Button onClick={() => router.push('/dashboard')} className="mt-6">Go to Dashboard</Button>
-      </div>
-    );
+    return null;
   }
   
   const canCurrentUserEditRoleOf = useCallback((targetUser: User): boolean => {
@@ -319,7 +290,7 @@ export default function UsersPage() {
       return targetUser.id !== currentUser.id && targetUser.role !== 'SYSTEM_ADMIN';
     }
     if (currentUser.role === 'ADMIN') {
-      if (targetUser.id === currentUser.id) return true; // Admins can edit their own info
+      if (targetUser.id === currentUser.id) return true; 
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR' || targetUser.role === 'LR' || targetUser.role === 'CO';
     }
     return false; 
@@ -434,110 +405,111 @@ export default function UsersPage() {
                     </TableRow>
                   ))
                 ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map((user, index) => (
-                  <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="pl-6 font-mono text-muted-foreground">{index + 1}</TableCell>
-                    <TableCell>
-                      <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
-                        <AvatarImage src={user.avatarUrl || undefined} alt={user.name} data-ai-hint="user face" />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
-                      </Avatar>
-                    </TableCell>
-                    <TableCell className="font-medium text-foreground">{user.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
-                        user.role === 'SYSTEM_ADMIN' ? 'bg-red-600/20 text-red-700 dark:text-red-300 border-red-600/30 dark:border-red-500/30' :
-                        user.role === 'ADMIN' ? 'bg-purple-600/20 text-purple-700 dark:text-purple-300 border-purple-600/30 dark:border-purple-500/30' :
-                        user.role === 'CRM' ? 'bg-primary/20 text-primary dark:text-orange-300 border-primary/30 dark:border-orange-500/30' :
-                        user.role === 'DESIGNER_REPRESENTATIVE' ? 'bg-green-600/20 text-green-700 dark:text-green-300 border-green-600/30 dark:border-green-500/30' : 
-                        user.role === 'VENDOR' ? 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30' :
-                        user.role === 'LR' ? 'bg-blue-600/20 text-blue-700 dark:text-blue-300 border-blue-600/30 dark:border-blue-500/30' :
-                        'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30'
-                      }`}>
-                        {user.role.replace(/_/g, ' ')}
-                      </span>
-                    </TableCell>
-                    {showBanStatusColumn && (
+                  filteredUsers.map((user, index) => {
+                    const roleDef = roleDefinitionsMap.get(user.role);
+                    const badgeColor = roleDef?.color || '#6b7280';
+                    const textColor = getContrastTextColor(badgeColor);
+                    
+                    return (
+                      <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="pl-6 font-mono text-muted-foreground">{index + 1}</TableCell>
                         <TableCell>
-                        <Badge variant={user.isBanned ? "destructive" : "default"} className={user.isBanned ? "bg-red-500/20 text-red-700 border-red-500/30" : "bg-green-500/20 text-green-700 border-green-500/30"}>
-                            {user.isBanned ? "Banned" : "Active"}
-                        </Badge>
+                          <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
+                            <AvatarImage src={user.avatarUrl || undefined} alt={user.name} data-ai-hint="user face" />
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
+                          </Avatar>
                         </TableCell>
-                    )}
-                    <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
-                    <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
-                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-9 w-9" title="User Actions">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions for {user.name}</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuGroup>
-                            <DropdownMenuItem 
-                              onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
-                              disabled={!canAdminModifyTargetUser(user)}
-                              className="cursor-pointer"
-                            >
-                              <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
-                            </DropdownMenuItem>
-                            {currentUser?.role === 'SYSTEM_ADMIN' && (
-                              <DropdownMenuItem 
-                                onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
-                                className={`cursor-pointer ${user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}`}
-                                disabled={!canSystemAdminToggleBan(user)}
-                              >
-                                {user.isBanned ? <UserCheck className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
-                                {user.isBanned ? "Unban User" : "Ban User"}
-                              </DropdownMenuItem>
-                            )}
-                             <DropdownMenuItem 
-                                onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
-                                disabled={!canAdminModifyTargetUser(user)}
-                                className="cursor-pointer"
-                              >
-                                <UserCog className="mr-2 h-4 w-4" /> Set Avatar
-                              </DropdownMenuItem>
-                             <DropdownMenuItem 
-                                onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true);}}
-                                disabled={!canAdminModifyTargetUser(user)}
-                                className="cursor-pointer"
-                              >
-                                <KeyRound className="mr-2 h-4 w-4" /> Change Password
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true);}}
-                                disabled={!canCurrentUserEditRoleOf(user)}
-                                className="cursor-pointer"
-                              >
-                                <Edit className="mr-2 h-4 w-4" /> Edit Role
-                              </DropdownMenuItem>
-                            {user.role === 'CRM' && (
-                               <DropdownMenuItem 
-                                onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true);}}
-                                disabled={!canAdminModifyTargetUser(user)}
-                                className="cursor-pointer"
-                              >
-                                <Target className="mr-2 h-4 w-4" /> Set Sales Targets
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuGroup>
-                          <DropdownMenuSeparator />
-                           <DropdownMenuItem 
-                            onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true);}}
-                            disabled={!canAdminDeleteTargetUser(user)}
-                            className="cursor-pointer text-destructive focus:text-destructive"
+                        <TableCell className="font-medium text-foreground">{user.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            style={{ backgroundColor: badgeColor, color: textColor }}
+                            className="border-none"
                           >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                            {user.role.replace(/_/g, ' ')}
+                          </Badge>
+                        </TableCell>
+                        {showBanStatusColumn && (
+                            <TableCell>
+                            <Badge variant={user.isBanned ? "destructive" : "default"} className={user.isBanned ? "bg-red-500/20 text-red-700 border-red-500/30" : "bg-green-500/20 text-green-700 border-green-500/30"}>
+                                {user.isBanned ? "Banned" : "Active"}
+                            </Badge>
+                            </TableCell>
+                        )}
+                        <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
+                        <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
+                           <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-9 w-9" title="User Actions">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions for {user.name}</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuGroup>
+                                <DropdownMenuItem 
+                                  onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
+                                  disabled={!canAdminModifyTargetUser(user)}
+                                  className="cursor-pointer"
+                                >
+                                  <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
+                                </DropdownMenuItem>
+                                {currentUser?.role === 'SYSTEM_ADMIN' && (
+                                  <DropdownMenuItem 
+                                    onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
+                                    className={`cursor-pointer ${user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}`}
+                                    disabled={!canSystemAdminToggleBan(user)}
+                                  >
+                                    {user.isBanned ? <UserCheck className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
+                                    {user.isBanned ? "Unban User" : "Ban User"}
+                                  </DropdownMenuItem>
+                                )}
+                                 <DropdownMenuItem 
+                                    onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
+                                    disabled={!canAdminModifyTargetUser(user)}
+                                    className="cursor-pointer"
+                                  >
+                                    <UserCog className="mr-2 h-4 w-4" /> Set Avatar
+                                  </DropdownMenuItem>
+                                 <DropdownMenuItem 
+                                    onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true);}}
+                                    disabled={!canAdminModifyTargetUser(user)}
+                                    className="cursor-pointer"
+                                  >
+                                    <KeyRound className="mr-2 h-4 w-4" /> Change Password
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true);}}
+                                    disabled={!canCurrentUserEditRoleOf(user)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Edit className="mr-2 h-4 w-4" /> Edit Role
+                                  </DropdownMenuItem>
+                                {user.role === 'CRM' && (
+                                   <DropdownMenuItem 
+                                    onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true);}}
+                                    disabled={!canAdminModifyTargetUser(user)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Target className="mr-2 h-4 w-4" /> Set Sales Targets
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuGroup>
+                              <DropdownMenuSeparator />
+                               <DropdownMenuItem 
+                                onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true);}}
+                                disabled={!canAdminDeleteTargetUser(user)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                  ) : (
                     <TableRow>
                         <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
@@ -591,9 +563,7 @@ export default function UsersPage() {
         currentUser={currentUser}
         isOpen={isAddUserDialogOpen}
         onOpenChange={setIsAddUserDialogOpen}
-      >
-        {/* The AddUserDialog is triggered by a button in the header, not here directly */}
-      </AddUserDialog>
+      />
 
       {isEditInfoDialogOpen && userToEditInfo && (
         <EditUserInfoDialog
@@ -670,7 +640,6 @@ export default function UsersPage() {
           onUserRoleUpdated={async (userId, newRole) => {
             const success = await updateUserRoleInFirestore(userId, newRole);
             if (success) handleUserRoleUpdated();
-            // Parent handles toast & re-fetch. No need to return boolean here explicitly.
           }}
           isOpen={isEditRoleDialogOpen}
           onOpenChange={(open) => {

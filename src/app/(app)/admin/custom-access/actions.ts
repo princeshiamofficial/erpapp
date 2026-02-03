@@ -29,9 +29,9 @@ import type { FirebaseError } from 'firebase-admin';
 import type { messaging } from 'firebase-admin';
 
 
-export async function addCustomRoleAction(name: string): Promise<{ success: boolean; error?: string }> {
+export async function addCustomRoleAction(name: string, color: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const role = await addCustomRole(name);
+    const role = await addCustomRole(name, color);
     if (role) {
       revalidatePath("/(app)/admin/custom-access");
       revalidatePath("/(app)/users");
@@ -43,9 +43,9 @@ export async function addCustomRoleAction(name: string): Promise<{ success: bool
   }
 }
 
-export async function updateCustomRoleAction(id: string, name: string): Promise<{ success: boolean; error?: string }> {
+export async function updateCustomRoleAction(id: string, name: string, color: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateCustomRole(id, name);
+    const success = await updateCustomRole(id, name, color);
     if (success) {
       revalidatePath("/(app)/admin/custom-access");
       revalidatePath("/(app)/users");
@@ -234,8 +234,14 @@ export async function updateExpenseLoggingPermissionsAction(permissions: Expense
     if (!permissions || !permissions.mode) {
         return { success: false, error: "Invalid permission structure provided." };
     }
+    if (permissions.mode === 'specificRoles' && (!Array.isArray(permissions.allowedRoles) || permissions.allowedRoles.some(r => !['ADMIN','CRM','DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'].includes(r)))) {
+        return { success: false, error: "Invalid roles specified for expense logging." };
+    }
+    if (permissions.mode === 'specificUsers' && !Array.isArray(permissions.allowedUserIds)) {
+        return { success: false, error: "Allowed user IDs must be an array for expense logging." };
+    }
 
-    const success = await setExpenseLoggingPermissions(permissions);
+    const success = await updateExpenseLoggingPermissionsAction(permissions);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
       revalidatePath("/(app)/finance-manager"); 

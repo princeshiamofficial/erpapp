@@ -38,6 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { getContrastTextColor } from '@/lib/status-service';
 
 const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
 
@@ -72,6 +73,7 @@ export default function CustomAccessPage() {
   const [isAddEditRoleDialogOpen, setIsAddEditRoleDialogOpen] = useState(false);
   const [roleToEdit, setRoleToEdit] = useState<UserRoleDefinition | null>(null);
   const [roleNameInput, setRoleNameInput] = useState('');
+  const [roleColorInput, setRoleColorInput] = useState('#6b7280');
   const [isSubmittingRole, setIsSubmittingRole] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<UserRoleDefinition | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -216,12 +218,14 @@ export default function CustomAccessPage() {
   const handleOpenAddRole = () => {
     setRoleToEdit(null);
     setRoleNameInput('');
+    setRoleColorInput('#6b7280');
     setIsAddEditRoleDialogOpen(true);
   };
 
   const handleOpenEditRole = (role: UserRoleDefinition) => {
     setRoleToEdit(role);
     setRoleNameInput(role.name);
+    setRoleColorInput(role.color || '#6b7280');
     setIsAddEditRoleDialogOpen(true);
   };
 
@@ -230,9 +234,9 @@ export default function CustomAccessPage() {
     setIsSubmittingRole(true);
     let result;
     if (roleToEdit) {
-      result = await updateCustomRoleAction(roleToEdit.id, roleNameInput.trim());
+      result = await updateCustomRoleAction(roleToEdit.id, roleNameInput.trim(), roleColorInput);
     } else {
-      result = await addCustomRoleAction(roleNameInput.trim());
+      result = await addCustomRoleAction(roleNameInput.trim(), roleColorInput);
     }
     setIsSubmittingRole(false);
     if (result.success) {
@@ -282,7 +286,7 @@ export default function CustomAccessPage() {
           <div className="flex justify-between items-center">
             <div>
               <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage custom roles. Default system roles cannot be deleted or renamed.</CardDescription>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage custom roles and colors. System roles cannot be deleted.</CardDescription>
             </div>
             <Button onClick={handleOpenAddRole} size="sm">
               <Plus className="h-4 w-4 mr-2" /> Add Custom Role
@@ -295,6 +299,7 @@ export default function CustomAccessPage() {
               <TableRow>
                 <TableHead className="pl-6">Role ID</TableHead>
                 <TableHead>Role Name</TableHead>
+                <TableHead>Preview</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right pr-6">Actions</TableHead>
               </TableRow>
@@ -305,6 +310,7 @@ export default function CustomAccessPage() {
                   <TableRow key={`role-skel-${i}`}>
                     <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                   </TableRow>
@@ -314,21 +320,32 @@ export default function CustomAccessPage() {
                   <TableCell className="pl-6 font-mono text-sm">{role.id}</TableCell>
                   <TableCell className="font-medium">{role.name}</TableCell>
                   <TableCell>
+                    <Badge 
+                      style={{ 
+                        backgroundColor: role.color || '#6b7280', 
+                        color: getContrastTextColor(role.color || '#6b7280') 
+                      }}
+                      className="border-none"
+                    >
+                      {role.name}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     <Badge variant={role.isDefault ? "secondary" : "outline"}>
                       {role.isDefault ? "System Default" : "Custom"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right pr-6">
-                    {!role.isDefault && (
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditRole(role)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditRole(role)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {!role.isDefault && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { setRoleToDelete(role); setIsDeleteDialogOpen(true); }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -583,7 +600,29 @@ export default function CustomAccessPage() {
                 value={roleNameInput}
                 onChange={e => setRoleNameInput(e.target.value)}
                 placeholder="e.g., MANAGER"
+                disabled={roleToEdit?.isDefault && currentUser?.role !== 'SYSTEM_ADMIN'}
               />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="role-color">Role Color</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="role-color"
+                  type="color"
+                  value={roleColorInput}
+                  onChange={e => setRoleColorInput(e.target.value)}
+                  className="w-12 h-10 p-1 cursor-pointer"
+                />
+                <div 
+                  className="flex-1 h-10 rounded-md border flex items-center justify-center font-medium"
+                  style={{ 
+                    backgroundColor: roleColorInput, 
+                    color: getContrastTextColor(roleColorInput) 
+                  }}
+                >
+                  Preview Badge
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
