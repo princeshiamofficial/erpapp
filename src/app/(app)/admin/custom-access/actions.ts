@@ -1,4 +1,3 @@
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -21,7 +20,7 @@ import {
   setTelegramSettings,
   setLeaderboardRestriction,
 } from "@/lib/settings-service";
-import { addCustomRole, updateCustomRole, deleteCustomRole } from "@/lib/user-role-service";
+import { addCustomRole, updateCustomRole, deleteCustomRole, updateRolesOrder } from "@/lib/user-role-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
@@ -66,6 +65,20 @@ export async function deleteCustomRoleAction(id: string): Promise<{ success: boo
       return { success: true };
     }
     return { success: false, error: "Failed to delete role." };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error" };
+  }
+}
+
+export async function reorderRolesAction(roleIds: string[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updateRolesOrder(roleIds);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/(app)/users");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to save new roles order." };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Error" };
   }
@@ -215,6 +228,7 @@ export async function updateToastSoundUrlAction(soundUrl: string | null): Promis
 
 export async function updateLeaderboardBackgroundImageUrlAction(imageUrl: string | null): Promise<{ success: boolean; error?: string }> {
   try {
+    const settingsDocRef = adminApp ? null : null; // Inert ref
     const success = await setLeaderboardBackgroundImageUrl(imageUrl);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
@@ -241,7 +255,7 @@ export async function updateExpenseLoggingPermissionsAction(permissions: Expense
         return { success: false, error: "Allowed user IDs must be an array for expense logging." };
     }
 
-    const success = await updateExpenseLoggingPermissionsAction(permissions);
+    const success = await setExpenseLoggingPermissions(permissions);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
       revalidatePath("/(app)/finance-manager"); 
@@ -395,12 +409,12 @@ export async function sendPushNotificationAction(
       targetDescription = `users with roles: ${targetRoles.join(', ')}`;
       targetUsersData = allUsersFromDb
         .filter(u => u.fcmToken && targetRoles.includes(u.role))
-        .map(u => ({ id: u.id, name: u.name, role: u.role, fcmToken: u.fcmToken }));
+        .map(u => ({ id: user.id, name: user.name, role: user.role, fcmToken: user.fcmToken }));
     } else if (targetType === 'all') {
       targetDescription = "all users (excluding sender)";
       targetUsersData = allUsersFromDb
         .filter(u => u.fcmToken && u.id !== actingUser.id) // Exclude the sender
-        .map(u => ({ id: u.id, name: u.name, role: u.role, fcmToken: u.fcmToken }));
+        .map(u => ({ id: user.id, name: user.name, role: user.role, fcmToken: user.fcmToken }));
     } else {
       return { success: false, message: "Invalid targeting information provided.", error: "Invalid target."};
     }

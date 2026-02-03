@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -26,11 +25,12 @@ import {
   addCustomRoleAction,
   updateCustomRoleAction,
   deleteCustomRoleAction,
+  reorderRolesAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award, Plus, Edit, MoreVertical, AlertTriangle, Loader2 } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award, Plus, Edit, MoreVertical, AlertTriangle, Loader2, GripVertical } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,6 +39,24 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { getContrastTextColor } from '@/lib/status-service';
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
 
@@ -77,6 +95,13 @@ export default function CustomAccessPage() {
   const [isSubmittingRole, setIsSubmittingRole] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<UserRoleDefinition | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -125,7 +150,7 @@ export default function CustomAccessPage() {
     setIsSubmittingOrderEditing(true);
     const result = await updateRolesAllowedToEditOrdersAction(Array.from(rolesAllowedToEdit).filter(r => r !== 'SYSTEM_ADMIN'));
     if (result.success) toast({ title: "Permissions Updated", description: "Order editing permissions saved." });
-    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingOrderEditing(false);
   };
 
@@ -133,7 +158,7 @@ export default function CustomAccessPage() {
     setIsSubmittingOrderDeletion(true);
     const result = await updateRolesAllowedToDeleteOrdersAction(Array.from(rolesAllowedToDelete).filter(r => r !== 'SYSTEM_ADMIN'));
     if (result.success) toast({ title: "Permissions Updated", description: "Order deletion permissions saved." });
-    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingOrderDeletion(false);
   };
 
@@ -141,7 +166,7 @@ export default function CustomAccessPage() {
     setIsSubmittingFinancialVisibility(true);
     const result = await updateRolesAllowedToViewFinancialsAction(Array.from(rolesAllowedToViewFinancials).filter(r => r !== 'SYSTEM_ADMIN'));
     if (result.success) toast({ title: "Permissions Updated", description: "Financial visibility permissions saved." });
-    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingFinancialVisibility(false);
   };
   
@@ -184,7 +209,7 @@ export default function CustomAccessPage() {
     setIsSubmittingProjectStageAccess(true);
     const result = await updateProjectStageAccessAction(projectStageAccess);
     if (result.success) toast({ title: "Permissions Updated", description: "Project stage access permissions saved." });
-    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingProjectStageAccess(false);
   };
   
@@ -201,7 +226,7 @@ export default function CustomAccessPage() {
     setIsSubmittingPipelineAccess(true);
     const result = await updatePipelineAccessAction({ canViewAllLeads: Array.from(pipelineAccess) });
     if (result.success) toast({ title: "Permissions Updated", description: "Pipeline access permissions saved." });
-    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingPipelineAccess(false);
   };
   
@@ -262,6 +287,26 @@ export default function CustomAccessPage() {
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = allRoles.findIndex((r) => r.id === active.id);
+      const newIndex = allRoles.findIndex((r) => r.id === over.id);
+
+      const newRoles = arrayMove(allRoles, oldIndex, newIndex);
+      setAllRoles(newRoles);
+
+      const result = await reorderRolesAction(newRoles.map(r => r.id));
+      if (!result.success) {
+        toast({ title: "Reorder Failed", description: result.error || "Could not save new role order.", variant: "destructive" });
+        fetchData(); // Revert on failure
+      } else {
+        toast({ title: "Order Saved", description: "New roles priority order has been saved." });
+      }
+    }
+  };
+
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
     return <div className="p-8 text-center">Access Denied. You must be a System Administrator to view this page.</div>;
@@ -286,7 +331,7 @@ export default function CustomAccessPage() {
           <div className="flex justify-between items-center">
             <div>
               <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage custom roles and colors. System roles cannot be deleted.</CardDescription>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Drag rows to change role priority. System roles cannot be deleted.</CardDescription>
             </div>
             <Button onClick={handleOpenAddRole} size="sm">
               <Plus className="h-4 w-4 mr-2" /> Add Custom Role
@@ -294,63 +339,52 @@ export default function CustomAccessPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-6">Role ID</TableHead>
-                <TableHead>Role Name</TableHead>
-                <TableHead>Preview</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right pr-6">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(3)].map((_, i) => (
-                  <TableRow key={`role-skel-${i}`}>
-                    <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : allRoles.map(role => (
-                <TableRow key={role.id}>
-                  <TableCell className="pl-6 font-mono text-sm">{role.id}</TableCell>
-                  <TableCell className="font-medium">{role.name}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      style={{ 
-                        backgroundColor: role.color || '#6b7280', 
-                        color: getContrastTextColor(role.color || '#6b7280') 
-                      }}
-                      className="border-none"
-                    >
-                      {role.name}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={role.isDefault ? "secondary" : "outline"}>
-                      {role.isDefault ? "System Default" : "Custom"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right pr-6">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditRole(role)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {!role.isDefault && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { setRoleToDelete(role); setIsDeleteDialogOpen(true); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="pl-2">Role ID</TableHead>
+                  <TableHead>Role Name</TableHead>
+                  <TableHead>Preview</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right pr-6">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  [...Array(3)].map((_, i) => (
+                    <TableRow key={`role-skel-${i}`}>
+                      <TableCell></TableCell>
+                      <TableCell className="pl-2"><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <SortableContext 
+                    items={allRoles.map(r => r.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {allRoles.map(role => (
+                      <SortableRoleRow 
+                        key={role.id} 
+                        role={role} 
+                        onEdit={handleOpenEditRole}
+                        onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
+                      />
+                    ))}
+                  </SortableContext>
+                )}
+              </TableBody>
+            </Table>
+          </DndContext>
         </CardContent>
       </Card>
 
@@ -654,5 +688,72 @@ export default function CustomAccessPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function SortableRoleRow({ 
+  role, 
+  onEdit, 
+  onDelete 
+}: { 
+  role: UserRoleDefinition; 
+  onEdit: (role: UserRoleDefinition) => void;
+  onDelete: (role: UserRoleDefinition) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: role.id });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 0,
+    position: isDragging ? 'relative' as const : 'static' as const,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className={cn(isDragging && "bg-muted shadow-lg")}>
+      <TableCell className="w-[50px]">
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+          <GripVertical className="h-4 w-4" />
+        </button>
+      </TableCell>
+      <TableCell className="pl-2 font-mono text-sm">{role.id}</TableCell>
+      <TableCell className="font-medium">{role.name}</TableCell>
+      <TableCell>
+        <Badge 
+          style={{ 
+            backgroundColor: role.color || '#6b7280', 
+            color: getContrastTextColor(role.color || '#6b7280') 
+          }}
+          className="border-none"
+        >
+          {role.name}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge variant={role.isDefault ? "secondary" : "outline"}>
+          {role.isDefault ? "System Default" : "Custom"}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right pr-6">
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(role)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          {!role.isDefault && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(role)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }

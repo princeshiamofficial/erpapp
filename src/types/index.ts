@@ -1,4 +1,3 @@
-
 export type UserRole = string;
 
 export interface UserRoleDefinition {
@@ -6,6 +5,7 @@ export interface UserRoleDefinition {
   name: string;
   color: string;
   isDefault: boolean;
+  priority: number; // Added for ordering
   createdAt: string;
 }
 
