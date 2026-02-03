@@ -350,7 +350,6 @@ export default function CustomAccessPage() {
                   <TableHead className="w-[50px]"></TableHead>
                   <TableHead className="pl-2">Role ID</TableHead>
                   <TableHead>Role Name</TableHead>
-                  <TableHead>Preview</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead className="text-right pr-6">Actions</TableHead>
                 </TableRow>
@@ -361,8 +360,7 @@ export default function CustomAccessPage() {
                     <TableRow key={`role-skel-${i}`}>
                       <TableCell></TableCell>
                       <TableCell className="pl-2"><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                     </TableRow>
@@ -398,7 +396,7 @@ export default function CustomAccessPage() {
             {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                   {manageableRoles.map((role) => (<div key={role.id} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`role-edit-perm-${role.id}`} checked={rolesAllowedToEdit.has(role.id)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id, checked)} disabled={isSubmittingOrderEditing}/>
+                      <Checkbox id={`role-edit-perm-${role.id}`} checked={rolesAllowedToEdit.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)} disabled={isSubmittingOrderEditing}/>
                       <Label htmlFor={`role-edit-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
                 </div>}
           </CardContent>
@@ -416,7 +414,7 @@ export default function CustomAccessPage() {
             {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                   {manageableRoles.map((role) => (<div key={`role-delete-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`role-delete-perm-${role.id}`} checked={rolesAllowedToDelete.has(role.id)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id, checked)} disabled={isSubmittingOrderDeletion}/>
+                      <Checkbox id={`role-delete-perm-${role.id}`} checked={rolesAllowedToDelete.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)} disabled={isSubmittingOrderDeletion}/>
                       <Label htmlFor={`role-delete-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
                 </div>}
           </CardContent>
@@ -438,7 +436,7 @@ export default function CustomAccessPage() {
                 {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
                 : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-x-6 gap-y-4">
                     {manageableRoles.map((role) => (<div key={`role-financial-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                        <Checkbox id={`role-financial-perm-${role.id}`} checked={rolesAllowedToViewFinancials.has(role.id)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id, checked)} disabled={isSubmittingFinancialVisibility}/>
+                        <Checkbox id={`role-financial-perm-${role.id}`} checked={rolesAllowedToViewFinancials.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)} disabled={isSubmittingFinancialVisibility}/>
                         <Label htmlFor={`role-financial-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
                     </div>}
             </CardContent>
@@ -596,8 +594,8 @@ export default function CustomAccessPage() {
                         <TableCell key={`${stage}-${role.id}`} className="text-center">
                           <Checkbox
                             id={`perm-${stage}-${role.id}`}
-                            checked={projectStageAccess[stage]?.includes(role.id) || false}
-                            onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role.id, checked)}
+                            checked={projectStageAccess[stage]?.includes(role.id as UserRole) || false}
+                            onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role.id as UserRole, checked)}
                             disabled={isSubmittingProjectStageAccess}
                             aria-label={`Allow ${role.name} for ${stage} stage`}
                           />
@@ -725,14 +723,13 @@ function SortableRoleRow({
         </button>
       </TableCell>
       <TableCell className="pl-2 font-mono text-sm">{role.id}</TableCell>
-      <TableCell className="font-medium">{role.name}</TableCell>
       <TableCell>
         <Badge 
           style={{ 
             backgroundColor: role.color || '#6b7280', 
             color: getContrastTextColor(role.color || '#6b7280') 
           }}
-          className="border-none"
+          className="border-none px-3 py-1 text-sm"
         >
           {role.name}
         </Badge>
