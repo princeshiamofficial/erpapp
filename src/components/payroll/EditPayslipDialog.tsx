@@ -162,6 +162,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         incentive: parseFloat(incentive),
         trainingFee: isNewEmployee ? parseFloat(trainingFee) : undefined,
         advance: parseFloat(advance) || 0,
+        providentFund: providentFund, // Save calculated PF amount
         payableAmount: payableAmount,
         paymentStatus: paymentStatus,
     };

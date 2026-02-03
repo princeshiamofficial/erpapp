@@ -46,9 +46,20 @@ export interface Payslip {
     incentive: number;
     trainingFee?: number;
     advance?: number; // New field for salary advance
+    providentFund: number; // New field to store PF amount
     payableAmount: number; // Storing the calculated amount for record-keeping
     paymentStatus: 'Paid' | 'Unpaid'; // New field
     updatedAt: string; // ISO string
+}
+
+export interface ProvidentFundRecord {
+    id: string; // e.g., '2024-07-employeeId'
+    employeeId: string;
+    employeeName: string;
+    month: string; // YYYY-MM
+    amount: number;
+    status: 'Paid' | 'Unpaid';
+    updatedAt: string;
 }
 
 export interface Employee {

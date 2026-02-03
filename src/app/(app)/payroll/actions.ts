@@ -1,9 +1,8 @@
 
-
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Employee, Payslip, SalaryIncrement, LeaveRecord } from "@/types";
+import type { Employee, Payslip, SalaryIncrement, LeaveRecord, User } from "@/types";
 import {
   addEmployee as addEmployeeService,
   updateEmployee as updateEmployeeService,
@@ -15,6 +14,7 @@ import {
   getPayslipForMonth,
   updatePayslipInDb,
 } from "@/lib/employee-service";
+import { getProvidentFundRecords, updateProvidentFundRecord } from "@/lib/provident-fund-service";
 
 export async function addEmployeeAction(
   employeeData: Omit<Employee, 'id' | 'employeeId'>
@@ -82,6 +82,24 @@ export async function updatePayslipAction(
   try {
     const success = await updatePayslipInDb(payslipId, payslipData);
     if (success) {
+      // Sync with Provident Fund database
+      const month = payslipId.substring(0, 7); // Extract YYYY-MM
+      const employeeId = payslipId.substring(8);
+      const employee = await getEmployeeById(employeeId);
+
+      if (employee && employee.providentFundStatus === 'Active') {
+          // Record the PF contribution status based on salary paid status
+          await updateProvidentFundRecord({
+              id: payslipId, // Use same ID for 1:1 mapping
+              employeeId,
+              employeeName: employee.name,
+              month,
+              amount: payslipData.providentFund,
+              status: payslipData.paymentStatus, // Salary Paid status = PF Received status
+              updatedAt: new Date().toISOString()
+          });
+      }
+
       revalidatePath("/(app)/payroll");
       return { success: true };
     }
@@ -181,4 +199,8 @@ export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId:
     console.error("Error in deleteLeaveRecordAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
+}
+
+export async function getProvidentFundRecordsAction(employeeId?: string) {
+    return await getProvidentFundRecords(employeeId);
 }
