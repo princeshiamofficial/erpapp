@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { getEmployees } from '@/lib/employee-service';
-import type { Employee, User, OfficeTime, AttendanceRecord, UserRole } from '@/types';
+import type { Employee, User, OfficeTime, AttendanceRecord, UserRole, UserRoleDefinition } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
@@ -31,6 +31,7 @@ import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, isSameDay } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
+import { getRoles } from '@/lib/user-role-service';
 import { saveWeekendSettingsAction } from './actions';
 import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
 import type { DateRange } from "react-day-picker";
@@ -85,6 +86,7 @@ export default function AttendancePage() {
     const [activeTab, setActiveTab] = useState("attendees_report");
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [allUsers, setAllUsers] = useState<User[]>([]);
+    const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [attendanceDateFilter, setAttendanceDateFilter] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -136,7 +138,8 @@ export default function AttendancePage() {
             attendanceMonth2, 
             attendanceMonth3, 
             fetchedUsers, 
-            fetchedWeekendSettings
+            fetchedWeekendSettings,
+            fetchedRoles
           ] = await Promise.all([
             getEmployees(),
             getOfficeTimes(),
@@ -144,7 +147,8 @@ export default function AttendancePage() {
             getAttendanceForMonth(subDays(new Date(), 30)),
             getAttendanceForMonth(subDays(new Date(), 60)),
             getUsers(),
-            getWeekendSettings()
+            getWeekendSettings(),
+            getRoles()
           ]);
 
           const allAttendance = [
@@ -159,6 +163,7 @@ export default function AttendancePage() {
           setAttendanceData(uniqueAttendance);
           setAllUsers(fetchedUsers);
           setSelectedWeekends(fetchedWeekendSettings.days);
+          setAvailableRoles(fetchedRoles);
         } catch (error) {
           console.error("Failed to fetch page data:", error);
           toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
@@ -1314,6 +1319,7 @@ export default function AttendancePage() {
                 onOpenChange={setIsOfficeTimeDialogOpen}
                 onOfficeTimeSaved={handleOfficeTimeSaved}
                 officeTime={officeTimeToEdit}
+                availableRoles={availableRoles}
              />
              <EditAttendanceDialog
                 isOpen={isEditAttendanceDialogOpen}

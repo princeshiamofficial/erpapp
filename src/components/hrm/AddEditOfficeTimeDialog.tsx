@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -18,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { addOfficeTimeAction, updateOfficeTimeAction } from '@/app/(app)/hrm/attendance/actions';
-import type { OfficeTime, UserRole } from '@/types';
+import type { OfficeTime, UserRole, UserRoleDefinition } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -30,11 +28,10 @@ interface AddEditOfficeTimeDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onOfficeTimeSaved: () => void;
   officeTime?: OfficeTime | null;
+  availableRoles: UserRoleDefinition[];
 }
 
-const ALL_ROLES: UserRole[] = ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "SYSTEM_ADMIN", "CO"];
-
-export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSaved, officeTime }: AddEditOfficeTimeDialogProps) {
+export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSaved, officeTime, availableRoles }: AddEditOfficeTimeDialogProps) {
   const [name, setName] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -202,10 +199,10 @@ export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSave
                                     <Check className={cn("mr-2 h-4 w-4", applicableRoles === 'all' ? "opacity-100" : "opacity-0")} />
                                     All Roles
                                 </CommandItem>
-                                {ALL_ROLES.map(role => (
-                                    <CommandItem key={role} onSelect={() => handleRoleToggle(role)} className="cursor-pointer">
-                                        <Check className={cn("mr-2 h-4 w-4", Array.isArray(applicableRoles) && applicableRoles.includes(role) ? "opacity-100" : "opacity-0")} />
-                                        {role.replace(/_/g, ' ')}
+                                {availableRoles.map(role => (
+                                    <CommandItem key={role.id} onSelect={() => handleRoleToggle(role.id)} className="cursor-pointer">
+                                        <Check className={cn("mr-2 h-4 w-4", Array.isArray(applicableRoles) && applicableRoles.includes(role.id) ? "opacity-100" : "opacity-0")} />
+                                        {role.name}
                                     </CommandItem>
                                 ))}
                             </CommandGroup>
