@@ -13,11 +13,11 @@ import {
   PaginationContent,
   PaginationItem,
   PaginationLink,
-  PaginationEllipsis,
+  PaginationNext,
   PaginationPrevious,
-  PaginationNext
+  PaginationEllipsis
 } from "@/components/ui/pagination";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, ListFilter } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord, ProvidentFundRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
@@ -696,7 +696,7 @@ export default function PayrollPage() {
             </TableFooter>
           </Table>
         </div>
-      </CardHeader>
+      </CardContent>
     </Card>
   );
   
