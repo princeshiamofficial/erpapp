@@ -29,7 +29,8 @@ import {
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award, Plus, Edit, MoreVertical, AlertTriangle } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award, Plus, Edit, MoreVertical, AlertTriangle, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,7 +40,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
-const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
 export default function CustomAccessPage() {
   const { currentUser } = useAuth();
@@ -67,10 +67,7 @@ export default function CustomAccessPage() {
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
-  const [isLeadCategoryAccessVisible, setIsLeadCategoryAccessVisible] = useState(false);
   
-  const [popoverStates, setPopoverStates] = useState<Record<string, boolean>>({});
-
   // Role Management states
   const [isAddEditRoleDialogOpen, setIsAddEditRoleDialogOpen] = useState(false);
   const [roleToEdit, setRoleToEdit] = useState<UserRoleDefinition | null>(null);
@@ -189,43 +186,6 @@ export default function CustomAccessPage() {
     setIsSubmittingProjectStageAccess(false);
   };
   
-  const handleLeadCategoryRoleChange = (category: LeadCategory, role: UserRole, checked: boolean | "indeterminate") => {
-    setLeadCategoryAccess(prev => {
-      const newPermissions = { ...prev };
-      const currentRoles = new Set(newPermissions[category]?.roles || []);
-      if (checked) currentRoles.add(role); else currentRoles.delete(role);
-      if (!newPermissions[category]) newPermissions[category] = { roles: [], specialAccess: [] };
-      newPermissions[category].roles = Array.from(currentRoles);
-      return newPermissions;
-    });
-  };
-
-  const handleLeadCategorySpecialAccessChange = (category: LeadCategory, userId: string) => {
-    setLeadCategoryAccess(prev => {
-      const newPermissions = { ...prev };
-      if (!newPermissions[category]) {
-        newPermissions[category] = { roles: [], specialAccess: [] };
-      }
-      const currentSpecialAccess = new Set(newPermissions[category].specialAccess);
-      if (currentSpecialAccess.has(userId)) {
-        currentSpecialAccess.delete(userId);
-      } else {
-        currentSpecialAccess.add(userId);
-      }
-      newPermissions[category].specialAccess = Array.from(currentSpecialAccess);
-      return newPermissions;
-    });
-  };
-
-  const handleSaveLeadCategoryAccess = async () => {
-    setIsSubmittingLeadCategoryAccess(true);
-    const result = await updateLeadCategoryAccessAction(leadCategoryAccess);
-    if (result.success) toast({ title: "Permissions Updated", description: "Lead category access permissions saved." });
-    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
-    setIsSubmittingLeadCategoryAccess(false);
-  };
-
-
   const handlePipelineAccessChange = (userId: string, checked: boolean | "indeterminate") => {
     setPipelineAccess(prev => {
       const newSet = new Set(prev);
@@ -303,7 +263,7 @@ export default function CustomAccessPage() {
     return <div className="p-8 text-center">Access Denied. You must be a System Administrator to view this page.</div>;
   }
 
-  const manageableRoles = allRoles.filter(r => r.id !== 'SYSTEM_ADMIN'); // Hide SYSTEM_ADMIN from visibility matrix but keep in system
+  const manageableRoles = allRoles.filter(r => r.id !== 'SYSTEM_ADMIN');
 
   return (
     <div className="space-y-8 p-4 sm:p-6 lg:p-8">
@@ -317,7 +277,6 @@ export default function CustomAccessPage() {
         </Button>
       </div>
 
-      {/* Role Management Card */}
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <div className="flex justify-between items-center">
@@ -495,7 +454,7 @@ export default function CustomAccessPage() {
       </div>
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5" onDoubleClick={() => setIsLeadCategoryAccessVisible(prev => !prev)}>
+        <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex-1">
               <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
