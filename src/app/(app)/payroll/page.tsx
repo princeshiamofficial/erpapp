@@ -18,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Landmark as ProvidentFundIcon, AlertCircle as FineIcon } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, Calendar } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord, ProvidentFundRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
