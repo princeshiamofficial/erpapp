@@ -1,31 +1,35 @@
 
-
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { User, UserRole } from "@/types";
+import type { User, UserRole, UserRoleDefinition } from "@/types";
+import { getRoles } from '@/lib/user-role-service';
 
 interface EditUserRoleDialogProps {
   user: User;
   currentUser: User; 
-  onUserRoleUpdated: (userId: string, newRole: UserRole) => Promise<void>; // Changed to Promise<void>
+  onUserRoleUpdated: (userId: string, newRole: UserRole) => Promise<void>; 
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
-
 export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpen, onOpenChange }: EditUserRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedRole(user.role);
+      const fetchRoles = async () => {
+        const roles = await getRoles();
+        setAvailableRoles(roles);
+      };
+      fetchRoles();
     }
   }, [user, isOpen]);
 
@@ -39,30 +43,20 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
   };
   const isRoleChangeAllowed = canChangeRole();
 
-  const getAvailableRolesForSelection = (): UserRole[] => {
-    if (currentUser.role === 'SYSTEM_ADMIN') return ALL_USER_ROLES; 
+  const filteredRolesForSelection = useMemo(() => {
+    if (currentUser.role === 'SYSTEM_ADMIN') return availableRoles; 
     if (currentUser.role === 'ADMIN') {
-      // Admin can assign/edit to ADMIN, CRM, DR, VENDOR, but not SYSTEM_ADMIN.
-      // If editing another ADMIN or SYSTEM_ADMIN, or themselves, they are restricted.
-      if (user.id === currentUser.id || user.role === 'SYSTEM_ADMIN') {
-        return [user.role]; // Can only select the current role (effectively no change allowed)
+      if (user.id === currentUser.id || user.role === 'SYSTEM_ADMIN' || user.role === 'ADMIN') {
+        return availableRoles.filter(r => r.id === user.role);
       }
-      if (user.role === 'ADMIN') { // If target is admin, current admin can't change their role
-          return [user.role];
-      }
-      // Can assign these roles to non-admin/non-system-admin users
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR', 'CO'];
+      return availableRoles.filter(r => r.id !== 'SYSTEM_ADMIN');
     }
-    return [user.role]; // Default: can only select current role (no change)
-  };
-  const availableRoles = getAvailableRolesForSelection();
+    return availableRoles.filter(r => r.id === user.role);
+  }, [availableRoles, currentUser.role, user.id, user.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isRoleChangeAllowed) {
-      // Toast should be handled by parent if needed, or here if this dialog was self-contained
-      return;
-    }
+    if (!isRoleChangeAllowed) return;
     if (selectedRole === user.role) {
         onOpenChange(false);
         return;
@@ -70,9 +64,7 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
     setIsSubmitting(true);
     try {
       await onUserRoleUpdated(user.id, selectedRole);
-      // Parent (UsersPage) will handle toast and re-fetch
     } catch (error) {
-      // Parent (UsersPage) should handle error toasts
       console.error("Error in EditUserRoleDialog handleSubmit:", error);
     } finally {
       setIsSubmitting(false);
@@ -81,7 +73,6 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {/* DialogTrigger is handled by parent controlling isOpen */}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit User Role</DialogTitle>
@@ -98,14 +89,14 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
               <Select 
                 value={selectedRole} 
                 onValueChange={(value) => setSelectedRole(value as UserRole)}
-                disabled={!isRoleChangeAllowed || (availableRoles.length === 1 && availableRoles[0] === user.role) || isSubmitting}
+                disabled={!isRoleChangeAllowed || (filteredRolesForSelection.length <= 1) || isSubmitting}
               >
                 <SelectTrigger id="role-edit" className="col-span-3">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableRoles.map(r => (
-                    <SelectItem key={r} value={r}>{r.replace(/_/g, ' ')}</SelectItem>
+                  {filteredRolesForSelection.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

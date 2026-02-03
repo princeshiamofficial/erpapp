@@ -1,5 +1,12 @@
 
-export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN" | "VENDOR" | "LR" | "CO";
+export type UserRole = string;
+
+export interface UserRoleDefinition {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  createdAt: string;
+}
 
 export interface User {
   id: string;

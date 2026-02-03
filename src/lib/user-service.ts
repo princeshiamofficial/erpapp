@@ -1,5 +1,4 @@
 
-
 'use server'; // Potentially for some functions if called directly from Server Components/Actions
 
 import { db } from './firebase';
@@ -8,23 +7,17 @@ import type { User, UserRole } from '@/types';
 
 const USERS_COLLECTION = 'users';
 
-const getRolePrefix = (role: UserRole): string => {
-  switch (role) {
-    case 'ADMIN':
-      return 'Admin-';
-    case 'CRM':
-      return 'CRM-';
-    case 'DESIGNER_REPRESENTATIVE':
-      return 'DR-';
-    case 'SYSTEM_ADMIN':
-      return 'SysAdmin-';
-    case 'VENDOR':
-      return 'Vendor-';
-    case 'LR':
-      return 'LR-';
-    default:
-      return 'User-'; // Fallback, though all roles should be covered
-  }
+const getRolePrefix = (role: string): string => {
+  const defaults: Record<string, string> = {
+    'ADMIN': 'Admin-',
+    'CRM': 'CRM-',
+    'DESIGNER_REPRESENTATIVE': 'DR-',
+    'SYSTEM_ADMIN': 'SysAdmin-',
+    'VENDOR': 'Vendor-',
+    'LR': 'LR-',
+    'CO': 'CO-',
+  };
+  return defaults[role] || `${role}-`;
 };
 
 // Add a new user to Firestore with role-specific sequential ID

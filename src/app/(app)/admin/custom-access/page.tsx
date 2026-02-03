@@ -8,9 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types";
+import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings, UserRoleDefinition } from "@/types";
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
+import { getRoles } from '@/lib/user-role-service';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
@@ -22,22 +23,22 @@ import {
   updateLeadCategoryAccessAction,
   updatePaymentValidationAction,
   updateLeaderboardRestrictionAction,
-} from '../crm-target-settings/actions';
+  addCustomRoleAction,
+  updateCustomRoleAction,
+  deleteCustomRoleAction,
+} from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award, Plus, Edit, MoreVertical, AlertTriangle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
-const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
-const FINANCIAL_VISIBILITY_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
-const PROJECT_STAGE_ACCESS_ROLES: UserRole[] = ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR', 'CO'];
 const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
-const LEAD_CATEGORY_ACCESS_ROLES: UserRole[] = ['SYSTEM_ADMIN', 'ADMIN', 'CRM'];
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
 export default function CustomAccessPage() {
@@ -45,6 +46,7 @@ export default function CustomAccessPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const [allRoles, setAllRoles] = useState<UserRoleDefinition[]>([]);
   const [rolesAllowedToEdit, setRolesAllowedToEdit] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
   const [rolesAllowedToDelete, setRolesAllowedToDelete] = useState<Set<UserRole>>(new Set(['SYSTEM_ADMIN']));
   const [rolesAllowedToViewFinancials, setRolesAllowedToViewFinancials] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
@@ -69,13 +71,23 @@ export default function CustomAccessPage() {
   
   const [popoverStates, setPopoverStates] = useState<Record<string, boolean>>({});
 
+  // Role Management states
+  const [isAddEditRoleDialogOpen, setIsAddEditRoleDialogOpen] = useState(false);
+  const [roleToEdit, setRoleToEdit] = useState<UserRoleDefinition | null>(null);
+  const [roleNameInput, setRoleNameInput] = useState('');
+  const [isSubmittingRole, setIsSubmittingRole] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<UserRoleDefinition | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [globalSettings, allUsers] = await Promise.all([
+      const [globalSettings, allUsers, fetchedRoles] = await Promise.all([
           fetchGlobalSettings(),
-          getUsers()
+          getUsers(),
+          getRoles()
       ]);
+      setAllRoles(fetchedRoles);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setRolesAllowedToDelete(new Set(globalSettings.rolesAllowedToDeleteOrders ?? ['SYSTEM_ADMIN']));
       setRolesAllowedToViewFinancials(new Set(globalSettings.rolesAllowedToViewFinancials ?? ['ADMIN', 'SYSTEM_ADMIN']));
@@ -240,10 +252,58 @@ export default function CustomAccessPage() {
     );
   }, [crmUsers, crmSearchTerm]);
 
+  // Role Management handlers
+  const handleOpenAddRole = () => {
+    setRoleToEdit(null);
+    setRoleNameInput('');
+    setIsAddEditRoleDialogOpen(true);
+  };
+
+  const handleOpenEditRole = (role: UserRoleDefinition) => {
+    setRoleToEdit(role);
+    setRoleNameInput(role.name);
+    setIsAddEditRoleDialogOpen(true);
+  };
+
+  const handleSaveRole = async () => {
+    if (!roleNameInput.trim()) return;
+    setIsSubmittingRole(true);
+    let result;
+    if (roleToEdit) {
+      result = await updateCustomRoleAction(roleToEdit.id, roleNameInput.trim());
+    } else {
+      result = await addCustomRoleAction(roleNameInput.trim());
+    }
+    setIsSubmittingRole(false);
+    if (result.success) {
+      toast({ title: "Success", description: `Role ${roleToEdit ? 'updated' : 'added'} successfully.` });
+      setIsAddEditRoleDialogOpen(false);
+      fetchData();
+    } else {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (!roleToDelete) return;
+    setIsSubmittingRole(true);
+    const result = await deleteCustomRoleAction(roleToDelete.id);
+    setIsSubmittingRole(false);
+    if (result.success) {
+      toast({ title: "Success", description: "Role deleted successfully." });
+      setIsDeleteDialogOpen(false);
+      fetchData();
+    } else {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
+  };
+
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
     return <div className="p-8 text-center">Access Denied. You must be a System Administrator to view this page.</div>;
   }
+
+  const manageableRoles = allRoles.filter(r => r.id !== 'SYSTEM_ADMIN'); // Hide SYSTEM_ADMIN from visibility matrix but keep in system
 
   return (
     <div className="space-y-8 p-4 sm:p-6 lg:p-8">
@@ -257,6 +317,67 @@ export default function CustomAccessPage() {
         </Button>
       </div>
 
+      {/* Role Management Card */}
+      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage custom roles. Default system roles cannot be deleted or renamed.</CardDescription>
+            </div>
+            <Button onClick={handleOpenAddRole} size="sm">
+              <Plus className="h-4 w-4 mr-2" /> Add Custom Role
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-6">Role ID</TableHead>
+                <TableHead>Role Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right pr-6">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(3)].map((_, i) => (
+                  <TableRow key={`role-skel-${i}`}>
+                    <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : allRoles.map(role => (
+                <TableRow key={role.id}>
+                  <TableCell className="pl-6 font-mono text-sm">{role.id}</TableCell>
+                  <TableCell className="font-medium">{role.name}</TableCell>
+                  <TableCell>
+                    <Badge variant={role.isDefault ? "secondary" : "outline"}>
+                      {role.isDefault ? "System Default" : "Custom"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
+                    {!role.isDefault && (
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditRole(role)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { setRoleToDelete(role); setIsDeleteDialogOpen(true); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
@@ -266,9 +387,9 @@ export default function CustomAccessPage() {
           <CardContent className="p-6">
             {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {EDITABLE_ROLES_FOR_ORDERS.map((role) => (<div key={role} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`role-edit-perm-${role}`} checked={rolesAllowedToEdit.has(role)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role, checked)} disabled={isSubmittingOrderEditing}/>
-                      <Label htmlFor={`role-edit-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
+                  {manageableRoles.map((role) => (<div key={role.id} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox id={`role-edit-perm-${role.id}`} checked={rolesAllowedToEdit.has(role.id)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id, checked)} disabled={isSubmittingOrderEditing}/>
+                      <Label htmlFor={`role-edit-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
                 </div>}
           </CardContent>
            <CardFooter className="border-t p-5 flex justify-end">
@@ -284,9 +405,9 @@ export default function CustomAccessPage() {
           <CardContent className="p-6">
             {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {DELETABLE_ROLES_FOR_ORDERS.map((role) => (<div key={`role-delete-perm-${role}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`role-delete-perm-${role}`} checked={rolesAllowedToDelete.has(role)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role, checked)} disabled={isSubmittingOrderDeletion}/>
-                      <Label htmlFor={`role-delete-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
+                  {manageableRoles.map((role) => (<div key={`role-delete-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox id={`role-delete-perm-${role.id}`} checked={rolesAllowedToDelete.has(role.id)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id, checked)} disabled={isSubmittingOrderDeletion}/>
+                      <Label htmlFor={`role-delete-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
                 </div>}
           </CardContent>
            <CardFooter className="border-t p-5 flex justify-end">
@@ -306,9 +427,9 @@ export default function CustomAccessPage() {
             <CardContent className="p-6">
                 {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
                 : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-x-6 gap-y-4">
-                    {FINANCIAL_VISIBILITY_ROLES.map((role) => (<div key={`role-financial-perm-${role}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                        <Checkbox id={`role-financial-perm-${role}`} checked={rolesAllowedToViewFinancials.has(role)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role, checked)} disabled={isSubmittingFinancialVisibility}/>
-                        <Label htmlFor={`role-financial-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
+                    {manageableRoles.map((role) => (<div key={`role-financial-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                        <Checkbox id={`role-financial-perm-${role.id}`} checked={rolesAllowedToViewFinancials.has(role.id)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id, checked)} disabled={isSubmittingFinancialVisibility}/>
+                        <Label htmlFor={`role-financial-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
                     </div>}
             </CardContent>
             <CardFooter className="border-t p-5 flex justify-end">
@@ -431,95 +552,6 @@ export default function CustomAccessPage() {
         </CardFooter>
       </Card>
       
-      {isLeadCategoryAccessVisible && (
-      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><FolderKanban className="h-6 w-6 text-primary" />Lead Category Access</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles and specific users can view leads in each category.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6 font-semibold sticky left-0 bg-card z-10">Category</TableHead>
-                  {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
-                    <TableHead key={role} className="text-center">{role.replace(/_/g, ' ')}</TableHead>
-                  ))}
-                  <TableHead className="text-center pr-6">Special Access</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  LEAD_CATEGORIES.map(category => (
-                    <TableRow key={`skel-lead-cat-${category}`}>
-                      <TableCell className="pl-6 sticky left-0 bg-card z-10"><Skeleton className="h-5 w-24" /></TableCell>
-                      {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
-                        <TableCell key={`skel-lead-cell-${category}-${role}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
-                      ))}
-                      <TableCell className="pr-6"><Skeleton className="h-10 w-48 mx-auto" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  LEAD_CATEGORIES.map(category => {
-                      const permissions = leadCategoryAccess[category] || { roles: [], specialAccess: [] };
-                      const selectedUsers = crmUsers.filter(u => permissions.specialAccess.includes(u.id));
-                      const selectedUsersDisplay = selectedUsers.length > 2 ? `${selectedUsers.length} users selected` : selectedUsers.map(u => u.name).join(", ");
-                      return (
-                        <TableRow key={category} className="hover:bg-muted/30">
-                          <TableCell className="pl-6 font-medium sticky left-0 bg-card z-10">{category}</TableCell>
-                          {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
-                            <TableCell key={`${category}-${role}`} className="text-center">
-                              <Checkbox
-                                id={`lead-perm-${category}-${role}`}
-                                checked={permissions.roles?.includes(role) || false}
-                                onCheckedChange={(checked) => handleLeadCategoryRoleChange(category, role, checked)}
-                                disabled={isSubmittingLeadCategoryAccess}
-                                aria-label={`Allow ${role} for ${category} category`}
-                              />
-                            </TableCell>
-                          ))}
-                           <TableCell className="pr-6 text-center">
-                            <Popover open={popoverStates[category]} onOpenChange={(open) => setPopoverStates(p => ({...p, [category]: open}))}>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-48 h-8">
-                                    <span className="truncate">{selectedUsersDisplay || "Select users..."}</span>
-                                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                <Command><CommandInput placeholder="Search user..." />
-                                  <CommandList><CommandEmpty>No user found.</CommandEmpty>
-                                    <CommandGroup>
-                                      {crmUsers.map((user) => (
-                                        <CommandItem key={`special-access-${category}-${user.id}`} value={user.name} onSelect={() => handleLeadCategorySpecialAccessChange(category, user.id)} className="cursor-pointer">
-                                          <CheckIcon className={cn("mr-2 h-4 w-4", permissions.specialAccess.includes(user.id) ? "opacity-100" : "opacity-0")}/>
-                                          {user.name}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-        <CardFooter className="border-t p-5 flex justify-end">
-          <Button onClick={handleSaveLeadCategoryAccess} disabled={isLoading || isSubmittingLeadCategoryAccess}>
-            {isSubmittingLeadCategoryAccess ? "Saving Permissions..." : "Save Category Permissions"}
-          </Button>
-        </CardFooter>
-      </Card>
-    )}
-
-
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Project Stage Access</CardTitle>
@@ -531,8 +563,8 @@ export default function CustomAccessPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6 font-semibold">Stage</TableHead>
-                  {PROJECT_STAGE_ACCESS_ROLES.map(role => (
-                    <TableHead key={role} className="text-center">{role.replace(/_/g, ' ')}</TableHead>
+                  {manageableRoles.map(role => (
+                    <TableHead key={role.id} className="text-center">{role.name}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -541,8 +573,8 @@ export default function CustomAccessPage() {
                   PROJECT_STAGES.map(stage => (
                     <TableRow key={`skel-stage-${stage}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-32" /></TableCell>
-                      {PROJECT_STAGE_ACCESS_ROLES.map(role => (
-                        <TableCell key={`skel-cell-${stage}-${role}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
+                      {manageableRoles.map(role => (
+                        <TableCell key={`skel-cell-${stage}-${role.id}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                       ))}
                     </TableRow>
                   ))
@@ -550,14 +582,14 @@ export default function CustomAccessPage() {
                   PROJECT_STAGES.map(stage => (
                     <TableRow key={stage} className="hover:bg-muted/30">
                       <TableCell className="pl-6 font-medium">{stage}</TableCell>
-                      {PROJECT_STAGE_ACCESS_ROLES.map(role => (
-                        <TableCell key={`${stage}-${role}`} className="text-center">
+                      {manageableRoles.map(role => (
+                        <TableCell key={`${stage}-${role.id}`} className="text-center">
                           <Checkbox
-                            id={`perm-${stage}-${role}`}
-                            checked={projectStageAccess[stage]?.includes(role) || false}
-                            onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role, checked)}
+                            id={`perm-${stage}-${role.id}`}
+                            checked={projectStageAccess[stage]?.includes(role.id) || false}
+                            onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role.id, checked)}
                             disabled={isSubmittingProjectStageAccess}
-                            aria-label={`Allow ${role} for ${stage} stage`}
+                            aria-label={`Allow ${role.name} for ${stage} stage`}
                           />
                         </TableCell>
                       ))}
@@ -574,6 +606,55 @@ export default function CustomAccessPage() {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Role Management Dialog */}
+      <Dialog open={isAddEditRoleDialogOpen} onOpenChange={setIsAddEditRoleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{roleToEdit ? 'Edit Role' : 'Add Custom Role'}</DialogTitle>
+            <DialogDescription>
+              Custom roles will be available for user assignments and access matrices.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1">
+              <Label htmlFor="role-name">Role Name</Label>
+              <Input
+                id="role-name"
+                value={roleNameInput}
+                onChange={e => setRoleNameInput(e.target.value)}
+                placeholder="e.g., MANAGER"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddEditRoleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveRole} disabled={isSubmittingRole || !roleNameInput.trim()}>
+              {isSubmittingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Role Alert */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" /> Delete Role?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the role "<span className="font-semibold">{roleToDelete?.name}</span>"? This may affect users currently assigned to this role.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRole} className="bg-destructive hover:bg-destructive/90">
+              {isSubmittingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

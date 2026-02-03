@@ -16,11 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
-import type { User, UserRole } from "@/types";
+import type { User, UserRole, UserRoleDefinition } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
 import { addUser as addUserToFirestoreService } from '@/lib/user-service';
+import { getRoles } from '@/lib/user-role-service';
 import { Switch } from '@/components/ui/switch'; // Import Switch
 import { Loader2 } from 'lucide-react';
 
@@ -33,8 +34,6 @@ interface AddUserDialogProps {
   children: React.ReactNode;
   defaultRole?: UserRole;
 }
-
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
 
 export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, children, defaultRole }: AddUserDialogProps) {
   const [name, setName] = useState('');
@@ -49,9 +48,10 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLeader, setIsLeader] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
   const { toast } = useToast();
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const [isLeader, setIsLeader] = useState(false);
 
   const resetForm = useCallback(() => {
     setName('');
@@ -71,15 +71,22 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   }, [defaultRole]); 
 
   useEffect(() => {
-    if (!isOpen) {
-      resetForm();
+    if (isOpen) {
+      const fetchRoles = async () => {
+        const roles = await getRoles();
+        setAvailableRoles(roles);
+      };
+      fetchRoles();
+      if (!isSubmitting) {
+        // Only focus if not in the middle of a submission
+        setTimeout(() => {
+          nameInputRef.current?.focus();
+        }, 100);
+      }
     } else {
-       setRole(defaultRole);
-       setTimeout(() => {
-        nameInputRef.current?.focus();
-       }, 100);
+      resetForm();
     }
-  }, [isOpen, resetForm, defaultRole]);
+  }, [isOpen, resetForm, defaultRole, isSubmitting]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -97,16 +104,15 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     };
   }, [selectedFile]);
 
-  const getAssignableRoles = (): UserRole[] => {
+  const assignableRoles = useMemo(() => {
     if (currentUser.role === 'SYSTEM_ADMIN') {
-      return ALL_USER_ROLES;
+      return availableRoles;
     }
     if (currentUser.role === 'ADMIN') {
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR', 'CO']; 
+      return availableRoles.filter(r => r.id !== 'SYSTEM_ADMIN'); 
     }
     return []; 
-  };
-  const assignableRoles = getAssignableRoles();
+  }, [availableRoles, currentUser.role]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,7 +277,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                 </SelectTrigger>
                 <SelectContent>
                   {assignableRoles.map(r => (
-                    <SelectItem key={r} value={r}>{r.replace(/_/g, ' ')}</SelectItem>
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
