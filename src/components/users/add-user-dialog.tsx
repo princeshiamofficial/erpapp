@@ -23,6 +23,7 @@ import { addUser as addUserToFirestoreService } from '@/lib/user-service';
 import { getRoles } from '@/lib/user-role-service';
 import { Switch } from '@/components/ui/switch'; 
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 
 interface AddUserDialogProps {
