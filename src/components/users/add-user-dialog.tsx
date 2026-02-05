@@ -18,10 +18,10 @@ import { Textarea } from '@/components/ui/textarea';
 import type { User, UserRole, UserRoleDefinition } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
-import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
+import { UserCircle, UploadCloud, XCircle, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { addUser as addUserToFirestoreService } from '@/lib/user-service';
 import { getRoles } from '@/lib/user-role-service';
-import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Switch } from '@/components/ui/switch'; 
 import { Loader2 } from 'lucide-react';
 
 
@@ -37,6 +37,8 @@ interface AddUserDialogProps {
 export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, children, defaultRole }: AddUserDialogProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [idMode, setIdMode] = useState<'auto' | 'manual'>('auto');
+  const [manualId, setManualId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -55,6 +57,8 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const resetForm = useCallback(() => {
     setName('');
     setEmail('');
+    setIdMode('auto');
+    setManualId('');
     setCompanyName('');
     setAddress('');
     setPhone('');
@@ -77,7 +81,6 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       };
       fetchRoles();
       if (!isSubmitting) {
-        // Only focus if not in the middle of a submission
         setTimeout(() => {
           nameInputRef.current?.focus();
         }, 100);
@@ -155,6 +158,14 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       });
       return;
     }
+    if (idMode === 'manual' && !manualId.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "User ID is required when manual mode is selected.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (password.length < 6) {
       toast({
         title: "Validation Error",
@@ -201,11 +212,12 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       }
     }
 
-    const newUserFirestoreData: Omit<User, 'id'> & { password?: string } = { 
+    const newUserFirestoreData: Omit<User, 'id'> & { id?: string, password?: string } = { 
       name,
       email,
       role,
       password, 
+      id: idMode === 'manual' ? manualId.trim() : undefined,
       companyName: companyName || undefined,
       phone: phone || undefined,
       address: address || undefined,
@@ -217,14 +229,19 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       isLeader: (role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE') ? isLeader : undefined,
     };
 
-    const createdUser = await addUserToFirestoreService(newUserFirestoreData);
-    setIsSubmitting(false);
+    try {
+      const createdUser = await addUserToFirestoreService(newUserFirestoreData);
+      setIsSubmitting(false);
 
-    if (createdUser) {
-        onUserAdded();
-        onOpenChange(false);
-    } else {
-       toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
+      if (createdUser) {
+          onUserAdded();
+          onOpenChange(false);
+      } else {
+         toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
+      }
+    } catch (error: any) {
+      setIsSubmitting(false);
+      toast({ title: "Error", description: error.message || "An unexpected error occurred.", variant: "destructive"});
     }
   };
 
@@ -245,6 +262,40 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={isSubmitting} />
           </div>
+
+          <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="id-mode" className="flex items-center gap-2 cursor-pointer">
+                <Fingerprint className="h-4 w-4 text-muted-foreground" />
+                User ID Generation
+              </Label>
+              <div className="flex items-center gap-2">
+                <span className={cn("text-xs", idMode === 'auto' ? "text-primary font-bold" : "text-muted-foreground")}>Auto</span>
+                <Switch
+                  id="id-mode"
+                  checked={idMode === 'manual'}
+                  onCheckedChange={(checked) => setIdMode(checked ? 'manual' : 'auto')}
+                  disabled={isSubmitting}
+                />
+                <span className={cn("text-xs", idMode === 'manual' ? "text-primary font-bold" : "text-muted-foreground")}>Manual</span>
+              </div>
+            </div>
+            {idMode === 'manual' && (
+              <div className="space-y-1 pt-2">
+                <Label htmlFor="manualId">Manual User ID *</Label>
+                <Input
+                  id="manualId"
+                  value={manualId}
+                  onChange={e => setManualId(e.target.value)}
+                  placeholder="e.g., CUSTOM-001"
+                  required={idMode === 'manual'}
+                  disabled={isSubmitting}
+                />
+                <p className="text-[10px] text-muted-foreground">Must be unique and not match system patterns.</p>
+              </div>
+            )}
+          </div>
+
            <div className="space-y-1">
             <Label htmlFor="password-add">Password</Label>
               <div className="relative">

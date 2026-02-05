@@ -1,4 +1,3 @@
-
 'use server'; // Potentially for some functions if called directly from Server Components/Actions
 
 import { db } from './firebase';
@@ -20,27 +19,37 @@ const getRolePrefix = (role: string): string => {
   return defaults[role] || `${role}-`;
 };
 
-// Add a new user to Firestore with role-specific sequential ID
-export const addUser = async (userData: Omit<User, 'id'>): Promise<User | null> => {
+// Add a new user to Firestore with role-specific sequential ID or a custom ID
+export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Promise<User | null> => {
   const usersCol = collection(db, USERS_COLLECTION);
   const rolePrefix = getRolePrefix(userData.role);
 
   try {
-    const q = query(usersCol, where('id', '>=', rolePrefix), where('id', '<', rolePrefix + '\uffff'), orderBy('id', 'desc'));
-    const roleUsersSnapshot = await getDocs(q);
+    let userId = userData.id;
 
-    let maxUserNumber = 0;
-    roleUsersSnapshot.forEach(docSnap => {
-      const docId = docSnap.id;
-      if (docId.startsWith(rolePrefix)) {
-        const numPart = parseInt(docId.substring(rolePrefix.length), 10);
-        if (!isNaN(numPart) && numPart > maxUserNumber) {
-          maxUserNumber = numPart;
+    if (!userId) {
+      const q = query(usersCol, where('id', '>=', rolePrefix), where('id', '<', rolePrefix + '\uffff'), orderBy('id', 'desc'));
+      const roleUsersSnapshot = await getDocs(q);
+
+      let maxUserNumber = 0;
+      roleUsersSnapshot.forEach(docSnap => {
+        const docId = docSnap.id;
+        if (docId.startsWith(rolePrefix)) {
+          const numPart = parseInt(docId.substring(rolePrefix.length), 10);
+          if (!isNaN(numPart) && numPart > maxUserNumber) {
+            maxUserNumber = numPart;
+          }
         }
+      });
+      const newUserNumber = maxUserNumber + 1;
+      userId = `${rolePrefix}${String(newUserNumber).padStart(3, '0')}`;
+    } else {
+      // Check if custom ID already exists
+      const existingUser = await getUserById(userId);
+      if (existingUser) {
+        throw new Error(`User ID "${userId}" already exists. Please choose another.`);
       }
-    });
-    const newUserNumber = maxUserNumber + 1;
-    const userId = `${rolePrefix}${String(newUserNumber).padStart(3, '0')}`;
+    }
 
     const newUser: User = {
       ...userData,
@@ -52,14 +61,15 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<User | null> 
       monthlyOrderTarget: userData.monthlyOrderTarget === undefined ? null : userData.monthlyOrderTarget,
       weeklyOrderTarget: userData.weeklyOrderTarget === undefined ? null : userData.weeklyOrderTarget,
       isBanned: false, 
-      fcmToken: null, // Initialize fcmToken as null for new users
-      isLeader: userData.isLeader || false, // Initialize isLeader
+      fcmToken: null,
+      isLeader: userData.isLeader || false,
     };
     const userDocRef = doc(db, USERS_COLLECTION, userId);
     await setDoc(userDocRef, newUser);
     return newUser;
   } catch (error) {
     console.error("Error adding user to Firestore:", error);
+    if (error instanceof Error) throw error;
     return null;
   }
 };
