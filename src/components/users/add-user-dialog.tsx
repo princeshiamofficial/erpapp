@@ -52,6 +52,10 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLeader, setIsLeader] = useState(false);
   const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
+  const [showIdMode, setShowIdMode] = useState(false);
+  const clickCountRef = useRef(0);
+  const lastClickRef = useRef(0);
+  
   const { toast } = useToast();
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,6 +73,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsLeader(false);
+    setShowIdMode(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -146,6 +151,25 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     setPreviewUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleTitleClick = () => {
+    const now = Date.now();
+    if (now - lastClickRef.current < 500) {
+      clickCountRef.current += 1;
+    } else {
+      clickCountRef.current = 1;
+    }
+    lastClickRef.current = now;
+
+    if (clickCountRef.current === 3) {
+      setShowIdMode(true);
+      clickCountRef.current = 0;
+      toast({
+        title: "Manual ID Mode Enabled",
+        description: "You can now enter a custom User ID.",
+      });
     }
   };
 
@@ -251,7 +275,12 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New User</DialogTitle>
+          <DialogTitle 
+            onClick={handleTitleClick} 
+            className="cursor-default select-none hover:text-primary transition-colors"
+          >
+            Add New User
+          </DialogTitle>
           <DialogDescription>Fill in the details for the new user.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
@@ -264,38 +293,40 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
             <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={isSubmitting} />
           </div>
 
-          <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="id-mode" className="flex items-center gap-2 cursor-pointer">
-                <Fingerprint className="h-4 w-4 text-muted-foreground" />
-                User ID Generation
-              </Label>
-              <div className="flex items-center gap-2">
-                <span className={cn("text-xs", idMode === 'auto' ? "text-primary font-bold" : "text-muted-foreground")}>Auto</span>
-                <Switch
-                  id="id-mode"
-                  checked={idMode === 'manual'}
-                  onCheckedChange={(checked) => setIdMode(checked ? 'manual' : 'auto')}
-                  disabled={isSubmitting}
-                />
-                <span className={cn("text-xs", idMode === 'manual' ? "text-primary font-bold" : "text-muted-foreground")}>Manual</span>
+          {showIdMode && (
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/30 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="id-mode" className="flex items-center gap-2 cursor-pointer">
+                  <Fingerprint className="h-4 w-4 text-muted-foreground" />
+                  User ID Generation
+                </Label>
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-xs", idMode === 'auto' ? "text-primary font-bold" : "text-muted-foreground")}>Auto</span>
+                  <Switch
+                    id="id-mode"
+                    checked={idMode === 'manual'}
+                    onCheckedChange={(checked) => setIdMode(checked ? 'manual' : 'auto')}
+                    disabled={isSubmitting}
+                  />
+                  <span className={cn("text-xs", idMode === 'manual' ? "text-primary font-bold" : "text-muted-foreground")}>Manual</span>
+                </div>
               </div>
+              {idMode === 'manual' && (
+                <div className="space-y-1 pt-2">
+                  <Label htmlFor="manualId">Manual User ID *</Label>
+                  <Input
+                    id="manualId"
+                    value={manualId}
+                    onChange={e => setManualId(e.target.value)}
+                    placeholder="e.g., CUSTOM-001"
+                    required={idMode === 'manual'}
+                    disabled={isSubmitting}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Must be unique and not match system patterns.</p>
+                </div>
+              )}
             </div>
-            {idMode === 'manual' && (
-              <div className="space-y-1 pt-2">
-                <Label htmlFor="manualId">Manual User ID *</Label>
-                <Input
-                  id="manualId"
-                  value={manualId}
-                  onChange={e => setManualId(e.target.value)}
-                  placeholder="e.g., CUSTOM-001"
-                  required={idMode === 'manual'}
-                  disabled={isSubmitting}
-                />
-                <p className="text-[10px] text-muted-foreground">Must be unique and not match system patterns.</p>
-              </div>
-            )}
-          </div>
+          )}
 
            <div className="space-y-1">
             <Label htmlFor="password-add">Password</Label>
