@@ -19,6 +19,7 @@ import {
   Download,
   Loader2,
   User as UserIcon,
+  Users as UsersIcon,
   ChevronsUpDown,
   Check,
 } from 'lucide-react'; 
@@ -52,6 +53,7 @@ import { getOrderById } from '@/lib/order-service';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import Papa from 'papaparse';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -59,7 +61,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -154,8 +155,17 @@ export function ProjectsKanbanClient() {
 
 
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor)
   );
   
@@ -163,7 +173,10 @@ export function ProjectsKanbanClient() {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
     }, 300);
-    return () => clearTimeout(handler);
+
+    return () => {
+      clearTimeout(handler);
+    };
   }, [searchTerm]);
 
   const fetchData = useCallback(async (isSilent = false) => {
@@ -579,6 +592,7 @@ export function ProjectsKanbanClient() {
         sensors={sensors} 
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd} 
+        onDragCancel={handleDragCancel}
         collisionDetection={closestCorners}
     >
       <div className="flex flex-col h-full space-y-4">
