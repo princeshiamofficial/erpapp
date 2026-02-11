@@ -111,7 +111,7 @@ const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
 
@@ -341,7 +341,15 @@ export function ProjectsKanbanClient() {
       'CR Clearance': [], 'CO Clearance': [], 'Cancel': [], 'On Design': [],
       'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
     };
-    filteredProjects.forEach(project => {
+    
+    // Sort projects within the grouping to ensure consistent layout
+    const sorted = [...filteredProjects].sort((a, b) => {
+        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
+
+    sorted.forEach(project => {
       if (grouped[project.status]) {
         grouped[project.status].push(project);
       }
@@ -374,6 +382,7 @@ export function ProjectsKanbanClient() {
     if (!currentUser || isReadOnly) return;
     const originalStatus = project.status;
     
+    // Optimistic update
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
@@ -384,6 +393,7 @@ export function ProjectsKanbanClient() {
     
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
+      // Revert if failed
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
@@ -480,7 +490,7 @@ export function ProjectsKanbanClient() {
     }
   
     handleConfirmStatusUpdate(project, newStatus);
-  }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate, isReadOnly]);
+  }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate, isReadOnly, handleOpenAssignDrDialog]);
   
   const handleDragCancel = () => {
     setActiveProject(null);
@@ -624,7 +634,7 @@ export function ProjectsKanbanClient() {
                             <AvatarFallback className="text-xs">{getInitials(selectedUser.name)}</AvatarFallback>
                         </Avatar>
                     ) : (
-                        <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <UsersIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                     )}
                     <span className="truncate">{selectedUserName}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

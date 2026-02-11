@@ -78,7 +78,7 @@ export function KanbanColumn({
         <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : projects.length}</span>
       </div>
       <ScrollArea className="flex-1 bg-background/10 custom-scrollbar">
-        <div className="space-y-3 p-3">
+        <motion.div layout className="space-y-3 p-3 min-h-[100px]">
         {isLoading && projects.length === 0 ? (
           <div className="space-y-3">
             <Skeleton className="h-20 w-full rounded-md" />
@@ -90,15 +90,15 @@ export function KanbanColumn({
             <p className="text-xs text-muted-foreground text-center italic">No projects in this stage.</p>
           </div>
         ) : (
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {visibleProjects.map((project, index) => (
               <motion.div
                 key={project.id}
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2, delay: (index % PROJECTS_PER_PAGE) * 0.03 }}
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.1 } }}
+                transition={{ duration: 0.2 }}
               >
                   <ProjectCard 
                     key={project.id} 
@@ -124,7 +124,7 @@ export function KanbanColumn({
             </Button>
           </div>
         )}
-        </div>
+        </motion.div>
       </ScrollArea>
     </div>
   );
