@@ -29,7 +29,7 @@ const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => {
       >
         <Construction className="h-24 w-24 text-primary drop-shadow-[0_5px_15px_rgba(var(--primary-hsl),0.3)]" />
       </motion.div>
-      <motion.h1 
+      <motion.h1
         className="text-4xl font-bold mb-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -37,7 +37,7 @@ const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => {
       >
         Under Maintenance
       </motion.h1>
-      <motion.p 
+      <motion.p
         className="text-lg text-muted-foreground max-w-lg mb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -73,29 +73,13 @@ function AppShell({
   }, [logout]);
 
   useEffect(() => {
-    let progressInterval: NodeJS.Timeout | undefined;
     if (isLoading) {
       setShowLoadingScreen(true);
       setLoadingProgress(0);
-      let currentProgress = 0;
-      progressInterval = setInterval(() => {
-        currentProgress += Math.random() * 15 + 5;
-        if (currentProgress >= 90) {
-          currentProgress = 90;
-          clearInterval(progressInterval);
-        }
-        setLoadingProgress(currentProgress);
-      }, 150);
     } else {
       setLoadingProgress(100);
-      const fadeOutTimer = setTimeout(() => {
-        setShowLoadingScreen(false);
-      }, 300);
-      return () => clearTimeout(fadeOutTimer);
+      setShowLoadingScreen(false);
     }
-    return () => {
-      if (progressInterval) clearInterval(progressInterval);
-    };
   }, [isLoading]);
 
   useEffect(() => {
@@ -116,9 +100,9 @@ function AppShell({
     if (currentUser?.role === 'SYSTEM_ADMIN') return false;
     return true;
   }, [isLoading, initialGlobalSettings, currentUser]);
-  
+
   if (!currentUser && showLoadingScreen) {
-      return (
+    return (
       <AnimatePresence>
         {showLoadingScreen && (
           <motion.div
@@ -134,7 +118,7 @@ function AppShell({
               className="flex flex-col items-center"
             >
               <motion.div
-                animate={{ scale: [1, 1.05, 1, 1.05, 1], rotate: [0, 2, -2, 2, 0],}}
+                animate={{ scale: [1, 1.05, 1, 1.05, 1], rotate: [0, 2, -2, 2, 0], }}
                 transition={{ duration: 2.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 0.3 }}
               >
                 <Logo className="h-20 w-20 text-primary drop-shadow-[0_5px_15px_rgba(var(--primary-hsl),0.4)]" />
@@ -169,8 +153,8 @@ function AppShell({
 
   return (
     <SidebarProvider>
-        {currentUser && !isSuspendedDialogOpen ? children : null}
-        {isSuspendedDialogOpen && <AccountSuspendedDialog isOpen={isSuspendedDialogOpen} onConfirmLogout={logout} />}
+      {currentUser && !isSuspendedDialogOpen ? children : null}
+      {isSuspendedDialogOpen && <AccountSuspendedDialog isOpen={isSuspendedDialogOpen} onConfirmLogout={logout} />}
     </SidebarProvider>
   );
 }
@@ -194,10 +178,10 @@ export function AppProviders({
   if (!isClient) {
     // Render a basic loading state on the server to prevent errors
     return (
-       <div className="fixed inset-0 z-50 flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
-          <Logo className="h-20 w-20 text-primary" />
-          <p className="mt-6 text-lg font-semibold text-primary tracking-wider">Loading...</p>
-       </div>
+      <div className="fixed inset-0 z-50 flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
+        <Logo className="h-20 w-20 text-primary" />
+        <p className="mt-6 text-lg font-semibold text-primary tracking-wider">Loading...</p>
+      </div>
     );
   }
 

@@ -1,5 +1,17 @@
 {
     "IDX.aI.enableInlineCompletion": true,
     "IDX.aI.enableCodebaseIndexing": true,
-    "IDX.agenticWorkspace": true
+    "IDX.agenticWorkspace": true,
+    "workbench.colorCustomizations": {
+        "terminal.background": "#010409",
+        "terminal.foreground": "#ffffff",
+        "terminalCursor.foreground": "#00ff00",
+        "terminal.ansiRed": "#ff0000",
+        "terminal.ansiGreen": "#00ff00",
+        "terminal.ansiBlue": "#0000ff",
+        "terminal.ansiCyan": "#00ffff",
+        "terminal.ansiMagenta": "#ff00ff",
+        "terminal.ansiYellow": "#ffff00",
+        "terminal.border": "#00ff00"
+    }
 }

@@ -1,7 +1,11 @@
 
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging"; // Added for FCM
 
@@ -17,18 +21,19 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
+let app: FirebaseApp;
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
 } else {
   app = getApp();
 }
 
-// Use initializeFirestore with persistence settings
+// Use initializeFirestore with modern persistent cache
 const db = initializeFirestore(app, {
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-  // The 'ignoreUndefinedProperties' is a good practice to include, though not strictly required by the warning fix
-  ignoreUndefinedProperties: true 
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  }),
+  ignoreUndefinedProperties: true
 });
 
 console.log("[Firestore] Offline persistence enabled via initializeFirestore.");
