@@ -59,7 +59,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ViewLeadDialog } from '@/components/pipeline/ViewLeadDialog';
 import Papa from 'papaparse';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -445,6 +444,11 @@ export function ProjectsKanbanClient() {
     toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
   };
   
+  const canFilterUsers = useMemo(() => {
+    if (!currentUser) return false;
+    return currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader);
+  }, [currentUser]);
+
   const usersForFilter = useMemo(() => {
     if (!currentUser) return [];
     if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
@@ -566,7 +570,6 @@ export function ProjectsKanbanClient() {
       'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
     };
     
-    // Sort projects within the grouping to ensure consistent layout
     const sorted = [...filteredProjects].sort((a, b) => {
         const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
         const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
@@ -586,10 +589,6 @@ export function ProjectsKanbanClient() {
     return Array.from(categories).sort();
   }, [projects]);
   
-
-  if (isLoading) {
-    return <KanbanSkeleton />;
-  }
 
   return (
     <DndContext 
