@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Project, CustomStatus, User } from '@/types'; 
@@ -26,6 +25,7 @@ interface KanbanColumnProps {
   allStatuses: CustomStatus[]; 
   allUsers: User[]; 
   onOpenAssignDrDialog: (project: Project) => void;
+  onViewLead?: (project: Project) => void;
   isSearching?: boolean;
 }
 
@@ -44,6 +44,7 @@ export function KanbanColumn({
   allStatuses,
   allUsers,
   onOpenAssignDrDialog,
+  onViewLead = () => {},
   isSearching = false,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -113,6 +114,7 @@ export function KanbanColumn({
                         allStatuses={allStatuses}
                         allUsers={allUsers}
                         onOpenAssignDrDialog={onOpenAssignDrDialog} 
+                        onViewLead={onViewLead}
                       />
                   </motion.div>
                 ))}

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -60,6 +59,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { ViewLeadDialog } from '@/components/pipeline/ViewLeadDialog';
 import Papa from 'papaparse';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -111,7 +111,7 @@ const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
 
@@ -220,6 +220,14 @@ export function ProjectsKanbanClient() {
 
     return () => clearInterval(intervalId);
   }, [fetchData, currentUser]);
+
+  const handleDateRangeChange = (
+    range: DateRange | undefined,
+    displayLabel: string, 
+    predefinedValue: PredefinedRange | "custom" | null
+  ) => {
+    setSelectedDateRange(range);
+  };
 
   const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
     if (isReadOnly || !currentUser) {
@@ -578,11 +586,6 @@ export function ProjectsKanbanClient() {
     return Array.from(categories).sort();
   }, [projects]);
   
-  const canFilterUsers = useMemo(() => {
-    if (!currentUser) return false;
-    return currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader);
-  }, [currentUser]);
-
 
   if (isLoading) {
     return <KanbanSkeleton />;
@@ -625,7 +628,7 @@ export function ProjectsKanbanClient() {
                             <AvatarFallback className="text-xs">{getInitials(selectedUser.name)}</AvatarFallback>
                         </Avatar>
                     ) : (
-                        <UsersIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                     )}
                     <span className="truncate">{selectedUserName}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -746,6 +749,7 @@ export function ProjectsKanbanClient() {
             allStatuses={allStatuses}
             allUsers={allUsers}
             onOpenAssignDrDialog={handleOpenAssignDrDialog}
+            onViewLead={() => {}}
           />
         ) : null}
       </DragOverlay>

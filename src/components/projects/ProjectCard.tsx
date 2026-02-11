@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Project, CustomStatus, User } from '@/types'; 
@@ -43,7 +42,8 @@ interface ProjectCardProps {
   currentUser: User | null; 
   allStatuses: CustomStatus[]; 
   allUsers: User[];
-  onOpenAssignDrDialog: (project: Project) => void; 
+  onOpenAssignDrDialog: (project: Project) => void;
+  onViewLead: (project: Project) => void;
 }
 
 function formatDurationPrecise(totalSeconds: number): string {
@@ -203,7 +203,7 @@ const calculateProgressInfo = (
   };
 };
 
-export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, allUsers, onOpenAssignDrDialog }: ProjectCardProps) {
+export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, allUsers, onOpenAssignDrDialog, onViewLead }: ProjectCardProps) {
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     setIsMounted(true);
@@ -278,6 +278,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
         "relative group",
         isOverlay ? "z-50" : (isDragging ? "z-50" : "")
       )}
+      onClick={() => isMounted && !isOverlay && onViewLead(project)}
     >
       <Card
         className={cn(
