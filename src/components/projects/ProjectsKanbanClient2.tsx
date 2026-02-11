@@ -220,6 +220,230 @@ export function ProjectsKanbanClient() {
 
     return () => clearInterval(intervalId);
   }, [fetchData, currentUser]);
+
+  const handleDateRangeChange = (
+    range: DateRange | undefined,
+    displayLabel: string, 
+    predefinedValue: PredefinedRange | "custom" | null
+  ) => {
+    setSelectedDateRange(range);
+  };
+
+  const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
+    if (isReadOnly || !currentUser) {
+        toast({ title: "Read-Only Mode", description: "Actions are disabled.", variant: "default" });
+        return;
+    }
+    
+    const projectShim: TrackingLink = {
+        id: projectToAssign.id,
+        companyName: projectToAssign.name,
+        currentStatus: projectToAssign.status,
+        designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
+        designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
+        address: '', phoneNumber: '', orderItems: [],
+        crmUserId: projectToAssign.assigneeId,
+        crmUserName: projectToAssign.assigneeName,
+        createdAt: projectToAssign.createdAt || new Date().toISOString(),
+        isPublic: false, statusHistory: [], comments: [], advancePayments: [],
+    };
+    
+    if (!projectToAssign.designerRepresentativeId) {
+      setProjectForDocsComplete(projectToAssign);
+      setIsDocsCompleteDialogOpen(true);
+    } else {
+      setSelectedOrderForDrAssignment(projectShim);
+      setIsAssignDrDialogOpen(true);
+    }
+
+  }, [toast, currentUser, isReadOnly]);
+
+  const handleConfirmStatusUpdate = useCallback(async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
+    if (!currentUser || isReadOnly) return;
+    const originalStatus = project.status;
+    
+    // Optimistic update
+    setProjects(prevProjects => {
+      return prevProjects.map(p =>
+        p.id === project.id ? { ...p, status: newStatus } : p
+      );
+    });
+
+    const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
+    
+    if (!result.success) {
+      toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
+      // Revert if failed
+      setProjects(prevProjects => {
+        return prevProjects.map(p =>
+          p.id === project.id ? { ...p, status: originalStatus } : p
+        );
+      });
+    } else {
+      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
+    }
+  }, [currentUser, toast, isReadOnly]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    if (isReadOnly) return;
+    const { active } = event;
+    if (active.data.current?.project) {
+      setActiveProject(active.data.current.project as Project);
+    }
+  };
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setActiveProject(null);
+    if (isReadOnly) return;
+
+    const { active, over } = event;
+  
+    if (!currentUser) {
+      toast({ title: "Authentication Error", description: "Cannot update project, user not authenticated.", variant: "destructive" });
+      return;
+    }
+  
+    if (!over || !active.data.current?.project) {
+      return;
+    }
+  
+    const project = active.data.current.project as Project;
+    const newStatus = over.id as ProjectStatusType;
+    const originalStatus = project.status;
+  
+    if (newStatus === originalStatus) {
+      return;
+    }
+  
+    if (currentUser.role !== 'SYSTEM_ADMIN' && globalSettings) {
+      const permissions = globalSettings.projectStageAccess;
+      if (permissions && permissions[newStatus] && !permissions[newStatus].includes(currentUser.role)) {
+        toast({
+          title: "Permission Denied",
+          description: `You do not have permission to move projects to the '${newStatus}' stage.`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+  
+    if (newStatus === 'On Design' && project.status !== 'On Design') {
+      if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+        setProjectForDocsComplete(project);
+        setIsDocsCompleteDialogOpen(true);
+        return; 
+      }
+    }
+  
+    if (newStatus === 'Logistics' && project.status !== 'Logistics' && globalSettings?.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+      const order = await getOrderById(project.id);
+  
+      if (!order) {
+        toast({ title: "Error", description: "Could not retrieve order details for validation.", variant: "destructive" });
+        return;
+      }
+  
+      const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+      const effectiveDiscount = order.specialClientDiscount || 0;
+      const netPayable = orderSubtotal - effectiveDiscount;
+      const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+      const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
+  
+      if (paymentPercentage < 45) {
+        setPaymentValidationError(`Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required to move to Logistics.`);
+        return; 
+      }
+    }
+  
+    if (newStatus === 'On Design' && !project.designerRepresentativeId) {
+      handleOpenAssignDrDialog(project);
+      return;
+    }
+    
+    if (newStatus === 'On Hold') {
+      setProjectToHold(project);
+      setIsHoldReasonDialogOpen(true);
+      return;
+    }
+  
+    if (newStatus === 'Logistics') {
+      setProjectForLogistics(project);
+      setIsLogisticsConfirmDialogOpen(true);
+      return;
+    }
+    
+    if (newStatus === 'Courier') {
+      setProjectToCourier(project);
+      return;
+    }
+  
+    handleConfirmStatusUpdate(project, newStatus);
+  }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate, isReadOnly, handleOpenAssignDrDialog]);
+  
+  const handleDragCancel = () => {
+    setActiveProject(null);
+  };
+  
+  const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
+    setProjects(prev => prev.map(p => p.id === updatedOrderFromDialog.id ? {
+      ...p,
+      status: 'On Design',
+      designerRepresentativeId: updatedOrderFromDialog.designerRepresentativeId,
+      designerRepresentativeName: updatedOrderFromDialog.designerRepresentativeName,
+      assigneeAvatarUrl: updatedOrderFromDialog.assigneeAvatarUrl,
+    } : p));
+    toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
+  }, [toast]);
+
+  const handleExport = async () => {
+    const deliveredProjects = projects.filter(p => p.status === 'Delivered');
+  
+    if (deliveredProjects.length === 0) {
+      toast({ title: "No Data", description: "There are no projects in the 'Delivered' stage to export." });
+      return;
+    }
+    
+    setIsDataFetching(true);
+
+    const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
+    const ordersResults = await Promise.all(ordersDataPromises);
+    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
+    
+    setIsDataFetching(false);
+
+    const dataToExport = deliveredProjects.map(p => {
+      const order = ordersMap.get(p.id);
+      const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
+      const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
+      const nameParts = (p.name || '').split(' • ');
+      const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
+      const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
+      
+        return {
+          'Job ID': jobId,
+          'Company Name': companyName,
+          'Phone': order?.phoneNumber || 'N/A',
+          'Address': order?.address || 'N/A',
+          'Delivery Date': deliveryDate,
+        };
+      });
+  
+    const csv = Papa.unparse(dataToExport, {
+        header: true,
+        columns: ["Job ID", "Company Name", "Phone", "Address", "Delivery Date"]
+    });
+
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'delivered_projects_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  
+    toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
+  };
   
   const usersForFilter = useMemo(() => {
     if (!currentUser) return [];
@@ -361,231 +585,6 @@ export function ProjectsKanbanClient() {
     const categories = new Set(projects.map(p => p.categoryTag).filter(Boolean));
     return Array.from(categories).sort();
   }, [projects]);
-  
-  const handleDateRangeChange = (
-    range: DateRange | undefined,
-    displayLabel: string, 
-    predefinedValue: PredefinedRange | "custom" | null
-  ) => {
-    setSelectedDateRange(range);
-  };
-
-  const handleDragStart = (event: DragStartEvent) => {
-    if (isReadOnly) return;
-    const { active } = event;
-    if (active.data.current?.project) {
-      setActiveProject(active.data.current.project as Project);
-    }
-  };
-
-  const handleConfirmStatusUpdate = useCallback(async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
-    if (!currentUser || isReadOnly) return;
-    const originalStatus = project.status;
-    
-    // Optimistic update
-    setProjects(prevProjects => {
-      return prevProjects.map(p =>
-        p.id === project.id ? { ...p, status: newStatus } : p
-      );
-    });
-
-    const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
-    
-    if (!result.success) {
-      toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
-      // Revert if failed
-      setProjects(prevProjects => {
-        return prevProjects.map(p =>
-          p.id === project.id ? { ...p, status: originalStatus } : p
-        );
-      });
-    } else {
-      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-    }
-  }, [currentUser, toast, isReadOnly]);
-
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    setActiveProject(null);
-    if (isReadOnly) return;
-
-    const { active, over } = event;
-  
-    if (!currentUser) {
-      toast({ title: "Authentication Error", description: "Cannot update project, user not authenticated.", variant: "destructive" });
-      return;
-    }
-  
-    if (!over || !active.data.current?.project) {
-      return;
-    }
-  
-    const project = active.data.current.project as Project;
-    const newStatus = over.id as ProjectStatusType;
-    const originalStatus = project.status;
-  
-    if (newStatus === originalStatus) {
-      return;
-    }
-  
-    if (currentUser.role !== 'SYSTEM_ADMIN' && globalSettings) {
-      const permissions = globalSettings.projectStageAccess;
-      if (permissions && permissions[newStatus] && !permissions[newStatus].includes(currentUser.role)) {
-        toast({
-          title: "Permission Denied",
-          description: `You do not have permission to move projects to the '${newStatus}' stage.`,
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-  
-    if (newStatus === 'On Design' && project.status !== 'On Design') {
-      if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
-        setProjectForDocsComplete(project);
-        setIsDocsCompleteDialogOpen(true);
-        return; 
-      }
-    }
-  
-    if (newStatus === 'Logistics' && project.status !== 'Logistics' && globalSettings?.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
-      const order = await getOrderById(project.id);
-  
-      if (!order) {
-        toast({ title: "Error", description: "Could not retrieve order details for validation.", variant: "destructive" });
-        return;
-      }
-  
-      const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-      const effectiveDiscount = order.specialClientDiscount || 0;
-      const netPayable = orderSubtotal - effectiveDiscount;
-      const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
-      const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
-  
-      if (paymentPercentage < 45) {
-        setPaymentValidationError(`Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required to move to Logistics.`);
-        return; 
-      }
-    }
-  
-    if (newStatus === 'On Design' && !project.designerRepresentativeId) {
-      handleOpenAssignDrDialog(project);
-      return;
-    }
-    
-    if (newStatus === 'On Hold') {
-      setProjectToHold(project);
-      setIsHoldReasonDialogOpen(true);
-      return;
-    }
-  
-    if (newStatus === 'Logistics') {
-      setProjectForLogistics(project);
-      setIsLogisticsConfirmDialogOpen(true);
-      return;
-    }
-    
-    if (newStatus === 'Courier') {
-      setProjectToCourier(project);
-      return;
-    }
-  
-    handleConfirmStatusUpdate(project, newStatus);
-  }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate, isReadOnly, handleOpenAssignDrDialog]);
-  
-  const handleDragCancel = () => {
-    setActiveProject(null);
-  };
-  
-  const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
-    if (isReadOnly || !currentUser) {
-        toast({ title: "Read-Only Mode", description: "Actions are disabled.", variant: "default" });
-        return;
-    }
-    
-    const projectShim: TrackingLink = {
-        id: projectToAssign.id,
-        companyName: projectToAssign.name,
-        currentStatus: projectToAssign.status,
-        designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
-        designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
-        address: '', phoneNumber: '', orderItems: [],
-        crmUserId: projectToAssign.assigneeId,
-        crmUserName: projectToAssign.assigneeName,
-        createdAt: projectToAssign.createdAt || new Date().toISOString(),
-        isPublic: false, statusHistory: [], comments: [], advancePayments: [],
-    };
-    
-    if (!projectToAssign.designerRepresentativeId) {
-      setProjectForDocsComplete(projectToAssign);
-      setIsDocsCompleteDialogOpen(true);
-    } else {
-      setSelectedOrderForDrAssignment(projectShim);
-      setIsAssignDrDialogOpen(true);
-    }
-
-  }, [toast, currentUser, isReadOnly]);
-
-
-  const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
-    setProjects(prev => prev.map(p => p.id === updatedOrderFromDialog.id ? {
-      ...p,
-      status: 'On Design',
-      designerRepresentativeId: updatedOrderFromDialog.designerRepresentativeId,
-      designerRepresentativeName: updatedOrderFromDialog.designerRepresentativeName,
-      assigneeAvatarUrl: updatedOrderFromDialog.assigneeAvatarUrl,
-    } : p));
-    toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
-  }, [toast]);
-
-  const handleExport = async () => {
-    const deliveredProjects = projects.filter(p => p.status === 'Delivered');
-  
-    if (deliveredProjects.length === 0) {
-      toast({ title: "No Data", description: "There are no projects in the 'Delivered' stage to export." });
-      return;
-    }
-    
-    setIsDataFetching(true);
-
-    const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
-    const ordersResults = await Promise.all(ordersDataPromises);
-    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
-    
-    setIsDataFetching(false);
-
-    const dataToExport = deliveredProjects.map(p => {
-      const order = ordersMap.get(p.id);
-      const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
-      const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
-      const nameParts = (p.name || '').split(' • ');
-      const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
-      const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
-      
-        return {
-          'Job ID': jobId,
-          'Company Name': companyName,
-          'Phone': order?.phoneNumber || 'N/A',
-          'Address': order?.address || 'N/A',
-          'Delivery Date': deliveryDate,
-        };
-      });
-  
-    const csv = Papa.unparse(dataToExport, {
-        header: true,
-        columns: ["Job ID", "Company Name", "Phone", "Address", "Delivery Date"]
-    });
-
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'delivered_projects_export.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  
-    toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
-  };
   
   const canFilterUsers = useMemo(() => {
     if (!currentUser) return false;
