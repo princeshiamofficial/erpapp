@@ -1,9 +1,8 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, UserRole } from '@/types'; 
+import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, UserRole, TrackingLink } from '@/types'; 
 import { 
   ClipboardCheck,
   ClipboardX,
@@ -29,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, parseISO, isSameWeek, isSameMonth, isSameYear } from 'date-fns';
+import { format, parseISO, isSameWeek, isSameMonth, isSameYear, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import {
   DndContext,
   MouseSensor,
@@ -53,28 +52,22 @@ import { getProjects } from '@/lib/project-service';
 import { getStatuses, DELIVERED_STATUS_ID } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
-import type { TrackingLink } from '@/types';
-import { Briefcase } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
+import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
 import Papa from 'papaparse';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { isWithinInterval, subDays, startOfDay, endOfDay } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
   ssr: false,
 });
-
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
@@ -123,7 +116,6 @@ const getInitials = (name: string | undefined): string => {
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-
 export function ProjectsKanbanClient() {
   const { currentUser } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -135,7 +127,6 @@ export function ProjectsKanbanClient() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const { toast } = useToast();
   const [activeProject, setActiveProject] = useState<Project | null>(null); 
 
@@ -163,19 +154,9 @@ export function ProjectsKanbanClient() {
   const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
-
   const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 10,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor)
   );
   
@@ -183,10 +164,7 @@ export function ProjectsKanbanClient() {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
     }, 300);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    return () => clearTimeout(handler);
   }, [searchTerm]);
 
   const fetchData = useCallback(async (isSilent = false) => {
@@ -224,10 +202,9 @@ export function ProjectsKanbanClient() {
     }
     fetchData();
 
-    // Setup periodic background refresh
     const intervalId = setInterval(() => {
       fetchData(true);
-    }, 30000); // 30 seconds
+    }, 30000); 
 
     return () => clearInterval(intervalId);
   }, [fetchData, currentUser]);
@@ -385,7 +362,6 @@ export function ProjectsKanbanClient() {
     if (!currentUser || isReadOnly) return;
     const originalStatus = project.status;
     
-    // Optimistic Update
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
@@ -396,7 +372,6 @@ export function ProjectsKanbanClient() {
     
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
-      // Revert Optimistic Update
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
@@ -404,10 +379,8 @@ export function ProjectsKanbanClient() {
       });
     } else {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      // Trigger a silent sync to ensure server state matches local state
-      fetchData(true);
     }
-  }, [currentUser, toast, isReadOnly, fetchData]);
+  }, [currentUser, toast, isReadOnly]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveProject(null);
@@ -453,7 +426,6 @@ export function ProjectsKanbanClient() {
     }
   
     if (newStatus === 'Logistics' && project.status !== 'Logistics' && globalSettings?.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
-      // Background check for payment
       const order = await getOrderById(project.id);
   
       if (!order) {
@@ -541,8 +513,7 @@ export function ProjectsKanbanClient() {
       assigneeAvatarUrl: updatedOrderFromDialog.assigneeAvatarUrl,
     } : p));
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
-    fetchData(true); // Silent sync
-  }, [toast, fetchData]);
+  }, [toast]);
 
   const handleExport = async () => {
     const deliveredProjects = projects.filter(p => p.status === 'Delivered');
@@ -745,7 +716,7 @@ export function ProjectsKanbanClient() {
               <Briefcase className="mx-auto h-16 w-16 opacity-30 mb-4" />
               <p className="text-xl font-semibold">No projects found.</p>
               <p className="text-sm">
-                {searchTerm || categoryFilter !== 'all' || endDateFilter !== 'all'
+                {searchTerm || categoryFilter !== 'all'
                   ? "Try adjusting your filters or search term."
                   : "Get started by adding new orders or projects."}
               </p>
