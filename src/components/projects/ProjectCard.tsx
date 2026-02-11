@@ -4,9 +4,9 @@
 import type { Project, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react'; // Added UserCheck
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
-import Link from 'next/link';
+import NextLink from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -42,7 +42,7 @@ interface ProjectCardProps {
   isOverlay?: boolean; 
   currentUser: User | null; 
   allStatuses: CustomStatus[]; 
-  allUsers: User[]; // Added
+  allUsers: User[];
   onOpenAssignDrDialog: (project: Project) => void; 
 }
 
@@ -278,7 +278,6 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
         "relative group",
         isOverlay ? "z-50" : (isDragging ? "z-50" : "")
       )}
-      onClick={() => isMounted && !isOverlay && onViewLead(project)}
     >
       <Card
         className={cn(
@@ -290,7 +289,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           <div className="flex justify-between items-start">
             <span className="text-sm font-semibold text-foreground truncate">{project.projectIdDisplay}</span>
             {!isOverlay && (
-                 <Link
+                 <NextLink
                     href={`/track/${project.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -299,7 +298,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                     title="View Invoice / Order Details"
                   >
                     <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </Link>
+                  </NextLink>
             )}
           </div>
           
@@ -307,7 +306,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             <p className="text-xs font-medium text-muted-foreground" title={project.name}>{truncatedProjectName}</p>
           </div>
 
-          <Link
+          <NextLink
             href={`/track/${project.id}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -320,7 +319,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               <CalendarDays className="mr-1.5 h-3 w-3" />
               Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
             </div>
-          </Link>
+          </NextLink>
           
           {progressInfo.showProgressBar && (
               <div className="pt-1">
@@ -349,7 +348,6 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                       crmInfoClickable
                         ? (e) => { 
                             e.stopPropagation();
-                            console.log('[ProjectCard] CRM AVATAR clicked. Calling onOpenAssignDrDialog for project:', project.id);
                             onOpenAssignDrDialog(project);
                           }
                         : undefined
@@ -383,7 +381,6 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                             drInfoClickable
                               ? (e) => {
                                   e.stopPropagation();
-                                  console.log('[ProjectCard] DR AVATAR area clicked. Calling onOpenAssignDrDialog for project:', project.id);
                                   onOpenAssignDrDialog(project);
                                 }
                               : undefined

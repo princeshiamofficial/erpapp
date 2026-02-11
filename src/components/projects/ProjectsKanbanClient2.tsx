@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -20,15 +21,11 @@ import {
   User as UserIcon,
   ChevronsUpDown,
   Check,
-  LayoutGrid,
-  List,
-  Calendar as CalendarIcon,
-  Users as UsersIcon,
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, parseISO, isSameWeek, isSameMonth, isSameYear, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import {
   DndContext,
   MouseSensor,
@@ -38,7 +35,6 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent, 
-  type DragCancelEvent, 
   closestCorners,
   DragOverlay, 
 } from '@dnd-kit/core';
@@ -155,6 +151,7 @@ export function ProjectsKanbanClient() {
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
   const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
+
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
@@ -582,7 +579,6 @@ export function ProjectsKanbanClient() {
         sensors={sensors} 
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd} 
-        onDragCancel={handleDragCancel}
         collisionDetection={closestCorners}
     >
       <div className="flex flex-col h-full space-y-4">
@@ -715,7 +711,7 @@ export function ProjectsKanbanClient() {
           </div>
           {filteredProjects.length === 0 && !isLoading && (
             <div className="text-center py-10 text-muted-foreground mt-8">
-              <Briefcase className="mx-auto h-16 w-16 opacity-30 mb-4" />
+              <ClipboardCheck className="mx-auto h-16 w-16 opacity-30 mb-4" />
               <p className="text-xl font-semibold">No projects found.</p>
               <p className="text-sm">
                 {searchTerm || categoryFilter !== 'all'
