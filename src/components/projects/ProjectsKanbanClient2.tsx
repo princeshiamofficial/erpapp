@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, UserRole } from '@/types'; 
 import { 
@@ -124,14 +124,14 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-// No initial props are needed now, as the component fetches its own data.
 export function ProjectsKanbanClient() {
   const { currentUser } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); 
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Start as true
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDataFetching, setIsDataFetching] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -182,15 +182,16 @@ export function ProjectsKanbanClient() {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 300); // 300ms debounce delay
+    }, 300);
 
     return () => {
       clearTimeout(handler);
     };
   }, [searchTerm]);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
+    setIsDataFetching(true);
     try {
       const [fetchedProjects, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([ 
         getProjects(),
@@ -207,6 +208,7 @@ export function ProjectsKanbanClient() {
       toast({ title: "Error", description: "Could not load projects or status configurations.", variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setIsDataFetching(false);
     }
   }, [toast]);
   
@@ -221,6 +223,13 @@ export function ProjectsKanbanClient() {
       }
     }
     fetchData();
+
+    // Setup periodic background refresh
+    const intervalId = setInterval(() => {
+      fetchData(true);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
   }, [fetchData, currentUser]);
   
   const usersForFilter = useMemo(() => {
@@ -256,7 +265,7 @@ export function ProjectsKanbanClient() {
   }, [usersForFilter, userSearchQuery]);
 
   const visibleKanbanColumns = useMemo(() => {
-    if (isReadOnly) { // Show all columns in read-only mode
+    if (isReadOnly) {
         return KANBAN_COLUMNS_CONFIG;
     }
     if (!currentUser || !globalSettings?.projectStageAccess) {
@@ -376,6 +385,7 @@ export function ProjectsKanbanClient() {
     if (!currentUser || isReadOnly) return;
     const originalStatus = project.status;
     
+    // Optimistic Update
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
@@ -386,6 +396,7 @@ export function ProjectsKanbanClient() {
     
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
+      // Revert Optimistic Update
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
@@ -393,8 +404,10 @@ export function ProjectsKanbanClient() {
       });
     } else {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
+      // Trigger a silent sync to ensure server state matches local state
+      fetchData(true);
     }
-  }, [currentUser, toast, isReadOnly]);
+  }, [currentUser, toast, isReadOnly, fetchData]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveProject(null);
@@ -440,9 +453,8 @@ export function ProjectsKanbanClient() {
     }
   
     if (newStatus === 'Logistics' && project.status !== 'Logistics' && globalSettings?.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
-      setIsLoading(true);
+      // Background check for payment
       const order = await getOrderById(project.id);
-      setIsLoading(false);
   
       if (!order) {
         toast({ title: "Error", description: "Could not retrieve order details for validation.", variant: "destructive" });
@@ -529,7 +541,8 @@ export function ProjectsKanbanClient() {
       assigneeAvatarUrl: updatedOrderFromDialog.assigneeAvatarUrl,
     } : p));
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
-  }, [toast]);
+    fetchData(true); // Silent sync
+  }, [toast, fetchData]);
 
   const handleExport = async () => {
     const deliveredProjects = projects.filter(p => p.status === 'Delivered');
@@ -539,13 +552,13 @@ export function ProjectsKanbanClient() {
       return;
     }
     
-    setIsLoading(true);
+    setIsDataFetching(true);
 
     const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
     const ordersResults = await Promise.all(ordersDataPromises);
     const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
     
-    setIsLoading(false);
+    setIsDataFetching(false);
 
     const dataToExport = deliveredProjects.map(p => {
       const order = ordersMap.get(p.id);
@@ -609,12 +622,15 @@ export function ProjectsKanbanClient() {
 
         {!isReadOnly && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 px-4 sm:px-0">
-            <Input
-              placeholder="Search projects (ID, Name, Assignee, DR)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-card border-border/50 focus:border-primary"
-            />
+            <div className="relative">
+              <Input
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-card border-border/50 focus:border-primary pr-8"
+              />
+              {isDataFetching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
             {canFilterUsers && (
               <Popover open={isUserFilterOpen} onOpenChange={setIsUserFilterOpen}>
                 <PopoverTrigger asChild>
@@ -682,7 +698,7 @@ export function ProjectsKanbanClient() {
                   disabled={isLoading}
                   className="bg-card border-border/50 focus:border-primary"
               >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                  {isDataFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
                   Export Delivered
               </Button>
             )}
@@ -772,7 +788,7 @@ export function ProjectsKanbanClient() {
           }}
           project={projectToCourier}
           currentUser={currentUser}
-          onSuccess={fetchData}
+          onSuccess={() => fetchData(true)}
         />
       )}
       
@@ -856,5 +872,3 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
-
-    

@@ -937,3 +937,91 @@
 [debug] [2026-02-11T05:37:31.746Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
 [debug] [2026-02-11T05:37:31.765Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
 [debug] [2026-02-11T05:37:31.765Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-02-11T05:45:52.421Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-02-11T05:45:52.425Z] > authorizing via signed-in user (colorhut.official@gmail.com)
+[debug] [2026-02-11T05:45:52.426Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.427Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.427Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T05:45:52.430Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T05:45:52.430Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:52.494Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T05:45:52.496Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:52.499Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo [none]
+[debug] [2026-02-11T05:45:52.704Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo 401
+[debug] [2026-02-11T05:45:52.707Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_TYPE_UNSUPPORTED","metadata":{"method":"google.cloud.billing.v1.CloudBilling.GetProjectBillingInfo","service":"cloudbilling.googleapis.com"}}]}}
+[debug] [2026-02-11T05:45:52.708Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-02-11T05:45:52.708Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.708Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.708Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T05:45:52.712Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T05:45:52.712Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:52.741Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T05:45:52.743Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-02-11T05:45:52.767Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-02-11T05:45:52.767Z] > authorizing via signed-in user (colorhut.official@gmail.com)
+[debug] [2026-02-11T05:45:52.768Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.768Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.768Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T05:45:52.774Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T05:45:52.775Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-02-11T05:45:52.806Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-02-11T05:45:52.806Z] > authorizing via signed-in user (colorhut.official@gmail.com)
+[debug] [2026-02-11T05:45:52.807Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.807Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:52.807Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T05:45:52.807Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T05:45:52.807Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:52.836Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T05:45:52.838Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:52.839Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo [none]
+[debug] [2026-02-11T05:45:52.849Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T05:45:52.852Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:52.852Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo [none]
+[debug] [2026-02-11T05:45:53.021Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo 401
+[debug] [2026-02-11T05:45:53.021Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_TYPE_UNSUPPORTED","metadata":{"method":"google.cloud.billing.v1.CloudBilling.GetProjectBillingInfo","service":"cloudbilling.googleapis.com"}}]}}
+[debug] [2026-02-11T05:45:53.021Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-02-11T05:45:53.021Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:53.021Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:53.021Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T05:45:53.021Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T05:45:53.021Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:53.039Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T05:45:53.041Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:53.858Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo 401
+[debug] [2026-02-11T05:45:53.859Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_TYPE_UNSUPPORTED","metadata":{"method":"google.cloud.billing.v1.CloudBilling.GetProjectBillingInfo","service":"cloudbilling.googleapis.com"}}]}}
+[debug] [2026-02-11T05:45:53.859Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-02-11T05:45:53.859Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:53.859Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T05:45:53.859Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T05:45:53.859Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T05:45:53.859Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T05:45:53.892Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T05:45:53.894Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-02-11T12:27:57.459Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-02-11T12:27:57.459Z] > authorizing via signed-in user (colorhut.official@gmail.com)
+[debug] [2026-02-11T12:27:57.460Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T12:27:57.461Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T12:27:57.461Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T12:27:57.464Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T12:27:57.464Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T12:27:57.504Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T12:27:57.504Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T12:27:57.505Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo [none]
+[debug] [2026-02-11T12:27:58.539Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo 401
+[debug] [2026-02-11T12:27:58.540Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/colorhut-57f5a/billingInfo {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_TYPE_UNSUPPORTED","metadata":{"method":"google.cloud.billing.v1.CloudBilling.GetProjectBillingInfo","service":"cloudbilling.googleapis.com"}}]}}
+[debug] [2026-02-11T12:27:58.540Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-02-11T12:27:58.540Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T12:27:58.540Z] Checked if tokens are valid: false, expires at: 1749019237953
+[debug] [2026-02-11T12:27:58.540Z] > refreshing access token with scopes: []
+[debug] [2026-02-11T12:27:58.546Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-02-11T12:27:58.546Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-02-11T12:27:58.577Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-02-11T12:27:58.579Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
