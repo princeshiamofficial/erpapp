@@ -78,53 +78,60 @@ export function KanbanColumn({
         <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : projects.length}</span>
       </div>
       <ScrollArea className="flex-1 bg-background/10 custom-scrollbar">
-        <motion.div layout className="space-y-3 p-3 min-h-[100px]">
-        {isLoading && projects.length === 0 ? (
-          <div className="space-y-3">
-            <Skeleton className="h-20 w-full rounded-md" />
-            <Skeleton className="h-20 w-full rounded-md" />
-            <Skeleton className="h-20 w-full rounded-md" />
-          </div>
-        ) : visibleProjects.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <p className="text-xs text-muted-foreground text-center italic">No projects in this stage.</p>
-          </div>
-        ) : (
-          <AnimatePresence initial={false}>
-            {visibleProjects.map((project, index) => (
-              <motion.div
-                key={project.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.1 } }}
-                transition={{ duration: 0.2 }}
+        <div className="p-3 min-h-full">
+          <motion.div layout className="space-y-3">
+            {isLoading && projects.length === 0 ? (
+              <div className="space-y-3">
+                <Skeleton className="h-20 w-full rounded-md" />
+                <Skeleton className="h-20 w-full rounded-md" />
+                <Skeleton className="h-20 w-full rounded-md" />
+              </div>
+            ) : visibleProjects.length === 0 ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-xs text-muted-foreground text-center italic">No projects in this stage.</p>
+              </div>
+            ) : (
+              <AnimatePresence initial={false} mode="popLayout">
+                {visibleProjects.map((project) => (
+                  <motion.div
+                    key={project.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ 
+                      opacity: 0, 
+                      scale: 0.9, 
+                      height: 0, 
+                      marginBottom: 0,
+                      transition: { duration: 0.2 } 
+                    }}
+                    transition={{ duration: 0.2 }}
+                  >
+                      <ProjectCard 
+                        project={project} 
+                        currentUser={currentUser}
+                        allStatuses={allStatuses}
+                        allUsers={allUsers}
+                        onOpenAssignDrDialog={onOpenAssignDrDialog} 
+                      />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
+          </motion.div>
+          {hasMoreProjects && (
+            <div className="text-center pt-4">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-8"
+                onClick={handleLoadMore}
               >
-                  <ProjectCard 
-                    key={project.id} 
-                    project={project} 
-                    currentUser={currentUser}
-                    allStatuses={allStatuses}
-                    allUsers={allUsers}
-                    onOpenAssignDrDialog={onOpenAssignDrDialog} 
-                  />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        )}
-        {hasMoreProjects && (
-          <div className="text-center pt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs h-8"
-              onClick={handleLoadMore}
-            >
-              Load More ({projects.length - visibleCount} remaining)
-            </Button>
-          </div>
-        )}
-        </motion.div>
+                Load More ({projects.length - visibleCount} remaining)
+              </Button>
+            </div>
+          )}
+        </div>
       </ScrollArea>
     </div>
   );

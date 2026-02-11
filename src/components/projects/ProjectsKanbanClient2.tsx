@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, UserRole, TrackingLink } from '@/types'; 
+import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, TrackingLink } from '@/types'; 
 import { 
   ClipboardCheck,
   ClipboardX,
@@ -54,13 +54,13 @@ import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import Papa from 'papaparse';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import Papa from 'papaparse';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -220,14 +220,6 @@ export function ProjectsKanbanClient() {
 
     return () => clearInterval(intervalId);
   }, [fetchData, currentUser]);
-
-  const handleDateRangeChange = (
-    range: DateRange | undefined,
-    displayLabel: string, 
-    predefinedValue: PredefinedRange | "custom" | null
-  ) => {
-    setSelectedDateRange(range);
-  };
 
   const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
     if (isReadOnly || !currentUser) {
