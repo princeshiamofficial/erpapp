@@ -96,10 +96,10 @@ const nextConfig: NextConfig = {
     ]
   },
   webpack: (config) => {
-    config.module.rules.push({
-      test: /node_modules\/handlebars\/lib\/index.js/,
-      use: "null-loader",
-    });
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      handlebars: 'handlebars/dist/handlebars.js',
+    };
     return config;
   },
 };
