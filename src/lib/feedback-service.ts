@@ -1,24 +1,20 @@
 
 "use server";
 
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 import type { Feedback } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
-const COLLECTION_NAME = 'feedback';
+const FEEDBACK_TABLE = 'feedback';
 
 export const getFeedback = async (): Promise<Feedback[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999&orderBy=submittedAt&direction=desc`);
-    if (response && Array.isArray(response.documents)) {
-        return response.documents.map((doc: { id: string, data: any }) => ({
-            id: doc.id,
-            ...doc.data
-        } as Feedback));
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT data_json FROM ${FEEDBACK_TABLE} ORDER BY id DESC`);
+    return rows.map(row => ({
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as Feedback));
   } catch (error) {
-    console.error("Error fetching feedback via API v3:", error);
+    console.error("Error fetching feedback from MySQL:", error);
     return [];
   }
 };
@@ -26,47 +22,36 @@ export const getFeedback = async (): Promise<Feedback[]> => {
 export const getFeedbackForOrder = async (orderId: string): Promise<Feedback[]> => {
   if (!orderId) return [];
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    // V3 API search is broad, so we fetch and filter. A more specific API endpoint would be better.
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents
-        .map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Feedback))
-        .filter((feedback: Feedback) => feedback.orderId === orderId);
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT data_json FROM ${FEEDBACK_TABLE} WHERE order_id = ?`, [orderId]);
+    return rows.map(row => ({
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as Feedback));
   } catch (error) {
-    console.error(`Error fetching feedback for order ${orderId} via API v3:`, error);
+    console.error(`Error fetching feedback for order ${orderId} from MySQL:`, error);
     return [];
   }
 };
 
-
 export const addFeedback = async (feedbackData: Omit<Feedback, 'id'>): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const payload = { data: feedbackData };
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
+    const id = uuidv4();
+    await query(`INSERT INTO ${FEEDBACK_TABLE} (id, order_id, data_json) VALUES (?, ?, ?)`,
+      [id, feedbackData.orderId || null, JSON.stringify({ ...feedbackData, id })]);
     return true;
   } catch (error) {
-    console.error("Error adding feedback via API v3:", error);
+    console.error("Error adding feedback to MySQL:", error);
     return false;
   }
 };
 
 export async function deleteFeedbackAction(feedbackId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${feedbackId}`, {
-        method: 'DELETE'
-    });
+    await query(`DELETE FROM ${FEEDBACK_TABLE} WHERE id = ?`, [feedbackId]);
     return { success: true };
   } catch (error) {
-    console.error(`Error deleting feedback ${feedbackId} via API v3:`, error);
+    console.error(`Error deleting feedback ${feedbackId} from MySQL:`, error);
     if (error instanceof Error) {
-        return { success: false, error: error.message };
+      return { success: false, error: error.message };
     }
     return { success: false, error: 'An unknown error occurred during deletion.' };
   }

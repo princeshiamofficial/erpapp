@@ -1,10 +1,10 @@
-'use server'; // Potentially for some functions if called directly from Server Components/Actions
+'use server';
 
-import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, where, orderBy, deleteDoc } from 'firebase/firestore';
+import { query } from './mysql';
 import type { User, UserRole } from '@/types';
+import bcrypt from 'bcryptjs';
 
-const USERS_COLLECTION = 'users';
+const USERS_TABLE = 'users';
 
 const getRolePrefix = (role: string): string => {
   const defaults: Record<string, string> = {
@@ -19,28 +19,28 @@ const getRolePrefix = (role: string): string => {
   return defaults[role] || `${role}-`;
 };
 
-// Add a new user to Firestore with role-specific sequential ID or a custom ID
+// Add a new user to MySQL
 export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Promise<User | null> => {
-  const usersCol = collection(db, USERS_COLLECTION);
   const rolePrefix = getRolePrefix(userData.role);
 
   try {
     let userId = userData.id;
 
     if (!userId) {
-      const q = query(usersCol, where('id', '>=', rolePrefix), where('id', '<', rolePrefix + '\uffff'), orderBy('id', 'desc'));
-      const roleUsersSnapshot = await getDocs(q);
+      // Find the max ID for this role prefix
+      const result = await query<{ id: string }[]>(
+        `SELECT id FROM ${USERS_TABLE} WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+        [`${rolePrefix}%`]
+      );
 
       let maxUserNumber = 0;
-      roleUsersSnapshot.forEach(docSnap => {
-        const docId = docSnap.id;
-        if (docId.startsWith(rolePrefix)) {
-          const numPart = parseInt(docId.substring(rolePrefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxUserNumber) {
-            maxUserNumber = numPart;
-          }
+      if (result.length > 0) {
+        const lastId = result[0].id;
+        const numPart = parseInt(lastId.substring(rolePrefix.length), 10);
+        if (!isNaN(numPart)) {
+          maxUserNumber = numPart;
         }
-      });
+      }
       const newUserNumber = maxUserNumber + 1;
       userId = `${rolePrefix}${String(newUserNumber).padStart(3, '0')}`;
     } else {
@@ -51,6 +51,8 @@ export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Pro
       }
     }
 
+    const hashedPassword = userData.password ? await bcrypt.hash(userData.password, 10) : await bcrypt.hash('password', 10);
+
     const newUser: User = {
       ...userData,
       id: userId,
@@ -58,239 +60,282 @@ export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Pro
       phone: userData.phone || null,
       address: userData.address || null,
       avatarUrl: userData.avatarUrl || null,
-      monthlyOrderTarget: userData.monthlyOrderTarget === undefined ? null : userData.monthlyOrderTarget,
-      weeklyOrderTarget: userData.weeklyOrderTarget === undefined ? null : userData.weeklyOrderTarget,
-      isBanned: false, 
+      monthlyOrderTarget: userData.monthlyOrderTarget ?? 0,
+      weeklyOrderTarget: userData.weeklyOrderTarget ?? 0,
+      isBanned: false,
       fcmToken: null,
       isLeader: userData.isLeader || false,
     };
-    const userDocRef = doc(db, USERS_COLLECTION, userId);
-    await setDoc(userDocRef, newUser);
+
+    await query(
+      `INSERT INTO ${USERS_TABLE} (id, name, email, password, role, company_name, phone, address, avatar_url, monthly_order_target, weekly_order_target, is_banned, fcm_token, is_leader) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newUser.id, newUser.name, newUser.email, hashedPassword,
+        newUser.role, newUser.companyName, newUser.phone, newUser.address,
+        newUser.avatarUrl, newUser.monthlyOrderTarget, newUser.weeklyOrderTarget,
+        newUser.isBanned, newUser.fcmToken, newUser.isLeader
+      ]
+    );
+
     return newUser;
   } catch (error) {
-    console.error("Error adding user to Firestore:", error);
+    console.error("Error adding user to MySQL:", error);
     if (error instanceof Error) throw error;
     return null;
   }
 };
 
-// Get all users from Firestore
+// Get all users from MySQL
 export const getUsers = async (): Promise<User[]> => {
-  const usersCol = collection(db, USERS_COLLECTION);
-  const q = query(usersCol, orderBy("name", "asc")); // Order by name for consistent listing
   try {
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as User));
+    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} ORDER BY name ASC`);
+    return results.map(row => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      companyName: row.company_name,
+      phone: row.phone,
+      address: row.address,
+      password: row.password,
+      avatarUrl: row.avatar_url,
+      monthlyOrderTarget: row.monthly_order_target,
+      weeklyOrderTarget: row.weekly_order_target,
+      isBanned: Boolean(row.is_banned),
+      fcmToken: row.fcm_token,
+      isLeader: Boolean(row.is_leader)
+    } as User));
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("Error fetching users from MySQL:", error);
     return [];
   }
 };
 
-// Get a single user by ID
+// Get a single user by ID from MySQL
 export const getUserById = async (userId: string): Promise<User | null> => {
   if (!userId) return null;
-  const userDocRef = doc(db, USERS_COLLECTION, userId);
   try {
-    const docSnap = await getDoc(userDocRef);
-    if (docSnap.exists()) {
-      return { ...docSnap.data(), id: docSnap.id } as User;
+    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
+    if (results.length > 0) {
+      const row = results[0];
+      return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        companyName: row.company_name,
+        phone: row.phone,
+        address: row.address,
+        password: row.password,
+        avatarUrl: row.avatar_url,
+        monthlyOrderTarget: row.monthly_order_target,
+        weeklyOrderTarget: row.weekly_order_target,
+        isBanned: Boolean(row.is_banned),
+        fcmToken: row.fcm_token,
+        isLeader: Boolean(row.is_leader)
+      } as User;
     }
     return null;
   } catch (error) {
-    console.error(`Error fetching user by ID "${userId}":`, error);
+    console.error(`Error fetching user by ID "${userId}" from MySQL:`, error);
     return null;
   }
 };
 
-
-// Get user by email (for login)
+// Get user by email from MySQL
 export const getUserByEmail = async (email: string): Promise<User | null> => {
-  const usersRef = collection(db, USERS_COLLECTION);
-  const q = query(usersRef, where("email", "==", email));
   try {
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      const userDoc = querySnapshot.docs[0];
-      return { ...userDoc.data(), id: userDoc.id } as User;
+    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE email = ?`, [email]);
+    if (results.length > 0) {
+      const row = results[0];
+      return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        companyName: row.company_name,
+        phone: row.phone,
+        address: row.address,
+        password: row.password,
+        avatarUrl: row.avatar_url,
+        monthlyOrderTarget: row.monthly_order_target,
+        weeklyOrderTarget: row.weekly_order_target,
+        isBanned: Boolean(row.is_banned),
+        fcmToken: row.fcm_token,
+        isLeader: Boolean(row.is_leader)
+      } as User;
     }
     return null;
   } catch (error) {
-    console.error(`Error fetching user by email "${email}":`, error);
+    console.error(`Error fetching user by email "${email}" from MySQL:`, error);
     return null;
   }
 };
 
-// Update user's role
-export const updateUserRoleInFirestore = async (userId: string, role: UserRole): Promise<boolean> => {
+// Update user's role in MySQL
+export const updateUserRole = async (userId: string, role: UserRole): Promise<boolean> => {
   try {
-    const userDoc = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDoc, { role });
+    await query(`UPDATE ${USERS_TABLE} SET role = ? WHERE id = ?`, [role, userId]);
     return true;
   } catch (error) {
-    console.error("Error updating user role in Firestore:", error);
+    console.error("Error updating user role in MySQL:", error);
     return false;
   }
 };
 
-// Update user's password (stores plain text)
-export const updateUserPasswordInFirestore = async (userId: string, newPasswordPlainText: string): Promise<boolean> => {
+// Update user's password in MySQL (hashed)
+export const updateUserPassword = async (userId: string, newPasswordPlainText: string): Promise<boolean> => {
   try {
-    const userDoc = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDoc, { password: newPasswordPlainText });
+    const hashedPassword = await bcrypt.hash(newPasswordPlainText, 10);
+    await query(`UPDATE ${USERS_TABLE} SET password = ? WHERE id = ?`, [hashedPassword, userId]);
     return true;
   } catch (error) {
-    console.error("Error updating user password in Firestore:", error);
+    console.error("Error updating user password in MySQL:", error);
     return false;
   }
 };
 
-// Update user's avatar
-export const updateUserAvatarInFirestore = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
+// Verify user password
+export const verifyUserPassword = async (email: string, passwordPlainText: string): Promise<User | null> => {
   try {
-    const userDoc = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDoc, { avatarUrl: avatarUrl ?? null }); // Ensure null if empty
+    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE email = ?`, [email]);
+    if (results.length > 0) {
+      const row = results[0];
+      const isMatch = await bcrypt.compare(passwordPlainText, row.password);
+      if (isMatch) {
+        return {
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          role: row.role,
+          companyName: row.company_name,
+          phone: row.phone,
+          address: row.address,
+          avatarUrl: row.avatar_url,
+          monthlyOrderTarget: row.monthly_order_target,
+          weeklyOrderTarget: row.weekly_order_target,
+          isBanned: Boolean(row.is_banned),
+          fcm_token: row.fcm_token,
+          isLeader: Boolean(row.is_leader)
+        } as User;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error verifying password for email "${email}":`, error);
+    return null;
+  }
+};
+
+// Update user's avatar in MySQL
+export const updateUserAvatar = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
+  try {
+    await query(`UPDATE ${USERS_TABLE} SET avatar_url = ? WHERE id = ?`, [avatarUrl, userId]);
     return true;
   } catch (error) {
-    console.error("Error updating user avatar in Firestore:", error);
+    console.error("Error updating user avatar in MySQL:", error);
     return false;
   }
 };
 
-// Update user's sales targets
-export const updateUserTargetsInFirestore = async (userId: string, monthlyTarget: number | null, weeklyTarget: number | null): Promise<boolean> => {
+// Update user's sales targets in MySQL
+export const updateUserTargets = async (userId: string, monthlyTarget: number | null, weeklyTarget: number | null): Promise<boolean> => {
   try {
-    const userDoc = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDoc, {
-      monthlyOrderTarget: monthlyTarget === undefined ? null : monthlyTarget,
-      weeklyOrderTarget: weeklyTarget === undefined ? null : weeklyTarget
-    });
+    await query(
+      `UPDATE ${USERS_TABLE} SET monthly_order_target = ?, weekly_order_target = ? WHERE id = ?`,
+      [monthlyTarget, weeklyTarget, userId]
+    );
     return true;
   } catch (error) {
-    console.error("Error updating user targets in Firestore:", error);
+    console.error("Error updating user targets in MySQL:", error);
     return false;
   }
 };
 
-// Delete a user from Firestore
-export const deleteUserFromFirestore = async (userId: string): Promise<boolean> => {
+// Delete a user from MySQL
+export const deleteUser = async (userId: string): Promise<boolean> => {
   try {
-    const userDoc = doc(db, USERS_COLLECTION, userId);
-    await deleteDoc(userDoc);
+    await query(`DELETE FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
     return true;
   } catch (error) {
-    console.error("Error deleting user from Firestore:", error);
+    console.error("Error deleting user from MySQL:", error);
     return false;
   }
 };
 
-// Update user's ban status
+// Update user's ban status in MySQL
 export const updateUserBanStatus = async (userId: string, isBanned: boolean): Promise<boolean> => {
   try {
-    const userDoc = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDoc, { isBanned });
+    await query(`UPDATE ${USERS_TABLE} SET is_banned = ? WHERE id = ?`, [isBanned, userId]);
     return true;
   } catch (error) {
-    console.error(`Error updating ban status for user ${userId}:`, error);
+    console.error(`Error updating ban status for user ${userId} in MySQL:`, error);
     return false;
   }
 };
 
-// Update user's basic information
+// Update user's basic information in MySQL
 export const updateUserInfo = async (
   userId: string,
   updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category' | 'isLeader'>>
 ): Promise<boolean> => {
   try {
-    const userDoc = doc(db, USERS_COLLECTION, userId);
-    const dataToUpdate: Record<string, any> = {};
-    if (updates.name !== undefined) dataToUpdate.name = updates.name;
-    if (updates.email !== undefined) dataToUpdate.email = updates.email;
-    if (updates.companyName !== undefined) dataToUpdate.companyName = updates.companyName === '' ? null : updates.companyName;
-    if (updates.phone !== undefined) dataToUpdate.phone = updates.phone === '' ? null : updates.phone;
-    if (updates.address !== undefined) dataToUpdate.address = updates.address === '' ? null : updates.address;
-    if (updates.category !== undefined) dataToUpdate.category = updates.category === '' ? null : updates.category;
-    if (updates.isLeader !== undefined) dataToUpdate.isLeader = updates.isLeader;
+    const fields: string[] = [];
+    const values: any[] = [];
 
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+    if (updates.email !== undefined) { fields.push('email = ?'); values.push(updates.email); }
+    if (updates.companyName !== undefined) { fields.push('company_name = ?'); values.push(updates.companyName || null); }
+    if (updates.phone !== undefined) { fields.push('phone = ?'); values.push(updates.phone || null); }
+    if (updates.address !== undefined) { fields.push('address = ?'); values.push(updates.address || null); }
+    if (updates.isLeader !== undefined) { fields.push('is_leader = ?'); values.push(updates.isLeader); }
 
-    if (Object.keys(dataToUpdate).length === 0) {
-      return true; // No actual updates to make
-    }
+    if (fields.length === 0) return true;
 
-    await updateDoc(userDoc, dataToUpdate);
+    values.push(userId);
+    await query(`UPDATE ${USERS_TABLE} SET ${fields.join(', ')} WHERE id = ?`, values);
     return true;
   } catch (error) {
-    console.error(`Error updating user info for ${userId}:`, error);
+    console.error(`Error updating user info for ${userId} in MySQL:`, error);
     return false;
   }
 };
 
-
-// Update user's FCM token
-export async function updateUserFCMTokenInFirestore(userId: string, fcmToken: string | null): Promise<boolean> {
-  if (!userId) {
-    console.error("updateUserFCMTokenInFirestore: userId is required.");
-    return false;
-  }
+// Update user's FCM token in MySQL
+export async function updateUserFCMToken(userId: string, fcmToken: string | null): Promise<boolean> {
+  if (!userId) return false;
   try {
-    const userDocRef = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDocRef, { fcmToken: fcmToken ?? null }); // Store null if token is null
-    console.log(`[User Service] FCM token for user ${userId} updated to: ${fcmToken}`);
+    await query(`UPDATE ${USERS_TABLE} SET fcm_token = ? WHERE id = ?`, [fcmToken, userId]);
     return true;
   } catch (error) {
-    console.error(`[User Service] Error updating FCM token for user ${userId}:`, error);
+    console.error(`Error updating FCM token for user ${userId} in MySQL:`, error);
     return false;
   }
 }
 
-
-// Helper to seed initial admin or ensure admin@colorhut.dev is SYSTEM_ADMIN
+// Seed admin user in MySQL
 export const seedInitialAdminUser = async () => {
   const adminEmail = "admin@colorhut.dev";
-  
   try {
+    // await ensureCoreTablesExist(); // Removed non-existent call
     const existingAdmin = await getUserByEmail(adminEmail);
-
     if (!existingAdmin) {
-      console.log(`No user found with email ${adminEmail}, seeding initial System Admin...`);
       await addUser({
         name: 'Default Admin',
         email: adminEmail,
-        role: 'SYSTEM_ADMIN', 
+        role: 'SYSTEM_ADMIN',
         companyName: 'Color Hut Inc.',
-        password: "password", 
+        password: "password",
         avatarUrl: null,
         monthlyOrderTarget: 0,
         weeklyOrderTarget: 0,
-        isBanned: false, 
+        isBanned: false,
         fcmToken: null,
         isLeader: false,
       });
-      console.log(`Default System Admin user (${adminEmail}) seeded into Firestore.`);
-    } else {
-      let updates: Partial<User> = {};
-      if (existingAdmin.role !== 'SYSTEM_ADMIN') {
-        updates.role = 'SYSTEM_ADMIN';
-        console.log(`Updating ${adminEmail} role to SYSTEM_ADMIN.`);
-      }
-      if (existingAdmin.isBanned === undefined) { 
-        updates.isBanned = false;
-         console.log(`Setting isBanned to false for ${adminEmail}.`);
-      }
-      if (existingAdmin.fcmToken === undefined) { // Ensure fcmToken field exists
-        updates.fcmToken = null;
-      }
-      
-      if (Object.keys(updates).length > 0) {
-        console.log(`User ${adminEmail} found. Applying updates:`, updates);
-        const userDocRef = doc(db, USERS_COLLECTION, existingAdmin.id);
-        await updateDoc(userDocRef, updates);
-        console.log(`User ${adminEmail} updated in Firestore.`);
-      } else {
-         console.log(`User ${adminEmail} already exists with SYSTEM_ADMIN role and correct setup.`);
-      }
     }
   } catch (error) {
-    console.error("Error checking or seeding/updating admin user:", error);
+    console.error("Error seeding admin user in MySQL:", error);
   }
 };

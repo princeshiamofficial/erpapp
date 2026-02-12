@@ -11,7 +11,8 @@ import { ArrowLeft, Eye, PackageCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { TrackingLink, CustomStatus } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getStatuses } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { useToast } from '@/hooks/use-toast';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format as formatDateFns } from 'date-fns';
 
@@ -61,14 +62,14 @@ export default function MonthlyDeliveriesPage() {
           log.status === delivStatus.id && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
         );
       });
-      
+
       // Sort by delivery date, most recent first
       setDeliveredOrders(monthlyDelivered.sort((a, b) => {
-          const aDeliveryLog = a.statusHistory.find(l => l.status === delivStatus.id);
-          const bDeliveryLog = b.statusHistory.find(l => l.status === delivStatus.id);
-          if (!aDeliveryLog || !bDeliveryLog) return 0; // Should not happen if filtered correctly
-          return new Date(bDeliveryLog.timestamp).getTime() - new Date(aDeliveryLog.timestamp).getTime();
-        })
+        const aDeliveryLog = a.statusHistory.find(l => l.status === delivStatus.id);
+        const bDeliveryLog = b.statusHistory.find(l => l.status === delivStatus.id);
+        if (!aDeliveryLog || !bDeliveryLog) return 0; // Should not happen if filtered correctly
+        return new Date(bDeliveryLog.timestamp).getTime() - new Date(aDeliveryLog.timestamp).getTime();
+      })
       );
 
     } catch (error) {

@@ -1,0 +1,1344 @@
+{
+  "collections": [
+    {
+      "name": "COWorkflow",
+      "document_count": 0,
+      "created_at": "2025-10-18T12:32:28+00:00"
+    },
+    {
+      "name": "COworkflow",
+      "document_count": 58,
+      "created_at": "2025-10-16T04:23:09+00:00"
+    },
+    {
+      "name": "CRcase",
+      "document_count": 0,
+      "created_at": "2025-09-20T12:29:53+00:00"
+    },
+    {
+      "name": "CRworkflow",
+      "document_count": 0,
+      "created_at": "2025-09-20T09:05:41+00:00"
+    },
+    {
+      "name": "DRcase",
+      "document_count": 6,
+      "created_at": "2025-09-20T12:32:46+00:00"
+    },
+    {
+      "name": "DRworkflow",
+      "document_count": 310,
+      "created_at": "2025-09-20T07:34:09+00:00"
+    },
+    {
+      "name": "LRcase",
+      "document_count": 0,
+      "created_at": "2025-09-20T12:32:50+00:00"
+    },
+    {
+      "name": "LRworkflow",
+      "document_count": 53,
+      "created_at": "2025-09-20T09:05:56+00:00"
+    },
+    {
+      "name": "Lrbills",
+      "document_count": 0,
+      "created_at": "2025-12-31T06:21:37+00:00"
+    },
+    {
+      "name": "attendance-2023-04",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:37+00:00"
+    },
+    {
+      "name": "attendance-2023-05",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:36+00:00"
+    },
+    {
+      "name": "attendance-2023-06",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:34+00:00"
+    },
+    {
+      "name": "attendance-2023-07",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:32+00:00"
+    },
+    {
+      "name": "attendance-2023-08",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:31+00:00"
+    },
+    {
+      "name": "attendance-2023-09",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:29+00:00"
+    },
+    {
+      "name": "attendance-2023-10",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:27+00:00"
+    },
+    {
+      "name": "attendance-2023-11",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:25+00:00"
+    },
+    {
+      "name": "attendance-2023-12",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:24+00:00"
+    },
+    {
+      "name": "attendance-2024-01",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:22+00:00"
+    },
+    {
+      "name": "attendance-2024-02",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:20+00:00"
+    },
+    {
+      "name": "attendance-2024-03",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:18+00:00"
+    },
+    {
+      "name": "attendance-2024-04",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:16+00:00"
+    },
+    {
+      "name": "attendance-2024-05",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:14+00:00"
+    },
+    {
+      "name": "attendance-2024-06",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:13+00:00"
+    },
+    {
+      "name": "attendance-2024-07",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:11+00:00"
+    },
+    {
+      "name": "attendance-2024-08",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:09+00:00"
+    },
+    {
+      "name": "attendance-2024-09",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:07+00:00"
+    },
+    {
+      "name": "attendance-2024-10",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:05+00:00"
+    },
+    {
+      "name": "attendance-2024-11",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:03+00:00"
+    },
+    {
+      "name": "attendance-2024-12",
+      "document_count": 0,
+      "created_at": "2025-10-01T09:47:02+00:00"
+    },
+    {
+      "name": "attendance-2025-01",
+      "document_count": 0,
+      "created_at": "2025-09-27T08:02:35+00:00"
+    },
+    {
+      "name": "attendance-2025-02",
+      "document_count": 0,
+      "created_at": "2025-09-28T10:26:48+00:00"
+    },
+    {
+      "name": "attendance-2025-03",
+      "document_count": 0,
+      "created_at": "2025-09-27T08:01:13+00:00"
+    },
+    {
+      "name": "attendance-2025-04",
+      "document_count": 0,
+      "created_at": "2025-09-27T08:01:04+00:00"
+    },
+    {
+      "name": "attendance-2025-05",
+      "document_count": 0,
+      "created_at": "2025-09-27T08:00:49+00:00"
+    },
+    {
+      "name": "attendance-2025-06",
+      "document_count": 0,
+      "created_at": "2025-09-27T08:03:44+00:00"
+    },
+    {
+      "name": "attendance-2025-07",
+      "document_count": 0,
+      "created_at": "2025-09-27T06:57:25+00:00"
+    },
+    {
+      "name": "attendance-2025-08",
+      "document_count": 0,
+      "created_at": "2025-09-27T05:59:33+00:00"
+    },
+    {
+      "name": "attendance-2025-09",
+      "document_count": 8,
+      "created_at": "2025-09-27T04:10:36+00:00"
+    },
+    {
+      "name": "attendance-2025-10",
+      "document_count": 318,
+      "created_at": "2025-09-27T06:30:13+00:00"
+    },
+    {
+      "name": "attendance-2025-11",
+      "document_count": 305,
+      "created_at": "2025-09-30T03:18:48+00:00"
+    },
+    {
+      "name": "attendance-2025-12",
+      "document_count": 409,
+      "created_at": "2025-09-30T03:18:50+00:00"
+    },
+    {
+      "name": "attendance-2026-01",
+      "document_count": 486,
+      "created_at": "2025-09-30T03:18:52+00:00"
+    },
+    {
+      "name": "attendance-2026-02",
+      "document_count": 207,
+      "created_at": "2025-09-30T03:18:53+00:00"
+    },
+    {
+      "name": "attendance-2026-03",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:18:55+00:00"
+    },
+    {
+      "name": "attendance-2026-04",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:18:57+00:00"
+    },
+    {
+      "name": "attendance-2026-05",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:00+00:00"
+    },
+    {
+      "name": "attendance-2026-06",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:02+00:00"
+    },
+    {
+      "name": "attendance-2026-07",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:04+00:00"
+    },
+    {
+      "name": "attendance-2026-08",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:06+00:00"
+    },
+    {
+      "name": "attendance-2026-09",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:08+00:00"
+    },
+    {
+      "name": "attendance-2026-10",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:10+00:00"
+    },
+    {
+      "name": "attendance-2026-11",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:12+00:00"
+    },
+    {
+      "name": "attendance-2026-12",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:13+00:00"
+    },
+    {
+      "name": "attendance-2027-01",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:15+00:00"
+    },
+    {
+      "name": "attendance-2027-02",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:18+00:00"
+    },
+    {
+      "name": "attendance-2027-03",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:19+00:00"
+    },
+    {
+      "name": "attendance-2027-04",
+      "document_count": 0,
+      "created_at": "2025-09-30T03:19:21+00:00"
+    },
+    {
+      "name": "attendance-mark",
+      "document_count": 40,
+      "created_at": "2025-09-27T05:02:21+00:00"
+    },
+    {
+      "name": "attendance-month",
+      "document_count": 0,
+      "created_at": "2025-10-05T13:23:14+00:00"
+    },
+    {
+      "name": "billReports",
+      "document_count": 134,
+      "created_at": "2025-10-08T12:29:26+00:00"
+    },
+    {
+      "name": "clientGifts",
+      "document_count": 2,
+      "created_at": "2025-09-09T10:49:23+00:00"
+    },
+    {
+      "name": "customOrderStatuses",
+      "document_count": 16,
+      "created_at": "2025-09-04T12:22:54+00:00"
+    },
+    {
+      "name": "dialogue",
+      "document_count": 18,
+      "created_at": "2025-09-20T12:02:53+00:00"
+    },
+    {
+      "name": "districtData",
+      "document_count": 770,
+      "created_at": "2025-09-04T13:01:37+00:00"
+    },
+    {
+      "name": "employees",
+      "document_count": 39,
+      "created_at": "2025-09-06T03:37:56+00:00"
+    },
+    {
+      "name": "feedback",
+      "document_count": 4,
+      "created_at": "2025-09-11T10:27:33+00:00"
+    },
+    {
+      "name": "finance-01-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:48+00:00"
+    },
+    {
+      "name": "finance-01-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:43+00:00"
+    },
+    {
+      "name": "finance-02-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:48+00:00"
+    },
+    {
+      "name": "finance-02-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:43+00:00"
+    },
+    {
+      "name": "finance-03-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:47+00:00"
+    },
+    {
+      "name": "finance-03-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:42+00:00"
+    },
+    {
+      "name": "finance-04-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:47+00:00"
+    },
+    {
+      "name": "finance-04-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:42+00:00"
+    },
+    {
+      "name": "finance-05-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:46+00:00"
+    },
+    {
+      "name": "finance-05-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:41+00:00"
+    },
+    {
+      "name": "finance-06-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:46+00:00"
+    },
+    {
+      "name": "finance-06-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:41+00:00"
+    },
+    {
+      "name": "finance-07-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:46+00:00"
+    },
+    {
+      "name": "finance-07-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:40+00:00"
+    },
+    {
+      "name": "finance-08-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:45+00:00"
+    },
+    {
+      "name": "finance-08-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:40+00:00"
+    },
+    {
+      "name": "finance-09-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:45+00:00"
+    },
+    {
+      "name": "finance-09-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:40+00:00"
+    },
+    {
+      "name": "finance-10-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:44+00:00"
+    },
+    {
+      "name": "finance-10-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:39+00:00"
+    },
+    {
+      "name": "finance-11-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:44+00:00"
+    },
+    {
+      "name": "finance-11-2025",
+      "document_count": 30,
+      "created_at": "2025-11-04T13:03:39+00:00"
+    },
+    {
+      "name": "finance-12-2023",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:49+00:00"
+    },
+    {
+      "name": "finance-12-2024",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:03:44+00:00"
+    },
+    {
+      "name": "finance-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-29T06:23:02+00:00"
+    },
+    {
+      "name": "leads-01-2026",
+      "document_count": 1,
+      "created_at": "2026-01-21T09:51:36+00:00"
+    },
+    {
+      "name": "leads",
+      "document_count": 10579,
+      "created_at": "2025-09-06T06:24:14+00:00"
+    },
+    {
+      "name": "officeLocation",
+      "document_count": 2,
+      "created_at": "2025-09-26T11:12:33+00:00"
+    },
+    {
+      "name": "officeTime",
+      "document_count": 3,
+      "created_at": "2025-09-26T13:52:44+00:00"
+    },
+    {
+      "name": "orders",
+      "document_count": 1184,
+      "created_at": "2025-09-06T15:17:21+00:00"
+    },
+    {
+      "name": "payHistory-01-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-01-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-01T03:14:51+00:00"
+    },
+    {
+      "name": "payHistory-02-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-02-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-02-2026",
+      "document_count": 0,
+      "created_at": "2026-02-01T04:04:29+00:00"
+    },
+    {
+      "name": "payHistory-03-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-03-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-04-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-04-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-05-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-05-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-06-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-06-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-07-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-07-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-08-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-08-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-09-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-09-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-10-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-10-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-11-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-12-2023",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-12-2024",
+      "document_count": 0,
+      "created_at": "2025-11-12T10:48:45+00:00"
+    },
+    {
+      "name": "payHistory-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-01T09:16:21+00:00"
+    },
+    {
+      "name": "personalTransactions",
+      "document_count": 151,
+      "created_at": "2025-09-06T03:23:44+00:00"
+    },
+    {
+      "name": "pipelineLeads",
+      "document_count": 0,
+      "created_at": "2026-01-21T09:42:05+00:00"
+    },
+    {
+      "name": "projects",
+      "document_count": 1164,
+      "created_at": "2025-09-06T15:38:16+00:00"
+    },
+    {
+      "name": "providentFund",
+      "document_count": 0,
+      "created_at": "2026-02-03T03:49:47+00:00"
+    },
+    {
+      "name": "purchaseRequests",
+      "document_count": 0,
+      "created_at": "2025-09-07T12:07:41+00:00"
+    },
+    {
+      "name": "quotations",
+      "document_count": 147,
+      "created_at": "2025-09-08T13:54:55+00:00"
+    },
+    {
+      "name": "routine-c9857954-2a79-40f5-bded-84917b6f1e32",
+      "document_count": 8,
+      "created_at": "2025-10-16T13:43:20+00:00"
+    },
+    {
+      "name": "routine-headers-Admin-003",
+      "document_count": 10,
+      "created_at": "2025-10-17T06:19:09+00:00"
+    },
+    {
+      "name": "routine-headers-CRM-019",
+      "document_count": 1,
+      "created_at": "2025-11-26T03:06:46+00:00"
+    },
+    {
+      "name": "routine-headers-DR-003",
+      "document_count": 1,
+      "created_at": "2025-11-15T04:52:17+00:00"
+    },
+    {
+      "name": "routine-headers-c9857954-2a79-40f5-bded-84917b6f1e32",
+      "document_count": 19,
+      "created_at": "2025-10-16T16:47:54+00:00"
+    },
+    {
+      "name": "routines-Admin-002-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-03T08:11:20+00:00"
+    },
+    {
+      "name": "routines-Admin-002-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-18T09:31:17+00:00"
+    },
+    {
+      "name": "routines-Admin-002-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-18T09:31:16+00:00"
+    },
+    {
+      "name": "routines-Admin-002-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-10T13:19:18+00:00"
+    },
+    {
+      "name": "routines-Admin-002-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-03T08:11:21+00:00"
+    },
+    {
+      "name": "routines-Admin-003-01-2026",
+      "document_count": 3,
+      "created_at": "2026-01-01T02:15:58+00:00"
+    },
+    {
+      "name": "routines-Admin-003-02-2026",
+      "document_count": 3,
+      "created_at": "2026-02-06T23:26:56+00:00"
+    },
+    {
+      "name": "routines-Admin-003-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-16T19:44:55+00:00"
+    },
+    {
+      "name": "routines-Admin-003-10-2025",
+      "document_count": 8,
+      "created_at": "2025-10-16T19:44:55+00:00"
+    },
+    {
+      "name": "routines-Admin-003-11-2025",
+      "document_count": 5,
+      "created_at": "2025-11-01T06:32:27+00:00"
+    },
+    {
+      "name": "routines-Admin-003-12-2025",
+      "document_count": 1,
+      "created_at": "2025-12-16T10:22:18+00:00"
+    },
+    {
+      "name": "routines-Admin-005-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-11T06:30:23+00:00"
+    },
+    {
+      "name": "routines-Admin-005-11-2025",
+      "document_count": 0,
+      "created_at": "2025-12-20T10:41:44+00:00"
+    },
+    {
+      "name": "routines-Admin-005-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-20T10:41:44+00:00"
+    },
+    {
+      "name": "routines-CRM-002-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-22T07:36:10+00:00"
+    },
+    {
+      "name": "routines-CRM-002-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-20T12:56:53+00:00"
+    },
+    {
+      "name": "routines-CRM-002-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-20T12:56:53+00:00"
+    },
+    {
+      "name": "routines-CRM-002-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-04T13:33:33+00:00"
+    },
+    {
+      "name": "routines-CRM-002-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-13T13:43:36+00:00"
+    },
+    {
+      "name": "routines-CRM-003-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-25T06:10:49+00:00"
+    },
+    {
+      "name": "routines-CRM-003-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-25T06:10:48+00:00"
+    },
+    {
+      "name": "routines-CRM-004-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-07T04:03:43+00:00"
+    },
+    {
+      "name": "routines-CRM-004-02-2026",
+      "document_count": 0,
+      "created_at": "2026-02-08T11:40:19+00:00"
+    },
+    {
+      "name": "routines-CRM-004-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-23T11:28:06+00:00"
+    },
+    {
+      "name": "routines-CRM-004-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-23T11:28:05+00:00"
+    },
+    {
+      "name": "routines-CRM-004-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-24T10:45:48+00:00"
+    },
+    {
+      "name": "routines-CRM-004-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-02T07:17:58+00:00"
+    },
+    {
+      "name": "routines-CRM-010-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-27T05:13:42+00:00"
+    },
+    {
+      "name": "routines-CRM-010-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-27T05:13:42+00:00"
+    },
+    {
+      "name": "routines-CRM-011-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-19T03:09:44+00:00"
+    },
+    {
+      "name": "routines-CRM-011-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-19T03:09:43+00:00"
+    },
+    {
+      "name": "routines-CRM-011-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-08T07:39:39+00:00"
+    },
+    {
+      "name": "routines-CRM-014-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-18T03:35:15+00:00"
+    },
+    {
+      "name": "routines-CRM-014-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-18T03:35:15+00:00"
+    },
+    {
+      "name": "routines-CRM-014-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-15T03:27:37+00:00"
+    },
+    {
+      "name": "routines-CRM-014-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-16T03:11:38+00:00"
+    },
+    {
+      "name": "routines-CRM-015-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-23T07:59:00+00:00"
+    },
+    {
+      "name": "routines-CRM-015-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-23T07:58:59+00:00"
+    },
+    {
+      "name": "routines-CRM-016-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-29T06:08:27+00:00"
+    },
+    {
+      "name": "routines-CRM-016-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-29T06:08:26+00:00"
+    },
+    {
+      "name": "routines-CRM-016-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-10T13:00:33+00:00"
+    },
+    {
+      "name": "routines-CRM-016-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-18T04:10:33+00:00"
+    },
+    {
+      "name": "routines-CRM-017-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-03T03:15:22+00:00"
+    },
+    {
+      "name": "routines-CRM-017-10-2025",
+      "document_count": 0,
+      "created_at": "2025-11-24T12:14:13+00:00"
+    },
+    {
+      "name": "routines-CRM-017-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-24T12:14:12+00:00"
+    },
+    {
+      "name": "routines-CRM-017-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-09T03:30:10+00:00"
+    },
+    {
+      "name": "routines-CRM-018-10-2025",
+      "document_count": 0,
+      "created_at": "2025-11-24T12:39:15+00:00"
+    },
+    {
+      "name": "routines-CRM-018-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-24T12:39:14+00:00"
+    },
+    {
+      "name": "routines-CRM-018-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-01T13:35:21+00:00"
+    },
+    {
+      "name": "routines-CRM-019-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-01T12:36:31+00:00"
+    },
+    {
+      "name": "routines-CRM-019-10-2025",
+      "document_count": 0,
+      "created_at": "2025-11-24T12:04:35+00:00"
+    },
+    {
+      "name": "routines-CRM-019-11-2025",
+      "document_count": 1,
+      "created_at": "2025-11-24T12:04:35+00:00"
+    },
+    {
+      "name": "routines-CRM-019-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-03T03:27:52+00:00"
+    },
+    {
+      "name": "routines-CRM-020-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-04T07:49:26+00:00"
+    },
+    {
+      "name": "routines-CRM-020-11-2025",
+      "document_count": 0,
+      "created_at": "2025-12-08T09:55:04+00:00"
+    },
+    {
+      "name": "routines-CRM-020-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-08T09:55:03+00:00"
+    },
+    {
+      "name": "routines-CRM-022-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-12T06:48:03+00:00"
+    },
+    {
+      "name": "routines-CRM-022-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-12T06:48:04+00:00"
+    },
+    {
+      "name": "routines-CRM-023-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-18T12:05:12+00:00"
+    },
+    {
+      "name": "routines-CRM-023-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-18T12:05:13+00:00"
+    },
+    {
+      "name": "routines-CRM-024-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-18T11:19:56+00:00"
+    },
+    {
+      "name": "routines-CRM-024-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-18T11:19:56+00:00"
+    },
+    {
+      "name": "routines-CRM-025-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-21T09:22:09+00:00"
+    },
+    {
+      "name": "routines-CRM-025-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-21T09:22:10+00:00"
+    },
+    {
+      "name": "routines-CRM-026-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-21T10:54:35+00:00"
+    },
+    {
+      "name": "routines-CRM-026-02-2026",
+      "document_count": 0,
+      "created_at": "2026-02-03T03:01:34+00:00"
+    },
+    {
+      "name": "routines-CRM-026-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-21T10:54:36+00:00"
+    },
+    {
+      "name": "routines-CRM-027-01-2026",
+      "document_count": 0,
+      "created_at": "2026-02-09T09:11:37+00:00"
+    },
+    {
+      "name": "routines-CRM-027-02-2026",
+      "document_count": 0,
+      "created_at": "2026-02-09T09:11:36+00:00"
+    },
+    {
+      "name": "routines-DR-001-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-05T17:22:32+00:00"
+    },
+    {
+      "name": "routines-DR-001-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-20T12:09:33+00:00"
+    },
+    {
+      "name": "routines-DR-001-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-20T12:09:32+00:00"
+    },
+    {
+      "name": "routines-DR-001-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-22T12:59:01+00:00"
+    },
+    {
+      "name": "routines-DR-001-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-05T17:22:33+00:00"
+    },
+    {
+      "name": "routines-DR-002-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-20T04:58:21+00:00"
+    },
+    {
+      "name": "routines-DR-002-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-20T04:58:21+00:00"
+    },
+    {
+      "name": "routines-DR-002-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-21T08:09:31+00:00"
+    },
+    {
+      "name": "routines-DR-002-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-10T09:32:59+00:00"
+    },
+    {
+      "name": "routines-DR-003-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-01T12:05:05+00:00"
+    },
+    {
+      "name": "routines-DR-003-02-2026",
+      "document_count": 0,
+      "created_at": "2026-02-01T03:24:45+00:00"
+    },
+    {
+      "name": "routines-DR-003-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-18T09:24:39+00:00"
+    },
+    {
+      "name": "routines-DR-003-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-18T09:24:39+00:00"
+    },
+    {
+      "name": "routines-DR-003-11-2025",
+      "document_count": 28,
+      "created_at": "2025-11-01T13:24:02+00:00"
+    },
+    {
+      "name": "routines-DR-003-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-18T03:13:28+00:00"
+    },
+    {
+      "name": "routines-DR-005-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-07T03:58:53+00:00"
+    },
+    {
+      "name": "routines-DR-005-02-2026",
+      "document_count": 0,
+      "created_at": "2026-02-03T06:27:51+00:00"
+    },
+    {
+      "name": "routines-DR-005-11-2025",
+      "document_count": 0,
+      "created_at": "2025-12-24T08:25:55+00:00"
+    },
+    {
+      "name": "routines-DR-005-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-24T08:25:54+00:00"
+    },
+    {
+      "name": "routines-LR-001-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-18T12:07:46+00:00"
+    },
+    {
+      "name": "routines-LR-001-12-2025",
+      "document_count": 0,
+      "created_at": "2026-01-18T12:07:46+00:00"
+    },
+    {
+      "name": "routines-LR-002-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-28T13:00:57+00:00"
+    },
+    {
+      "name": "routines-LR-002-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-28T13:00:57+00:00"
+    },
+    {
+      "name": "routines-LR-002-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-12T05:09:54+00:00"
+    },
+    {
+      "name": "routines-LR-003-01-2026",
+      "document_count": 0,
+      "created_at": "2026-01-29T08:56:17+00:00"
+    },
+    {
+      "name": "routines-LR-003-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-21T16:35:54+00:00"
+    },
+    {
+      "name": "routines-LR-003-10-2025",
+      "document_count": 0,
+      "created_at": "2025-10-21T16:35:53+00:00"
+    },
+    {
+      "name": "routines-LR-003-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-11T13:49:31+00:00"
+    },
+    {
+      "name": "routines-LR-003-12-2025",
+      "document_count": 0,
+      "created_at": "2025-12-22T15:32:57+00:00"
+    },
+    {
+      "name": "routines-c9857954-2a79-40f5-bded-84917b6f1e32-01-2026",
+      "document_count": 0,
+      "created_at": "2026-02-03T06:05:50+00:00"
+    },
+    {
+      "name": "routines-c9857954-2a79-40f5-bded-84917b6f1e32-02-2026",
+      "document_count": 0,
+      "created_at": "2026-02-03T06:05:49+00:00"
+    },
+    {
+      "name": "routines-c9857954-2a79-40f5-bded-84917b6f1e32-09-2025",
+      "document_count": 0,
+      "created_at": "2025-10-16T18:07:20+00:00"
+    },
+    {
+      "name": "routines-c9857954-2a79-40f5-bded-84917b6f1e32-10-2025",
+      "document_count": 7,
+      "created_at": "2025-10-16T16:45:42+00:00"
+    },
+    {
+      "name": "routines-c9857954-2a79-40f5-bded-84917b6f1e32-11-2025",
+      "document_count": 0,
+      "created_at": "2025-11-06T15:15:56+00:00"
+    },
+    {
+      "name": "routines-c9857954-2a79-40f5-bded-84917b6f1e32-12-2025",
+      "document_count": 1,
+      "created_at": "2025-12-17T10:18:03+00:00"
+    },
+    {
+      "name": "routines-c9857954-2a79-40f5-bded-84917b6f1e32",
+      "document_count": 2,
+      "created_at": "2025-10-16T16:33:31+00:00"
+    },
+    {
+      "name": "salarySheet-2025-01",
+      "document_count": 0,
+      "created_at": "2025-12-23T11:57:27+00:00"
+    },
+    {
+      "name": "salarySheet-2025-03",
+      "document_count": 0,
+      "created_at": "2026-02-07T09:03:52+00:00"
+    },
+    {
+      "name": "salarySheet-2025-04",
+      "document_count": 0,
+      "created_at": "2026-02-07T09:04:22+00:00"
+    },
+    {
+      "name": "salarySheet-2025-05",
+      "document_count": 0,
+      "created_at": "2026-02-01T08:56:41+00:00"
+    },
+    {
+      "name": "salarySheet-2025-06",
+      "document_count": 0,
+      "created_at": "2026-02-07T09:05:05+00:00"
+    },
+    {
+      "name": "salarySheet-2025-07",
+      "document_count": 0,
+      "created_at": "2026-02-07T09:05:22+00:00"
+    },
+    {
+      "name": "salarySheet-2025-08",
+      "document_count": 13,
+      "created_at": "2025-10-06T04:27:27+00:00"
+    },
+    {
+      "name": "salarySheet-2025-09",
+      "document_count": 18,
+      "created_at": "2025-10-06T04:27:19+00:00"
+    },
+    {
+      "name": "salarySheet-2025-10",
+      "document_count": 17,
+      "created_at": "2025-10-06T04:24:08+00:00"
+    },
+    {
+      "name": "salarySheet-2025-11",
+      "document_count": 19,
+      "created_at": "2025-10-07T08:26:18+00:00"
+    },
+    {
+      "name": "salarySheet-2025-12",
+      "document_count": 19,
+      "created_at": "2025-10-06T05:49:08+00:00"
+    },
+    {
+      "name": "salarySheet-2026-01",
+      "document_count": 30,
+      "created_at": "2025-12-23T11:56:27+00:00"
+    },
+    {
+      "name": "salarySheet-2026-02",
+      "document_count": 0,
+      "created_at": "2026-02-05T03:06:59+00:00"
+    },
+    {
+      "name": "salarySheet-2026-12",
+      "document_count": 0,
+      "created_at": "2025-12-23T11:56:19+00:00"
+    },
+    {
+      "name": "serviceGifts",
+      "document_count": 6,
+      "created_at": "2025-09-09T07:49:10+00:00"
+    },
+    {
+      "name": "serviceLaminations",
+      "document_count": 4,
+      "created_at": "2025-09-04T12:42:10+00:00"
+    },
+    {
+      "name": "serviceModels",
+      "document_count": 197,
+      "created_at": "2025-09-04T12:37:45+00:00"
+    },
+    {
+      "name": "servicePaymentMethods",
+      "document_count": 18,
+      "created_at": "2025-09-04T12:42:42+00:00"
+    },
+    {
+      "name": "shippedOrders",
+      "document_count": 26,
+      "created_at": "2025-09-06T15:46:15+00:00"
+    },
+    {
+      "name": "soldhistory",
+      "document_count": 81,
+      "created_at": "2025-11-05T06:23:18+00:00"
+    },
+    {
+      "name": "sowData",
+      "document_count": 0,
+      "created_at": "2025-09-06T15:58:45+00:00"
+    },
+    {
+      "name": "stock",
+      "document_count": 36,
+      "created_at": "2025-11-05T03:50:37+00:00"
+    },
+    {
+      "name": "teamPerformance",
+      "document_count": 670,
+      "created_at": "2025-09-10T13:09:50+00:00"
+    },
+    {
+      "name": "userRoles",
+      "document_count": 13,
+      "created_at": "2026-02-03T05:15:57+00:00"
+    },
+    {
+      "name": "vendorBills",
+      "document_count": 2,
+      "created_at": "2025-09-15T11:17:07+00:00"
+    },
+    {
+      "name": "vendorCategories",
+      "document_count": 4,
+      "created_at": "2025-09-15T07:21:14+00:00"
+    },
+    {
+      "name": "vendorProducts",
+      "document_count": 2,
+      "created_at": "2025-09-15T07:25:50+00:00"
+    },
+    {
+      "name": "weekend",
+      "document_count": 1,
+      "created_at": "2025-09-28T13:32:48+00:00"
+    }
+  ]
+}

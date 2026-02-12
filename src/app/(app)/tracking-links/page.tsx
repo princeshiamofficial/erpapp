@@ -6,16 +6,17 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical, Briefcase } from "lucide-react"; 
+import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical, Briefcase } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getOrders } from '@/lib/order-service'; 
-import { getContrastTextColor, getStatuses } from '@/lib/status-service';
+import { getOrders } from '@/lib/order-service';
+import { getStatuses } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast'; 
+import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +40,7 @@ const ITEMS_PER_PAGE = 25;
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
-  const { toast } = useToast(); 
+  const { toast } = useToast();
   const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,7 +51,7 @@ export default function TrackingLinksPage() {
   const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -79,16 +80,16 @@ export default function TrackingLinksPage() {
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
 
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
     return ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
   };
-  
+
   const handleTrackingLinkUpdated = () => {
-    fetchData(); 
+    fetchData();
     setIsEditDialogOpen(false);
     setSelectedLink(null);
   };
@@ -97,7 +98,7 @@ export default function TrackingLinksPage() {
     const urlToCopy = linkType === 'feedback'
       ? `${window.location.origin}/feedback/${linkId}`
       : `${window.location.origin}/my-project/${linkId}`;
-    
+
     const successMessage = linkType === 'feedback' ? "Feedback link copied!" : "Project link copied!";
     const setter = linkType === 'feedback' ? setCopiedLinkId : setCopiedProjectLinkId;
 
@@ -108,7 +109,7 @@ export default function TrackingLinksPage() {
       await navigator.clipboard.writeText(urlToCopy);
       toast({ title: "Link Copied!", description: successMessage });
       setter(linkId);
-      setTimeout(() => setter(null), 2000); 
+      setTimeout(() => setter(null), 2000);
     } catch (err) {
       console.error('Failed to copy: ', err);
       let description = "Could not copy the link. Please try copying manually.";
@@ -116,7 +117,7 @@ export default function TrackingLinksPage() {
         if (err.name === 'NotAllowedError' || err.message.toLowerCase().includes("permissions policy")) {
           description = "Clipboard access was denied or restricted. Please check your browser settings.";
         } else if (err.message.includes("Clipboard API not available") || (typeof window !== 'undefined' && !window.isSecureContext)) {
-           description = "Copying to clipboard requires a secure connection (HTTPS) or is not supported by your browser.";
+          description = "Copying to clipboard requires a secure connection (HTTPS) or is not supported by your browser.";
         }
       }
       toast({ title: "Copy Failed", description, variant: "destructive" });
@@ -126,7 +127,7 @@ export default function TrackingLinksPage() {
 
   const filteredTrackingLinks = useMemo(() => {
     if (!searchTerm) return trackingLinks;
-    return trackingLinks.filter(link => 
+    return trackingLinks.filter(link =>
       link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -153,11 +154,11 @@ export default function TrackingLinksPage() {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInScope = new Set<string>();
       paginatedLinks.forEach(link => uniqueStatusIdsInScope.add(link.currentStatus));
-      
+
       uniqueStatusIdsInScope.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
       });
-      
+
       setOrderStatusDisplay(prevMap => {
         if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
           return newDisplayInfoMap;
@@ -168,11 +169,11 @@ export default function TrackingLinksPage() {
       setOrderStatusDisplay({});
     }
   }, [paginatedLinks, allStatuses, getStatusDisplayInfoCallback]);
-  
+
   const renderPagination = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
-    
+    const maxPagesToShow = 5;
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
@@ -181,7 +182,7 @@ export default function TrackingLinksPage() {
 
       if (currentPage < 3) endPage = maxPagesToShow;
       else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-      
+
       if (startPage > 1) {
         pageNumbers.push(1);
         if (startPage > 2) pageNumbers.push('...');
@@ -193,20 +194,20 @@ export default function TrackingLinksPage() {
       }
     }
     return pageNumbers.map((page, index) => (
-        <PaginationItem key={index}>
+      <PaginationItem key={index}>
         {page === '...' ? <PaginationEllipsis />
-        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+          : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
             {page}
           </PaginationLink>
         }
-        </PaginationItem>
+      </PaginationItem>
     ));
   };
 
 
   if (!currentUser) return (
-     <div className="flex h-screen w-full items-center justify-center">
-       <Loader2 className="h-12 w-12 animate-spin text-primary" />
+    <div className="flex h-screen w-full items-center justify-center">
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
     </div>
   );
 
@@ -214,26 +215,26 @@ export default function TrackingLinksPage() {
     <div className="space-y-6 p-1 sm:p-0">
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex-grow">
-                    <CardTitle className="text-card-foreground text-xl">Track Orders</CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of generated tracking links and their status.</CardDescription>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-                        <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-                    </Button>
-                    <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                        placeholder="Search links..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 bg-background h-10 rounded-md w-full"
-                        />
-                    </div>
-                </div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex-grow">
+              <CardTitle className="text-card-foreground text-xl">Track Orders</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of generated tracking links and their status.</CardDescription>
             </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search links..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
+                />
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -251,7 +252,7 @@ export default function TrackingLinksPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                   [...Array(5)].map((_, i) => (
+                  [...Array(5)].map((_, i) => (
                     <TableRow key={`skel-link-${i}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
@@ -302,7 +303,7 @@ export default function TrackingLinksPage() {
                                 {copiedLinkId === link.id ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <ClipboardCopy className="mr-2 h-4 w-4" />}
                                 {copiedLinkId === link.id ? "Copied!" : "Copy Feedback Link"}
                               </DropdownMenuItem>
-                               <DropdownMenuItem
+                              <DropdownMenuItem
                                 onSelect={() => handleCopyLink(link.id, 'project')}
                                 className="cursor-pointer"
                               >
@@ -329,18 +330,18 @@ export default function TrackingLinksPage() {
                     );
                   })
                 ) : (
-                    <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                            <Link2 className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
-                            <p className="text-lg text-muted-foreground font-medium">
-                              {searchTerm ? "No tracking links match your search." : "No tracking links found."}
-                            </p>
-                             <p className="text-sm text-muted-foreground">
-                                {searchTerm ? "Try a different search term." : "Orders will appear here once created."}
-                            </p>
-                        </TableCell>
-                    </TableRow>
-                 )}
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                      <Link2 className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                      <p className="text-lg text-muted-foreground font-medium">
+                        {searchTerm ? "No tracking links match your search." : "No tracking links found."}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {searchTerm ? "Try a different search term." : "Orders will appear here once created."}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -350,19 +351,19 @@ export default function TrackingLinksPage() {
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
-                    aria-disabled={currentPage === 1} 
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                    aria-disabled={currentPage === 1}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                   />
                 </PaginationItem>
                 {renderPagination()}
                 <PaginationItem>
-                  <PaginationNext 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
-                    aria-disabled={currentPage === totalPages} 
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                    aria-disabled={currentPage === totalPages}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
                   />
                 </PaginationItem>
@@ -375,7 +376,7 @@ export default function TrackingLinksPage() {
       {selectedLink && currentUser && allStatuses.length > 0 && isEditDialogOpen && (
         <EditTrackingLinkDialog
           isOpen={isEditDialogOpen}
-          onOpenChange={(open) => { 
+          onOpenChange={(open) => {
             setIsEditDialogOpen(open);
             if (!open) setSelectedLink(null);
           }}

@@ -4,16 +4,17 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User, OrderLogEntry, CustomStatus, UserRole } from "@/types";
-import { updateOrder, getOrderById, autoSettleOrderIfDelivered } from "@/lib/order-service"; 
-import { getStatusById, DELIVERED_STATUS_ID } from "@/lib/status-service"; 
+import { updateOrder, getOrderById, autoSettleOrderIfDelivered } from "@/lib/order-service";
+import { getStatusById } from "@/lib/status-service";
+import { DELIVERED_STATUS_ID } from "@/lib/status-constants";
 import { v4 as uuidv4 } from 'uuid';
 
 export async function updateTrackingLinkAction(
   orderId: string,
   updates: {
     isPublic?: boolean;
-    currentStatus?: string; 
-    statusNotes?: string; 
+    currentStatus?: string;
+    statusNotes?: string;
   },
   currentUser: User
 ): Promise<TrackingLink | { error: string }> {
@@ -57,15 +58,15 @@ export async function updateTrackingLinkAction(
       if (updates.currentStatus === DELIVERED_STATUS_ID) {
         statusChangedToDelivered = true;
       }
-      
+
       const newStatusObject = await getStatusById(updates.currentStatus);
-      const newStatusName = newStatusObject ? newStatusObject.name : updates.currentStatus; 
+      const newStatusName = newStatusObject ? newStatusObject.name : updates.currentStatus;
 
       let logNotes = `Status changed to ${newStatusName}.`;
       if (updates.statusNotes && updates.statusNotes.trim() !== "") {
-        logNotes = updates.statusNotes.trim(); 
+        logNotes = updates.statusNotes.trim();
       }
-      
+
       newLogEntries.push({
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -75,9 +76,9 @@ export async function updateTrackingLinkAction(
         notes: logNotes,
       });
     }
-    
+
     if (newLogEntries.length > 0) {
-        dataToUpdate.statusHistory = [...currentOrder.statusHistory, ...newLogEntries];
+      dataToUpdate.statusHistory = [...currentOrder.statusHistory, ...newLogEntries];
     }
 
     if (Object.keys(dataToUpdate).length === 0) {
@@ -95,14 +96,14 @@ export async function updateTrackingLinkAction(
 
     revalidatePath("/(app)/tracking-links");
     revalidatePath(`/track/${orderId}`);
-    revalidatePath("/(app)/dashboard"); 
+    revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
-    
+
     const updatedOrder = await getOrderById(orderId);
-     if (!updatedOrder) {
-        return { error: "Failed to retrieve updated order after update."};
+    if (!updatedOrder) {
+      return { error: "Failed to retrieve updated order after update." };
     }
     return updatedOrder;
 

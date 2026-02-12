@@ -9,11 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { useSocket } from "@/contexts/socket-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getStatuses } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -91,7 +93,7 @@ export default function OrdersPage() {
   const [viewType, setViewType] = useState<'orders' | 'reorders'>('orders');
 
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
-  
+
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
 
 
@@ -127,10 +129,25 @@ export default function OrdersPage() {
     fetchOrderData();
   }, [fetchOrderData]);
 
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("order-updated", (data: any) => {
+      console.log("Order updated remotely:", data);
+      fetchOrderData();
+    });
+
+    return () => {
+      socket.off("order-updated");
+    };
+  }, [socket, fetchOrderData]);
+
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => s.isVisible !== false);
   }, [allStatuses]);
-  
+
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
   };
@@ -142,7 +159,7 @@ export default function OrdersPage() {
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
       result = result.filter(order => order.designerRepresentativeId === currentUser.id);
     }
-    
+
     if (selectedDateRange?.from) {
       const startDate = startOfDay(selectedDateRange.from);
       const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
@@ -157,20 +174,20 @@ export default function OrdersPage() {
     }
 
     if (viewType === 'reorders') {
-        const jobCounts = result.reduce((acc, order) => {
-            const jobId = (order.companyName || '').split(' • ')[0].trim();
-            if (jobId) {
-                acc[jobId] = (acc[jobId] || 0) + 1;
-            }
-            return acc;
-        }, {} as Record<string, number>);
+      const jobCounts = result.reduce((acc, order) => {
+        const jobId = (order.companyName || '').split(' • ')[0].trim();
+        if (jobId) {
+          acc[jobId] = (acc[jobId] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
 
-        const reorderJobIds = new Set(Object.keys(jobCounts).filter(jobId => jobCounts[jobId] > 1));
-        
-        result = result.filter(order => {
-            const jobId = (order.companyName || '').split(' • ')[0].trim();
-            return jobId && reorderJobIds.has(jobId);
-        });
+      const reorderJobIds = new Set(Object.keys(jobCounts).filter(jobId => jobCounts[jobId] > 1));
+
+      result = result.filter(order => {
+        const jobId = (order.companyName || '').split(' • ')[0].trim();
+        return jobId && reorderJobIds.has(jobId);
+      });
     }
 
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -203,7 +220,7 @@ export default function OrdersPage() {
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
 
   useEffect(() => {
@@ -318,18 +335,18 @@ export default function OrdersPage() {
   };
 
   const handleOrderUpdated = useCallback(async (updatedOrder: TrackingLink) => {
-    setOrders(prevOrders => 
+    setOrders(prevOrders =>
       prevOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
     );
-    toast({ title: "Order Updated", description: "Order details have been successfully updated."});
+    toast({ title: "Order Updated", description: "Order details have been successfully updated." });
     setIsEditOrderDialogOpen(false);
     setOrderToEdit(null);
   }, [toast]);
 
   const renderPagination = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
-    
+    const maxPagesToShow = 5;
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
@@ -338,7 +355,7 @@ export default function OrdersPage() {
 
       if (currentPage < 3) endPage = maxPagesToShow;
       else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-      
+
       if (startPage > 1) {
         pageNumbers.push(1);
         if (startPage > 2) pageNumbers.push('...');
@@ -350,13 +367,13 @@ export default function OrdersPage() {
       }
     }
     return pageNumbers.map((page, index) => (
-        <PaginationItem key={index}>
+      <PaginationItem key={index}>
         {page === '...' ? <PaginationEllipsis />
-        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+          : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
             {page}
           </PaginationLink>
         }
-        </PaginationItem>
+      </PaginationItem>
     ));
   };
 
@@ -444,8 +461,8 @@ export default function OrdersPage() {
               </Button>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <DateRangePicker 
-                initialRange={selectedDateRange} 
+              <DateRangePicker
+                initialRange={selectedDateRange}
                 onDateRangeChange={handleDateRangeChange}
                 className="h-10"
               />
@@ -522,7 +539,7 @@ export default function OrdersPage() {
                               {canEditOrder && (
                                 <DropdownMenuItem
                                   onSelect={() => handleOpenEditOrderDialog(order)}
-                                  disabled={!currentUser || !currentUser.role} 
+                                  disabled={!currentUser || !currentUser.role}
                                   className="cursor-pointer"
                                 >
                                   <Edit3 className="mr-2 h-4 w-4" /> Edit Order
@@ -607,24 +624,24 @@ export default function OrdersPage() {
             </Table>
           </div>
         </CardContent>
-         <CardFooter className="py-4 border-t">
+        <CardFooter className="py-4 border-t">
           {totalPages > 1 && (
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
-                    aria-disabled={currentPage === 1} 
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                    aria-disabled={currentPage === 1}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                   />
                 </PaginationItem>
                 {renderPagination()}
                 <PaginationItem>
-                  <PaginationNext 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
-                    aria-disabled={currentPage === totalPages} 
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                    aria-disabled={currentPage === totalPages}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
                   />
                 </PaginationItem>
@@ -644,7 +661,7 @@ export default function OrdersPage() {
               setStatusesForDialog(null);
             }
           }}
-          order={selectedOrderForDrAssignment} 
+          order={selectedOrderForDrAssignment}
           currentUser={currentUser}
           allStatuses={statusesForDialog}
           onDrAssigned={handleDrAssignmentSuccess}

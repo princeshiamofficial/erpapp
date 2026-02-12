@@ -1,95 +1,83 @@
 
 
 "use server";
-
+import { query } from './mysql';
 import type { BillReport } from '@/types';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
-import { addPaymentToHistory } from './payment-history-service'; // Import the service
 
-const COLLECTION_NAME = 'billReports';
+const BILL_REPORTS_TABLE = 'bill_reports';
 
 export const getBillReports = async (): Promise<BillReport[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999&orderBy=date&direction=desc`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data
-      } as BillReport));
-    }
-    return [];
+    const results = await query<any[]>(`SELECT * FROM ${BILL_REPORTS_TABLE} ORDER BY date DESC`);
+    return results.map(row => ({
+      id: row.id,
+      vendorId: row.vendor_id,
+      vendorName: row.vendor_name,
+      amount: row.amount,
+      payment: row.payment,
+      method: row.method,
+      date: row.date,
+      invoiceId: row.invoice_id
+    } as BillReport));
   } catch (error) {
-    console.error("Error fetching bill reports via API v3:", error);
+    console.error("Error fetching bill reports from MySQL:", error);
     return [];
   }
 };
 
 export const addBillReport = async (reportData: Omit<BillReport, 'id'>): Promise<BillReport | null> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const payload = { data: reportData };
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
+    const id = uuidv4();
+    const date = typeof reportData.date === 'string' ? reportData.date : format(reportData.date, 'yyyy-MM-dd HH:mm:ss');
 
-    const newEntry = {
-        id: newDoc.id,
-        ...newDoc.data
-    } as BillReport;
+    await query(
+      `INSERT INTO ${BILL_REPORTS_TABLE} (id, vendor_id, vendor_name, amount, payment, method, date, invoice_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, reportData.vendorId, reportData.vendorName, reportData.amount || 0, reportData.payment || 0, reportData.method, date, reportData.invoiceId]
+    );
 
-    // Also add to the centralized payment history
-    await addPaymentToHistory(newEntry);
-
-    return newEntry;
+    return { id, ...reportData } as BillReport;
   } catch (error) {
-    console.error("Error adding bill report via API v3:", error);
-    if (error instanceof Error) throw error;
+    console.error("Error adding bill report to MySQL:", error);
     return null;
   }
 };
 
 export const updateBillReport = async (id: string, updates: Partial<BillReport>): Promise<boolean> => {
-    try {
-        const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
-        const finalData = { ...existingDoc.data, ...updates };
-        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ data: finalData })
-        });
-        
-        // Also update the centralized payment history
-        await addPaymentToHistory(finalData as Omit<BillReport, 'id'> & {id: string});
+  try {
+    const fields: string[] = [];
+    const values: any[] = [];
 
-        return true;
-    } catch (error) {
-        console.error(`Error updating bill report ${id} via API v3:`, error);
-        return false;
+    if (updates.vendorId !== undefined) { fields.push('vendor_id = ?'); values.push(updates.vendorId); }
+    if (updates.vendorName !== undefined) { fields.push('vendor_name = ?'); values.push(updates.vendorName); }
+    if (updates.amount !== undefined) { fields.push('amount = ?'); values.push(updates.amount); }
+    if (updates.payment !== undefined) { fields.push('payment = ?'); values.push(updates.payment); }
+    if (updates.method !== undefined) { fields.push('method = ?'); values.push(updates.method); }
+    if (updates.date !== undefined) {
+      fields.push('date = ?');
+      values.push(typeof updates.date === 'string' ? updates.date : format(updates.date, 'yyyy-MM-dd HH:mm:ss'));
     }
+    if (updates.invoiceId !== undefined) { fields.push('invoice_id = ?'); values.push(updates.invoiceId); }
+
+    if (fields.length === 0) return true;
+
+    values.push(id);
+    await query(`UPDATE ${BILL_REPORTS_TABLE} SET ${fields.join(', ')} WHERE id = ?`, values);
+    return true;
+  } catch (error) {
+    console.error(`Error updating bill report ${id} in MySQL:`, error);
+    return false;
+  }
 };
 
 
 export const deleteBillReport = async (id: string): Promise<{ success: boolean, error?: string }> => {
   try {
-    // Also delete from the payment history
-    const reportToDelete = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
-    if (reportToDelete && reportToDelete.data) {
-        const date = new Date(reportToDelete.data.date);
-        const historyCollectionName = `payHistory-${format(date, 'MM-yyyy')}`;
-        await fetchFromApiV3(`collections/${historyCollectionName}/documents/${id}`, {
-            method: 'DELETE'
-        }).catch(err => console.warn(`Could not delete from payment history, it might not exist: ${err.message}`));
-    }
-    
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-        method: 'DELETE'
-    });
-
+    await query(`DELETE FROM ${BILL_REPORTS_TABLE} WHERE id = ?`, [id]);
     return { success: true };
   } catch (error) {
-    console.error(`Error deleting bill report ${id} via API v3:`, error);
+    console.error(`Error deleting bill report ${id} from MySQL:`, error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 };

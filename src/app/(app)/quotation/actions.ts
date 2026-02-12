@@ -4,15 +4,13 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User, OrderItem, AdvancePaymentRecord, ServiceModelItem, OrderLogEntry } from "@/types";
-import { addQuotation as addQuotationService, getQuotationById, deleteQuotation as deleteQuotationFromDb, updateQuotation as updateQuotationService } from "@/lib/quotation-service"; 
+import { addQuotation as addQuotationService, getQuotationById, deleteQuotation as deleteQuotationFromDb, updateQuotation as updateQuotationService } from "@/lib/quotation-service";
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { getModels, updateModelStock } from '@/lib/service-options-service';
-import { fetchFromApiV3 } from '@/lib/api-helper2';
-import { adminApp } from '@/lib/firebase-admin';
-import type { messaging } from 'firebase-admin';
+
 
 interface CreateQuotationDialogFormData {
   jobId: string;
@@ -31,7 +29,7 @@ interface CreateQuotationDialogFormData {
   advancePaymentAmount?: string | null;
   advancePaymentMethod?: string | null;
   specialClientDiscount?: number | null;
-  customPaymentMethodText?: string; 
+  customPaymentMethodText?: string;
   orderNotes?: string | null;
   initialStatusId: string;
 }
@@ -47,7 +45,7 @@ export async function createQuotationAction(
     if (!data.jobId?.trim()) return { error: "Contact Person is required." };
     if (!data.companyName?.trim()) return { error: "Company Name is required." };
     if (!data.address?.trim()) return { error: "Address is required." };
-    
+
     const phoneNumber = data.phoneNumber?.trim();
     if (!phoneNumber) return { error: "Phone Number is required." };
     const phoneRegex = /^0\d{10}$/;
@@ -73,12 +71,12 @@ export async function createQuotationAction(
       if (!item.model?.trim()) return { error: `Model is required for all quotation items.` };
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity < 0) return { error: `Invalid quantity for model "${item.model}". Quantity must be a non-negative number.` };
-      
+
       const lamination = item.lamination?.trim() || 'N/A';
-      
+
       const unitPrice = item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) ? 0 : Number(item.unitPrice);
       const lineItemTotalPrice = item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) ? 0 : Number(item.lineItemTotalPrice);
-      
+
 
       processedOrderItems.push({
         id: item.id || uuidv4(),
@@ -91,10 +89,10 @@ export async function createQuotationAction(
       orderItemsTotal += lineItemTotalPrice;
     }
 
-    if (data.specialClientDiscount !== null && data.specialClientDiscount < 0) {
+    if (data.specialClientDiscount !== null && data.specialClientDiscount !== undefined && data.specialClientDiscount < 0) {
       return { error: "Special Client Discount must be a non-negative number." };
     }
-    if (data.specialClientDiscount !== null && data.specialClientDiscount > orderItemsTotal && orderItemsTotal > 0) {
+    if (data.specialClientDiscount !== null && data.specialClientDiscount !== undefined && data.specialClientDiscount > orderItemsTotal && orderItemsTotal > 0) {
       return { error: "Special Client Discount cannot exceed the total quotation price." };
     }
 
@@ -105,25 +103,25 @@ export async function createQuotationAction(
       if (isNaN(numAdvancePayment) || numAdvancePayment < 0) return { error: "Advance Payment Amount must be a non-negative number." };
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
-    
+
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
-    const grandTotal = netPayable; 
+    const grandTotal = netPayable;
     if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > grandTotal && grandTotal > 0) {
-        return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed grand total amount (${grandTotal}).` };
+      return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed grand total amount (${grandTotal}).` };
     }
 
     let finalAdvancePaymentMethod: string | null = null;
     if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > 0) {
-        if (data.advancePaymentMethod && typeof data.advancePaymentMethod === 'string' && data.advancePaymentMethod.trim() !== '') {
-          if (data.advancePaymentMethod.toLowerCase() === 'other') {
-            if (!data.customPaymentMethodText || !data.customPaymentMethodText.trim()) return { error: "Please specify the 'Other' payment method for the advance." };
-            finalAdvancePaymentMethod = data.customPaymentMethodText.trim();
-          } else {
-            finalAdvancePaymentMethod = data.advancePaymentMethod.trim();
-          }
+      if (data.advancePaymentMethod && typeof data.advancePaymentMethod === 'string' && data.advancePaymentMethod.trim() !== '') {
+        if (data.advancePaymentMethod.toLowerCase() === 'other') {
+          if (!data.customPaymentMethodText || !data.customPaymentMethodText.trim()) return { error: "Please specify the 'Other' payment method for the advance." };
+          finalAdvancePaymentMethod = data.customPaymentMethodText.trim();
         } else {
-            return { error: "Payment Method is required when Advance Payment is entered." };
+          finalAdvancePaymentMethod = data.advancePaymentMethod.trim();
         }
+      } else {
+        return { error: "Payment Method is required when Advance Payment is entered." };
+      }
     }
 
     const finalCombinedCompanyName = `${data.jobId.trim()} • ${data.companyName.trim()}`;
@@ -134,7 +132,7 @@ export async function createQuotationAction(
       phoneNumber: phoneNumber,
       createdAt: data.createdAt,
       orderItems: processedOrderItems,
-      advancePaymentAmount: parsedAdvancePaymentAmount, 
+      advancePaymentAmount: parsedAdvancePaymentAmount,
       advancePaymentMethod: finalAdvancePaymentMethod,
       specialClientDiscount: data.specialClientDiscount,
       shippingCharge: null,
@@ -176,10 +174,10 @@ export async function updateQuotationAction(
 
     const existingQuotation = await getQuotationById(quotationId);
     if (!existingQuotation) return { success: false, error: `Quotation with ID ${quotationId} not found.` };
-    
+
     let currentOrderItemsTotal = (updates.orderItems || existingQuotation.orderItems).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
 
-    const finalUpdates: Partial<TrackingLink> = { ...updates };
+    const finalUpdates: any = { ...updates };
     delete finalUpdates.newAdvancePaymentAmount;
     delete finalUpdates.newAdvancePaymentMethod;
     delete finalUpdates.newAdvancePaymentNotes;
@@ -192,7 +190,7 @@ export async function updateQuotationAction(
         return { success: false, error: "Invalid Date Created format." };
       }
     }
-    
+
     if (updates.shippingCharge !== undefined) {
       const charge = Number(updates.shippingCharge);
       if (isNaN(charge) || charge < 0) {
@@ -202,28 +200,28 @@ export async function updateQuotationAction(
     }
 
     if (updates.specialClientDiscountString !== undefined) {
-        if (updates.specialClientDiscountString && updates.specialClientDiscountString.trim() !== '') {
-            const discountStr = updates.specialClientDiscountString.trim();
-            let numericDiscount = 0;
-            if (discountStr.endsWith('%')) {
-                const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-                if (isNaN(percentage) || percentage < 0) return { success: false, error: "Invalid percentage for Special Client Discount."};
-                numericDiscount = (percentage / 100) * currentOrderItemsTotal;
-            } else {
-                const fixedAmount = parseFloat(discountStr);
-                if (isNaN(fixedAmount) || fixedAmount < 0) return { success: false, error: "Special Client Discount must be a non-negative number."};
-                numericDiscount = fixedAmount;
-            }
-            if (numericDiscount > currentOrderItemsTotal && currentOrderItemsTotal > 0) return { success: false, error: "Special Client Discount cannot exceed the total quotation price."};
-            finalUpdates.specialClientDiscount = numericDiscount;
+      if (updates.specialClientDiscountString && updates.specialClientDiscountString.trim() !== '') {
+        const discountStr = updates.specialClientDiscountString.trim();
+        let numericDiscount = 0;
+        if (discountStr.endsWith('%')) {
+          const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+          if (isNaN(percentage) || percentage < 0) return { success: false, error: "Invalid percentage for Special Client Discount." };
+          numericDiscount = (percentage / 100) * currentOrderItemsTotal;
         } else {
-            finalUpdates.specialClientDiscount = null;
+          const fixedAmount = parseFloat(discountStr);
+          if (isNaN(fixedAmount) || fixedAmount < 0) return { success: false, error: "Special Client Discount must be a non-negative number." };
+          numericDiscount = fixedAmount;
         }
+        if (numericDiscount > currentOrderItemsTotal && currentOrderItemsTotal > 0) return { success: false, error: "Special Client Discount cannot exceed the total quotation price." };
+        finalUpdates.specialClientDiscount = numericDiscount;
+      } else {
+        finalUpdates.specialClientDiscount = null;
+      }
     }
 
-    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (Contact Person • Name) cannot be empty."};
-    if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
-    
+    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (Contact Person • Name) cannot be empty." };
+    if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty." };
+
     if (updates.phoneNumber !== undefined) {
       const phoneNumber = updates.phoneNumber.trim();
       if (!phoneNumber) return { success: false, error: "Phone Number cannot be empty." };
@@ -233,9 +231,9 @@ export async function updateQuotationAction(
       }
       finalUpdates.phoneNumber = phoneNumber;
     }
-    
+
     if (updates.orderNotes !== undefined) finalUpdates.orderNotes = updates.orderNotes?.trim() || null;
-    
+
     if (updates.orderItems) {
       if (!Array.isArray(updates.orderItems) || updates.orderItems.length === 0) return { success: false, error: "Quotation must have at least one item." };
       finalUpdates.orderItems = updates.orderItems;
@@ -243,25 +241,25 @@ export async function updateQuotationAction(
 
 
     if (updates.newAdvancePaymentAmount && updates.newAdvancePaymentAmount > 0) {
-        if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
-            return { success: false, error: "Payment method is required for new advance payment." };
-        }
-        const newAdvanceRecord: AdvancePaymentRecord = {
-            id: uuidv4(),
-            amount: updates.newAdvancePaymentAmount,
-            date: new Date().toISOString(),
-            paymentMethod: updates.newAdvancePaymentMethod,
-            notes: updates.newAdvancePaymentNotes?.trim() || null,
-            recordedByUserId: currentUser.id,
-            recordedByUserName: currentUser.name,
-        };
-        finalUpdates.advancePayments = [...(existingQuotation.advancePayments || []), newAdvanceRecord];
+      if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
+        return { success: false, error: "Payment method is required for new advance payment." };
+      }
+      const newAdvanceRecord: AdvancePaymentRecord = {
+        id: uuidv4(),
+        amount: updates.newAdvancePaymentAmount,
+        date: new Date().toISOString(),
+        paymentMethod: updates.newAdvancePaymentMethod,
+        notes: updates.newAdvancePaymentNotes?.trim() || null,
+        recordedByUserId: currentUser.id,
+        recordedByUserName: currentUser.name,
+      };
+      finalUpdates.advancePayments = [...(existingQuotation.advancePayments || []), newAdvanceRecord];
     } else if (updates.advancePayments) {
-        finalUpdates.advancePayments = updates.advancePayments;
+      finalUpdates.advancePayments = updates.advancePayments;
     }
 
     if (Object.keys(finalUpdates).length === 0 && updates.specialClientDiscountString === undefined) {
-        return { success: true, quotation: existingQuotation, error: "No changes detected to save." };
+      return { success: true, quotation: existingQuotation, error: "No changes detected to save." };
     }
 
     finalUpdates.updatedAt = new Date().toISOString();
@@ -273,7 +271,7 @@ export async function updateQuotationAction(
 
     const updatedQuotation = await getQuotationById(quotationId);
     if (!updatedQuotation) return { success: false, error: "Failed to retrieve updated quotation after update." };
-    
+
     revalidatePath("/(app)/quotation");
     revalidatePath(`/track/${quotationId}`);
 
@@ -299,7 +297,7 @@ export async function updateQuotationStatusAction(
     if (!currentQuotation) {
       return { success: false, error: `Quotation ${quotationId} not found.` };
     }
-    
+
     if (currentQuotation.currentStatus === newStatus) {
       return { success: true, quotation: currentQuotation }; // No change needed
     }
@@ -343,14 +341,14 @@ export async function updateQuotationStatusAction(
 }
 
 export async function deleteQuotationAction(
-  quotationId: string, 
+  quotationId: string,
   currentUser: User
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!quotationId) {
-        return { success: false, error: "Quotation ID is required for deletion." };
+      return { success: false, error: "Quotation ID is required for deletion." };
     }
-    
+
     const settings = await getGlobalSettings();
     const canDelete = currentUser.role === 'SYSTEM_ADMIN' || (settings.rolesAllowedToDeleteOrders?.includes(currentUser.role) ?? false);
 

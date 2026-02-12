@@ -1,66 +1,68 @@
+"use server";
 
-
+import { query } from './mysql';
 import type { VendorProduct } from '@/types';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { v4 as uuidv4 } from 'uuid';
 
-const COLLECTION_NAME = 'vendorProducts';
+const VENDOR_PRODUCTS_TABLE = 'vendor_products';
 
 export const getVendorProducts = async (): Promise<VendorProduct[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444&orderBy=name&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data
-      } as VendorProduct));
-    }
-    return [];
+    const results = await query<any[]>(`SELECT * FROM ${VENDOR_PRODUCTS_TABLE} ORDER BY name ASC`);
+    return results.map(row => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      price: row.price,
+      description: row.description
+    } as VendorProduct));
   } catch (error) {
-    console.error("Error fetching vendor products via API v3:", error);
+    console.error("Error fetching vendor products from MySQL:", error);
     return [];
   }
 };
 
 export const addVendorProduct = async (productData: Omit<VendorProduct, 'id'>): Promise<VendorProduct | null> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ data: productData }),
-    });
-    return { id: newDoc.id, ...newDoc.data } as VendorProduct;
+    const id = uuidv4();
+    await query(
+      `INSERT INTO ${VENDOR_PRODUCTS_TABLE} (id, name, category, price, description) VALUES (?, ?, ?, ?, ?)`,
+      [id, productData.name, productData.category, productData.price || 0, productData.description || '']
+    );
+    return { id, ...productData } as VendorProduct;
   } catch (error) {
-    console.error("Error adding vendor product via API v3:", error);
+    console.error("Error adding vendor product to MySQL:", error);
     return null;
   }
 };
 
 export const updateVendorProduct = async (id: string, updates: Partial<VendorProduct>): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
-    const finalData = { ...existingDoc.data, ...updates };
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData })
-    });
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+    if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category); }
+    if (updates.price !== undefined) { fields.push('price = ?'); values.push(updates.price); }
+    if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
+
+    if (fields.length === 0) return true;
+
+    values.push(id);
+    await query(`UPDATE ${VENDOR_PRODUCTS_TABLE} SET ${fields.join(', ')} WHERE id = ?`, values);
     return true;
   } catch (error) {
-    console.error(`Error updating vendor product ${id} via API v3:`, error);
+    console.error(`Error updating vendor product ${id} from MySQL:`, error);
     return false;
   }
 };
 
 export const deleteVendorProduct = async (id: string): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-        method: 'DELETE'
-    });
+    await query(`DELETE FROM ${VENDOR_PRODUCTS_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error(`Error deleting vendor product ${id} via API v3:`, error);
+    console.error(`Error deleting vendor product ${id} from MySQL:`, error);
     return false;
   }
 };

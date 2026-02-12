@@ -76,7 +76,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [calculatedDiscountAmount, setCalculatedDiscountAmount] = useState<number>(0);
   const [netPayable, setNetPayable] = useState<number>(0);
   const [amountDue, setAmountDue] = useState<number>(0);
-  
+
   const [selectedPaymentProof, setSelectedPaymentProof] = useState<File | null>(null);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const paymentProofRef = useRef<HTMLInputElement>(null);
@@ -165,25 +165,25 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         jobIdInputRef.current?.focus();
       }, 100);
     } else {
-        resetForm();
+      resetForm();
     }
   }, [isOpen, fetchOptions, allOrders, resetForm, jobId]);
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
-        const isCurrentStatusInAvailable = initialStatusId && availableStatuses.some(s => s.id === initialStatusId);
-        if (!initialStatusId || !isCurrentStatusInAvailable) {
-            const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
-            if (orderSubmittedStatus) {
-                setInitialStatusId(orderSubmittedStatus.id);
-            } else if (availableStatuses.length > 0 && availableStatuses[0]) {
-                setInitialStatusId(availableStatuses[0].id);
-            } else {
-                setInitialStatusId('');
-            }
+      const isCurrentStatusInAvailable = initialStatusId && availableStatuses.some(s => s.id === initialStatusId);
+      if (!initialStatusId || !isCurrentStatusInAvailable) {
+        const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
+        if (orderSubmittedStatus) {
+          setInitialStatusId(orderSubmittedStatus.id);
+        } else if (availableStatuses.length > 0 && availableStatuses[0]) {
+          setInitialStatusId(availableStatuses[0].id);
+        } else {
+          setInitialStatusId('');
         }
+      }
     } else if (isOpen && availableStatuses.length === 0) {
-        setInitialStatusId('');
+      setInitialStatusId('');
     }
   }, [isOpen, availableStatuses, initialStatusId]);
 
@@ -194,15 +194,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     let discountNum = 0;
     const discountStr = specialClientDiscount.trim();
     if (discountStr.endsWith('%')) {
-        const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-        if (!isNaN(percentage) && percentage >= 0) {
-            discountNum = (percentage / 100) * currentItemsTotal;
-        }
+      const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+      if (!isNaN(percentage) && percentage >= 0) {
+        discountNum = (percentage / 100) * currentItemsTotal;
+      }
     } else {
-        const fixedAmount = parseFloat(discountStr);
-        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
-            discountNum = fixedAmount;
-        }
+      const fixedAmount = parseFloat(discountStr);
+      if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+        discountNum = fixedAmount;
+      }
     }
     discountNum = Math.min(discountNum, currentItemsTotal);
     setCalculatedDiscountAmount(discountNum);
@@ -217,18 +217,18 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const advancePaymentValue = parseFloat(advancePaymentAmount);
   const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
-  
+
   const isProofRequired = useMemo(() => {
     return false; // Disabled as per user request
   }, []);
 
   useEffect(() => {
     if (!isAdvancePaymentEntered) {
-        setAdvancePaymentMethod('');
-        setCustomPaymentMethodText('');
-        setNewAdvancePaymentNotes('');
-        setShowCustomPaymentInput(false);
-        setSelectedPaymentProof(null);
+      setAdvancePaymentMethod('');
+      setCustomPaymentMethodText('');
+      setNewAdvancePaymentNotes('');
+      setShowCustomPaymentInput(false);
+      setSelectedPaymentProof(null);
     }
   }, [isAdvancePaymentEntered]);
 
@@ -249,7 +249,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             updatedItem.model = selectedModel ? selectedModel.name : '';
             updatedItem.unitPrice = selectedModel?.sellingPrice ?? null;
           } else if (field === 'quantity' || field === 'lamination') {
-             updatedItem = { ...item, [field]: value as string };
+            updatedItem = { ...item, [field]: value as string };
           }
           if (field === 'modelName' || field === 'quantity') {
             updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, updatedItem.quantity);
@@ -260,7 +260,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       })
     );
   };
-  
+
   const handleJobIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newJobId = e.target.value;
     setJobId(newJobId);
@@ -273,7 +273,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     const handler = setTimeout(() => {
       const trimmedJobId = jobId.trim();
       if (!trimmedJobId || !allOrders.length) {
-        if(isAutoFilled) {
+        if (isAutoFilled) {
           // Clear fields if Job ID is cleared
           setCompanyName('');
           setAddress('');
@@ -290,18 +290,18 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
       if (existingOrder) {
         if (!isAutoFilled) {
-            const nameParts = (existingOrder.companyName || '').split(' • ');
-            const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
+          const nameParts = (existingOrder.companyName || '').split(' • ');
+          const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
 
-            setCompanyName(actualCompanyName);
-            setAddress(existingOrder.address);
-            setPhoneNumber(existingOrder.phoneNumber);
-            setIsAutoFilled(true);
+          setCompanyName(actualCompanyName);
+          setAddress(existingOrder.address);
+          setPhoneNumber(existingOrder.phoneNumber);
+          setIsAutoFilled(true);
 
-            toast({
-              title: "Existing Job ID Found",
-              description: `Details for "${trimmedJobId}" have been auto-filled.`,
-            });
+          toast({
+            title: "Existing Job ID Found",
+            description: `Details for "${trimmedJobId}" have been auto-filled.`,
+          });
         }
       } else if (isAutoFilled) {
         setCompanyName('');
@@ -338,7 +338,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       setCustomPaymentMethodText('');
     }
   };
-  
+
   const handleAdvancePaymentAmountChange = (value: string) => {
     setAdvancePaymentAmount(value);
     const numericValue = parseFloat(value);
@@ -357,23 +357,23 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     let discountVal = 0;
     const discountStr = value.trim();
     if (discountStr.endsWith('%')) {
-        const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-        if (!isNaN(percentage) && percentage >= 0) {
-            discountVal = (percentage / 100) * orderItemsTotal;
-        }
+      const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+      if (!isNaN(percentage) && percentage >= 0) {
+        discountVal = (percentage / 100) * orderItemsTotal;
+      }
     } else {
-        const fixedAmount = parseFloat(discountStr);
-        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
-            discountVal = fixedAmount;
-        }
+      const fixedAmount = parseFloat(discountStr);
+      if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+        discountVal = fixedAmount;
+      }
     }
 
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
-        toast({
-            title: "Validation Warning",
-            description: `Special Client Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
-            variant: "destructive"
-        });
+      toast({
+        title: "Validation Warning",
+        description: `Special Client Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
+        variant: "destructive"
+      });
     }
   };
 
@@ -429,16 +429,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Final validations
     if (!canSubmit) {
       toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
       return;
     }
-    
+
     setIsSubmitting(true);
     let uploadedProofUrl: string | null = null;
-    
+
     if (isAdvancePaymentEntered && selectedPaymentProof) {
       setIsUploadingProof(true);
       const formData = new FormData();
@@ -582,7 +582,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label className="text-lg font-semibold">Order Items *</Label>
               {orderItems.map((item) => (
                 <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                   <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
                     <div className="space-y-1">
                       <Label htmlFor={`model-${item.id}`}>Model *</Label>
                       <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
@@ -596,15 +596,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                           >
                             <span className="flex items-center gap-2 flex-1 text-left whitespace-nowrap overflow-hidden">
                               {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
-                                  <Avatar className="h-5 w-5 rounded-sm">
-                                      <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
-                                      <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                                  </Avatar>
+                                <Avatar className="h-5 w-5 rounded-sm">
+                                  <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
+                                  <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                </Avatar>
                               ) : null}
                               <span className="truncate">
-                              {item.model
-                                ? modelOptions.find((option) => option.name === item.model)?.name
-                                : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                                {item.model
+                                  ? modelOptions.find((option) => option.name === item.model)?.name
+                                  : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
                               </span>
                             </span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -661,7 +661,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                           {laminationOptions.map(option => (
                             <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
                           ))}
-                           {laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}
+                          {laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}
                         </SelectContent>
                       </Select>
                     </div>
@@ -674,7 +674,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveItem(item.id)}
-                      disabled={isSubmitting || orderItems.length <=1}
+                      disabled={isSubmitting || orderItems.length <= 1}
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive-foreground h-10 w-10"
                       title="Remove item"
                     >
@@ -700,7 +700,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <div className="space-y-1">
                 <Label htmlFor="specialClientDiscount">Special Client Discount</Label>
                 <div className="relative">
-                   <Input
+                  <Input
                     id="specialClientDiscount"
                     type="text"
                     value={specialClientDiscount}
@@ -725,105 +725,105 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </div>
               {isAdvancePaymentEntered && (
                 <>
-                <div className="space-y-1">
-                  <Label htmlFor="advancePaymentMethod">
-                    Payment Method *
-                  </Label>
-                   <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={isPaymentMethodPopoverOpen}
-                        className="w-full justify-between bg-background"
-                        disabled={isLoadingOptions || paymentMethodOptions.length === 0}
-                      >
-                         <span className="flex-1 text-left whitespace-nowrap">
-                          {advancePaymentMethod
-                            ? paymentMethodOptions.find((option) => option.name === advancePaymentMethod)?.name
-                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
-                         </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0">
-                      <Command>
-                        <CommandInput placeholder="Search method..." />
-                        <CommandList>
-                          <CommandEmpty>No payment method found.</CommandEmpty>
-                          <CommandGroup>
-                            {paymentMethodOptions.map((option) => (
-                              <CommandItem
-                                key={option.id}
-                                value={option.name}
-                                onSelect={(currentValue) => {
-                                  handleAdvancePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
-                                  setIsPaymentMethodPopoverOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    advancePaymentMethod === option.name ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                 <span className="whitespace-nowrap">{option.name}</span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {showCustomPaymentInput && (
-                    <div className="mt-2 space-y-1">
-                      <Label htmlFor="customPaymentMethodText">
-                        Specify Other Payment Method *
-                      </Label>
-                      <Input
-                        id="customPaymentMethodText"
-                        value={customPaymentMethodText}
-                        onChange={(e) => setCustomPaymentMethodText(e.target.value)}
-                        placeholder="e.g., Specific Mobile Wallet"
-                        required={advancePaymentMethod.toLowerCase() === 'other'}
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label>
-                  <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={(e) => setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isAdvancePaymentEntered} minLength={4} />
-                </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="advancePaymentMethod">
+                      Payment Method *
+                    </Label>
+                    <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={isPaymentMethodPopoverOpen}
+                          className="w-full justify-between bg-background"
+                          disabled={isLoadingOptions || paymentMethodOptions.length === 0}
+                        >
+                          <span className="flex-1 text-left whitespace-nowrap">
+                            {advancePaymentMethod
+                              ? paymentMethodOptions.find((option) => option.name === advancePaymentMethod)?.name
+                              : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0">
+                        <Command>
+                          <CommandInput placeholder="Search method..." />
+                          <CommandList>
+                            <CommandEmpty>No payment method found.</CommandEmpty>
+                            <CommandGroup>
+                              {paymentMethodOptions.map((option) => (
+                                <CommandItem
+                                  key={option.id}
+                                  value={option.name}
+                                  onSelect={(currentValue) => {
+                                    handleAdvancePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
+                                    setIsPaymentMethodPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      advancePaymentMethod === option.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <span className="whitespace-nowrap">{option.name}</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {showCustomPaymentInput && (
+                      <div className="mt-2 space-y-1">
+                        <Label htmlFor="customPaymentMethodText">
+                          Specify Other Payment Method *
+                        </Label>
+                        <Input
+                          id="customPaymentMethodText"
+                          value={customPaymentMethodText}
+                          onChange={(e) => setCustomPaymentMethodText(e.target.value)}
+                          placeholder="e.g., Specific Mobile Wallet"
+                          required={advancePaymentMethod.toLowerCase() === 'other'}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="newAdvancePaymentNotes">Reference/Notes *</Label>
+                    <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={(e) => setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" required={isAdvancePaymentEntered} minLength={4} />
+                  </div>
                 </>
               )}
             </div>
 
             <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
-                <h4 className="text-md font-semibold text-foreground mb-2">Order Summary</h4>
+              <h4 className="text-md font-semibold text-foreground mb-2">Order Summary</h4>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Order Items Total:</span>
+                <span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span>
+              </div>
+              {(calculatedDiscountAmount || 0) > 0 && (
                 <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Order Items Total:</span>
-                    <span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span>
+                  <span className="text-muted-foreground">Special Client Discount:</span>
+                  <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span>
                 </div>
-                {(calculatedDiscountAmount || 0) > 0 && (
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Special Client Discount:</span>
-                        <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span>
-                    </div>
-                )}
-                <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-foreground">Net Payable:</span>
-                    <span className="text-foreground">{formatCurrencyBdt(netPayable)}</span>
+              )}
+              <div className="flex justify-between text-sm font-semibold">
+                <span className="text-foreground">Net Payable:</span>
+                <span className="text-foreground">{formatCurrencyBdt(netPayable)}</span>
+              </div>
+              {isAdvancePaymentEntered && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Advance Paid:</span>
+                  <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePaymentAmount))}</span>
                 </div>
-                {isAdvancePaymentEntered && (
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Advance Paid:</span>
-                        <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePaymentAmount))}</span>
-                    </div>
-                )}
-                 <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
-                    <span className="text-primary">Amount Due:</span>
-                    <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
-                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
+                <span className="text-primary">Amount Due:</span>
+                <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
+              </div>
             </div>
 
           </div>

@@ -15,9 +15,9 @@ export interface User {
   email: string;
   role: UserRole;
   companyName?: string | null;
-  phone?: string | null; 
+  phone?: string | null;
   address?: string | null; // Added for Vendors
-  category?: string | null; 
+  category?: string | null;
   password?: string;
   avatarUrl?: string | null;
   monthlyOrderTarget?: number | null;
@@ -29,10 +29,10 @@ export interface User {
 }
 
 export interface SalaryIncrement {
-    date: string; // ISO string
-    previousSalary: number;
-    newSalary: number;
-    incrementAmount: number;
+  date: string; // ISO string
+  previousSalary: number;
+  newSalary: number;
+  incrementAmount: number;
 }
 
 export interface LeaveRecord {
@@ -45,29 +45,29 @@ export interface LeaveRecord {
 }
 
 export interface Payslip {
-    id: string; // e.g., '2024-07-CRM-001'
-    employeeId: string;
-    presentDays: number;
-    absentDays: number;
-    lateDays: number;
-    fine: number;
-    incentive: number;
-    trainingFee?: number;
-    advance?: number; // New field for salary advance
-    providentFund: number; // New field to store PF amount
-    payableAmount: number; // Storing the calculated amount for record-keeping
-    paymentStatus: 'Paid' | 'Unpaid'; // New field
-    updatedAt: string; // ISO string
+  id: string; // e.g., '2024-07-CRM-001'
+  employeeId: string;
+  presentDays: number;
+  absentDays: number;
+  lateDays: number;
+  fine: number;
+  incentive: number;
+  trainingFee?: number;
+  advance?: number; // New field for salary advance
+  providentFund: number; // New field to store PF amount
+  payableAmount: number; // Storing the calculated amount for record-keeping
+  paymentStatus: 'Paid' | 'Unpaid'; // New field
+  updatedAt: string; // ISO string
 }
 
 export interface ProvidentFundRecord {
-    id: string; // e.g., '2024-07-employeeId'
-    employeeId: string;
-    employeeName: string;
-    month: string; // YYYY-MM
-    amount: number;
-    status: 'Paid' | 'Unpaid';
-    updatedAt: string;
+  id: string; // e.g., '2024-07-employeeId'
+  employeeId: string;
+  employeeName: string;
+  month: string; // YYYY-MM
+  amount: number;
+  status: 'Paid' | 'Unpaid';
+  updatedAt: string;
 }
 
 export interface Employee {
@@ -177,7 +177,7 @@ export interface TrackingLink {
   crmUserName: string;
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;
-  assigneeAvatarUrl?: string | null; 
+  assigneeAvatarUrl?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
   createdAt: string; // ISO string
   updatedAt?: string; // ISO string for last edit of order details
@@ -207,6 +207,7 @@ export interface Comment {
   userRole?: UserRole | 'Client';
   text: string;
   isInternal: boolean;
+  timestamp: string;
   replies?: Comment[];
   likes?: {
     count: number;
@@ -236,8 +237,8 @@ export interface ServicePaymentMethodItem {
 }
 
 export interface ServiceGiftItem {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 
@@ -252,9 +253,9 @@ export interface ExpenseLoggingPermissions {
 export type ProjectStatusType = 'CR Clearance' | 'CO Clearance' | 'Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier' | 'Delivered';
 
 export interface RoleBasedTarget {
-    CRM: number;
-    DESIGNER_REPRESENTATIVE: number;
-    LR: number;
+  CRM: number;
+  DESIGNER_REPRESENTATIVE: number;
+  LR: number;
 }
 
 export interface PipelineAccessSettings {
@@ -428,24 +429,24 @@ export interface Lead {
 }
 
 export interface DistrictDataEntry {
-    id?: string; // Optional Firestore ID
-    jobId: string;
-    businessName: string;
-    address: string;
-    phone: string;
-    orderDate: string; // ISO String
-    division?: string;
-    district?: string;
+  id?: string; // Optional Firestore ID
+  jobId: string;
+  businessName: string;
+  address: string;
+  phone: string;
+  orderDate: string; // ISO String
+  division?: string;
+  district?: string;
 }
 
 export interface DistrictInfo {
-    name: string;
-    entries: DistrictDataEntry[];
+  name: string;
+  entries: DistrictDataEntry[];
 }
 
 export interface DivisionData {
-    division: string;
-    districts: DistrictInfo[];
+  division: string;
+  districts: DistrictInfo[];
 }
 
 export type PurchaseRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Purchased';
@@ -453,7 +454,7 @@ export type PurchaseRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Purch
 export interface PurchaseRequest {
   id: string;
   requestId: string;
-  createdAt: string; 
+  createdAt: string;
   updatedAt: string;
   item: string;
   quantity: number;
@@ -467,16 +468,16 @@ export interface PurchaseRequest {
 }
 
 export interface SowDataEntry {
-    id: string;
-    jobId: string;
-    businessName: string;
-    address: string;
-    phoneNumber: string;
-    category: string;
-    amount?: number;
-    createdAt: string; // ISO String for when SOW was created
-    crmUserId: string;
-    crmUserName: string;
+  id: string;
+  jobId: string;
+  businessName: string;
+  address: string;
+  phoneNumber: string;
+  category: string;
+  amount?: number;
+  createdAt: string; // ISO String for when SOW was created
+  crmUserId: string;
+  crmUserName: string;
 }
 
 export interface Gift {
@@ -552,16 +553,16 @@ export interface VendorBill {
 }
 
 export interface BillReport {
-    id: string;
-    vendorId: string;
-    vendorName: string;
-    date: string; // ISO String
-    invoiceId: string;
-    amount: number;
-    payment: number;
-    method: string;
-    status?: 'Approved' | 'Pending' | 'Paid' | 'Unpaid';
-    notes?: string | null;
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  date: string; // ISO String
+  invoiceId: string;
+  amount: number;
+  payment: number;
+  method: string;
+  status?: 'Approved' | 'Pending' | 'Paid' | 'Unpaid';
+  notes?: string | null;
 }
 
 export interface LrEntryItem {
@@ -575,25 +576,25 @@ export interface LrEntryItem {
 }
 
 export interface Dr2oEntry {
-    id: string;
-    date: string; // ISO string
-    crmId: string;
-    crmName: string;
-    // CR Fields
-    companyName?: string;
-    companyNumber?: string;
-    paymentCompanyName?: string;
-    paymentNumber?: string;
-    // DR/CO Fields
-    newCustomer1?: string;
-    newCustomer2?: string;
-    newCustomer3?: string;
-    oldCustomer1?: string;
-    oldCustomer2?: string;
-    oldCustomer3?: string;
-    oldCustomer4?: string;
-    // LR Fields
-    lrItems?: LrEntryItem[];
+  id: string;
+  date: string; // ISO string
+  crmId: string;
+  crmName: string;
+  // CR Fields
+  companyName?: string;
+  companyNumber?: string;
+  paymentCompanyName?: string;
+  paymentNumber?: string;
+  // DR/CO Fields
+  newCustomer1?: string;
+  newCustomer2?: string;
+  newCustomer3?: string;
+  oldCustomer1?: string;
+  oldCustomer2?: string;
+  oldCustomer3?: string;
+  oldCustomer4?: string;
+  // LR Fields
+  lrItems?: LrEntryItem[];
 }
 
 export interface CaseStudyMessage {
@@ -613,31 +614,31 @@ export interface CaseStudyMessage {
 }
 
 export interface OfficeTime {
-    id: string;
-    name: string;
-    startTime: string; // "HH:mm"
-    endTime: string; // "HH:mm"
-    graceTime: number; // in minutes
-    shift: 'Day' | 'Night';
-    applicableRoles?: UserRole[] | 'all';
+  id: string;
+  name: string;
+  startTime: string; // "HH:mm"
+  endTime: string; // "HH:mm"
+  graceTime: number; // in minutes
+  shift: 'Day' | 'Night';
+  applicableRoles?: UserRole[] | 'all';
 }
 
 export type AttendanceStatus = 'On Time' | 'Late' | 'Absent';
 
 export interface AttendanceRecord {
-    id: string; // Composite key: `${employeeId}_${YYYY-MM-DD}`
-    employeeId: string;
-    employeeName: string;
-    date: string; // YYYY-MM-DD
-    status: AttendanceStatus;
-    checkInTime: string; // ISO String
-    checkOutTime?: string | null; // ISO String
-    hoursWorked?: string | null; // e.g., "8h 15m"
-    lateReason?: string | null;
-    earlyOutReason?: string | null;
-    location: string; // "Head Office", "Remote", etc.
-    checkInLocation?: { lat: number; lng: number };
-    checkOutLocation?: { lat: number; lng: number };
+  id: string; // Composite key: `${employeeId}_${YYYY-MM-DD}`
+  employeeId: string;
+  employeeName: string;
+  date: string; // YYYY-MM-DD
+  status: AttendanceStatus;
+  checkInTime: string; // ISO String
+  checkOutTime?: string | null; // ISO String
+  hoursWorked?: string | null; // e.g., "8h 15m"
+  lateReason?: string | null;
+  earlyOutReason?: string | null;
+  location: string; // "Head Office", "Remote", etc.
+  checkInLocation?: { lat: number; lng: number };
+  checkOutLocation?: { lat: number; lng: number };
 }
 
 export interface TaskEntry {
@@ -652,25 +653,25 @@ export interface TaskEntry {
 }
 
 export interface MonthlyTargetHistory {
-    id: string; // e.g., 'CRM-2024-06'
-    team: UserRole | 'all';
-    month: string; // YYYY-MM
-    target: number;
-    achieved: number;
-    undone: number;
+  id: string; // e.g., 'CRM-2024-06'
+  team: UserRole | 'all';
+  month: string; // YYYY-MM
+  target: number;
+  achieved: number;
+  undone: number;
 }
 
 // Updated data structure for the Daily Routine page
 export interface DailyRoutine {
   id: string; // Document ID for a header can be anything, for a daily record it's YYYY-MM-DD
   userId: string;
-  
+
   // Fields for a routine header
   title?: string;
   time?: string;
   color?: string;
   description?: string;
-  
+
   // Fields for a daily record
   completedTasks?: Record<string, string>; // Maps taskId to ISO timestamp
   remarks?: string;

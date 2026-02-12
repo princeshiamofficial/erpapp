@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, TrackingLink } from '@/types'; 
-import { 
+import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings, TrackingLink, UserRole } from '@/types';
+import {
   ClipboardCheck,
   ClipboardX,
   DraftingCompass,
@@ -21,7 +21,8 @@ import {
   Users as UsersIcon,
   ChevronsUpDown,
   Check,
-} from 'lucide-react'; 
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,18 +35,20 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragStartEvent, 
+  type DragStartEvent,
   closestCorners,
-  DragOverlay, 
+  DragOverlay,
 } from '@dnd-kit/core';
 import { updateProjectStatusAction } from '@/app/(app)/projects/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
+import { useSocket } from '@/contexts/socket-context';
 import { CourierConfirmationDialog } from '@/components/projects/CourierConfirmationDialog';
-import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog'; 
+import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog';
 import { FileUploadConfirmationDialog } from '@/components/projects/FileUploadConfirmationDialog';
 import { getProjects } from '@/lib/project-service';
-import { getStatuses, DELIVERED_STATUS_ID } from '@/lib/status-service'; 
+import { getStatuses } from '@/lib/status-service';
+import { DELIVERED_STATUS_ID } from '@/lib/status-constants';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { getOrderById } from '@/lib/order-service';
@@ -66,7 +69,7 @@ const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').th
   ssr: false,
 });
 
-const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
+const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: LucideIcon; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
   { title: 'CO Clearance', status: 'CO Clearance', icon: ClipboardList, headerBgClass: 'bg-teal-600', headerTextClass: 'text-teal-50' },
   { title: 'On Design', status: 'On Design', icon: DraftingCompass, headerBgClass: 'bg-purple-600', headerTextClass: 'text-purple-50' },
@@ -78,31 +81,31 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
 ];
 
 function KanbanSkeleton() {
-   return (
-      <div className="flex flex-col h-full space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
-        </div>
-        <div className="flex-1 overflow-x-auto pb-4">
-          <div className="flex space-x-4 min-w-max px-4 sm:px-0">
-            {KANBAN_COLUMNS_CONFIG.map((col) => (
-              <div key={col.status} className="flex-1 min-w-[280px] max-w-[320px] flex flex-col bg-muted/30 rounded-lg shadow-sm">
-                <div className={`px-3 py-2.5 flex items-center justify-between ${col.headerBgClass} text-white rounded-t-lg`}>
-                  <Skeleton className="h-5 w-32 bg-white/30" />
-                  <Skeleton className="h-5 w-6 rounded-full bg-white/30" />
-                </div>
-                <div className="flex-1 p-3 space-y-3">
-                  <Skeleton className="h-20 w-full rounded-md" />
-                  <Skeleton className="h-20 w-full rounded-md" />
-                  <Skeleton className="h-20 w-full rounded-md" />
-                </div>
+  return (
+    <div className="flex flex-col h-full space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
+        <Skeleton className="h-10 w-full rounded-md" />
+        <Skeleton className="h-10 w-full rounded-md" />
+        <Skeleton className="h-10 w-full rounded-md" />
+      </div>
+      <div className="flex-1 overflow-x-auto pb-4">
+        <div className="flex space-x-4 min-w-max px-4 sm:px-0">
+          {KANBAN_COLUMNS_CONFIG.map((col) => (
+            <div key={col.status} className="flex-1 min-w-[280px] max-w-[320px] flex flex-col bg-muted/30 rounded-lg shadow-sm">
+              <div className={`px-3 py-2.5 flex items-center justify-between ${col.headerBgClass} text-white rounded-t-lg`}>
+                <Skeleton className="h-5 w-32 bg-white/30" />
+                <Skeleton className="h-5 w-6 rounded-full bg-white/30" />
               </div>
-            ))}
-          </div>
+              <div className="flex-1 p-3 space-y-3">
+                <Skeleton className="h-20 w-full rounded-md" />
+                <Skeleton className="h-20 w-full rounded-md" />
+                <Skeleton className="h-20 w-full rounded-md" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+    </div>
   );
 }
 
@@ -117,7 +120,7 @@ const getInitials = (name: string | undefined): string => {
 export function ProjectsKanbanClient() {
   const { currentUser } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); 
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,26 +129,26 @@ export function ProjectsKanbanClient() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const { toast } = useToast();
-  const [activeProject, setActiveProject] = useState<Project | null>(null); 
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
 
-  const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null); 
-  const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false); 
+  const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null);
+  const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
   const [projectToCourier, setProjectToCourier] = useState<Project | null>(null);
-  
+
   const [projectToHold, setProjectToHold] = useState<Project | null>(null);
   const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
-  
+
   const [projectForLogistics, setProjectForLogistics] = useState<Project | null>(null);
   const [isLogisticsConfirmDialogOpen, setIsLogisticsConfirmDialogOpen] = useState(false);
   const [paymentValidationError, setPaymentValidationError] = useState<string | null>(null);
   const [projectForDocsComplete, setProjectForDocsComplete] = useState<Project | null>(null);
   const [isDocsCompleteDialogOpen, setIsDocsCompleteDialogOpen] = useState(false);
-  
+
   const [projectOwnerFilter, setProjectOwnerFilter] = useState<'my' | 'all'>('my');
 
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [hashId, setHashId] = useState<string | null>(null);
-  
+
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>();
 
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
@@ -167,7 +170,7 @@ export function ProjectsKanbanClient() {
     }),
     useSensor(KeyboardSensor)
   );
-  
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -178,18 +181,20 @@ export function ProjectsKanbanClient() {
     };
   }, [searchTerm]);
 
+  const { socket } = useSocket();
+
   const fetchData = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsLoading(true);
     setIsDataFetching(true);
     try {
-      const [fetchedProjects, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([ 
+      const [fetchedProjects, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([
         getProjects(),
         getStatuses(),
         getGlobalSettings(),
         getUsers()
       ]);
       setProjects(fetchedProjects);
-      setAllStatuses(fetchedStatuses); 
+      setAllStatuses(fetchedStatuses);
       setGlobalSettings(fetchedSettings);
       setAllUsers(fetchedUsers);
     } catch (error) {
@@ -200,7 +205,20 @@ export function ProjectsKanbanClient() {
       setIsDataFetching(false);
     }
   }, [toast]);
-  
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("project-updated", (data: any) => {
+      console.log("Project updated remotely:", data);
+      fetchData(true);
+    });
+
+    return () => {
+      socket.off("project-updated");
+    };
+  }, [socket, fetchData]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const currentHash = window.location.hash.substring(1);
@@ -215,14 +233,14 @@ export function ProjectsKanbanClient() {
 
     const intervalId = setInterval(() => {
       fetchData(true);
-    }, 30000); 
+    }, 30000);
 
     return () => clearInterval(intervalId);
   }, [fetchData, currentUser]);
 
   const handleDateRangeChange = (
     range: DateRange | undefined,
-    displayLabel: string, 
+    displayLabel: string,
     predefinedValue: PredefinedRange | "custom" | null
   ) => {
     setSelectedDateRange(range);
@@ -230,23 +248,23 @@ export function ProjectsKanbanClient() {
 
   const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
     if (isReadOnly || !currentUser) {
-        toast({ title: "Read-Only Mode", description: "Actions are disabled.", variant: "default" });
-        return;
+      toast({ title: "Read-Only Mode", description: "Actions are disabled.", variant: "default" });
+      return;
     }
-    
+
     const projectShim: TrackingLink = {
-        id: projectToAssign.id,
-        companyName: projectToAssign.name,
-        currentStatus: projectToAssign.status,
-        designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
-        designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
-        address: '', phoneNumber: '', orderItems: [],
-        crmUserId: projectToAssign.assigneeId,
-        crmUserName: projectToAssign.assigneeName,
-        createdAt: projectToAssign.createdAt || new Date().toISOString(),
-        isPublic: false, statusHistory: [], comments: [], advancePayments: [],
+      id: projectToAssign.id,
+      companyName: projectToAssign.name,
+      currentStatus: projectToAssign.status,
+      designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
+      designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
+      address: '', phoneNumber: '', orderItems: [],
+      crmUserId: projectToAssign.assigneeId,
+      crmUserName: projectToAssign.assigneeName,
+      createdAt: projectToAssign.createdAt || new Date().toISOString(),
+      isPublic: false, statusHistory: [], comments: [], advancePayments: [],
     };
-    
+
     if (!projectToAssign.designerRepresentativeId) {
       setProjectForDocsComplete(projectToAssign);
       setIsDocsCompleteDialogOpen(true);
@@ -260,7 +278,7 @@ export function ProjectsKanbanClient() {
   const handleConfirmStatusUpdate = useCallback(async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
     if (!currentUser || isReadOnly) return;
     const originalStatus = project.status;
-    
+
     // Optimistic update
     setProjects(prevProjects => {
       return prevProjects.map(p =>
@@ -269,7 +287,7 @@ export function ProjectsKanbanClient() {
     });
 
     const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
-    
+
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
       // Revert if failed
@@ -296,24 +314,24 @@ export function ProjectsKanbanClient() {
     if (isReadOnly) return;
 
     const { active, over } = event;
-  
+
     if (!currentUser) {
       toast({ title: "Authentication Error", description: "Cannot update project, user not authenticated.", variant: "destructive" });
       return;
     }
-  
+
     if (!over || !active.data.current?.project) {
       return;
     }
-  
+
     const project = active.data.current.project as Project;
     const newStatus = over.id as ProjectStatusType;
     const originalStatus = project.status;
-  
+
     if (newStatus === originalStatus) {
       return;
     }
-  
+
     if (currentUser.role !== 'SYSTEM_ADMIN' && globalSettings) {
       const permissions = globalSettings.projectStageAccess;
       if (permissions && permissions[newStatus] && !permissions[newStatus].includes(currentUser.role)) {
@@ -325,64 +343,64 @@ export function ProjectsKanbanClient() {
         return;
       }
     }
-  
+
     if (newStatus === 'On Design' && project.status !== 'On Design') {
       if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
         setProjectForDocsComplete(project);
         setIsDocsCompleteDialogOpen(true);
-        return; 
+        return;
       }
     }
-  
+
     if (newStatus === 'Logistics' && project.status !== 'Logistics' && globalSettings?.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
       const order = await getOrderById(project.id);
-  
+
       if (!order) {
         toast({ title: "Error", description: "Could not retrieve order details for validation.", variant: "destructive" });
         return;
       }
-  
+
       const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
       const effectiveDiscount = order.specialClientDiscount || 0;
       const netPayable = orderSubtotal - effectiveDiscount;
       const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
       const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
-  
+
       if (paymentPercentage < 45) {
         setPaymentValidationError(`Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required to move to Logistics.`);
-        return; 
+        return;
       }
     }
-  
+
     if (newStatus === 'On Design' && !project.designerRepresentativeId) {
       handleOpenAssignDrDialog(project);
       return;
     }
-    
+
     if (newStatus === 'On Hold') {
       setProjectToHold(project);
       setIsHoldReasonDialogOpen(true);
       return;
     }
-  
+
     if (newStatus === 'Logistics') {
       setProjectForLogistics(project);
       setIsLogisticsConfirmDialogOpen(true);
       return;
     }
-    
+
     if (newStatus === 'Courier') {
       setProjectToCourier(project);
       return;
     }
-  
+
     handleConfirmStatusUpdate(project, newStatus);
   }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate, isReadOnly, handleOpenAssignDrDialog]);
-  
+
   const handleDragCancel = () => {
     setActiveProject(null);
   };
-  
+
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
     setProjects(prev => prev.map(p => p.id === updatedOrderFromDialog.id ? {
       ...p,
@@ -396,18 +414,18 @@ export function ProjectsKanbanClient() {
 
   const handleExport = async () => {
     const deliveredProjects = projects.filter(p => p.status === 'Delivered');
-  
+
     if (deliveredProjects.length === 0) {
       toast({ title: "No Data", description: "There are no projects in the 'Delivered' stage to export." });
       return;
     }
-    
+
     setIsDataFetching(true);
 
     const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
     const ordersResults = await Promise.all(ordersDataPromises);
     const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
-    
+
     setIsDataFetching(false);
 
     const dataToExport = deliveredProjects.map(p => {
@@ -417,19 +435,19 @@ export function ProjectsKanbanClient() {
       const nameParts = (p.name || '').split(' • ');
       const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
       const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
-      
-        return {
-          'Job ID': jobId,
-          'Company Name': companyName,
-          'Phone': order?.phoneNumber || 'N/A',
-          'Address': order?.address || 'N/A',
-          'Delivery Date': deliveryDate,
-        };
-      });
-  
+
+      return {
+        'Job ID': jobId,
+        'Company Name': companyName,
+        'Phone': order?.phoneNumber || 'N/A',
+        'Address': order?.address || 'N/A',
+        'Delivery Date': deliveryDate,
+      };
+    });
+
     const csv = Papa.unparse(dataToExport, {
-        header: true,
-        columns: ["Job ID", "Company Name", "Phone", "Address", "Delivery Date"]
+      header: true,
+      columns: ["Job ID", "Company Name", "Phone", "Address", "Delivery Date"]
     });
 
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
@@ -440,10 +458,10 @@ export function ProjectsKanbanClient() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  
+
     toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
   };
-  
+
   const canFilterUsers = useMemo(() => {
     if (!currentUser) return false;
     return currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader);
@@ -467,12 +485,12 @@ export function ProjectsKanbanClient() {
 
   const selectedUserName = useMemo(() => {
     if (selectedUserIdFilter === 'all') {
-      if(currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader) return 'All DRs';
+      if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader) return 'All DRs';
       return 'All Users';
     }
     return selectedUser?.name || 'Select User';
   }, [selectedUserIdFilter, selectedUser, currentUser]);
-  
+
 
   const filteredUsersForDropdown = useMemo(() => {
     if (!userSearchQuery) return usersForFilter;
@@ -483,7 +501,7 @@ export function ProjectsKanbanClient() {
 
   const visibleKanbanColumns = useMemo(() => {
     if (isReadOnly) {
-        return KANBAN_COLUMNS_CONFIG;
+      return KANBAN_COLUMNS_CONFIG;
     }
     if (!currentUser || !globalSettings?.projectStageAccess) {
       return [];
@@ -491,9 +509,9 @@ export function ProjectsKanbanClient() {
     if (currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'CRM' && currentUser.isLeader)) {
       return KANBAN_COLUMNS_CONFIG;
     }
-    
+
     const userPermissions = globalSettings.projectStageAccess;
-    return KANBAN_COLUMNS_CONFIG.filter(column => 
+    return KANBAN_COLUMNS_CONFIG.filter(column =>
       userPermissions[column.status]?.includes(currentUser.role)
     );
   }, [currentUser, globalSettings, isReadOnly]);
@@ -501,47 +519,49 @@ export function ProjectsKanbanClient() {
 
   const filteredProjects = useMemo(() => {
     let baseProjects = projects;
-    
+
     if (hashId) {
       baseProjects = baseProjects.filter(project => project.id === hashId);
     } else {
-        if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
-            if (selectedUserIdFilter !== 'all') {
-                const user = allUsers.find(u => u.id === selectedUserIdFilter);
-                if (user?.role === 'CRM') {
-                   baseProjects = projects.filter(project => project.assigneeId === selectedUserIdFilter);
-                } else if (user?.role === 'DESIGNER_REPRESENTATIVE') {
-                   baseProjects = projects.filter(project => project.designerRepresentativeId === selectedUserIdFilter);
-                }
-            }
-        } else if (currentUser?.role === 'CRM') {
-            if (currentUser.isLeader) {
-                if (projectOwnerFilter === 'my') {
-                    baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
-                }
-            } else {
-                baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
-            }
-        } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-            if (currentUser.isLeader) {
-              const allowedStatusesForDr = globalSettings?.projectStageAccess?.['DESIGNER_REPRESENTATIVE'] || [];
-              if (selectedUserIdFilter !== 'all') {
-                baseProjects = projects.filter(project => 
-                  project.designerRepresentativeId === selectedUserIdFilter
-                );
-              } else {
-                baseProjects = projects.filter(project => 
-                  project.designerRepresentativeId && allowedStatusesForDr.includes(project.status)
-                );
-              }
-            } else {
-              baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
-            }
+      if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+        if (selectedUserIdFilter !== 'all') {
+          const user = allUsers.find(u => u.id === selectedUserIdFilter);
+          if (user?.role === 'CRM') {
+            baseProjects = projects.filter(project => project.assigneeId === selectedUserIdFilter);
+          } else if (user?.role === 'DESIGNER_REPRESENTATIVE') {
+            baseProjects = projects.filter(project => project.designerRepresentativeId === selectedUserIdFilter);
+          }
         }
+      } else if (currentUser?.role === 'CRM') {
+        if (currentUser.isLeader) {
+          if (projectOwnerFilter === 'my') {
+            baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
+          }
+        } else {
+          baseProjects = projects.filter(project => project.assigneeId === currentUser.id);
+        }
+      } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+        if (currentUser.isLeader) {
+          const allowedStatusesForDr = Object.entries(globalSettings?.projectStageAccess || {})
+            .filter(([_, roles]) => (roles as UserRole[]).includes('DESIGNER_REPRESENTATIVE'))
+            .map(([status]) => status);
+          if (selectedUserIdFilter !== 'all') {
+            baseProjects = projects.filter(project =>
+              project.designerRepresentativeId === selectedUserIdFilter
+            );
+          } else {
+            baseProjects = projects.filter(project =>
+              project.designerRepresentativeId && allowedStatusesForDr.includes(project.status)
+            );
+          }
+        } else {
+          baseProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
+        }
+      }
     }
 
     return baseProjects.filter(project => {
-      const matchesSearchTerm = debouncedSearchTerm.trim() === '' || 
+      const matchesSearchTerm = debouncedSearchTerm.trim() === '' ||
         project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         project.projectIdDisplay.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         project.assigneeName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
@@ -569,11 +589,11 @@ export function ProjectsKanbanClient() {
       'CR Clearance': [], 'CO Clearance': [], 'Cancel': [], 'On Design': [],
       'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
     };
-    
+
     const sorted = [...filteredProjects].sort((a, b) => {
-        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-        return dateB - dateA;
+      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return dateB - dateA;
     });
 
     sorted.forEach(project => {
@@ -588,15 +608,15 @@ export function ProjectsKanbanClient() {
     const categories = new Set(projects.map(p => p.categoryTag).filter(Boolean));
     return Array.from(categories).sort();
   }, [projects]);
-  
+
 
   return (
-    <DndContext 
-        sensors={sensors} 
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd} 
-        onDragCancel={handleDragCancel}
-        collisionDetection={closestCorners}
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+      collisionDetection={closestCorners}
     >
       <div className="flex flex-col h-full space-y-4">
         {isReadOnly && (
@@ -622,51 +642,51 @@ export function ProjectsKanbanClient() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={isUserFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10">
                     {selectedUser ? (
-                       <Avatar className="mr-2 h-6 w-6">
-                            <AvatarImage src={selectedUser.avatarUrl || undefined} />
-                            <AvatarFallback className="text-xs">{getInitials(selectedUser.name)}</AvatarFallback>
-                        </Avatar>
+                      <Avatar className="mr-2 h-6 w-6">
+                        <AvatarImage src={selectedUser.avatarUrl || undefined} />
+                        <AvatarFallback className="text-xs">{getInitials(selectedUser.name)}</AvatarFallback>
+                      </Avatar>
                     ) : (
-                        <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                     )}
                     <span className="truncate">{selectedUserName}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                   <Command>
-                      <CommandInput placeholder="Search user..." value={userSearchQuery} onValueChange={setUserSearchQuery} />
-                      <CommandList>
-                          <CommandEmpty>No user found.</CommandEmpty>
-                          <CommandGroup>
-                             <CommandItem onSelect={() => { setSelectedUserIdFilter('all'); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
-                                  <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")}/>
-                                  <UsersIcon className="h-5 w-5 text-muted-foreground" />
-                                  <span>{currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? 'All DRs' : 'All Users'}</span>
-                              </CommandItem>
-                              {filteredUsersForDropdown.map((user) => (
-                                  <CommandItem key={user.id} value={user.name} onSelect={() => { setSelectedUserIdFilter(user.id); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
-                                      <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
-                                      <Avatar className="h-6 w-6">
-                                        <AvatarImage src={user.avatarUrl || undefined} />
-                                        <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
-                                      </Avatar>
-                                      <span className="truncate">{user.name}</span>
-                                      {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') &&
-                                        <span className="text-xs text-muted-foreground ml-auto">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})</span>
-                                      }
-                                  </CommandItem>
-                              ))}
-                          </CommandGroup>
-                      </CommandList>
-                   </Command>
+                  <Command>
+                    <CommandInput placeholder="Search user..." value={userSearchQuery} onValueChange={setUserSearchQuery} />
+                    <CommandList>
+                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem onSelect={() => { setSelectedUserIdFilter('all'); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
+                          <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")} />
+                          <UsersIcon className="h-5 w-5 text-muted-foreground" />
+                          <span>{currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? 'All DRs' : 'All Users'}</span>
+                        </CommandItem>
+                        {filteredUsersForDropdown.map((user) => (
+                          <CommandItem key={user.id} value={user.name} onSelect={() => { setSelectedUserIdFilter(user.id); setIsUserFilterOpen(false); }} className="cursor-pointer flex items-center gap-2">
+                            <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={user.avatarUrl || undefined} />
+                              <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+                            </Avatar>
+                            <span className="truncate">{user.name}</span>
+                            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') &&
+                              <span className="text-xs text-muted-foreground ml-auto">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})</span>
+                            }
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
                 </PopoverContent>
               </Popover>
             )}
-            <DateRangePicker 
-                initialRange={selectedDateRange} 
-                onDateRangeChange={handleDateRangeChange}
-                className="bg-card border-border/50 focus:border-primary"
+            <DateRangePicker
+              initialRange={selectedDateRange}
+              onDateRangeChange={handleDateRangeChange}
+              className="bg-card border-border/50 focus:border-primary"
             />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="bg-card border-border/50 focus:border-primary">
@@ -679,18 +699,18 @@ export function ProjectsKanbanClient() {
             </Select>
             {currentUser?.role === 'SYSTEM_ADMIN' && (
               <Button
-                  variant="outline"
-                  onClick={handleExport}
-                  disabled={isLoading}
-                  className="bg-card border-border/50 focus:border-primary"
+                variant="outline"
+                onClick={handleExport}
+                disabled={isLoading}
+                className="bg-card border-border/50 focus:border-primary"
               >
-                  {isDataFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                  Export Delivered
+                {isDataFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Export Delivered
               </Button>
             )}
           </div>
         )}
-        
+
         {(currentUser?.role === 'CRM' && currentUser.isLeader) && !isReadOnly && (
           <div className="px-4 sm:px-0">
             <Select value={projectOwnerFilter} onValueChange={(value) => setProjectOwnerFilter(value as 'my' | 'all')}>
@@ -710,7 +730,7 @@ export function ProjectsKanbanClient() {
             {visibleKanbanColumns.map((col) => (
               <KanbanColumn
                 key={col.status}
-                id={col.status} 
+                id={col.status}
                 title={col.title}
                 icon={col.icon}
                 projects={projectsByStatus[col.status] || []}
@@ -741,14 +761,14 @@ export function ProjectsKanbanClient() {
       </div>
       <DragOverlay dropAnimation={null}>
         {activeProject ? (
-          <ProjectCard 
-            project={activeProject} 
-            isOverlay 
+          <ProjectCard
+            project={activeProject}
+            isOverlay
             currentUser={currentUser}
             allStatuses={allStatuses}
             allUsers={allUsers}
             onOpenAssignDrDialog={handleOpenAssignDrDialog}
-            onViewLead={() => {}}
+            onViewLead={() => { }}
           />
         ) : null}
       </DragOverlay>
@@ -760,13 +780,13 @@ export function ProjectsKanbanClient() {
             if (!open) setSelectedOrderForDrAssignment(null);
             setIsAssignDrDialogOpen(open);
           }}
-          order={selectedOrderForDrAssignment} 
+          order={selectedOrderForDrAssignment}
           currentUser={currentUser}
           allStatuses={allStatuses}
           onDrAssigned={handleDrAssignmentSuccess}
         />
       )}
-      
+
       {projectToCourier && currentUser && (
         <CourierConfirmationDialog
           isOpen={!!projectToCourier}
@@ -778,7 +798,7 @@ export function ProjectsKanbanClient() {
           onSuccess={() => fetchData(true)}
         />
       )}
-      
+
       {projectToHold && (
         <HoldReasonDialog
           isOpen={isHoldReasonDialogOpen}
@@ -790,25 +810,25 @@ export function ProjectsKanbanClient() {
           }}
         />
       )}
-      
+
       {projectForLogistics && (
-          <FileUploadConfirmationDialog
-            isOpen={isLogisticsConfirmDialogOpen}
-            onOpenChange={(open) => {
-              if(!open) {
-                const originalStatus = projects.find(p => p.id === projectForLogistics.id)?.status;
-                if (originalStatus && originalStatus !== 'Logistics') {
-                  setProjects(prev => prev.map(p => p.id === projectForLogistics.id ? {...p, status: originalStatus} : p));
-                }
-                setProjectForLogistics(null);
+        <FileUploadConfirmationDialog
+          isOpen={isLogisticsConfirmDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              const originalStatus = projects.find(p => p.id === projectForLogistics.id)?.status;
+              if (originalStatus && originalStatus !== 'Logistics') {
+                setProjects(prev => prev.map(p => p.id === projectForLogistics.id ? { ...p, status: originalStatus } : p));
               }
-              setIsLogisticsConfirmDialogOpen(open);
-            }}
-            onConfirm={(notes) => {
-              handleConfirmStatusUpdate(projectForLogistics, 'Logistics', notes);
               setProjectForLogistics(null);
-            }}
-          />
+            }
+            setIsLogisticsConfirmDialogOpen(open);
+          }}
+          onConfirm={(notes) => {
+            handleConfirmStatusUpdate(projectForLogistics, 'Logistics', notes);
+            setProjectForLogistics(null);
+          }}
+        />
       )}
 
       {projectForDocsComplete && (
@@ -838,22 +858,22 @@ export function ProjectsKanbanClient() {
 
       {paymentValidationError && (
         <AlertDialog open={!!paymentValidationError} onOpenChange={() => setPaymentValidationError(null)}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="h-6 w-6 text-destructive" />
-                        Payment Incomplete
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {paymentValidationError}
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogAction onClick={() => setPaymentValidationError(null)}>
-                        OK
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+                Payment Incomplete
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {paymentValidationError}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setPaymentValidationError(null)}>
+                OK
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
         </AlertDialog>
       )}
     </DndContext>

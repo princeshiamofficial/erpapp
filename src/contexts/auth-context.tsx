@@ -4,7 +4,7 @@
 import type { User } from '@/types';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
-import { getUserByEmail, seedInitialAdminUser, updateUserAvatarInFirestore, getUserById } from '@/lib/user-service';
+import { getUserByEmail, seedInitialAdminUser, updateUserAvatar as updateUserAvatarService, getUserById, verifyUserPassword } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -35,36 +35,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [router]);
 
   const refreshCurrentUser = useCallback(async () => {
-    if (currentUser && currentUser.id && !isSuspendedDialogOpen) { 
+    if (currentUser && currentUser.id && !isSuspendedDialogOpen) {
       console.log(`AuthContext: Refreshing current user data for ID: ${currentUser.id}`);
       try {
-        const firestoreUser = await getUserById(currentUser.id);
-        if (firestoreUser) {
-          if (firestoreUser.isBanned) {
+        const dbUser = await getUserById(currentUser.id);
+        if (dbUser) {
+          if (dbUser.isBanned) {
             console.log("AuthContext: Current user has been banned during session. Showing suspension dialog.");
-            setCurrentUser(firestoreUser as User); 
-            localStorage.setItem('colorhut-user', JSON.stringify(firestoreUser));
+            setCurrentUser(dbUser as User);
+            localStorage.setItem('colorhut-user', JSON.stringify(dbUser));
             setIsSuspendedDialogOpen(true);
           } else {
-            const { password, ...userToStore } = firestoreUser;
+            const { password, ...userToStore } = dbUser;
             if (JSON.stringify(currentUser) !== JSON.stringify(userToStore)) {
               console.log("AuthContext: Fetched latest user data (not banned). Updating local state.");
               setCurrentUser(userToStore as User);
               localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
             }
-             if (isSuspendedDialogOpen) { // If dialog was open but user is no longer banned
+            if (isSuspendedDialogOpen) { // If dialog was open but user is no longer banned
               setIsSuspendedDialogOpen(false);
             }
           }
         } else {
-          console.log("AuthContext: Current user not found in Firestore during refresh (e.g., deleted). Showing suspension dialog to force logout.");
-          setIsSuspendedDialogOpen(true); 
+          console.log("AuthContext: Current user not found in MySQL during refresh (e.g., deleted). Showing suspension dialog to force logout.");
+          setIsSuspendedDialogOpen(true);
         }
       } catch (error) {
         console.error("AuthContext: Error refreshing current user data:", error);
       }
     }
-  }, [currentUser, isSuspendedDialogOpen]); 
+  }, [currentUser, isSuspendedDialogOpen]);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -77,19 +77,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (storedUserJson) {
           console.log("AuthContext: Found user in localStorage.");
           try {
-             // Robust parsing and validation
+            // Robust parsing and validation
             const storedUser = JSON.parse(storedUserJson);
             if (storedUser && typeof storedUser === 'object' && storedUser.id && typeof storedUser.id === 'string') {
-              console.log(`AuthContext: Validating stored user ID: ${storedUser.id} against Firestore.`);
-              const firestoreUser = await getUserById(storedUser.id);
-              if (firestoreUser) {
-                setCurrentUser(firestoreUser as User); 
-                if (firestoreUser.isBanned) {
+              console.log(`AuthContext: Validating stored user ID: ${storedUser.id} against MySQL.`);
+              const dbUser = await getUserById(storedUser.id);
+              if (dbUser) {
+                setCurrentUser(dbUser as User);
+                if (dbUser.isBanned) {
                   console.log("AuthContext: Stored user is banned. Will trigger suspension dialog.");
-                  setIsSuspendedDialogOpen(true); 
+                  setIsSuspendedDialogOpen(true);
                 }
               } else {
-                console.log("AuthContext: Stored user NOT found in Firestore. Clearing localStorage.");
+                console.log("AuthContext: Stored user NOT found in MySQL. Clearing localStorage.");
                 localStorage.removeItem('colorhut-user');
               }
             } else {
@@ -118,60 +118,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log(`AuthContext: Login attempt for email: ${email}`);
     setIsLoading(true);
     try {
-      const userFromDb = await getUserByEmail(email);
-      
-      if (userFromDb) {
-        console.log(`AuthContext: User found in DB for email ${email}:`, { id: userFromDb.id, role: userFromDb.role, isBanned: userFromDb.isBanned });
-        if (userFromDb.password === pass) {
-          if (userFromDb.isBanned) {
-            console.log("AuthContext: Login attempt by banned user. Setting state for suspension dialog.");
-            const { password, ...userToStore } = userFromDb;
-            setCurrentUser(userToStore as User); // Set current user to banned user
-            localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
-            setIsSuspendedDialogOpen(true); // Trigger dialog
-            setIsLoading(false);
-            router.push('/dashboard'); // Navigate, layout will handle dialog display
-            return true; // Technically "authenticated" to reach the suspended state
-          } else {
-            console.log("AuthContext: Password matches and user not banned. Login successful.");
-            const { password, ...userToStore } = userFromDb;
-            setCurrentUser(userToStore as User);
-            localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
-            setIsLoading(false);
-            
-            // Redirect logic based on role
-            const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
-            if (!systemRoles.includes(userToStore.role)) {
-              router.push('/attendance');
-            } else if (userToStore.role === 'LR') {
-              router.push('/projects');
-            } else {
-              router.push('/dashboard');
-            }
-            return true;
-          }
+      const authenticatedUser = await verifyUserPassword(email, pass);
+
+      if (authenticatedUser) {
+        console.log(`AuthContext: User authenticated:`, { id: authenticatedUser.id, role: authenticatedUser.role, isBanned: authenticatedUser.isBanned });
+        if (authenticatedUser.isBanned) {
+          console.log("AuthContext: Login attempt by banned user. Setting state for suspension dialog.");
+          setCurrentUser(authenticatedUser);
+          localStorage.setItem('colorhut-user', JSON.stringify(authenticatedUser));
+          setIsSuspendedDialogOpen(true);
+          setIsLoading(false);
+          router.push('/dashboard');
+          return true;
         } else {
-          console.log("AuthContext: Password does NOT match for user:", email);
-          toast({
-              title: "Login Failed",
-              description: "Invalid email or password. Please try again.",
-              variant: "destructive",
-          });
+          console.log("AuthContext: Authentication successful.");
+          setCurrentUser(authenticatedUser);
+          localStorage.setItem('colorhut-user', JSON.stringify(authenticatedUser));
+          setIsLoading(false);
+
+          // Redirect logic based on role
+          const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
+          if (!systemRoles.includes(authenticatedUser.role)) {
+            router.push('/attendance');
+          } else if (authenticatedUser.role === 'LR') {
+            router.push('/projects');
+          } else {
+            router.push('/dashboard');
+          }
+          return true;
         }
       } else {
-        console.log(`AuthContext: User NOT found in DB for email ${email}.`);
+        console.log(`AuthContext: Authentication failed for email ${email}.`);
         toast({
-            title: "Login Failed",
-            description: "Invalid email or password. Please try again.",
-            variant: "destructive",
+          title: "Login Failed",
+          description: "Invalid email or password. Please try again.",
+          variant: "destructive",
         });
       }
     } catch (error) {
       console.error("AuthContext: Error during login process:", error);
       toast({
-          title: "Login Error",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
+        title: "Login Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
     }
     setIsLoading(false);
@@ -183,16 +172,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("AuthContext: updateUserAvatar - No current user or user ID.");
       return false;
     }
-    
-    const success = await updateUserAvatarInFirestore(currentUser.id, avatarUrl);
+
+    const success = await updateUserAvatarService(currentUser.id, avatarUrl);
 
     if (success) {
-      console.log("AuthContext: Avatar updated successfully in Firestore. Updating local state.");
+      console.log("AuthContext: Avatar updated successfully in MySQL. Updating local state.");
       const updatedUser = { ...currentUser, avatarUrl: avatarUrl || undefined };
       setCurrentUser(updatedUser);
       localStorage.setItem('colorhut-user', JSON.stringify(updatedUser));
     } else {
-      console.log("AuthContext: Failed to update avatar in Firestore.");
+      console.log("AuthContext: Failed to update avatar in MySQL.");
     }
     return success;
   };

@@ -13,7 +13,7 @@ import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getContrastTextColor } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { getQuotations } from '@/lib/quotation-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -96,7 +96,7 @@ export default function QuotationsPage() {
   }, [currentUser]);
 
   const fetchData = async () => {
-     if (quotations.length === 0) {
+    if (quotations.length === 0) {
       setIsLoading(true);
     }
     try {
@@ -141,22 +141,22 @@ export default function QuotationsPage() {
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
       result = result.filter(quotation => quotation.designerRepresentativeId === currentUser.id);
     }
-    
-    if (viewType === 're-quotations') {
-        const jobCounts = result.reduce((acc, quotation) => {
-            const jobId = (quotation.companyName || '').split(' • ')[0].trim();
-            if (jobId) {
-                acc[jobId] = (acc[jobId] || 0) + 1;
-            }
-            return acc;
-        }, {} as Record<string, number>);
 
-        const reorderJobIds = new Set(Object.keys(jobCounts).filter(jobId => jobCounts[jobId] > 1));
-        
-        result = result.filter(quotation => {
-            const jobId = (quotation.companyName || '').split(' • ')[0].trim();
-            return jobId && reorderJobIds.has(jobId);
-        });
+    if (viewType === 're-quotations') {
+      const jobCounts = result.reduce((acc, quotation) => {
+        const jobId = (quotation.companyName || '').split(' • ')[0].trim();
+        if (jobId) {
+          acc[jobId] = (acc[jobId] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      const reorderJobIds = new Set(Object.keys(jobCounts).filter(jobId => jobCounts[jobId] > 1));
+
+      result = result.filter(quotation => {
+        const jobId = (quotation.companyName || '').split(' • ')[0].trim();
+        return jobId && reorderJobIds.has(jobId);
+      });
     }
 
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -215,7 +215,7 @@ export default function QuotationsPage() {
 
 
   const canCreateQuotation = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-  
+
   const canEditQuotation = useMemo(() => {
     if (!currentUser || !globalAppSettings) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true;
@@ -255,29 +255,29 @@ export default function QuotationsPage() {
   };
 
   const handleQuotationUpdated = useCallback(async (updatedQuotation: TrackingLink) => {
-    setQuotations(prevQuotations => 
+    setQuotations(prevQuotations =>
       prevQuotations.map(o => o.id === updatedQuotation.id ? updatedQuotation : o)
     );
-    toast({ title: "Quotation Updated", description: "Quotation details have been successfully updated."});
+    toast({ title: "Quotation Updated", description: "Quotation details have been successfully updated." });
     setIsEditQuotationDialogOpen(false);
     setQuotationToEdit(null);
   }, [toast]);
-  
+
   const handleChangeStatus = async (quotation: TrackingLink, newStatus: string) => {
     if (!currentUser) return;
     const result = await updateQuotationStatusAction(quotation.id, newStatus, currentUser);
     if (result.success && result.quotation) {
-        toast({ title: "Status Updated", description: `Quotation status changed to ${newStatus}.` });
-        setQuotations(prev => prev.map(q => q.id === result.quotation?.id ? result.quotation : q));
+      toast({ title: "Status Updated", description: `Quotation status changed to ${newStatus}.` });
+      setQuotations(prev => prev.map(q => q.id === result.quotation?.id ? result.quotation : q));
     } else {
-        toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+      toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     }
   };
 
   const renderPagination = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
-    
+    const maxPagesToShow = 5;
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
@@ -286,7 +286,7 @@ export default function QuotationsPage() {
 
       if (currentPage < 3) endPage = maxPagesToShow;
       else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-      
+
       if (startPage > 1) {
         pageNumbers.push(1);
         if (startPage > 2) pageNumbers.push('...');
@@ -298,13 +298,13 @@ export default function QuotationsPage() {
       }
     }
     return pageNumbers.map((page, index) => (
-        <PaginationItem key={index}>
+      <PaginationItem key={index}>
         {page === '...' ? <PaginationEllipsis />
-        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+          : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
             {page}
           </PaginationLink>
         }
-        </PaginationItem>
+      </PaginationItem>
     ));
   };
 
@@ -335,7 +335,7 @@ export default function QuotationsPage() {
               </Button>
             </Link>
           )}
-          {(currentUser.role === 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
+          {(currentUser.role === 'ADMIN') && (
             <Link href="/admin/model-management" passHref>
               <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
                 <Layers className="mr-2 h-4 w-4" /> Configure Models
@@ -442,10 +442,10 @@ export default function QuotationsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleOpenEditQuotationDialog(quotation)} className="cursor-pointer">
-                                  <Edit3 className="mr-2 h-4 w-4" /> Edit Quotation
-                                </DropdownMenuItem>
-                               <DropdownMenuSub>
+                              <DropdownMenuItem onSelect={() => handleOpenEditQuotationDialog(quotation)} className="cursor-pointer">
+                                <Edit3 className="mr-2 h-4 w-4" /> Edit Quotation
+                              </DropdownMenuItem>
+                              <DropdownMenuSub>
                                 <DropdownMenuSubTrigger className="cursor-pointer">
                                   <Hourglass className="mr-2 h-4 w-4" /> Change Status
                                 </DropdownMenuSubTrigger>
@@ -523,24 +523,24 @@ export default function QuotationsPage() {
             </Table>
           </div>
         </CardContent>
-         <CardFooter className="py-4 border-t">
+        <CardFooter className="py-4 border-t">
           {totalPages > 1 && (
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
-                    aria-disabled={currentPage === 1} 
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                    aria-disabled={currentPage === 1}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                   />
                 </PaginationItem>
                 {renderPagination()}
                 <PaginationItem>
-                  <PaginationNext 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
-                    aria-disabled={currentPage === totalPages} 
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                    aria-disabled={currentPage === totalPages}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
                   />
                 </PaginationItem>

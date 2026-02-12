@@ -1,81 +1,64 @@
 
+"use server";
 
-import type { Dr2oEntry, UserRole } from '@/types';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import type { Dr2oEntry } from '@/types';
+import { query } from './mysql';
 
-const getCollectionNameForTeam = (team: 'CR' | 'DR' | 'LR' | 'CO'): string => {
-    switch (team) {
-        case 'CR': return 'CRworkflow';
-        case 'DR': return 'DRworkflow';
-        case 'LR': return 'LRworkflow';
-        case 'CO': return 'COworkflow';
-        default: return 'workflow'; // Fallback
-    }
-}
+const TABLE_NAME = 'workflow_entries';
 
 export const getDr2oEntries = async (team: 'CR' | 'DR' | 'LR' | 'CO' = 'CR'): Promise<Dr2oEntry[]> => {
-  const collectionName = getCollectionNameForTeam(team);
   try {
-    await ensureCollectionExistsV3(collectionName);
-    const response = await fetchFromApiV3(`collections/${collectionName}/documents?limit=9999`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data,
-      }));
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} WHERE team = ? ORDER BY id DESC`, [team]);
+    return rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json),
+    } as Dr2oEntry));
   } catch (error) {
-    console.error(`Error fetching DR 2.O entries for ${team} from ${collectionName} via API v3:`, error);
+    console.error(`Error fetching DR 2.O entries for ${team} from MySQL:`, error);
     return [];
   }
 };
 
 export const addDr2oEntry = async (entryData: Omit<Dr2oEntry, 'id'>, team: 'CR' | 'DR' | 'LR' | 'CO' = 'CR'): Promise<Dr2oEntry | null> => {
-  const collectionName = getCollectionNameForTeam(team);
   try {
-    await ensureCollectionExistsV3(collectionName);
-    const payload = { data: entryData };
-    const newDoc = await fetchFromApiV3(`collections/${collectionName}/documents`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    const { v4: uuidv4 } = require('uuid');
+    const id = uuidv4();
+    const dataWithId = { ...entryData, id };
 
-    return { id: newDoc.id, ...newDoc.data };
+    await query(`INSERT INTO ${TABLE_NAME} (id, team, data_json) VALUES (?, ?, ?)`,
+      [id, team, JSON.stringify(dataWithId)]);
+
+    return dataWithId as Dr2oEntry;
   } catch (error) {
-    console.error(`Error adding DR 2.O entry to ${collectionName} via API v3:`, error);
+    console.error(`Error adding DR 2.O entry to team ${team} in MySQL:`, error);
     if (error instanceof Error) throw error;
     return null;
   }
 };
 
 export const updateDr2oEntry = async (id: string, updates: Partial<Dr2oEntry>, team: 'CR' | 'DR' | 'LR' | 'CO' = 'CR'): Promise<boolean> => {
-  const collectionName = getCollectionNameForTeam(team);
   try {
-    await ensureCollectionExistsV3(collectionName);
-    const existingDoc = await fetchFromApiV3(`collections/${collectionName}/documents/${id}`);
-    const finalData = { ...existingDoc.data, ...updates };
+    const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME} WHERE id = ? AND team = ?`, [id, team]);
+    if (rows.length === 0) return false;
 
-    await fetchFromApiV3(`collections/${collectionName}/documents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ data: finalData }),
-    });
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const finalData = { ...existingData, ...updates };
+
+    await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ? AND team = ?`,
+      [JSON.stringify(finalData), id, team]);
     return true;
   } catch (error) {
-    console.error(`Error updating DR 2.O entry ${id} in ${collectionName} via API v3:`, error);
+    console.error(`Error updating DR 2.O entry ${id} in MySQL:`, error);
     return false;
   }
 };
 
 export const deleteDr2oEntry = async (id: string, team: 'CR' | 'DR' | 'LR' | 'CO'): Promise<boolean> => {
-  const collectionName = getCollectionNameForTeam(team);
   try {
-    await fetchFromApiV3(`collections/${collectionName}/documents/${id}`, {
-      method: 'DELETE'
-    });
+    await query(`DELETE FROM ${TABLE_NAME} WHERE id = ? AND team = ?`, [id, team]);
     return true;
   } catch (error) {
-    console.error(`Error deleting entry ${id} from ${collectionName} via API v3:`, error);
+    console.error(`Error deleting entry ${id} from MySQL:`, error);
     return false;
   }
 };

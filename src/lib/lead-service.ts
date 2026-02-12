@@ -1,104 +1,95 @@
-import type { Lead, LeadCategory, LeadStatusType } from '@/types';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
-import { format, subMonths, parseISO } from 'date-fns';
 
-const COLLECTION_NAME = 'leads';
+"use server";
 
-// Get all leads
+import type { Lead, LeadStatusType } from '@/types';
+import { query } from './mysql';
+import { v4 as uuidv4 } from 'uuid';
+
+const LEADS_TABLE = 'leads';
+
 export const getLeads = async (): Promise<Lead[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444`);
-    if (response && Array.isArray(response.documents)) {
-        const leads = response.documents.map((doc: { id: string, data: any }) => ({
-            id: doc.id,
-            ...doc.data
-        } as Lead));
-        return leads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${LEADS_TABLE} ORDER BY id DESC`);
+    return rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as Lead)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
-    console.error(`Error fetching leads from ${COLLECTION_NAME} via API v3:`, error);
+    console.error(`Error fetching leads from MySQL:`, error);
     return [];
   }
 };
 
-
-// Get a single lead by ID
 export const getLeadById = async (leadId: string): Promise<Lead | null> => {
-    if (!leadId) return null;
-    try {
-        const doc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`);
-        if (doc && doc.data) {
-            return { id: doc.id, ...doc.data } as Lead;
-        }
-    } catch (error) {
-        if (!(error instanceof Error && error.message.toLowerCase().includes('not found'))) {
-          console.warn(`Error getting lead ${leadId} in ${COLLECTION_NAME}:`, error);
-        }
+  if (!leadId) return null;
+  try {
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${LEADS_TABLE} WHERE id = ?`, [leadId]);
+    if (rows.length > 0) {
+      return { id: rows[0].id, ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as Lead;
     }
-    console.warn(`Lead with ID ${leadId} not found.`);
-    return null;
+  } catch (error) {
+    console.error(`Error fetching lead ${leadId} from MySQL:`, error);
+  }
+  return null;
 };
 
+export const getLeadByPhone = async (phone: string): Promise<Lead | null> => {
+  if (!phone) return null;
+  try {
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${LEADS_TABLE} WHERE phone = ?`, [phone]);
+    if (rows.length > 0) {
+      return { id: rows[0].id, ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as Lead;
+    }
+  } catch (error) {
+    console.error(`Error fetching lead by phone ${phone} from MySQL:`, error);
+  }
+  return null;
+};
 
-// Add a new lead
 export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME); 
-
+    const id = uuidv4();
     const dataWithStatus = {
-        ...leadData,
-        status: 'New Lead' as LeadStatusType,
-        customerType: leadData.customerType || null,
+      ...leadData,
+      status: 'New Lead' as LeadStatusType,
+      customerType: leadData.customerType || null,
     };
-    const payload = { data: dataWithStatus };
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
 
-    return { id: newDoc.id, ...newDoc.data } as Lead;
+    await query(`INSERT INTO ${LEADS_TABLE} (id, business_name, contact_name, phone, status, crm_id, data_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, dataWithStatus.businessName || null, dataWithStatus.contactName || null, dataWithStatus.phone || null, dataWithStatus.status || null, dataWithStatus.crmId || null, JSON.stringify(dataWithStatus)]);
+
+    return { id, ...dataWithStatus } as Lead;
   } catch (error) {
-    console.error("Error adding lead via API v3:", error);
-    if (error instanceof Error) throw error; 
+    console.error("Error adding lead to MySQL:", error);
     return null;
   }
 };
 
-// Update a lead
 export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id'>>): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
     const existingLead = await getLeadById(leadId);
-    if (!existingLead) {
-        throw new Error("Lead to update not found.");
-    }
-    
-    const finalData = { ...existingLead, ...updates, id: undefined };
-    delete finalData.id;
+    if (!existingLead) throw new Error("Lead to update not found.");
 
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData })
-    });
+    const finalData = { ...existingLead, ...updates };
+    const id = finalData.id;
+    delete (finalData as any).id;
+
+    await query(`UPDATE ${LEADS_TABLE} SET business_name = ?, contact_name = ?, phone = ?, status = ?, crm_id = ?, data_json = ? WHERE id = ?`,
+      [finalData.businessName || null, finalData.contactName || null, finalData.phone || null, finalData.status || null, finalData.crmId || null, JSON.stringify(finalData), id]);
+
     return true;
   } catch (error) {
-    console.error(`Error updating lead ${leadId} via API v3:`, error);
+    console.error(`Error updating lead ${leadId} in MySQL:`, error);
     return false;
   }
 };
 
-// Delete a lead
 export const deleteLead = async (leadId: string): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
-        method: 'DELETE'
-    });
+    await query(`DELETE FROM ${LEADS_TABLE} WHERE id = ?`, [leadId]);
     return true;
   } catch (error) {
-    console.error(`Error deleting lead ${leadId} via API v3:`, error);
+    console.error(`Error deleting lead ${leadId} from MySQL:`, error);
     return false;
   }
 };

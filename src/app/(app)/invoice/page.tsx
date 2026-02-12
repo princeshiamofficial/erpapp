@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { TrackingLink, CustomStatus, AdvancePaymentRecord, User } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getStatuses } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { getUsers } from '@/lib/user-service';
 import { getFullOrdersByIds } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -69,19 +70,19 @@ export default function InvoiceListPage() {
     if (orderIds.length === 0) return;
     setIsPreparingPrint(true);
     try {
-        const fullOrders = await getFullOrdersByIds(orderIds);
-        if (fullOrders.length !== orderIds.length) {
-          toast({ title: "Print Warning", description: "Some selected invoices could not be found.", variant: "destructive" });
-        }
-        if (fullOrders.length > 0) {
-          setOrdersToPrint(fullOrders);
-        } else {
-          setIsPreparingPrint(false);
-        }
-    } catch (error) {
-        console.error("Failed to fetch full orders for printing:", error);
-        toast({ title: "Print Error", description: "Could not prepare invoices for printing.", variant: "destructive" });
+      const fullOrders = await getFullOrdersByIds(orderIds);
+      if (fullOrders.length !== orderIds.length) {
+        toast({ title: "Print Warning", description: "Some selected invoices could not be found.", variant: "destructive" });
+      }
+      if (fullOrders.length > 0) {
+        setOrdersToPrint(fullOrders);
+      } else {
         setIsPreparingPrint(false);
+      }
+    } catch (error) {
+      console.error("Failed to fetch full orders for printing:", error);
+      toast({ title: "Print Error", description: "Could not prepare invoices for printing.", variant: "destructive" });
+      setIsPreparingPrint(false);
     }
   };
 
@@ -93,7 +94,7 @@ export default function InvoiceListPage() {
         setSelectedRowIds(new Set());
         window.removeEventListener('afterprint', handleAfterPrint);
       };
-      
+
       window.addEventListener('afterprint', handleAfterPrint);
 
       const timer = setTimeout(() => {
@@ -106,7 +107,7 @@ export default function InvoiceListPage() {
       };
     }
   }, [ordersToPrint]);
-  
+
   const filteredOrders = useMemo(() => {
     if (!searchTerm) return allOrders;
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -117,7 +118,7 @@ export default function InvoiceListPage() {
       order.crmUserName.toLowerCase().includes(lowerSearchTerm)
     );
   }, [allOrders, searchTerm]);
-  
+
   useEffect(() => {
     setSelectedRowIds(new Set());
   }, [searchTerm]);
@@ -157,7 +158,7 @@ export default function InvoiceListPage() {
     }
     return { name: 'N/A', color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
-  
+
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
       setSelectedRowIds(new Set(filteredOrders.map(o => o.id)));
@@ -206,25 +207,25 @@ export default function InvoiceListPage() {
           <CardContent className="p-0">
             {numSelected > 0 && (
               <div className="flex items-center gap-4 px-5 py-3 bg-secondary/50 border-b">
-                  <div className="text-sm font-semibold text-foreground flex-1">
-                      {numSelected} row{numSelected > 1 ? 's' : ''} selected.
-                  </div>
-                   <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePrintInvoices(Array.from(selectedRowIds))}
-                      disabled={isPreparingPrint}
-                   >
-                      {isPreparingPrint ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Preparing...</>
-                      ) : (
-                          <><Printer className="mr-2 h-4 w-4"/> Print Selected</>
-                      )}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSelectedRowIds(new Set())}>
-                      <X className="h-4 w-4"/>
-                      <span className="sr-only">Clear selection</span>
-                  </Button>
+                <div className="text-sm font-semibold text-foreground flex-1">
+                  {numSelected} row{numSelected > 1 ? 's' : ''} selected.
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePrintInvoices(Array.from(selectedRowIds))}
+                  disabled={isPreparingPrint}
+                >
+                  {isPreparingPrint ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing...</>
+                  ) : (
+                    <><Printer className="mr-2 h-4 w-4" /> Print Selected</>
+                  )}
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSelectedRowIds(new Set())}>
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Clear selection</span>
+                </Button>
               </div>
             )}
             <div className="overflow-x-auto">
@@ -254,7 +255,7 @@ export default function InvoiceListPage() {
                   {isLoading ? (
                     [...Array(8)].map((_, i) => (
                       <TableRow key={`skel-invoice-${i}`}>
-                        <TableCell className="text-center pl-4"><Skeleton className="h-5 w-5"/></TableCell>
+                        <TableCell className="text-center pl-4"><Skeleton className="h-5 w-5" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -271,11 +272,11 @@ export default function InvoiceListPage() {
                       return (
                         <TableRow key={order.id} className="hover:bg-muted/50 transition-colors" data-state={isSelected ? "selected" : ""}>
                           <TableCell className="text-center pl-4">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={(checked) => handleSelectRow(order.id, !!checked)}
-                                aria-label={`Select row for order ${order.id}`}
-                              />
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleSelectRow(order.id, !!checked)}
+                              aria-label={`Select row for order ${order.id}`}
+                            />
                           </TableCell>
                           <TableCell className="font-medium text-primary">
                             <Link href={`/invoice/${order.id}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
@@ -297,11 +298,11 @@ export default function InvoiceListPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                         <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
-                         <p className="text-lg text-muted-foreground font-medium">No orders found.</p>
-                         <p className="text-sm text-muted-foreground">
-                           {searchTerm ? "Try adjusting your search term." : "Create a new order to see it here."}
-                         </p>
+                        <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                        <p className="text-lg text-muted-foreground font-medium">No orders found.</p>
+                        <p className="text-sm text-muted-foreground">
+                          {searchTerm ? "Try adjusting your search term." : "Create a new order to see it here."}
+                        </p>
                       </TableCell>
                     </TableRow>
                   )}
@@ -311,15 +312,15 @@ export default function InvoiceListPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Hidden container for printing */}
       {ordersToPrint && (
         <div className="hidden print:block">
           {ordersToPrint.map(order => (
             <div key={`print-${order.id}`} className="invoice-page">
-              <InvoiceDetailsClient 
-                order={order} 
-                allStatuses={allStatuses} 
+              <InvoiceDetailsClient
+                order={order}
+                allStatuses={allStatuses}
                 allUsers={allUsers}
               />
             </div>

@@ -1,66 +1,53 @@
+"use server";
 
-
+import { query } from './mysql';
 import type { VendorCategory } from '@/types';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { v4 as uuidv4 } from 'uuid';
 
-const COLLECTION_NAME = 'vendorCategories';
+const VENDOR_CATEGORIES_TABLE = 'vendor_categories';
 
 export const getVendorCategories = async (): Promise<VendorCategory[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444&orderBy=name&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data
-      } as VendorCategory));
-    }
-    return [];
+    const results = await query<any[]>(`SELECT * FROM ${VENDOR_CATEGORIES_TABLE} ORDER BY name ASC`);
+    return results.map(row => ({
+      id: row.id,
+      name: row.name
+      // add other fields if they exist in type definition, but valid minimal map based on table
+    } as VendorCategory));
   } catch (error) {
-    console.error("Error fetching vendor categories via API v3:", error);
+    console.error("Error fetching vendor categories from MySQL:", error);
     return [];
   }
 };
 
 export const addVendorCategory = async (categoryData: Omit<VendorCategory, 'id'>): Promise<VendorCategory | null> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ data: categoryData }),
-    });
-    return { id: newDoc.id, ...newDoc.data } as VendorCategory;
+    const id = uuidv4();
+    await query(`INSERT INTO ${VENDOR_CATEGORIES_TABLE} (id, name) VALUES (?, ?)`, [id, categoryData.name]);
+    return { id, ...categoryData } as VendorCategory;
   } catch (error) {
-    console.error("Error adding vendor category via API v3:", error);
+    console.error("Error adding vendor category to MySQL:", error);
     return null;
   }
 };
 
 export const updateVendorCategory = async (id: string, updates: Partial<VendorCategory>): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
-    const finalData = { ...existingDoc.data, ...updates };
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData })
-    });
+    if (!updates.name) return true; // Nothing to update if name is missing? Or handle generic updates
+    await query(`UPDATE ${VENDOR_CATEGORIES_TABLE} SET name = ? WHERE id = ?`, [updates.name, id]);
     return true;
   } catch (error) {
-    console.error(`Error updating vendor category ${id} via API v3:`, error);
+    console.error(`Error updating vendor category ${id} in MySQL:`, error);
     return false;
   }
 };
 
 export const deleteVendorCategory = async (id: string): Promise<boolean> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-        method: 'DELETE'
-    });
+    await query(`DELETE FROM ${VENDOR_CATEGORIES_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error(`Error deleting vendor category ${id} via API v3:`, error);
+    console.error(`Error deleting vendor category ${id} from MySQL:`, error);
     return false;
   }
 };

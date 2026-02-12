@@ -38,7 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { getContrastTextColor } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 
 import {
   DndContext,
@@ -72,7 +72,7 @@ export default function CustomAccessPage() {
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
   const [leadCategoryAccess, setLeadCategoryAccess] = useState<Record<LeadCategory, LeadCategoryAccessSettings>>({} as Record<LeadCategory, LeadCategoryAccessSettings>);
   const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
-  const [isPaymentValidationEnabled, setIsPaymentValidationEnabled] = useState(true); 
+  const [isPaymentValidationEnabled, setIsPaymentValidationEnabled] = useState(true);
   const [isLeaderboardRestricted, setIsLeaderboardRestricted] = useState(false);
   const [crmUsers, setCrmUsers] = useState<User[]>([]);
   const [crmSearchTerm, setCrmSearchTerm] = useState('');
@@ -81,12 +81,12 @@ export default function CustomAccessPage() {
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
-  const [isSubmittingPaymentValidation, setIsSubmittingPaymentValidation] = useState(false); 
+  const [isSubmittingPaymentValidation, setIsSubmittingPaymentValidation] = useState(false);
   const [isSubmittingLeaderboardRestriction, setIsSubmittingLeaderboardRestriction] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
-  
+
   // Role Management states
   const [isAddEditRoleDialogOpen, setIsAddEditRoleDialogOpen] = useState(false);
   const [roleToEdit, setRoleToEdit] = useState<UserRoleDefinition | null>(null);
@@ -107,9 +107,9 @@ export default function CustomAccessPage() {
     setIsLoading(true);
     try {
       const [globalSettings, allUsers, fetchedRoles] = await Promise.all([
-          fetchGlobalSettings(),
-          getUsers(),
-          getRoles()
+        fetchGlobalSettings(),
+        getUsers(),
+        getRoles()
       ]);
       setAllRoles(fetchedRoles);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
@@ -118,7 +118,7 @@ export default function CustomAccessPage() {
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
       setLeadCategoryAccess(globalSettings.leadCategoryAccess || ({} as Record<LeadCategory, LeadCategoryAccessSettings>));
       setPipelineAccess(new Set(globalSettings.pipelineAccess?.canViewAllLeads ?? []));
-      setIsPaymentValidationEnabled(globalSettings.isPaymentValidationEnabled ?? true); 
+      setIsPaymentValidationEnabled(globalSettings.isPaymentValidationEnabled ?? true);
       setIsLeaderboardRestricted(globalSettings.isLeaderboardRestrictedToAdmin ?? false);
       setCrmUsers(allUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
@@ -136,7 +136,7 @@ export default function CustomAccessPage() {
       router.replace('/dashboard');
     }
   }, [currentUser, router, fetchData]);
-  
+
   const handleRolePermissionChange = (setter: React.Dispatch<React.SetStateAction<Set<UserRole>>>, role: UserRole, checked: boolean | "indeterminate") => {
     setter(prev => {
       const newSet = new Set(prev);
@@ -169,15 +169,15 @@ export default function CustomAccessPage() {
     else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingFinancialVisibility(false);
   };
-  
+
   const handleTogglePaymentValidation = async (enabled: boolean) => {
     setIsSubmittingPaymentValidation(true);
     const result = await updatePaymentValidationAction(enabled);
     if (result.success) {
-        setIsPaymentValidationEnabled(enabled);
-        toast({ title: "Settings Updated", description: `Payment validation is now ${enabled ? 'enabled' : 'disabled'}.` });
+      setIsPaymentValidationEnabled(enabled);
+      toast({ title: "Settings Updated", description: `Payment validation is now ${enabled ? 'enabled' : 'disabled'}.` });
     } else {
-        toast({ title: "Update Failed", description: result.error || "Could not update payment validation setting.", variant: "destructive" });
+      toast({ title: "Update Failed", description: result.error || "Could not update payment validation setting.", variant: "destructive" });
     }
     setIsSubmittingPaymentValidation(false);
   };
@@ -186,10 +186,10 @@ export default function CustomAccessPage() {
     setIsSubmittingLeaderboardRestriction(true);
     const result = await updateLeaderboardRestrictionAction(restricted);
     if (result.success) {
-        setIsLeaderboardRestricted(restricted);
-        toast({ title: "Settings Updated", description: `Leaderboard access is now ${restricted ? 'restricted to admins' : 'open to all permitted roles'}.` });
+      setIsLeaderboardRestricted(restricted);
+      toast({ title: "Settings Updated", description: `Leaderboard access is now ${restricted ? 'restricted to admins' : 'open to all permitted roles'}.` });
     } else {
-        toast({ title: "Update Failed", description: result.error || "Could not update leaderboard restriction setting.", variant: "destructive" });
+      toast({ title: "Update Failed", description: result.error || "Could not update leaderboard restriction setting.", variant: "destructive" });
     }
     setIsSubmittingLeaderboardRestriction(false);
   };
@@ -212,7 +212,7 @@ export default function CustomAccessPage() {
     else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingProjectStageAccess(false);
   };
-  
+
   const handlePipelineAccessChange = (userId: string, checked: boolean | "indeterminate") => {
     setPipelineAccess(prev => {
       const newSet = new Set(prev);
@@ -229,11 +229,11 @@ export default function CustomAccessPage() {
     else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingPipelineAccess(false);
   };
-  
+
   const filteredCrmUsers = useMemo(() => {
     if (!crmSearchTerm) return crmUsers;
     const lowerCaseSearch = crmSearchTerm.toLowerCase();
-    return crmUsers.filter(user => 
+    return crmUsers.filter(user =>
       user.name.toLowerCase().includes(lowerCaseSearch) ||
       user.email.toLowerCase().includes(lowerCaseSearch)
     );
@@ -318,7 +318,7 @@ export default function CustomAccessPage() {
     <div className="space-y-8 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3"><Shield className="h-8 w-8 text-primary"/>Custom Access Control</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3"><Shield className="h-8 w-8 text-primary" />Custom Access Control</h1>
           <p className="text-base text-muted-foreground mt-1">Manage role-based permissions for orders, projects, and pipeline visibility.</p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10">
@@ -339,7 +339,7 @@ export default function CustomAccessPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <DndContext 
+          <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
@@ -366,14 +366,14 @@ export default function CustomAccessPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <SortableContext 
+                  <SortableContext
                     items={allRoles.map(r => r.id)}
                     strategy={verticalListSortingStrategy}
                   >
                     {allRoles.map(role => (
-                      <SortableRoleRow 
-                        key={role.id} 
-                        role={role} 
+                      <SortableRoleRow
+                        key={role.id}
+                        role={role}
                         onEdit={handleOpenEditRole}
                         onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
                       />
@@ -395,16 +395,16 @@ export default function CustomAccessPage() {
           <CardContent className="p-6">
             {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {manageableRoles.map((role) => (<div key={role.id} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`role-edit-perm-${role.id}`} checked={rolesAllowedToEdit.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)} disabled={isSubmittingOrderEditing}/>
-                      <Label htmlFor={`role-edit-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
-                </div>}
+                {manageableRoles.map((role) => (<div key={role.id} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                  <Checkbox id={`role-edit-perm-${role.id}`} checked={rolesAllowedToEdit.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)} disabled={isSubmittingOrderEditing} />
+                  <Label htmlFor={`role-edit-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
+              </div>}
           </CardContent>
-           <CardFooter className="border-t p-5 flex justify-end">
+          <CardFooter className="border-t p-5 flex justify-end">
             <Button onClick={handleSaveOrderEditingPermissions} disabled={isLoading || isSubmittingOrderEditing}>{isSubmittingOrderEditing ? "Saving..." : "Save Editing Permissions"}</Button>
           </CardFooter>
         </Card>
-        
+
         <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Trash2 className="h-6 w-6 text-destructive" /> Order Deletion Permissions</CardTitle>
@@ -413,92 +413,92 @@ export default function CustomAccessPage() {
           <CardContent className="p-6">
             {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {manageableRoles.map((role) => (<div key={`role-delete-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`role-delete-perm-${role.id}`} checked={rolesAllowedToDelete.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)} disabled={isSubmittingOrderDeletion}/>
-                      <Label htmlFor={`role-delete-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
-                </div>}
+                {manageableRoles.map((role) => (<div key={`role-delete-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                  <Checkbox id={`role-delete-perm-${role.id}`} checked={rolesAllowedToDelete.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)} disabled={isSubmittingOrderDeletion} />
+                  <Label htmlFor={`role-delete-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
+              </div>}
           </CardContent>
-           <CardFooter className="border-t p-5 flex justify-end">
+          <CardFooter className="border-t p-5 flex justify-end">
             <Button onClick={handleSaveOrderDeletionPermissions} disabled={isLoading || isSubmittingOrderDeletion} variant="destructive">
               {isSubmittingOrderDeletion ? "Saving..." : "Save Deletion Permissions"}
             </Button>
           </CardFooter>
         </Card>
       </div>
-      
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" /> Financial Visibility</CardTitle>
-                <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can see price and payment details on tracking pages.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-                {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-                : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-x-6 gap-y-4">
-                    {manageableRoles.map((role) => (<div key={`role-financial-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                        <Checkbox id={`role-financial-perm-${role.id}`} checked={rolesAllowedToViewFinancials.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)} disabled={isSubmittingFinancialVisibility}/>
-                        <Label htmlFor={`role-financial-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
-                    </div>}
-            </CardContent>
-            <CardFooter className="border-t p-5 flex justify-end">
-                <Button onClick={handleSaveFinancialVisibilityPermissions} disabled={isLoading || isSubmittingFinancialVisibility}>
-                    {isSubmittingFinancialVisibility ? "Saving..." : "Save Financial Permissions"}
-                </Button>
-            </CardFooter>
+          <CardHeader className="border-b p-5">
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" /> Financial Visibility</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can see price and payment details on tracking pages.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
+              : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-x-6 gap-y-4">
+                {manageableRoles.map((role) => (<div key={`role-financial-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                  <Checkbox id={`role-financial-perm-${role.id}`} checked={rolesAllowedToViewFinancials.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)} disabled={isSubmittingFinancialVisibility} />
+                  <Label htmlFor={`role-financial-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
+              </div>}
+          </CardContent>
+          <CardFooter className="border-t p-5 flex justify-end">
+            <Button onClick={handleSaveFinancialVisibilityPermissions} disabled={isLoading || isSubmittingFinancialVisibility}>
+              {isSubmittingFinancialVisibility ? "Saving..." : "Save Financial Permissions"}
+            </Button>
+          </CardFooter>
         </Card>
 
         <div className="space-y-8">
-            <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-                <CardHeader className="border-b p-5">
-                    <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Payment Validation</CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm mt-0.5">Enable or disable the 45% payment check before moving projects to Logistics.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                    {isLoading ? (
-                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
-                    ) : (
-                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                            <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                                <span>Enforce 45% Payment for Logistics</span>
-                                <span className="font-normal leading-snug text-muted-foreground text-xs">If disabled, this check will be skipped.</span>
-                            </Label>
-                            <Switch
-                                id="paymentValidationSwitch"
-                                checked={isPaymentValidationEnabled}
-                                onCheckedChange={handleTogglePaymentValidation}
-                                disabled={isSubmittingPaymentValidation}
-                                aria-label="Toggle payment validation enforcement"
-                            />
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Payment Validation</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Enable or disable the 45% payment check before moving projects to Logistics.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isLoading ? (
+                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
+              ) : (
+                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                  <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                    <span>Enforce 45% Payment for Logistics</span>
+                    <span className="font-normal leading-snug text-muted-foreground text-xs">If disabled, this check will be skipped.</span>
+                  </Label>
+                  <Switch
+                    id="paymentValidationSwitch"
+                    checked={isPaymentValidationEnabled}
+                    onCheckedChange={handleTogglePaymentValidation}
+                    disabled={isSubmittingPaymentValidation}
+                    aria-label="Toggle payment validation enforcement"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-                <CardHeader className="border-b p-5">
-                    <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Award className="h-6 w-6 text-primary" /> Leaderboard Access</CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm mt-0.5">Restrict leaderboard visibility to administrators only.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                    {isLoading ? (
-                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
-                    ) : (
-                        <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                            <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                                <span>Restrict Leaderboard to Admins</span>
-                                <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, non-admin users cannot see the leaderboard.</span>
-                            </Label>
-                            <Switch
-                                id="leaderboardRestrictionSwitch"
-                                checked={isLeaderboardRestricted}
-                                onCheckedChange={handleToggleLeaderboardRestriction}
-                                disabled={isSubmittingLeaderboardRestriction}
-                                aria-label="Toggle leaderboard restriction"
-                            />
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Award className="h-6 w-6 text-primary" /> Leaderboard Access</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Restrict leaderboard visibility to administrators only.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isLoading ? (
+                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
+              ) : (
+                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                  <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                    <span>Restrict Leaderboard to Admins</span>
+                    <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, non-admin users cannot see the leaderboard.</span>
+                  </Label>
+                  <Switch
+                    id="leaderboardRestrictionSwitch"
+                    checked={isLeaderboardRestricted}
+                    onCheckedChange={handleToggleLeaderboardRestriction}
+                    disabled={isSubmittingLeaderboardRestriction}
+                    aria-label="Toggle leaderboard restriction"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -523,33 +523,33 @@ export default function CustomAccessPage() {
         <CardContent className="p-0">
           <ScrollArea className="h-auto max-h-80">
             <Table>
-                <TableHeader>
-                    <TableRow><TableHead className="pl-6 w-12">Allow</TableHead><TableHead>CRM User</TableHead><TableHead>Email</TableHead></TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? [...Array(3)].map((_, i) => (
-                    <TableRow key={`pipe-skel-${i}`}>
-                        <TableCell className="pl-6"><Skeleton className="h-5 w-5 rounded"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-40 rounded"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-52 rounded"/></TableCell>
-                    </TableRow>
-                  )) : filteredCrmUsers.length > 0 ? filteredCrmUsers.map(user => (
-                    <TableRow key={user.id} className="hover:bg-muted/30">
-                        <TableCell className="pl-6">
-                            <Checkbox 
-                                id={`pipeline-perm-${user.id}`} 
-                                checked={pipelineAccess.has(user.id)} 
-                                onCheckedChange={(checked) => handlePipelineAccessChange(user.id, checked)}
-                                disabled={isSubmittingPipelineAccess}
-                            />
-                        </TableCell>
-                        <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="font-medium cursor-pointer">{user.name}</Label></TableCell>
-                        <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="text-muted-foreground cursor-pointer">{user.email}</Label></TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow><TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No users with the CRM role were found.</TableCell></TableRow>
-                  )}
-                </TableBody>
+              <TableHeader>
+                <TableRow><TableHead className="pl-6 w-12">Allow</TableHead><TableHead>CRM User</TableHead><TableHead>Email</TableHead></TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? [...Array(3)].map((_, i) => (
+                  <TableRow key={`pipe-skel-${i}`}>
+                    <TableCell className="pl-6"><Skeleton className="h-5 w-5 rounded" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40 rounded" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-52 rounded" /></TableCell>
+                  </TableRow>
+                )) : filteredCrmUsers.length > 0 ? filteredCrmUsers.map(user => (
+                  <TableRow key={user.id} className="hover:bg-muted/30">
+                    <TableCell className="pl-6">
+                      <Checkbox
+                        id={`pipeline-perm-${user.id}`}
+                        checked={pipelineAccess.has(user.id)}
+                        onCheckedChange={(checked) => handlePipelineAccessChange(user.id, checked)}
+                        disabled={isSubmittingPipelineAccess}
+                      />
+                    </TableCell>
+                    <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="font-medium cursor-pointer">{user.name}</Label></TableCell>
+                    <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="text-muted-foreground cursor-pointer">{user.email}</Label></TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow><TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No users with the CRM role were found.</TableCell></TableRow>
+                )}
+              </TableBody>
             </Table>
           </ScrollArea>
         </CardContent>
@@ -559,7 +559,7 @@ export default function CustomAccessPage() {
           </Button>
         </CardFooter>
       </Card>
-      
+
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Project Stage Access</CardTitle>
@@ -645,11 +645,11 @@ export default function CustomAccessPage() {
                   onChange={e => setRoleColorInput(e.target.value)}
                   className="w-12 h-10 p-1 cursor-pointer"
                 />
-                <div 
+                <div
                   className="flex-1 h-10 rounded-md border flex items-center justify-center font-medium"
-                  style={{ 
-                    backgroundColor: roleColorInput, 
-                    color: getContrastTextColor(roleColorInput) 
+                  style={{
+                    backgroundColor: roleColorInput,
+                    color: getContrastTextColor(roleColorInput)
                   }}
                 >
                   Preview Badge
@@ -689,12 +689,12 @@ export default function CustomAccessPage() {
   );
 }
 
-function SortableRoleRow({ 
-  role, 
-  onEdit, 
-  onDelete 
-}: { 
-  role: UserRoleDefinition; 
+function SortableRoleRow({
+  role,
+  onEdit,
+  onDelete
+}: {
+  role: UserRoleDefinition;
   onEdit: (role: UserRoleDefinition) => void;
   onDelete: (role: UserRoleDefinition) => void;
 }) {
@@ -724,10 +724,10 @@ function SortableRoleRow({
       </TableCell>
       <TableCell className="pl-2 font-mono text-sm">{role.id}</TableCell>
       <TableCell>
-        <Badge 
-          style={{ 
-            backgroundColor: role.color || '#6b7280', 
-            color: getContrastTextColor(role.color || '#6b7280') 
+        <Badge
+          style={{
+            backgroundColor: role.color || '#6b7280',
+            color: getContrastTextColor(role.color || '#6b7280')
           }}
           className="border-none px-3 py-1 text-sm"
         >

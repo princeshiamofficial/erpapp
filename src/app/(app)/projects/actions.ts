@@ -4,18 +4,27 @@
 import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types";
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
-import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment, addShippedOrderEntry, deleteShippedOrderEntry } from '@/lib/order-service'; 
-import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
-import { v4 as uuidv4 } from 'uuid'; 
+import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment, addShippedOrderEntry, deleteShippedOrderEntry } from '@/lib/order-service';
+
+import {
+  CANCELLED_STATUS_ID,
+  ON_HOLD_STATUS_ID,
+  LOGISTICS_STATUS_ID,
+  SHIPPED_STATUS_ID,
+  DELIVERED_STATUS_ID,
+  ORDER_SUBMITTED_ID,
+  READY_FOR_DESIGN_STATUS_ID
+} from '@/lib/status-constants';
+import { v4 as uuidv4 } from 'uuid';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { fetchFromApiV3 } from '@/lib/api-helper2';
 import { sendTelegramMessage } from "@/lib/notification-utils";
+import { getIO } from "@/lib/socket-io";
 
 const sanitizeForPackzy = (input: string | null | undefined): string => {
   if (!input) return '';
   return input
-    .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '') 
-    .replace(/\s+/g, ' ') 
+    .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '')
+    .replace(/\s+/g, ' ')
     .trim();
 };
 
@@ -34,7 +43,7 @@ export async function updateProjectStatusAction(
         return { success: false, error: `You do not have permission to move projects to the '${newStatus}' stage.` };
       }
     }
-    
+
     // New validation logic for "Logistics" stage based on global setting
     if (newStatus === 'Logistics' && settings.isPaymentValidationEnabled && actingUser.role !== 'ADMIN' && actingUser.role !== 'SYSTEM_ADMIN') {
       const orderForValidation = await getOrderById(project.id);
@@ -63,11 +72,11 @@ export async function updateProjectStatusAction(
       await deleteShippedOrderEntry(project.id);
     }
 
-    const order = await getOrderById(project.id); 
+    const order = await getOrderById(project.id);
     if (order) {
       let targetOrderStatusId: string | null = null;
       let statusUpdateNote: string | null = null;
-      
+
       if (originalStatus === 'Delivered' && newStatus !== 'Delivered') {
         const unsettleReason = `Payment unsettled: Project moved from 'Delivered' to '${newStatus}' by ${actingUser.name}.`;
         await unsettleOrderPayment(project.id, unsettleReason, actingUser);
@@ -83,7 +92,7 @@ export async function updateProjectStatusAction(
         case 'CO Clearance': targetOrderStatusId = 'co-clearance'; statusUpdateNote = `Order moved to CO Clearance by ${actingUser.name}.`; break;
         case 'Delivered': targetOrderStatusId = DELIVERED_STATUS_ID; statusUpdateNote = `Order marked as delivered via project board by ${actingUser.name}.`; break;
       }
-      
+
 
       if (targetOrderStatusId && statusUpdateNote && order.currentStatus !== targetOrderStatusId) {
         const newLogEntry: OrderLogEntry = {
@@ -106,7 +115,7 @@ export async function updateProjectStatusAction(
           console.warn(`Project ${project.id} status updated to ${newStatus}, but failed to update corresponding order ${order.id} to target status ${targetOrderStatusId}.`);
         } else {
           console.log(`Order ${order.id} status updated to ${targetOrderStatusId} due to project ${project.id} being ${newStatus}.`);
-           if (newStatus === 'Delivered') {
+          if (newStatus === 'Delivered') {
             await autoSettleOrderIfDelivered(project.id, `System auto-settled: Project moved to '${newStatus}'.`, actingUser);
           }
         }
@@ -120,6 +129,14 @@ export async function updateProjectStatusAction(
     revalidatePath("/(app)/deliveries/weekly");
     revalidatePath(`/track/${project.id}`);
     revalidatePath("/(app)/invoice/[orderId]", "page");
+
+    // Emit socket events for real-time updates
+    const io = getIO();
+    if (io) {
+      io.emit("project-updated", { id: project.id, status: newStatus });
+      io.emit("order-updated", { id: project.id });
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error in updateProjectStatusAction:", error);
@@ -132,12 +149,14 @@ export async function transferToCourierAction(
   project: Project,
   actingUser: User,
   shippingArea: string,
-  shippingCharge: number
+  shippingCharge: number,
+  customRecipientName?: string,
+  customRecipientAddress?: string
 ): Promise<{ success: boolean; error?: string; consignment?: any }> {
   if (!project || !project.id) {
     return { success: false, error: 'Invalid project data provided.' };
   }
-  
+
   try {
     const order = await getOrderById(project.id);
     if (!order) {
@@ -153,8 +172,8 @@ export async function transferToCourierAction(
     const numericShippingCharge = Number(shippingCharge) || 0;
     const totalCodAmount = dueAmount + numericShippingCharge;
 
-    const recipientNameRaw = order.companyName.split('•').pop()?.trim() || order.companyName;
-    const recipientAddressRaw = order.address;
+    const recipientNameRaw = customRecipientName || order.companyName.split('•').pop()?.trim() || order.companyName;
+    const recipientAddressRaw = customRecipientAddress || order.address;
 
     const packzyPayload = {
       invoice: sanitizeForPackzy(order.id),
@@ -163,7 +182,7 @@ export async function transferToCourierAction(
       recipient_address: sanitizeForPackzy(recipientAddressRaw),
       cod_amount: totalCodAmount,
     };
-    
+
     const urlEncodedBody = Object.entries(packzyPayload)
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
       .join('&');
@@ -180,22 +199,22 @@ export async function transferToCourierAction(
 
     const responseText = await response.text();
     let responseData;
-    
+
     if (!response.ok) {
-        console.error(`Packzy API Error: Status ${response.status}`, responseText);
-        try {
-            responseData = JSON.parse(responseText);
-            return { success: false, error: `SteadFast API Error: ${responseData.message || 'Failed to create consignment.'}` };
-        } catch (e) {
-             return { success: false, error: `SteadFast API returned an error page. Please check the recipient details for invalid characters. Status: ${response.status}.` };
-        }
+      console.error(`Packzy API Error: Status ${response.status}`, responseText);
+      try {
+        responseData = JSON.parse(responseText);
+        return { success: false, error: `SteadFast API Error: ${responseData.message || 'Failed to create consignment.'}` };
+      } catch (e) {
+        return { success: false, error: `SteadFast API returned an error page. Please check the recipient details for invalid characters. Status: ${response.status}.` };
+      }
     }
 
     try {
-        responseData = JSON.parse(responseText);
+      responseData = JSON.parse(responseText);
     } catch (e) {
-        console.error('Packzy API Error: Response is not valid JSON.', responseText);
-        return { success: false, error: `SteadFast API returned an unexpected response that is not valid JSON. Please check their server status. Raw response: ${responseText.substring(0, 150)}...` };
+      console.error('Packzy API Error: Response is not valid JSON.', responseText);
+      return { success: false, error: `SteadFast API returned an unexpected response that is not valid JSON. Please check their server status. Raw response: ${responseText.substring(0, 150)}...` };
     }
 
     if (responseData.status !== 200) {
@@ -204,13 +223,13 @@ export async function transferToCourierAction(
     }
 
     const { consignment } = responseData;
-    
+
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, 'Courier', project);
     if (!projectUpdateSuccess) {
       console.error(`CRITICAL: Project ${project.id} consignment created in SteadFast (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
       return { success: false, error: "Consignment created, but failed to update project status. Please check manually." };
     }
-    
+
     const logEntry: OrderLogEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
@@ -231,12 +250,12 @@ export async function transferToCourierAction(
       updatedByUserId: actingUser.id,
       updatedByUserName: actingUser.name,
     });
-    
+
     if (!orderUpdateSuccess) {
-       console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with SteadFast details.`);
-       return { success: false, error: "Project status updated, but failed to update order details. Please check manually." };
+      console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with SteadFast details.`);
+      return { success: false, error: "Project status updated, but failed to update order details. Please check manually." };
     }
-    
+
     // Add to the shippedOrders collection for quick sync checks
     await addShippedOrderEntry(order.id, consignment.tracking_code);
 
@@ -257,7 +276,7 @@ export async function transferToCourierAction(
     revalidatePath(`/track/${order.id}`);
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/active-orders");
-    
+
     return { success: true, consignment };
 
   } catch (error) {

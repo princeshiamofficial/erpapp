@@ -1,44 +1,33 @@
 
 "use server";
 
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 import type { SowDataEntry } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
-const COLLECTION_NAME = 'sowData';
+const TABLE_NAME = 'sow_data';
 
 export const getSowEntries = async (): Promise<SowDataEntry[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999&orderBy=createdAt&direction=desc`);
-    if (response && Array.isArray(response.documents)) {
-        return response.documents.map((doc: { id: string, data: any }) => ({
-            id: doc.id,
-            ...doc.data
-        } as SowDataEntry));
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ORDER BY id DESC`);
+    return rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as SowDataEntry)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (error) {
-    console.error("Error fetching SOW entries via API v3:", error);
+    console.error("Error fetching SOW entries from MySQL:", error);
     return [];
   }
 };
 
 export const addSowEntry = async (data: Omit<SowDataEntry, 'id'>): Promise<SowDataEntry | null> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const payload = { data };
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
-
-    return {
-        id: newDoc.id,
-        ...newDoc.data
-    } as SowDataEntry;
+    const id = uuidv4();
+    const dataWithId: SowDataEntry = { ...data, id } as SowDataEntry;
+    await query(`INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(dataWithId)]);
+    return dataWithId;
   } catch (error) {
-    console.error("Error adding SOW entry via API v3:", error);
-    if (error instanceof Error) throw error;
+    console.error("Error adding SOW entry to MySQL:", error);
     return null;
   }
 };

@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AddEditRoutineDialog } from '@/components/daily-routine/AddEditRoutineDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from '@/components/ui/card';
-import { getContrastTextColor } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -74,13 +74,13 @@ export default function MyDailyRoutinePage() {
         getRoutinesAction(currentUser.id),
         getRoutineHeadersAction(currentUser.id)
       ]);
-      
+
       const routinesMap = fetchedRoutines.reduce((acc, routine) => {
         acc[routine.id] = routine; // The ID of a daily record is its date string 'YYYY-MM-DD'
         return acc;
       }, {} as Record<string, DailyRoutine>);
       setRoutinesData(routinesMap);
-      
+
       setRoutineHeaders(fetchedHeaders);
 
     } catch (error) {
@@ -98,7 +98,7 @@ export default function MyDailyRoutinePage() {
   useEffect(() => {
     if (!isAuthLoading && currentUser) {
       fetchData(); // Initial fetch
-      
+
       const intervalId = setInterval(() => {
         fetchData(true); // Silent background refresh every 15 seconds
       }, 15000);
@@ -108,57 +108,57 @@ export default function MyDailyRoutinePage() {
       router.push('/login');
     }
   }, [currentUser, isAuthLoading, router, fetchData]);
-  
+
   useEffect(() => {
     // This effect runs only for the mobile view and when viewing today's date
     if (!isMobile || !isToday(selectedDay) || routineHeaders.length === 0 || !scrollContainerRef.current) {
-        return;
+      return;
     }
 
     const autoScroll = () => {
-        const now = new Date();
-        const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+      const now = new Date();
+      const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
 
-        // Find the first routine that starts after the current time
-        const upcomingRoutine = routineHeaders.find(header => {
-            if (!header.time) return false;
-            const startTimeStr = header.time.split(' to ')[0];
-            const [hours, minutes] = startTimeStr.split(':').map(Number);
-            if (isNaN(hours) || isNaN(minutes)) return false;
-            const routineTimeInMinutes = hours * 60 + minutes;
-            return routineTimeInMinutes > currentTimeInMinutes;
-        });
-        
-        // Find the routine that is currently active
-        const activeRoutine = routineHeaders.slice().reverse().find(header => {
-            if (!header.time) return false;
-            const startTimeStr = header.time.split(' to ')[0];
-            const [hours, minutes] = startTimeStr.split(':').map(Number);
-            if (isNaN(hours) || isNaN(minutes)) return false;
-            const routineTimeInMinutes = hours * 60 + minutes;
-            return routineTimeInMinutes <= currentTimeInMinutes;
-        });
+      // Find the first routine that starts after the current time
+      const upcomingRoutine = routineHeaders.find(header => {
+        if (!header.time) return false;
+        const startTimeStr = header.time.split(' to ')[0];
+        const [hours, minutes] = startTimeStr.split(':').map(Number);
+        if (isNaN(hours) || isNaN(minutes)) return false;
+        const routineTimeInMinutes = hours * 60 + minutes;
+        return routineTimeInMinutes > currentTimeInMinutes;
+      });
 
-        const targetRoutine = upcomingRoutine || activeRoutine;
+      // Find the routine that is currently active
+      const activeRoutine = routineHeaders.slice().reverse().find(header => {
+        if (!header.time) return false;
+        const startTimeStr = header.time.split(' to ')[0];
+        const [hours, minutes] = startTimeStr.split(':').map(Number);
+        if (isNaN(hours) || isNaN(minutes)) return false;
+        const routineTimeInMinutes = hours * 60 + minutes;
+        return routineTimeInMinutes <= currentTimeInMinutes;
+      });
 
-        if (targetRoutine?.id) {
-            const element = routineItemRefs.current[targetRoutine.id];
-            if (element && scrollContainerRef.current) {
-                const container = scrollContainerRef.current;
-                const elementTop = element.offsetTop;
-                const elementHeight = element.offsetHeight;
-                const containerHeight = container.clientHeight;
-                
-                const scrollTo = elementTop - (containerHeight / 2) + (elementHeight / 2);
+      const targetRoutine = upcomingRoutine || activeRoutine;
 
-                container.scrollTo({
-                    top: scrollTo,
-                    behavior: 'smooth'
-                });
-            }
+      if (targetRoutine?.id) {
+        const element = routineItemRefs.current[targetRoutine.id];
+        if (element && scrollContainerRef.current) {
+          const container = scrollContainerRef.current;
+          const elementTop = element.offsetTop;
+          const elementHeight = element.offsetHeight;
+          const containerHeight = container.clientHeight;
+
+          const scrollTo = elementTop - (containerHeight / 2) + (elementHeight / 2);
+
+          container.scrollTo({
+            top: scrollTo,
+            behavior: 'smooth'
+          });
         }
+      }
     };
-    
+
     // Run once on mount and then every minute
     autoScroll();
     const intervalId = setInterval(autoScroll, 60000);
@@ -172,20 +172,20 @@ export default function MyDailyRoutinePage() {
     const dateKey = format(date, 'yyyy-MM-dd');
     const originalState = { ...routinesData };
     const dayRoutine = originalState[dateKey];
-    
+
     let isCurrentlyChecked = false;
     if (dayRoutine?.completedTasks) {
-        if (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) {
-            isCurrentlyChecked = true;
-        } else if (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(taskId)) {
-            isCurrentlyChecked = true;
-        }
+      if (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) {
+        isCurrentlyChecked = true;
+      } else if (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(taskId)) {
+        isCurrentlyChecked = true;
+      }
     }
 
     if (isCurrentlyChecked && typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) {
       const checkedTimestamp = parseISO(dayRoutine.completedTasks[taskId]);
       const minutesSinceChecked = differenceInMinutes(new Date(), checkedTimestamp);
-      
+
       if (minutesSinceChecked > 20) {
         // Silently block the action
         return;
@@ -194,47 +194,47 @@ export default function MyDailyRoutinePage() {
 
     // Optimistic UI update
     setRoutinesData(prev => {
-        const newRoutines = { ...prev };
-        const currentDayRoutine = newRoutines[dateKey] || { id: dateKey, userId: currentUser.id, completedTasks: {}, updatedAt: new Date().toISOString() };
-        
-        let updatedTasks: Record<string, string>;
+      const newRoutines = { ...prev };
+      const currentDayRoutine = newRoutines[dateKey] || { id: dateKey, userId: currentUser.id, completedTasks: {}, updatedAt: new Date().toISOString() };
 
-        if (typeof currentDayRoutine.completedTasks === 'object' && currentDayRoutine.completedTasks !== null) {
-            updatedTasks = { ...currentDayRoutine.completedTasks };
-        } else if (Array.isArray(currentDayRoutine.completedTasks)) {
-            // Convert legacy array to new object format
-            updatedTasks = currentDayRoutine.completedTasks.reduce((acc, id) => {
-                acc[id] = new Date().toISOString(); // Assign a placeholder timestamp
-                return acc;
-            }, {} as Record<string, string>);
-        } else {
-            updatedTasks = {};
-        }
+      let updatedTasks: Record<string, string>;
 
-        if (updatedTasks[taskId]) {
-            delete updatedTasks[taskId]; // Uncheck
-        } else {
-            updatedTasks[taskId] = new Date().toISOString(); // Check
-        }
-        
-        newRoutines[dateKey] = { ...currentDayRoutine, completedTasks: updatedTasks };
-        return newRoutines;
+      if (typeof currentDayRoutine.completedTasks === 'object' && currentDayRoutine.completedTasks !== null) {
+        updatedTasks = { ...currentDayRoutine.completedTasks };
+      } else if (Array.isArray(currentDayRoutine.completedTasks)) {
+        // Convert legacy array to new object format
+        updatedTasks = (currentDayRoutine.completedTasks as any).reduce((acc: any, id: any) => {
+          acc[id] = new Date().toISOString(); // Assign a placeholder timestamp
+          return acc;
+        }, {} as Record<string, string>);
+      } else {
+        updatedTasks = {};
+      }
+
+      if (updatedTasks[taskId]) {
+        delete updatedTasks[taskId]; // Uncheck
+      } else {
+        updatedTasks[taskId] = new Date().toISOString(); // Check
+      }
+
+      newRoutines[dateKey] = { ...currentDayRoutine, completedTasks: updatedTasks };
+      return newRoutines;
     });
 
     const result = await toggleRoutineTaskAction(currentUser.id, dateKey, taskId);
 
     if (!result.success) {
-        toast({ title: "Update Failed", description: result.error, variant: "destructive" });
-        setRoutinesData(originalState); // Revert on failure
+      toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+      setRoutinesData(originalState); // Revert on failure
     }
   };
-  
+
   const monthDays = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     const days = [];
     for (let i = 0; i <= differenceInMinutes(end, start) / (60 * 24); i++) {
-        days.push(addDays(start, i));
+      days.push(addDays(start, i));
     }
     return days;
   }, [currentMonth]);
@@ -245,7 +245,7 @@ export default function MyDailyRoutinePage() {
     setIsAddEditDialogOpen(false);
     setRoutineToEdit(null);
   };
-  
+
   const openAddDialog = () => {
     setRoutineToEdit(null);
     setIsAddEditDialogOpen(true);
@@ -277,41 +277,41 @@ export default function MyDailyRoutinePage() {
   if (isAuthLoading || !currentUser) {
     return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
-  
+
   const renderMobileView = () => {
     const selectedDateKey = format(selectedDay, 'yyyy-MM-dd');
     const dayRoutine = routinesData[selectedDateKey];
-    
+
     return (
       <div className="flex flex-col h-full">
         <div className="sticky top-0 z-10 flex justify-between items-center bg-card/80 backdrop-blur-sm p-2 rounded-b-md no-print shadow-sm">
-            <Button onClick={() => setSelectedDay(subDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
-                <ArrowLeft className="h-4 w-4" />
+          <Button onClick={() => setSelectedDay(subDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-40 justify-center text-md font-semibold h-9">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(selectedDay, 'd MMM, yyyy')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={selectedDay}
+                onSelect={(day) => day && setSelectedDay(day)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <div className="flex items-center gap-1">
+            <Button onClick={() => setSelectedDay(addDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
+              <ArrowRight className="h-4 w-4" />
             </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-40 justify-center text-md font-semibold h-9">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(selectedDay, 'd MMM, yyyy')}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={selectedDay}
-                  onSelect={(day) => day && setSelectedDay(day)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="flex items-center gap-1">
-                <Button onClick={() => setSelectedDay(addDays(selectedDay, 1))} variant="outline" size="icon" className="h-9 w-9">
-                    <ArrowRight className="h-4 w-4" />
-                </Button>
-                <Button onClick={openAddDialog} variant="outline" size="icon" className="h-9 w-9 bg-primary/10 text-primary border-primary/20">
-                  <PlusCircle className="h-4 w-4" />
-                </Button>
-            </div>
+            <Button onClick={openAddDialog} variant="outline" size="icon" className="h-9 w-9 bg-primary/10 text-primary border-primary/20">
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto pt-4 space-y-3" ref={scrollContainerRef}>
           {isLoading ? (
@@ -331,32 +331,32 @@ export default function MyDailyRoutinePage() {
               return (
                 <div
                   key={header.id}
-                  ref={el => (routineItemRefs.current[header.id] = el)}
+                  ref={el => { routineItemRefs.current[header.id] = el; }}
                   className="flex items-center p-3 bg-card rounded-lg shadow-sm border"
                   onClick={() => handleToggleTask(selectedDay, header.id)}
                 >
-                   <Checkbox
-                      checked={isChecked}
-                      className="h-6 w-6 rounded-md mr-4"
-                      aria-label={`Mark ${header.title} as completed`}
-                   />
-                   <div className="flex-1">
-                      <p className="font-semibold text-foreground">{header.title}</p>
-                      <p className="text-sm text-muted-foreground">{formatTime12Hour(header.time)}</p>
-                   </div>
-                   <div className="h-3 w-3 rounded-full" style={{ backgroundColor: header.color || '#e5e7eb' }} />
+                  <Checkbox
+                    checked={isChecked}
+                    className="h-6 w-6 rounded-md mr-4"
+                    aria-label={`Mark ${header.title} as completed`}
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">{header.title}</p>
+                    <p className="text-sm text-muted-foreground">{formatTime12Hour(header.time)}</p>
+                  </div>
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: header.color || '#e5e7eb' }} />
                 </div>
               );
             })
           ) : (
-             <Card className="text-center py-10 text-muted-foreground">
-                <CardContent>
-                  <p>No routines configured yet.</p>
-                   <Button onClick={openAddDialog} size="sm" className="mt-4">
-                      <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
-                    </Button>
-                </CardContent>
-             </Card>
+            <Card className="text-center py-10 text-muted-foreground">
+              <CardContent>
+                <p>No routines configured yet.</p>
+                <Button onClick={openAddDialog} size="sm" className="mt-4">
+                  <PlusCircle className="h-4 w-4 mr-2" /> Add Routine
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -364,109 +364,109 @@ export default function MyDailyRoutinePage() {
   };
 
   const renderDesktopView = () => (
-     <div className="space-y-4 printable-area">
-        <div className="flex justify-between items-center bg-card p-2 rounded-md no-print">
-          <Button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Previous Month
+    <div className="space-y-4 printable-area">
+      <div className="flex justify-between items-center bg-card p-2 rounded-md no-print">
+        <Button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} variant="outline">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Previous Month
+        </Button>
+        <h2 className="text-lg font-semibold text-center">
+          {format(currentMonth, "MMMM yyyy")}
+        </h2>
+        <div className="flex items-center gap-2">
+          <Button onClick={handlePrint} variant="outline">
+            <Printer className="h-4 w-4 mr-2" /> Print
           </Button>
-          <h2 className="text-lg font-semibold text-center">
-            {format(currentMonth, "MMMM yyyy")}
-          </h2>
-          <div className="flex items-center gap-2">
-            <Button onClick={handlePrint} variant="outline">
-              <Printer className="h-4 w-4 mr-2"/> Print
-            </Button>
-            <Button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} variant="outline">
-              Next Month <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
+          <Button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} variant="outline">
+            Next Month <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
-
-        {isLoading ? (
-          <div className="bg-card p-2 rounded-lg shadow-sm">
-            <Skeleton className="h-[calc(100vh-14rem)] w-full" />
-          </div>
-        ) : routineHeaders.length > 0 ? (
-          <div className="h-[calc(100vh-12rem)] overflow-auto border rounded-lg custom-scrollbar">
-            <table className="w-full border-collapse">
-                <thead className="sticky top-0 z-30">
-                    <tr>
-                        <th className="sticky left-0 z-40 border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
-                            <p className="font-semibold text-sm">Date With Day</p>
-                        </th>
-                        {routineHeaders.map(header => {
-                           const textColor = getContrastTextColor(header.color || '#f3f4f6');
-                           return (
-                            <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color || '#f3f4f6' }}>
-                                <div className="flex flex-col items-center justify-center gap-1 h-full min-h-[5rem] px-1">
-                                    <span style={{ color: textColor }} className="text-center">{header.title}</span>
-                                    <span className="font-normal text-xs text-center" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
-                                </div>
-                                <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3" style={{ color: textColor }}/></Button>
-                                </div>
-                            </th>
-                           )
-                        })}
-                        <th className="border p-2 align-top bg-muted/50 w-24 min-w-[96px] no-print">
-                          <Button size="sm" className="w-full h-full" onClick={openAddDialog}>
-                            <PlusCircle className="h-4 w-4 mr-1 sm:mr-2"/>
-                            <span className="hidden sm:inline">New</span>
-                          </Button>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {monthDays.map(date => {
-                        const dateKey = format(date, 'yyyy-MM-dd');
-                        const dayRoutine = routinesData[dateKey];
-                        return (
-                            <tr key={dateKey} className="hover:bg-muted/30">
-                                <td className="sticky left-0 border p-2 text-center bg-orange-200 dark:bg-orange-800/50 z-20">
-                                    <p className="font-semibold text-sm">{format(date, 'dd/MM/yy')}</p>
-                                    <p className="text-xs">{format(date, 'EEEE')}</p>
-                                </td>
-                                {routineHeaders.map(header => {
-                                    let isChecked = false;
-                                    if (dayRoutine?.completedTasks) {
-                                        if (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[header.id]) {
-                                            isChecked = true;
-                                        } else if (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id)) {
-                                            isChecked = true;
-                                        }
-                                    }
-                                    return (
-                                        <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
-                                            <Checkbox
-                                                checked={isChecked}
-                                                onCheckedChange={() => handleToggleTask(date, header.id)}
-                                                aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
-                                                className="h-5 w-5"
-                                            />
-                                        </td>
-                                    )
-                                })}
-                                <td className="border p-2 no-print"></td>
-                            </tr>
-                        )
-                    })}
-                </tbody>
-            </table>
-          </div>
-        ) : (
-          <Card className="md:col-span-2 lg:col-span-3">
-             <CardContent className="h-64 flex flex-col items-center justify-center text-center text-muted-foreground">
-               <ClipboardList className="h-12 w-12 mb-4 opacity-50" />
-               <p className="text-lg font-semibold">No routines yet!</p>
-               <p className="text-sm">Click "Add New" to get started.</p>
-                <Button onClick={openAddDialog} size="sm" className="mt-4">
-                  <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
-                </Button>
-             </CardContent>
-           </Card>
-        )}
       </div>
+
+      {isLoading ? (
+        <div className="bg-card p-2 rounded-lg shadow-sm">
+          <Skeleton className="h-[calc(100vh-14rem)] w-full" />
+        </div>
+      ) : routineHeaders.length > 0 ? (
+        <div className="h-[calc(100vh-12rem)] overflow-auto border rounded-lg custom-scrollbar">
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 z-30">
+              <tr>
+                <th className="sticky left-0 z-40 border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
+                  <p className="font-semibold text-sm">Date With Day</p>
+                </th>
+                {routineHeaders.map(header => {
+                  const textColor = getContrastTextColor(header.color || '#f3f4f6');
+                  return (
+                    <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color || '#f3f4f6' }}>
+                      <div className="flex flex-col items-center justify-center gap-1 h-full min-h-[5rem] px-1">
+                        <span style={{ color: textColor }} className="text-center">{header.title}</span>
+                        <span className="font-normal text-xs text-center" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
+                      </div>
+                      <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity no-print">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }} /></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3" style={{ color: textColor }} /></Button>
+                      </div>
+                    </th>
+                  )
+                })}
+                <th className="border p-2 align-top bg-muted/50 w-24 min-w-[96px] no-print">
+                  <Button size="sm" className="w-full h-full" onClick={openAddDialog}>
+                    <PlusCircle className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">New</span>
+                  </Button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthDays.map(date => {
+                const dateKey = format(date, 'yyyy-MM-dd');
+                const dayRoutine = routinesData[dateKey];
+                return (
+                  <tr key={dateKey} className="hover:bg-muted/30">
+                    <td className="sticky left-0 border p-2 text-center bg-orange-200 dark:bg-orange-800/50 z-20">
+                      <p className="font-semibold text-sm">{format(date, 'dd/MM/yy')}</p>
+                      <p className="text-xs">{format(date, 'EEEE')}</p>
+                    </td>
+                    {routineHeaders.map(header => {
+                      let isChecked = false;
+                      if (dayRoutine?.completedTasks) {
+                        if (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[header.id]) {
+                          isChecked = true;
+                        } else if (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id)) {
+                          isChecked = true;
+                        }
+                      }
+                      return (
+                        <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() => handleToggleTask(date, header.id)}
+                            aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
+                            className="h-5 w-5"
+                          />
+                        </td>
+                      )
+                    })}
+                    <td className="border p-2 no-print"></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Card className="md:col-span-2 lg:col-span-3">
+          <CardContent className="h-64 flex flex-col items-center justify-center text-center text-muted-foreground">
+            <ClipboardList className="h-12 w-12 mb-4 opacity-50" />
+            <p className="text-lg font-semibold">No routines yet!</p>
+            <p className="text-sm">Click "Add New" to get started.</p>
+            <Button onClick={openAddDialog} size="sm" className="mt-4">
+              <PlusCircle className="h-4 w-4 mr-2" /> Add Routine
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 
   return (
@@ -493,13 +493,13 @@ export default function MyDailyRoutinePage() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setRoutineToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDeleteRoutine} className="bg-destructive hover:bg-destructive/90" disabled={isDeleting}>
-                {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Deleting...</> : 'Delete Routine'}
+                {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : 'Delete Routine'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
-       <style jsx global>{`
+      <style jsx global>{`
         @media print {
           @page {
             size: A4 landscape;

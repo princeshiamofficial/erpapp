@@ -11,6 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
+import { Loader2 } from 'lucide-react';
 
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
@@ -30,7 +32,7 @@ interface PipelineKanbanColumnProps {
   currentUser: User | null;
   onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
-  onTransferLead: (lead: Lead) => void; 
+  onTransferLead: (lead: Lead) => void;
   allUsers: User[];
 }
 
@@ -38,17 +40,17 @@ const LEADS_PER_PAGE = 20;
 
 export function PipelineKanbanColumn({
   id,
-  title, 
-  icon: Icon, 
-  leads, 
-  headerBgClass, 
+  title,
+  icon: Icon,
+  leads,
+  headerBgClass,
   headerTextClass = "text-white",
   headerIconClass = "text-white",
   isLoading = false,
   currentUser,
   onViewLead,
   onDeleteLead,
-  onTransferLead, 
+  onTransferLead,
   allUsers,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -58,13 +60,23 @@ export function PipelineKanbanColumn({
   useEffect(() => {
     setVisibleCount(LEADS_PER_PAGE);
   }, [leads]);
-  
+
   const handleLoadMore = () => {
     setVisibleCount(prevCount => prevCount + LEADS_PER_PAGE);
   };
-  
+
   const visibleLeads = useMemo(() => leads.slice(0, visibleCount), [leads, visibleCount]);
   const hasMoreLeads = visibleCount < leads.length;
+
+  const { ref: observerRef, inView } = useInView({
+    threshold: 0.1,
+  });
+
+  useEffect(() => {
+    if (inView && hasMoreLeads) {
+      handleLoadMore();
+    }
+  }, [inView, hasMoreLeads]);
 
   return (
     <div
@@ -75,9 +87,9 @@ export function PipelineKanbanColumn({
       )}
     >
       <div className={cn(
-          `px-3 py-2.5 flex items-center justify-between rounded-t-lg shrink-0 sticky top-0 z-10`,
-          headerBgClass, 
-          headerTextClass
+        `px-3 py-2.5 flex items-center justify-between rounded-t-lg shrink-0 sticky top-0 z-10`,
+        headerBgClass,
+        headerTextClass
       )}>
         <div className="flex items-center">
           <Icon className={cn(`mr-2 h-4 w-4`, headerIconClass)} />
@@ -99,39 +111,32 @@ export function PipelineKanbanColumn({
             </div>
           ) : (
             <AnimatePresence>
-                {visibleLeads.map((lead, index) => (
-                    <motion.div
-                        key={lead.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2, delay: (index % LEADS_PER_PAGE) * 0.03 }}
-                    >
-                        <LeadCard
-                            lead={lead}
-                            currentUser={currentUser}
-                            onViewLead={onViewLead}
-                            onDeleteLead={onDeleteLead}
-                            onTransferLead={onTransferLead}
-                            allUsers={allUsers}
-                            headerBgClass={headerBgClass}
-                        />
-                    </motion.div>
-                ))}
+              {visibleLeads.map((lead, index) => (
+                <motion.div
+                  key={lead.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2, delay: (index % LEADS_PER_PAGE) * 0.03 }}
+                >
+                  <LeadCard
+                    lead={lead}
+                    currentUser={currentUser}
+                    onViewLead={onViewLead}
+                    onDeleteLead={onDeleteLead}
+                    onTransferLead={onTransferLead}
+                    allUsers={allUsers}
+                    headerBgClass={headerBgClass}
+                  />
+                </motion.div>
+              ))}
             </AnimatePresence>
           )}
 
           {hasMoreLeads && (
-            <div className="text-center pt-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs h-8"
-                onClick={handleLoadMore}
-              >
-                Load More ({leads.length - visibleCount} remaining)
-              </Button>
+            <div ref={observerRef} className="flex justify-center p-2">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
           )}
         </div>

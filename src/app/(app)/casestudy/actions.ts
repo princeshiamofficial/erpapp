@@ -1,13 +1,9 @@
 
 "use server";
 
-import type { CaseStudyMessage, User, UserRole } from "@/types";
+import type { CaseStudyMessage, User } from "@/types";
 import { getMessages, addMessage, deleteMessage } from "@/lib/case-study-service";
 import { revalidatePath } from "next/cache";
-import { adminApp } from '@/lib/firebase-admin';
-import { getUsers } from '@/lib/user-service';
-import type { messaging } from 'firebase-admin';
-import { getGlobalSettings } from '@/lib/settings-service';
 
 export async function getMessagesAction(team: 'CR' | 'DR' | 'LR'): Promise<CaseStudyMessage[]> {
   return getMessages(team);
@@ -29,7 +25,7 @@ export async function addMessageAction(
       team,
       userId: currentUser.id,
       userName: currentUser.name,
-      userRole: currentUser.role, // Add user role to the message
+      userRole: currentUser.role,
       userAvatarUrl: currentUser.avatarUrl,
       message,
       imageUrl,
@@ -38,85 +34,6 @@ export async function addMessageAction(
     const newMessage = await addMessage(team, messageData);
     if (newMessage) {
       revalidatePath("/(app)/layout", "layout");
-
-      // Send push notifications to other team members
-      try {
-        const allUsers = await getUsers();
-        
-        let targetRole: UserRole;
-        switch (team) {
-            case 'CR': targetRole = 'CRM'; break;
-            case 'DR': targetRole = 'DESIGNER_REPRESENTATIVE'; break;
-            case 'LR': targetRole = 'LR'; break;
-            default: return { success: true, message: newMessage }; // Or handle error
-        }
-
-        const teamMembers = allUsers.filter(u => 
-          (u.role === targetRole || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN') && 
-          u.id !== currentUser.id && 
-          u.fcmToken
-        );
-
-        if (teamMembers.length > 0) {
-            console.log(`[CaseStudy] Sending notifications to ${teamMembers.length} members of ${team} team and admins.`);
-            const globalSettings = await getGlobalSettings();
-            const customSoundUrl = globalSettings.toastSoundUrl;
-            
-            let notificationTitle = `New Message in ${team} Case Study`;
-            if (replyingTo) {
-                notificationTitle = `New Reply in ${team} Case Study`;
-            }
-
-            let notificationBody = `${currentUser.name}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`;
-            if (imageUrl && !message) {
-              notificationBody = `${currentUser.name} sent an image.`;
-            } else if (imageUrl && message) {
-              notificationBody = `${currentUser.name}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`;
-            }
-
-            const targetUrl = `/?casestudy=${team}`;
-
-            for (const member of teamMembers) {
-                 const fcmMessage: messaging.Message = {
-                    token: member.fcmToken!,
-                    notification: { 
-                      title: notificationTitle, 
-                      body: notificationBody,
-                      ...(imageUrl && { imageUrl }),
-                    },
-                    data: { 
-                      title: notificationTitle, 
-                      body: notificationBody, 
-                      targetUrl, 
-                      click_action: targetUrl, 
-                      ...(customSoundUrl && { customSoundUrl }),
-                      ...(imageUrl && { imageUrl }),
-                      icon: currentUser.avatarUrl || '/icons/icon-192x192.png',
-                    },
-                    webpush: { 
-                      notification: { 
-                        title: notificationTitle,
-                        body: notificationBody,
-                        icon: currentUser.avatarUrl || '/icons/icon-192x192.png',
-                        ...(imageUrl && { image: imageUrl }),
-                        ...(customSoundUrl ? { sound: customSoundUrl } : { sound: "default" }) 
-                      },
-                      fcmOptions: {
-                          link: targetUrl
-                      }
-                    },
-                 };
-                 if (adminApp && typeof adminApp.messaging === 'function') {
-                    await adminApp.messaging().send(fcmMessage);
-                 }
-            }
-        }
-      } catch (notifError) {
-          console.error('[CaseStudy] Failed to send push notifications:', notifError);
-          // Do not fail the whole action, just log the error.
-      }
-
-
       return { success: true, message: newMessage };
     }
     return { success: false, error: "Failed to save message." };
@@ -130,15 +47,15 @@ export async function deleteMessageAction(
   team: 'CR' | 'DR' | 'LR',
   messageId: string,
 ): Promise<{ success: boolean; error?: string }> {
-    try {
-        const success = await deleteMessage(team, messageId);
-        if (success) {
-            revalidatePath("/(app)/layout", "layout");
-            return { success: true };
-        }
-        return { success: false, error: "Failed to delete message from the database." };
-    } catch (error) {
-        console.error("Error in deleteMessageAction:", error);
-        return { success: false, error: "An unexpected error occurred while deleting the message." };
+  try {
+    const success = await deleteMessage(team, messageId);
+    if (success) {
+      revalidatePath("/(app)/layout", "layout");
+      return { success: true };
     }
+    return { success: false, error: "Failed to delete message from the database." };
+  } catch (error) {
+    console.error("Error in deleteMessageAction:", error);
+    return { success: false, error: "An unexpected error occurred while deleting the message." };
+  }
 }

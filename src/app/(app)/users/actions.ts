@@ -3,12 +3,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { 
-  updateUserBanStatus, 
+import {
+  updateUserBanStatus,
   updateUserInfo as updateUserInfoInDb,
-  deleteUserFromFirestore as deleteUserFromDbService, 
-  updateUserFCMTokenInFirestore // Added import
-} from "@/lib/user-service"; 
+  deleteUser as deleteUserFromDbService,
+  updateUserFCMToken
+} from "@/lib/user-service";
 import { User } from "@/types";
 
 export async function toggleUserBanStatusAction(
@@ -64,14 +64,14 @@ export async function deleteUserAction(userId: string): Promise<{ success: boole
 }
 
 export async function storeUserFCMTokenAction(
-  userId: string, 
+  userId: string,
   fcmToken: string | null
 ): Promise<{ success: boolean; error?: string }> {
   if (!userId) {
     return { success: false, error: "User ID is required to store FCM token." };
   }
   try {
-    const success = await updateUserFCMTokenInFirestore(userId, fcmToken);
+    const success = await updateUserFCMToken(userId, fcmToken);
     if (success) {
       // Optionally revalidate users path if you display tokens on the users page or admin page
       // revalidatePath("/(app)/users");

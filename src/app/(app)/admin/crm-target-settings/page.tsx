@@ -21,10 +21,9 @@ import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service
 import {
   updateCompletionStatusIdsAction,
   updateCommentsVisibilityAction,
-  sendPushNotificationAction,
   updateToastSoundUrlAction,
   updateLeaderboardBackgroundImageUrlAction,
-  updateExpenseLoggingPermissionsAction, 
+  updateExpenseLoggingPermissionsAction,
   updateMaintenanceModeAction,
   updateDrAssignmentNotificationTemplatesAction,
   updateRoleBasedTargetsAction,
@@ -41,8 +40,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import NextImage from 'next/image';
 
 
-const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR', 'CO'];
-const EXPENSE_LOGGING_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR']; 
+
+const EXPENSE_LOGGING_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
 const DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER = 'https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg';
 
 
@@ -69,17 +68,7 @@ export default function CrmTargetSettingsPage() {
   const [telegramChatIds, setTelegramChatIds] = useState('');
 
 
-  // Notification states
-  const [allUsers, setAllUsers] = useState<User[]>([]); // Users excluding System_Admin for targeting
   const [allTargetableUsersForExpensePerms, setAllTargetableUsersForExpensePerms] = useState<User[]>([]); // For expense perm user picker
-  const [notificationTitle, setNotificationTitle] = useState('');
-  const [notificationBody, setNotificationBody] = useState('');
-  const [notificationIconUrl, setNotificationIconUrl] = useState('');
-  const [notificationTargetUrl, setNotificationTargetUrl] = useState('');
-  const [notificationTargetType, setNotificationTargetType] = useState<'all' | 'roles' | 'users'>('all');
-  const [selectedNotificationRoles, setSelectedNotificationRoles] = useState<Set<UserRole>>(new Set());
-  const [selectedNotificationUserIds, setSelectedNotificationUserIds] = useState<Set<string>>(new Set());
-  const [isNotifUserPopoverOpen, setIsNotifUserPopoverOpen] = useState(false);
   const [isExpenseUserPopoverOpen, setIsExpenseUserPopoverOpen] = useState(false);
 
 
@@ -90,21 +79,14 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false);
   const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false);
   const [isSubmittingExpensePerms, setIsSubmittingExpensePerms] = useState(false);
-  const [isSendingNotification, setIsSendingNotification] = useState(false);
   const [isSubmittingMaintenanceMode, setIsSubmittingMaintenanceMode] = useState(false);
-  const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
   const [isSubmittingDrNotif, setIsSubmittingDrNotif] = useState(false);
   const [isSubmittingRoleTargets, setIsSubmittingRoleTargets] = useState(false);
   const [isSubmittingTelegram, setIsSubmittingTelegram] = useState(false);
 
-  // FCM Token Display State
-  const [fcmUserSearchTerm, setFcmUserSearchTerm] = useState('');
-  const [copiedTokenUserId, setCopiedTokenUserId] = useState<string | null>(null);
-
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
-    setIsLoadingUsersForNotifAndTokens(true);
     try {
       const [fetchedStatuses, globalSettings, fetchedUsersDb] = await Promise.all([
         getStatuses(),
@@ -116,7 +98,7 @@ export default function CrmTargetSettingsPage() {
       setAreCommentsVisible(globalSettings.areCommentsVisibleOnPublicPage ?? true);
       setToastSoundUrl(globalSettings.toastSoundUrl ?? '');
       setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? '');
-      setExpenseLoggingPerms(globalSettings.expenseLoggingPermissions ?? { mode: 'all', allowedRoles: [], allowedUserIds: []});
+      setExpenseLoggingPerms(globalSettings.expenseLoggingPermissions ?? { mode: 'all', allowedRoles: [], allowedUserIds: [] });
       setMaintenanceMode(globalSettings.maintenanceMode ?? false);
       setMaintenanceMessage(globalSettings.maintenanceMessage ?? '');
       setDrNotifTitle(globalSettings.drAssignmentNotificationTitle || '');
@@ -125,15 +107,12 @@ export default function CrmTargetSettingsPage() {
       setTelegramBotToken(globalSettings.telegramBotToken || '');
       setTelegramChatIds(Array.isArray(globalSettings.telegramChatIds) ? globalSettings.telegramChatIds.join(', ') : '');
 
-
-      setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
       setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
     } catch (error) {
       console.error("Error fetching settings data:", error);
       toast({ title: "Error", description: "Could not load settings or user data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
-      setIsLoadingUsersForNotifAndTokens(false);
     }
   }, [toast]);
 
@@ -255,7 +234,7 @@ export default function CrmTargetSettingsPage() {
     }
     setIsSubmittingDrNotif(false);
   };
-  
+
   const handleSaveTelegramSettings = async () => {
     setIsSubmittingTelegram(true);
     const chatIdsArray = telegramChatIds.split(',').map(id => id.trim()).filter(id => id);
@@ -268,84 +247,8 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingTelegram(false);
   };
 
-  const handleNotificationRoleCheckboxChange = (role: UserRole, checked: boolean | "indeterminate") => {
-    setSelectedNotificationRoles(prev => {
-      const newSet = new Set(prev);
-      if (checked === true) newSet.add(role);
-      else newSet.delete(role);
-      return newSet;
-    });
-  };
-
-  const handleNotificationUserSelect = (userId: string) => {
-    setSelectedNotificationUserIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) newSet.delete(userId);
-      else newSet.add(userId);
-      return newSet;
-    });
-  };
-
-  const handleSendNotification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) { toast({ title: "Authentication Error", description: "Cannot send notification.", variant: "destructive" }); return; }
-    if (!notificationTitle.trim() || !notificationBody.trim()) { toast({ title: "Validation Error", description: "Notification title and body are required.", variant: "destructive" }); return; }
-    if (notificationTargetType === 'roles' && selectedNotificationRoles.size === 0) { toast({ title: "Validation Error", description: "Please select at least one role for role-based targeting.", variant: "destructive" }); return; }
-    if (notificationTargetType === 'users' && selectedNotificationUserIds.size === 0) { toast({ title: "Validation Error", description: "Please select at least one user for user-based targeting.", variant: "destructive" }); return; }
-
-    setIsSendingNotification(true);
-    const payload = {
-      title: notificationTitle.trim(), body: notificationBody.trim(),
-      iconUrl: notificationIconUrl.trim() || undefined, targetUrl: notificationTargetUrl.trim() || undefined,
-      soundUrl: toastSoundUrl.trim() || undefined, 
-      targetType: notificationTargetType,
-      targetRoles: notificationTargetType === 'roles' ? Array.from(selectedNotificationRoles) : undefined,
-      targetUserIds: notificationTargetType === 'users' ? Array.from(selectedNotificationUserIds) : undefined,
-    };
-    const result = await sendPushNotificationAction(payload, currentUser);
-    setIsSendingNotification(false);
-    if (result.success) {
-      toast({ title: "Notification Send Attempted", description: result.message });
-      setNotificationTitle(''); setNotificationBody(''); setNotificationIconUrl(''); setNotificationTargetUrl('');
-    } else {
-      toast({ title: "Notification Failed", description: result.error || "Could not send notification.", variant: "destructive" });
-    }
-  };
-
-  const selectedNotifUsersDisplay = useMemo(() => {
-    if (selectedNotificationUserIds.size === 0) return "Select users...";
-    if (selectedNotificationUserIds.size > 2) return `${selectedNotificationUserIds.size} users selected`;
-    return Array.from(selectedNotificationUserIds).map(id => allUsers.find(u => u.id === id)?.name || id).join(", ");
-  }, [selectedNotificationUserIds, allUsers]);
-
-  const selectedExpenseUsersDisplay = useMemo(() => {
-    if (expenseLoggingPerms.allowedUserIds.length === 0) return "Select users...";
-    if (expenseLoggingPerms.allowedUserIds.length > 2) return `${expenseLoggingPerms.allowedUserIds.length} users selected`;
-    return expenseLoggingPerms.allowedUserIds.map(id => allTargetableUsersForExpensePerms.find(u => u.id === id)?.name || id).join(", ");
-  }, [expenseLoggingPerms.allowedUserIds, allTargetableUsersForExpensePerms]);
 
 
-  const filteredFcmUsers = useMemo(() => {
-    if (!fcmUserSearchTerm) return allUsers; // Show all targetable users for FCM
-    return allUsers.filter(user =>
-      user.name.toLowerCase().includes(fcmUserSearchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(fcmUserSearchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(fcmUserSearchTerm.toLowerCase())
-    );
-  }, [allUsers, fcmUserSearchTerm]);
-
-  const handleCopyFcmToken = async (token: string, userId: string) => {
-    try {
-      await navigator.clipboard.writeText(token);
-      toast({ title: "Token Copied!", description: "FCM token copied to clipboard." });
-      setCopiedTokenUserId(userId);
-      setTimeout(() => setCopiedTokenUserId(null), 2000);
-    } catch (err) {
-      toast({ title: "Copy Failed", description: "Could not copy token.", variant: "destructive" });
-      console.error("Failed to copy FCM token:", err);
-    }
-  };
-  
   const handleRoleTargetChange = (role: keyof RoleBasedTarget, value: string) => {
     const numericValue = parseInt(value, 10);
     setRoleBasedTargets(prev => ({
@@ -365,6 +268,12 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingRoleTargets(false);
   };
 
+
+  const selectedExpenseUsersDisplay = useMemo(() => {
+    if (expenseLoggingPerms.allowedUserIds.length === 0) return "Select users...";
+    if (expenseLoggingPerms.allowedUserIds.length > 2) return `${expenseLoggingPerms.allowedUserIds.length} users selected`;
+    return expenseLoggingPerms.allowedUserIds.map(id => allTargetableUsersForExpensePerms.find(u => u.id === id)?.name || id).join(", ");
+  }, [expenseLoggingPerms.allowedUserIds, allTargetableUsersForExpensePerms]);
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
     return (
@@ -396,67 +305,67 @@ export default function CrmTargetSettingsPage() {
         <CardContent className="p-6">
           {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-40 rounded" /></div>)}</div>
             : allStatuses.length === 0 ? <p className="text-muted-foreground">No order statuses found. Configure statuses first.</p>
-            : <ScrollArea className="h-[calc(50vh-200px)] pr-3"><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+              : <ScrollArea className="h-[calc(50vh-200px)] pr-3"><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                 {allStatuses.map((status) => (<div key={status.id} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                    <Checkbox id={`status-${status.id}`} checked={selectedStatusIds.has(status.id)} onCheckedChange={(checked) => handleCrmTargetCheckboxChange(status.id, checked)} disabled={isSubmittingCrmTargets} />
-                    <Label htmlFor={`status-${status.id}`} className="flex items-center gap-2 text-sm font-medium leading-none cursor-pointer">
-                      <span className="h-4 w-4 rounded-sm border border-border" style={{ backgroundColor: status.color }} title={status.name}/>{status.name}
-                      {status.isSystemStatus && <span className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm border border-border">System</span>}
-                    </Label></div>))}
+                  <Checkbox id={`status-${status.id}`} checked={selectedStatusIds.has(status.id)} onCheckedChange={(checked) => handleCrmTargetCheckboxChange(status.id, checked)} disabled={isSubmittingCrmTargets} />
+                  <Label htmlFor={`status-${status.id}`} className="flex items-center gap-2 text-sm font-medium leading-none cursor-pointer">
+                    <span className="h-4 w-4 rounded-sm border border-border" style={{ backgroundColor: status.color }} title={status.name} />{status.name}
+                    {status.isSystemStatus && <span className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm border border-border">System</span>}
+                  </Label></div>))}
               </div></ScrollArea>}
         </CardContent>
         <CardFooter className="border-t p-5 flex justify-end">
           <Button onClick={handleSaveCrmTargets} disabled={isLoading || isSubmittingCrmTargets || allStatuses.length === 0}>{isSubmittingCrmTargets ? "Saving..." : "Save CRM Target Settings"}</Button>
         </CardFooter>
       </Card>
-      
+
       <Separator className="my-8" />
-      
+
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Target className="h-6 w-6 text-primary" />Team Performance Targets</CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">Set the monthly task completion targets for different team roles.</CardDescription>
         </CardHeader>
         <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div className="space-y-1.5">
-             <Label htmlFor="crm-target">CRM Target</Label>
-             <Input
-               id="crm-target"
-               type="number"
-               value={roleBasedTargets.CRM}
-               onChange={(e) => handleRoleTargetChange('CRM', e.target.value)}
-               placeholder="e.g., 50"
-               min="0"
-               disabled={isLoading || isSubmittingRoleTargets}
-             />
-             <p className="text-xs text-muted-foreground">Monthly target per CRM user.</p>
-           </div>
-           <div className="space-y-1.5">
-             <Label htmlFor="dr-target">Designer Rep. Target</Label>
-             <Input
-               id="dr-target"
-               type="number"
-               value={roleBasedTargets.DESIGNER_REPRESENTATIVE}
-               onChange={(e) => handleRoleTargetChange('DESIGNER_REPRESENTATIVE', e.target.value)}
-               placeholder="e.g., 20"
-               min="0"
-               disabled={isLoading || isSubmittingRoleTargets}
-             />
-             <p className="text-xs text-muted-foreground">Monthly target per DR user.</p>
-           </div>
-           <div className="space-y-1.5">
-             <Label htmlFor="lr-target">Logistics (LR) Target</Label>
-             <Input
-               id="lr-target"
-               type="number"
-               value={roleBasedTargets.LR}
-               onChange={(e) => handleRoleTargetChange('LR', e.target.value)}
-               placeholder="e.g., 100"
-               min="0"
-               disabled={isLoading || isSubmittingRoleTargets}
-             />
-             <p className="text-xs text-muted-foreground">Total monthly target for the entire LR team.</p>
-           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="crm-target">CRM Target</Label>
+            <Input
+              id="crm-target"
+              type="number"
+              value={roleBasedTargets.CRM}
+              onChange={(e) => handleRoleTargetChange('CRM', e.target.value)}
+              placeholder="e.g., 50"
+              min="0"
+              disabled={isLoading || isSubmittingRoleTargets}
+            />
+            <p className="text-xs text-muted-foreground">Monthly target per CRM user.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="dr-target">Designer Rep. Target</Label>
+            <Input
+              id="dr-target"
+              type="number"
+              value={roleBasedTargets.DESIGNER_REPRESENTATIVE}
+              onChange={(e) => handleRoleTargetChange('DESIGNER_REPRESENTATIVE', e.target.value)}
+              placeholder="e.g., 20"
+              min="0"
+              disabled={isLoading || isSubmittingRoleTargets}
+            />
+            <p className="text-xs text-muted-foreground">Monthly target per DR user.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lr-target">Logistics (LR) Target</Label>
+            <Input
+              id="lr-target"
+              type="number"
+              value={roleBasedTargets.LR}
+              onChange={(e) => handleRoleTargetChange('LR', e.target.value)}
+              placeholder="e.g., 100"
+              min="0"
+              disabled={isLoading || isSubmittingRoleTargets}
+            />
+            <p className="text-xs text-muted-foreground">Total monthly target for the entire LR team.</p>
+          </div>
         </CardContent>
         <CardFooter className="border-t p-5 flex justify-end">
           <Button onClick={handleSaveRoleTargets} disabled={isLoading || isSubmittingRoleTargets}>
@@ -467,47 +376,47 @@ export default function CrmTargetSettingsPage() {
 
 
       <Separator className="my-8" />
-      
+
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-            <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
-                <Send className="h-6 w-6 text-primary" /> Telegram Bot Integration
-            </CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                Configure your Telegram bot to receive real-time payment notifications.
-            </CardDescription>
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+            <Send className="h-6 w-6 text-primary" /> Telegram Bot Integration
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">
+            Configure your Telegram bot to receive real-time payment notifications.
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
-            <div className="space-y-1.5">
-                <Label htmlFor="telegram-token">Bot Token</Label>
-                <Input
-                    id="telegram-token"
-                    type="password"
-                    value={telegramBotToken}
-                    onChange={(e) => setTelegramBotToken(e.target.value)}
-                    placeholder="Enter your Telegram Bot Token"
-                    disabled={isSubmittingTelegram || isLoading}
-                />
-            </div>
-            <div className="space-y-1.5">
-                <Label htmlFor="telegram-chat-ids">Chat IDs</Label>
-                <Textarea
-                    id="telegram-chat-ids"
-                    value={telegramChatIds}
-                    onChange={(e) => setTelegramChatIds(e.target.value)}
-                    placeholder="Enter one or more Chat IDs, separated by commas"
-                    disabled={isSubmittingTelegram || isLoading}
-                    rows={2}
-                />
-                <p className="text-xs text-muted-foreground">
-                  To send to multiple chats, separate each ID with a comma (e.g., -100123...,-100456...).
-                </p>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="telegram-token">Bot Token</Label>
+            <Input
+              id="telegram-token"
+              type="password"
+              value={telegramBotToken}
+              onChange={(e) => setTelegramBotToken(e.target.value)}
+              placeholder="Enter your Telegram Bot Token"
+              disabled={isSubmittingTelegram || isLoading}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="telegram-chat-ids">Chat IDs</Label>
+            <Textarea
+              id="telegram-chat-ids"
+              value={telegramChatIds}
+              onChange={(e) => setTelegramChatIds(e.target.value)}
+              placeholder="Enter one or more Chat IDs, separated by commas"
+              disabled={isSubmittingTelegram || isLoading}
+              rows={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              To send to multiple chats, separate each ID with a comma (e.g., -100123...,-100456...).
+            </p>
+          </div>
         </CardContent>
         <CardFooter className="border-t p-5 flex justify-end">
-            <Button onClick={handleSaveTelegramSettings} disabled={isSubmittingTelegram || isLoading}>
-                {isSubmittingTelegram ? "Saving..." : "Save Telegram Settings"}
-            </Button>
+          <Button onClick={handleSaveTelegramSettings} disabled={isSubmittingTelegram || isLoading}>
+            {isSubmittingTelegram ? "Saving..." : "Save Telegram Settings"}
+          </Button>
         </CardFooter>
       </Card>
 
@@ -532,7 +441,7 @@ export default function CrmTargetSettingsPage() {
                 <Label htmlFor="commentsVisibilitySwitch" className="flex flex-col space-y-1 cursor-pointer">
                   <span>Comments Section Visibility (Public Tracking)</span><span className="font-normal leading-snug text-muted-foreground text-xs">Show or hide comments on public order tracking pages.</span>
                 </Label>
-                <Switch id="commentsVisibilitySwitch" checked={areCommentsVisible} onCheckedChange={handleToggleCommentsVisibility} disabled={isSubmittingCommentsVisibility} aria-label="Toggle comments section visibility"/>
+                <Switch id="commentsVisibilitySwitch" checked={areCommentsVisible} onCheckedChange={handleToggleCommentsVisibility} disabled={isSubmittingCommentsVisibility} aria-label="Toggle comments section visibility" />
               </div>
 
               <div className="p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
@@ -548,7 +457,7 @@ export default function CrmTargetSettingsPage() {
                     { value: 'specificRoles', label: 'Specific Roles' },
                     { value: 'specificUsers', label: 'Specific Users' },
                     { value: 'none', label: 'Disable for All Staff' }
-                  ] as Array<{value: ExpenseLoggingMode, label: string}>).map(opt => (
+                  ] as Array<{ value: ExpenseLoggingMode, label: string }>).map(opt => (
                     <div key={opt.value} className="flex items-center space-x-2"><RadioGroupItem value={opt.value} id={`expense-mode-${opt.value}`} /><Label htmlFor={`expense-mode-${opt.value}`}>{opt.label}</Label></div>
                   ))}
                 </RadioGroup>
@@ -569,7 +478,7 @@ export default function CrmTargetSettingsPage() {
                 {expenseLoggingPerms.mode === 'specificUsers' && (
                   <div className="mt-3 p-3 border rounded-md bg-secondary/30">
                     <Label className="mb-2 block text-sm font-medium">Select Users *</Label>
-                    {isLoadingUsersForNotifAndTokens ? <Skeleton className="h-10 w-full rounded-md" /> : (
+                    {isLoading ? <Skeleton className="h-10 w-full rounded-md" /> : (
                       <Popover open={isExpenseUserPopoverOpen} onOpenChange={setIsExpenseUserPopoverOpen}>
                         <PopoverTrigger asChild>
                           <Button variant="outline" role="combobox" aria-expanded={isExpenseUserPopoverOpen} className="w-full justify-between bg-background">
@@ -582,7 +491,7 @@ export default function CrmTargetSettingsPage() {
                               <CommandGroup>
                                 {allTargetableUsersForExpensePerms.map((user) => (
                                   <CommandItem key={`expense-user-${user.id}`} value={`${user.name} ${user.email} ${user.role}`} onSelect={() => handleExpensePermsUserSelect(user.id)} className="cursor-pointer">
-                                    <CheckIcon className={cn("mr-2 h-4 w-4", expenseLoggingPerms.allowedUserIds.includes(user.id) ? "opacity-100" : "opacity-0")}/>
+                                    <CheckIcon className={cn("mr-2 h-4 w-4", expenseLoggingPerms.allowedUserIds.includes(user.id) ? "opacity-100" : "opacity-0")} />
                                     {user.name} <span className="text-xs text-muted-foreground ml-1">({user.role.replace(/_/g, ' ')})</span>
                                   </CommandItem>
                                 ))}
@@ -592,9 +501,9 @@ export default function CrmTargetSettingsPage() {
                     )}
                   </div>
                 )}
-                 <Button onClick={handleSaveExpensePermissions} disabled={isSubmittingExpensePerms} className="mt-4">
-                    {isSubmittingExpensePerms ? "Saving..." : "Save Expense Permissions"}
-                  </Button>
+                <Button onClick={handleSaveExpensePermissions} disabled={isSubmittingExpensePerms} className="mt-4">
+                  {isSubmittingExpensePerms ? "Saving..." : "Save Expense Permissions"}
+                </Button>
               </div>
             </>
           )}
@@ -603,7 +512,7 @@ export default function CrmTargetSettingsPage() {
 
 
       <Separator className="my-8" />
-      
+
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -690,7 +599,7 @@ export default function CrmTargetSettingsPage() {
             </Button>
           </CardFooter>
         </Card>
-        
+
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -725,7 +634,7 @@ export default function CrmTargetSettingsPage() {
                       width={200}
                       height={120}
                       className="object-cover rounded"
-                      unoptimized={leaderboardBgUrl.startsWith('/')} 
+                      unoptimized={leaderboardBgUrl.startsWith('/')}
                       onError={(e) => { e.currentTarget.src = DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER; e.currentTarget.alt = 'Error loading image. Default shown.' }}
                     />
                   </div>
@@ -742,7 +651,7 @@ export default function CrmTargetSettingsPage() {
       </div>
 
       <Separator className="my-8" />
-      
+
       <form onSubmit={handleSaveDrNotification}>
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
@@ -754,14 +663,14 @@ export default function CrmTargetSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="drNotifTitle">Notification Title *</Label>
-                <Input id="drNotifTitle" value={drNotifTitle} onChange={(e) => setDrNotifTitle(e.target.value)} placeholder="e.g., New Task from %assignerName% for %company%" required disabled={isSubmittingDrNotif}/>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="drNotifBody">Notification Body *</Label>
-                <Textarea id="drNotifBody" value={drNotifBody} onChange={(e) => setDrNotifBody(e.target.value)} placeholder="e.g., You have been assigned to order %orderId% (Job ID: %jobid%)." required disabled={isSubmittingDrNotif}/>
-              </div>
+            <div className="space-y-1">
+              <Label htmlFor="drNotifTitle">Notification Title *</Label>
+              <Input id="drNotifTitle" value={drNotifTitle} onChange={(e) => setDrNotifTitle(e.target.value)} placeholder="e.g., New Task from %assignerName% for %company%" required disabled={isSubmittingDrNotif} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="drNotifBody">Notification Body *</Label>
+              <Textarea id="drNotifBody" value={drNotifBody} onChange={(e) => setDrNotifBody(e.target.value)} placeholder="e.g., You have been assigned to order %orderId% (Job ID: %jobid%)." required disabled={isSubmittingDrNotif} />
+            </div>
           </CardContent>
           <CardFooter className="border-t p-5 flex justify-end">
             <Button type="submit" disabled={isSubmittingDrNotif}>{isSubmittingDrNotif ? "Saving..." : "Save DR Template"}</Button>
@@ -770,167 +679,7 @@ export default function CrmTargetSettingsPage() {
       </form>
 
 
-      <Separator className="my-8" />
 
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
-            <BellRing className="h-6 w-6 text-primary" /> User FCM Tokens
-          </CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            View Firebase Cloud Messaging tokens for registered users. Useful for direct notification testing via Firebase Console.
-          </CardDescription>
-           <div className="relative mt-4">
-            <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users by name, email, role..."
-              value={fcmUserSearchTerm}
-              onChange={(e) => setFcmUserSearchTerm(e.target.value)}
-              className="pl-9 bg-background/50"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoadingUsersForNotifAndTokens ? (
-            <div className="p-6 space-y-3">
-              {[...Array(3)].map((_, i) => <Skeleton key={`fcm-skel-${i}`} className="h-12 w-full rounded-md" />)}
-            </div>
-          ) : filteredFcmUsers.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground">
-              <Users className="mx-auto h-10 w-10 opacity-50 mb-2" />
-              No users found {fcmUserSearchTerm ? `matching "${fcmUserSearchTerm}"` : "or no tokens registered."}
-            </div>
-          ) : (
-            <ScrollArea className="h-auto max-h-[500px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6">User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>FCM Token</TableHead>
-                    <TableHead className="pr-6 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFcmUsers.map(user => (
-                    <TableRow key={user.id} className="hover:bg-muted/30">
-                      <TableCell className="pl-6 font-medium">
-                        <div>{user.name}</div>
-                        <div className="text-xs text-muted-foreground">{user.email}</div>
-                      </TableCell>
-                      <TableCell>{user.role.replace(/_/g, ' ')}</TableCell>
-                      <TableCell>
-                        {user.fcmToken ? (
-                          <span className="font-mono text-xs bg-secondary px-2 py-1 rounded-md border border-border/40 block max-w-xs truncate" title={user.fcmToken}>
-                            {user.fcmToken}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">No token / Not permitted</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="pr-6 text-right">
-                        {user.fcmToken ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopyFcmToken(user.fcmToken!, user.id)}
-                            className="h-8 px-2.5"
-                          >
-                            {copiedTokenUserId === user.id ? <CheckIcon className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                            <span className="ml-1.5 text-xs">{copiedTokenUserId === user.id ? "Copied!" : "Copy"}</span>
-                          </Button>
-                        ) : (
-                          <Button variant="outline" size="sm" disabled className="h-8 px-2.5 text-xs">No Token</Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
-
-      <Separator className="my-8" />
-
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
-            <Send className="h-6 w-6 text-primary" /> Send Push Notification
-          </CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            Compose and send a push notification. Use <code className="bg-muted px-1 py-0.5 rounded text-xs">%name%</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs">%role%</code> for personalization.
-             <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
-                Test with Firebase Console <ExternalLink className="inline-block h-3 w-3 ml-0.5"/>
-              </a>
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSendNotification}>
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="notifTitle">Title *</Label>
-              <Input id="notifTitle" value={notificationTitle} onChange={(e) => setNotificationTitle(e.target.value)} placeholder="e.g., New Feature for %role%!" required disabled={isSendingNotification}/>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="notifBody">Body *</Label>
-              <Textarea id="notifBody" value={notificationBody} onChange={(e) => setNotificationBody(e.target.value)} placeholder="Hi %name%, check out this update..." required disabled={isSendingNotification}/>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="notifIconUrl">Icon URL (Optional)</Label>
-                <Input id="notifIconUrl" value={notificationIconUrl} onChange={(e) => setNotificationIconUrl(e.target.value)} placeholder="e.g., /icons/icon-192x192.png" disabled={isSendingNotification}/>
-                 <p className="text-xs text-muted-foreground">Default is app icon. Must be absolute URL or path from public folder.</p>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="notifTargetUrl">Target URL (Optional)</Label>
-                <Input id="notifTargetUrl" value={notificationTargetUrl} onChange={(e) => setNotificationTargetUrl(e.target.value)} placeholder="e.g., /dashboard" disabled={isSendingNotification}/>
-                <p className="text-xs text-muted-foreground">URL to open on notification click. Relative or absolute.</p>
-              </div>
-            </div>
-            <Separator className="my-4"/>
-            <div className="space-y-2">
-              <Label className="text-md font-medium">Target Audience *</Label>
-              <RadioGroup value={notificationTargetType} onValueChange={(value) => setNotificationTargetType(value as 'all' | 'roles' | 'users')} className="flex flex-col sm:flex-row gap-4" disabled={isSendingNotification}>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="all" id="targetAll" /><Label htmlFor="targetAll">All Users</Label></div>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="roles" id="targetRoles" /><Label htmlFor="targetRoles">Specific Roles</Label></div>
-                <div className="flex items-center space-x-2"><RadioGroupItem value="users" id="targetUsers" /><Label htmlFor="targetUsers">Specific Users</Label></div>
-              </RadioGroup>
-            </div>
-            {notificationTargetType === 'roles' && (
-              <div className="p-4 border rounded-md bg-secondary/30 mt-2">
-                <Label className="mb-2 block text-sm font-medium">Select Roles *</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {NOTIFICATION_TARGET_ROLES.map(role => (<div key={role} className="flex items-center space-x-2 p-2 border rounded-md hover:bg-muted/50 bg-background">
-                      <Checkbox id={`notif-role-${role}`} checked={selectedNotificationRoles.has(role)} onCheckedChange={(checked) => handleNotificationRoleCheckboxChange(role, checked)} disabled={isSendingNotification}/>
-                      <Label htmlFor={`notif-role-${role}`} className="text-sm font-normal cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
-                </div>
-              </div>)}
-            {notificationTargetType === 'users' && (
-              <div className="p-4 border rounded-md bg-secondary/30 mt-2">
-                <Label className="mb-2 block text-sm font-medium">Select Users *</Label>
-                {isLoadingUsersForNotifAndTokens ? <Skeleton className="h-10 w-full rounded-md" />
-                : <Popover open={isNotifUserPopoverOpen} onOpenChange={setIsNotifUserPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" aria-expanded={isNotifUserPopoverOpen} className="w-full justify-between bg-background" disabled={isSendingNotification || allUsers.length === 0}>
-                        <span className="truncate">{selectedNotifUsersDisplay}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                      <Command><CommandInput placeholder="Search user..." disabled={isSendingNotification}/>
-                        <CommandList><CommandEmpty>No user found.</CommandEmpty>
-                          <CommandGroup>
-                            {allUsers.map((user) => (<CommandItem key={user.id} value={`${user.name} ${user.email} ${user.role}`} onSelect={() => handleNotificationUserSelect(user.id)} disabled={isSendingNotification} className="cursor-pointer">
-                                <CheckIcon className={cn("mr-2 h-4 w-4", selectedNotificationUserIds.has(user.id) ? "opacity-100" : "opacity-0")}/>
-                                {user.name} <span className="text-xs text-muted-foreground ml-1">({user.role.replace(/_/g, ' ')})</span></CommandItem>))}
-                          </CommandGroup></CommandList></Command></PopoverContent></Popover>}
-                 {selectedNotificationUserIds.size > 0 && (<div className="mt-2 text-xs"><span className="font-medium">Selected: </span><span className="text-muted-foreground">{Array.from(selectedNotificationUserIds).map(id => allUsers.find(u => u.id === id)?.name).filter(Boolean).join(", ")}</span></div>)}
-              </div>)}
-          </CardContent>
-          <CardFooter className="border-t p-5 flex justify-end">
-            <Button type="submit" disabled={isSendingNotification || !notificationTitle.trim() || !notificationBody.trim()}>{isSendingNotification ? "Sending..." : <><Send className="mr-2 h-4 w-4"/> Send Notification</>}</Button>
-          </CardFooter>
-        </form>
-      </Card>
     </div>
   );
 }

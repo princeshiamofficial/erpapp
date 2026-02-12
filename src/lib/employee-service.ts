@@ -1,86 +1,71 @@
-
+"use server";
 
 import type { Employee, Payslip, SalaryIncrement, LeaveRecord } from '@/types';
 import { subYears } from 'date-fns';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 import { v4 as uuidv4 } from 'uuid';
 
-const EMPLOYEES_COLLECTION = 'employees';
-const SALARY_SHEET_COLLECTION_PREFIX = 'salarySheet-';
-
-const getSalarySheetCollectionName = (month: string) => `${SALARY_SHEET_COLLECTION_PREFIX}${month}`;
+const EMPLOYEES_TABLE = 'employees';
+const SALARY_RECORDS_TABLE = 'salary_records';
 
 const defaultEmployeesData: Array<Omit<Employee, 'id' | 'employeeId' | 'userId'>> = [
-  { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [], nationalId: '1234567890123', accountNo: '112233445566' },
-  { name: 'Jane Smith', email: 'jane.smith@example.com', mobileNo: '01812345678', dob: subYears(new Date(), 25).toISOString(), designation: 'Project Manager', joiningDate: subYears(new Date(), 1).toISOString(), status: 'Active', salary: 95000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [], nationalId: '9876543210987', accountNo: '665544332211' },
+    { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [], nationalId: '1234567890123', accountNo: '112233445566' },
+    { name: 'Jane Smith', email: 'jane.smith@example.com', mobileNo: '01812345678', dob: subYears(new Date(), 25).toISOString(), designation: 'Project Manager', joiningDate: subYears(new Date(), 1).toISOString(), status: 'Active', salary: 95000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [], nationalId: '9876543210987', accountNo: '665544332211' },
 ];
 
 export const seedDefaultEmployees = async (): Promise<Employee[]> => {
-  const createdEmployees: Employee[] = [];
-  let counter = 1;
+    const createdEmployees: Employee[] = [];
+    let counter = 1;
 
-  for (const empData of defaultEmployeesData) {
-    const employeeId = `EMP-${String(counter++).padStart(3, '0')}`;
-    const newEmployeeData = {
-      ...empData,
-      employeeId,
-      userId: null,
-    };
-    try {
-      const newEmployee = await addEmployee(newEmployeeData);
-      if (newEmployee) {
-        createdEmployees.push(newEmployee);
-      }
-    } catch (error) {
-      console.error(`Error seeding employee ${empData.name}:`, error);
+    for (const empData of defaultEmployeesData) {
+        const employeeId = `EMP-${String(counter++).padStart(3, '0')}`;
+        const newEmployeeData = {
+            ...empData,
+            employeeId,
+            userId: null,
+        };
+        try {
+            const newEmployee = await addEmployee(newEmployeeData);
+            if (newEmployee) {
+                createdEmployees.push(newEmployee);
+            }
+        } catch (error) {
+            console.error(`Error seeding employee ${empData.name}:`, error);
+        }
     }
-  }
 
-  return createdEmployees;
+    return createdEmployees;
 };
 
 export const getEmployees = async (): Promise<Employee[]> => {
-  try {
-    await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents?limit=9999&orderBy=employeeId&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-        if (response.documents.length === 0) {
-            return [];
-        }
-        return response.documents.map((doc: { id: string, data: any }) => ({
-            id: doc.id,
-            ...doc.data
+    try {
+        const rows = await query<any[]>(`SELECT id, data_json FROM ${EMPLOYEES_TABLE} ORDER BY employee_id ASC`);
+        return rows.map(row => ({
+            id: row.id,
+            ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
         } as Employee));
+    } catch (error) {
+        console.error("Error fetching employees from MySQL:", error);
+        return [];
     }
-    return [];
-  } catch (error) {
-    console.error("Error fetching employees via API v3:", error);
-    return [];
-  }
 };
 
-export const getEmployeeById = async (employeeId: string): Promise<Employee | null> => {
-    if (!employeeId) return null;
+export const getEmployeeById = async (id: string): Promise<Employee | null> => {
+    if (!id) return null;
     try {
-        const response = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
-        if (response && response.data) {
-            return { id: response.id, ...response.data } as Employee;
+        const rows = await query<any[]>(`SELECT id, data_json FROM ${EMPLOYEES_TABLE} WHERE id = ? OR employee_id = ?`, [id, id]);
+        if (rows.length > 0) {
+            return { id: rows[0].id, ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as Employee;
         }
         return null;
     } catch (error) {
-        // If a document is not found, the API throws an error. We should handle this gracefully.
-        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-          return null;
-        }
-        console.error(`Error fetching employee by ID ${employeeId} via API v3:`, error);
+        console.error(`Error fetching employee ${id} from MySQL:`, error);
         return null;
     }
 };
 
 export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeId'>): Promise<Employee | null> => {
     try {
-        await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
-
         const allEmployees = await getEmployees();
         let maxIdNumber = 0;
         allEmployees.forEach(emp => {
@@ -91,39 +76,33 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
                 }
             }
         });
-        
+
         const newIdNumber = maxIdNumber + 1;
         const employeeId = `EMP-${String(newIdNumber).padStart(3, '0')}`;
-        const newEmployeeData = { 
-            ...employeeData, 
-            employeeId, 
-            nationalId: employeeData.nationalId || `${new Date().getFullYear()}${String(Math.floor(1000 + Math.random() * 9000))}`, // Auto-generate if not provided
+        const newEmployeeData = {
+            ...employeeData,
+            employeeId,
+            nationalId: employeeData.nationalId || `${new Date().getFullYear()}${String(Math.floor(1000 + Math.random() * 9000))}`,
             salaryHistory: [],
             yearlyLeave: employeeData.yearlyLeave || 12,
             leaveTaken: employeeData.leaveTaken || 0,
             leaveHistory: employeeData.leaveHistory || [],
-            providentFundStatus: employeeData.providentFundStatus || 'Active', // Default to Active
+            providentFundStatus: employeeData.providentFundStatus || 'Active',
         };
 
-        const newDoc = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents`, {
-            method: 'POST',
-            body: JSON.stringify({ data: newEmployeeData }),
-        });
+        const id = uuidv4();
+        await query(`INSERT INTO ${EMPLOYEES_TABLE} (id, user_id, employee_id, name, data_json) VALUES (?, ?, ?, ?, ?)`,
+            [id, newEmployeeData.userId || null, employeeId, newEmployeeData.name || '', JSON.stringify(newEmployeeData)]);
 
-        // The API should return the full document with its new ID.
-        return {
-            id: newDoc.id,
-            ...newDoc.data
-        } as Employee;
+        return { id, ...newEmployeeData } as Employee;
     } catch (error) {
-        console.error("Error adding employee via API v3:", error);
+        console.error("Error adding employee to MySQL:", error);
         return null;
     }
 };
 
 export const updateEmployee = async (employeeId: string, updates: Partial<Omit<Employee, 'id' | 'employeeId'>> & { isReverting?: boolean }, incrementDate?: string): Promise<boolean> => {
     try {
-        await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
         const existingEmployee = await getEmployeeById(employeeId);
         if (!existingEmployee) {
             throw new Error("Employee not found for update.");
@@ -133,110 +112,83 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
         const currentSalary = existingEmployee.salary || 0;
         const newSalary = updates.salary;
 
-        // If status is changing, set the statusChangeDate
         if (updates.status && updates.status !== existingEmployee.status) {
             finalUpdates.statusChangeDate = new Date().toISOString();
         }
 
         if (newSalary !== undefined && newSalary !== null && newSalary !== currentSalary) {
-            const isReverting = finalUpdates.isReverting || false;
-            
-            if (!isReverting) {
+            if (!finalUpdates.isReverting) {
                 const newIncrement: SalaryIncrement = {
                     date: incrementDate || new Date().toISOString(),
                     previousSalary: currentSalary,
                     newSalary: newSalary,
-                    incrementAmount: newSalary - currentSalary,
+                    incrementAmount: (newSalary || 0) - currentSalary,
                 };
-                const updatedHistory = [newIncrement, ...(finalUpdates.salaryHistory || existingEmployee.salaryHistory || [])];
-                finalUpdates.salaryHistory = updatedHistory;
+                finalUpdates.salaryHistory = [newIncrement, ...(existingEmployee.salaryHistory || [])];
             }
         }
-        
-        delete finalUpdates.isReverting;
 
+        delete finalUpdates.isReverting;
         const finalData = { ...existingEmployee, ...finalUpdates };
+        const id = finalData.id;
         delete (finalData as any).id;
 
+        await query(`UPDATE ${EMPLOYEES_TABLE} SET user_id = ?, name = ?, data_json = ? WHERE id = ?`,
+            [finalData.userId || null, finalData.name || '', JSON.stringify(finalData), id]);
 
-        await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
-            method: 'PUT',
-            body: JSON.stringify({ data: finalData })
-        });
         return true;
     } catch (error) {
-        console.error(`Error updating employee ${employeeId} via API v3:`, error);
+        console.error(`Error updating employee ${employeeId} in MySQL:`, error);
         return false;
     }
 };
 
-
 export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
     try {
-        await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
-        await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
-            method: 'DELETE'
-        });
+        await query(`DELETE FROM ${EMPLOYEES_TABLE} WHERE id = ? OR employee_id = ?`, [employeeId, employeeId]);
         return true;
     } catch (error) {
-        console.error(`Error deleting employee ${employeeId} via API v3:`, error);
+        console.error(`Error deleting employee ${employeeId} from MySQL:`, error);
         return false;
     }
 };
 
 export const getPayslipForMonth = async (month: string): Promise<Payslip[]> => {
-    const collectionName = getSalarySheetCollectionName(month);
     try {
-        await ensureCollectionExistsV3(collectionName);
-        const response = await fetchFromApiV3(`collections/${collectionName}/documents?limit=9999`);
-        if (response && Array.isArray(response.documents)) {
-            return response.documents.map((doc: { id: string, data: any }) => ({
-                id: doc.id,
-                ...doc.data
-            } as Payslip));
-        }
-        return [];
+        const rows = await query<any[]>(`SELECT id, data_json FROM ${SALARY_RECORDS_TABLE} WHERE month = ?`, [month]);
+        return rows.map(row => ({
+            id: row.id,
+            ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+        } as Payslip));
     } catch (error) {
-        console.error(`Error fetching payslips for ${month} via API v3:`, error);
+        console.error(`Error fetching payslips for ${month} from MySQL:`, error);
         return [];
     }
 };
 
-// New function to update a payslip record in its own collection
 export const updatePayslipInDb = async (payslipId: string, payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'>): Promise<boolean> => {
-    const month = payslipId.substring(0, 7); // Extract YYYY-MM from payslipId
-    const employeeId = payslipId.substring(8); // Extract employeeId from payslipId
-    const collectionName = getSalarySheetCollectionName(month);
+    const month = payslipId.substring(0, 7);
+    const employeeId = payslipId.substring(8);
     try {
-        const existingPayslip = await fetchFromApiV3(`collections/${collectionName}/documents/${payslipId}`).catch(() => null);
+        const existingRows = await query<any[]>(`SELECT data_json FROM ${SALARY_RECORDS_TABLE} WHERE id = ?`, [payslipId]);
+        const existingData = existingRows.length > 0 ? (typeof existingRows[0].data_json === 'string' ? JSON.parse(existingRows[0].data_json) : existingRows[0].data_json) : {};
 
         const dataToSave = {
-            ...(existingPayslip?.data || {}),
+            ...existingData,
             ...payslipData,
             employeeId: employeeId,
             updatedAt: new Date().toISOString(),
         };
-        
-        const payload = { id: payslipId, data: dataToSave };
 
-        if (existingPayslip) {
-             await fetchFromApiV3(`collections/${collectionName}/documents/${payslipId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ data: dataToSave })
-            });
-        } else {
-             await fetchFromApiV3(`collections/${collectionName}/documents`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-        }
+        await query(`INSERT INTO ${SALARY_RECORDS_TABLE} (id, employee_id, month, data_json) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE employee_id=VALUES(employee_id), month=VALUES(month), data_json=VALUES(data_json)`,
+            [payslipId, employeeId, month, JSON.stringify(dataToSave)]);
+
         return true;
     } catch (error) {
-        console.error(`Error updating payslip ${payslipId} in ${collectionName} via API v3:`, error);
+        console.error(`Error updating payslip ${payslipId} in MySQL:`, error);
         return false;
     }
 };
-
 
 export const deleteSalaryIncrement = async (employeeId: string, incrementDate: string): Promise<boolean> => {
     try {
@@ -244,17 +196,10 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
         if (!employee || !employee.salaryHistory) {
             throw new Error("Employee or salary history not found.");
         }
-
         const newHistory = employee.salaryHistory.filter(h => h.date !== incrementDate);
-        
-        const updates = { salaryHistory: newHistory };
-
-        const success = await updateEmployee(employeeId, updates, undefined);
-        return success;
-
+        return await updateEmployee(employeeId, { salaryHistory: newHistory });
     } catch (error) {
         console.error(`Error deleting salary increment for employee ${employeeId}:`, error);
-        if (error instanceof Error) throw error;
         return false;
     }
 };
@@ -262,24 +207,16 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
 export const addLeaveRecord = async (employeeId: string, leaveData: Omit<LeaveRecord, 'id'>, newTotalLeaveTaken?: number): Promise<boolean> => {
     try {
         const employee = await getEmployeeById(employeeId);
-        if (!employee) {
-            throw new Error("Employee not found.");
-        }
+        if (!employee) throw new Error("Employee not found.");
 
-        const newLeaveRecord: LeaveRecord = {
-            ...leaveData,
-            id: uuidv4(),
-        };
-
+        const newLeaveRecord: LeaveRecord = { ...leaveData, id: uuidv4() };
         const updatedHistory = [...(employee.leaveHistory || []), newLeaveRecord];
         const newLeaveTaken = newTotalLeaveTaken !== undefined ? newTotalLeaveTaken : (employee.leaveTaken || 0) + leaveData.days;
 
-        const updates = {
+        return await updateEmployee(employeeId, {
             leaveHistory: updatedHistory,
             leaveTaken: newLeaveTaken,
-        };
-
-        return await updateEmployee(employeeId, updates);
+        });
     } catch (error) {
         console.error(`Error adding leave record for employee ${employeeId}:`, error);
         return false;
@@ -287,30 +224,21 @@ export const addLeaveRecord = async (employeeId: string, leaveData: Omit<LeaveRe
 };
 
 export const deleteLeaveRecord = async (employeeId: string, leaveRecordId: string): Promise<boolean> => {
-  try {
-    const employee = await getEmployeeById(employeeId);
-    if (!employee) {
-      throw new Error("Employee not found.");
+    try {
+        const employee = await getEmployeeById(employeeId);
+        if (!employee) throw new Error("Employee not found.");
+
+        const leaveHistory = employee.leaveHistory || [];
+        const updatedHistory = leaveHistory.filter(record => record.id !== leaveRecordId);
+        if (leaveHistory.length === updatedHistory.length) return false;
+
+        const newLeaveTaken = updatedHistory.reduce((total, record) => total + record.days, 0);
+        return await updateEmployee(employeeId, {
+            leaveHistory: updatedHistory,
+            leaveTaken: newLeaveTaken,
+        });
+    } catch (error) {
+        console.error(`Error deleting leave record ${leaveRecordId} for employee ${employeeId}:`, error);
+        return false;
     }
-
-    const leaveHistory = employee.leaveHistory || [];
-    const updatedHistory = leaveHistory.filter(record => record.id !== leaveRecordId);
-
-    if (leaveHistory.length === updatedHistory.length) {
-      console.warn(`Leave record with ID ${leaveRecordId} not found for employee ${employeeId}. No changes made.`);
-      return false; 
-    }
-
-    const newLeaveTaken = updatedHistory.reduce((total, record) => total + record.days, 0);
-
-    const updates = {
-      leaveHistory: updatedHistory,
-      leaveTaken: newLeaveTaken,
-    };
-
-    return await updateEmployee(employeeId, updates);
-  } catch (error) {
-    console.error(`Error deleting leave record ${leaveRecordId} for employee ${employeeId}:`, error);
-    return false;
-  }
 };

@@ -1,76 +1,43 @@
 
-
 "use server";
 
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 
-const COLLECTION_NAME = 'weekend';
-const WEEKEND_DOC_ID = 'settings';
+const GLOBAL_SETTINGS_TABLE = 'global_settings';
+const WEEKEND_SETTINGS_ID = 'weekend';
 
 export interface WeekendSettings {
-  days: string[]; // e.g., ["Friday", "Saturday"]
+    days: string[]; // e.g., ["Friday", "Saturday"]
 }
 
 export const getWeekendSettings = async (): Promise<WeekendSettings> => {
-  try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${WEEKEND_DOC_ID}`);
-    if (response && response.data) {
-        return {
-            days: response.data.days || ["Friday", "Saturday"] // Default if field is missing
-        };
-    }
-     // If doc doesn't exist, create it with defaults
-    const defaultSettings: WeekendSettings = { days: ["Friday", "Saturday"] };
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ id: WEEKEND_DOC_ID, data: defaultSettings }),
-    });
-    return defaultSettings;
+    try {
+        const results = await query<any[]>(`SELECT settings_json FROM ${GLOBAL_SETTINGS_TABLE} WHERE id = ?`, [WEEKEND_SETTINGS_ID]);
 
-  } catch (error) {
-     if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-        const defaultSettings: WeekendSettings = { days: ["Friday", "Saturday"] };
-        try {
-             await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-                method: 'POST',
-                body: JSON.stringify({ id: WEEKEND_DOC_ID, data: defaultSettings }),
-            });
-             return defaultSettings;
-        } catch (createError) {
-             console.error("Error creating default weekend settings via API v3:", createError);
+        if (results.length > 0) {
+            const data = typeof results[0].settings_json === 'string' ? JSON.parse(results[0].settings_json) : results[0].settings_json;
+            return { days: data.days || ["Friday", "Saturday"] };
+        } else {
+            const defaultSettings = { days: ["Friday", "Saturday"] };
+            await query(`INSERT INTO ${GLOBAL_SETTINGS_TABLE} (id, settings_json) VALUES (?, ?)`, [WEEKEND_SETTINGS_ID, JSON.stringify(defaultSettings)]);
+            return defaultSettings;
         }
+    } catch (error) {
+        console.error("Error fetching weekend settings from MySQL:", error);
+        return { days: ["Friday", "Saturday"] };
     }
-    console.error("Error fetching weekend settings via API v3:", error);
-    return { days: ["Friday", "Saturday"] }; // Fallback default
-  }
 };
 
 export const saveWeekendSettings = async (days: string[]): Promise<boolean> => {
     try {
-        await ensureCollectionExistsV3(COLLECTION_NAME);
-        
-        const payload = {
-            id: WEEKEND_DOC_ID,
-            data: { days }
-        };
-
-        const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${WEEKEND_DOC_ID}`).catch(() => null);
-
-        if (existingDoc) {
-             await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${WEEKEND_DOC_ID}`, {
-                method: 'PUT',
-                body: JSON.stringify(payload),
-            });
-        } else {
-            await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-            });
-        }
+        const payload = { days };
+        await query(
+            `INSERT INTO ${GLOBAL_SETTINGS_TABLE} (id, settings_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE settings_json = VALUES(settings_json)`,
+            [WEEKEND_SETTINGS_ID, JSON.stringify(payload)]
+        );
         return true;
     } catch (error) {
-        console.error("Error saving weekend settings via API v3:", error);
+        console.error("Error saving weekend settings to MySQL:", error);
         return false;
     }
 };

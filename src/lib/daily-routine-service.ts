@@ -1,219 +1,146 @@
-
-
 "use server";
 
 import type { DailyRoutine } from '@/types';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 import { v4 as uuidv4 } from 'uuid';
-import { format } from 'date-fns';
 
-const getHeadersCollectionName = (userId: string) => `routine-headers-${userId}`;
-const getDailyCollectionName = (userId: string, date: Date) => `routines-${userId}-${format(date, 'MM-yyyy')}`;
+const HEADERS_TABLE = 'daily_routine_headers';
+const ENTRIES_TABLE = 'daily_routine_entries';
 
 export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
-  const collectionPath = getHeadersCollectionName(userId);
   try {
-    const endpoint = `collections/${collectionPath}/documents?limit=9999&orderBy=createdAt&direction=asc`;
-    const response = await fetchFromApiV3(endpoint);
-    
-    if (response && Array.isArray(response.documents)) {
-      return response.documents
-        .map((doc: { id: string, data: any }) => ({
-          id: doc.id,
-          ...doc.data
-        } as DailyRoutine))
-        .sort((a, b) => {
-          const timeA = a.time?.split(' ')[0];
-          const timeB = b.time?.split(' ')[0];
-          return (timeA || '').localeCompare(timeB || '');
-      });
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT data_json FROM ${HEADERS_TABLE} WHERE user_id = ?`, [userId]);
+    return rows.map(row => ({
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as DailyRoutine)).sort((a, b) => {
+      const timeA = a.time?.split(' ')[0] || '';
+      const timeB = b.time?.split(' ')[0] || '';
+      return timeA.localeCompare(timeB);
+    });
   } catch (error) {
-    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-      return [];
-    }
-    console.error(`Error fetching routine headers for user ${userId} from collection ${collectionPath} via API v3:`, error);
+    console.error(`Error fetching routine headers for user ${userId} from MySQL:`, error);
     return [];
   }
 };
 
 export const addRoutineHeader = async (routineData: Omit<DailyRoutine, 'id' | 'createdAt' | 'updatedAt' | 'completedTasks'>): Promise<DailyRoutine | null> => {
   if (!routineData.userId || !routineData.title) return null;
-  const collectionPath = getHeadersCollectionName(routineData.userId);
   try {
-    await ensureCollectionExistsV3(collectionPath);
-    const dataWithTimestamp: Omit<DailyRoutine, 'id'> = {
-      userId: routineData.userId,
-      title: routineData.title,
-      time: routineData.time,
-      description: routineData.description,
-      color: routineData.color,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const newDoc = await fetchFromApiV3(`collections/${collectionPath}/documents`, {
-      method: 'POST',
-      body: JSON.stringify({ data: dataWithTimestamp }),
-    });
-    return { id: newDoc.id, ...newDoc.data } as DailyRoutine;
+    const id = uuidv4();
+    const now = new Date().toISOString();
+    const dataWithTimestamp: DailyRoutine = {
+      ...routineData,
+      id,
+      createdAt: now,
+      updatedAt: now,
+    } as DailyRoutine;
+
+    await query(`INSERT INTO ${HEADERS_TABLE} (id, user_id, data_json) VALUES (?, ?, ?)`,
+      [id, routineData.userId, JSON.stringify(dataWithTimestamp)]);
+
+    return dataWithTimestamp;
   } catch (error) {
-    console.error(`Error adding routine header via API v3:`, error);
+    console.error(`Error adding routine header to MySQL:`, error);
     return null;
   }
 };
 
 export const updateRoutineHeader = async (id: string, updates: Partial<Omit<DailyRoutine, 'id' | 'userId'>>, userId: string): Promise<boolean> => {
   if (!id || !userId) return false;
-  const collectionPath = getHeadersCollectionName(userId);
   try {
-    const existingDoc = await fetchFromApiV3(`collections/${collectionPath}/documents/${id}`);
-    const finalData = { ...existingDoc.data, ...updates, updatedAt: new Date().toISOString() };
-    
-    await fetchFromApiV3(`collections/${collectionPath}/documents/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData })
-    });
+    const rows = await query<any[]>(`SELECT data_json FROM ${HEADERS_TABLE} WHERE id = ?`, [id]);
+    if (rows.length === 0) return false;
+
+    const currentData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const finalData = { ...currentData, ...updates, updatedAt: new Date().toISOString() };
+
+    await query(`UPDATE ${HEADERS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
     return true;
-  } catch(error) {
-    console.error(`Error updating routine header ${id} via API v3:`, error);
+  } catch (error) {
+    console.error(`Error updating routine header ${id} in MySQL:`, error);
     return false;
   }
 };
 
 export const deleteRoutineHeader = async (id: string, userId: string): Promise<boolean> => {
   if (!id || !userId) return false;
-  const collectionPath = getHeadersCollectionName(userId);
   try {
-    await fetchFromApiV3(`collections/${collectionPath}/documents/${id}`, {
-        method: 'DELETE'
-    });
+    await query(`DELETE FROM ${HEADERS_TABLE} WHERE id = ?`, [id]);
     return true;
-  } catch(error) {
-    console.error(`Error deleting routine header ${id} via API v3:`, error);
+  } catch (error) {
+    console.error(`Error deleting routine header ${id} from MySQL:`, error);
     return false;
   }
 };
 
-
-// Functions for daily check-in data
-
 export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
-  const now = new Date();
-  const monthsToFetch = [now, new Date(now.getFullYear(), now.getMonth() - 1, 1)];
-
   try {
-    const allRoutines: DailyRoutine[] = [];
-    for (const month of monthsToFetch) {
-      const collectionPath = getDailyCollectionName(userId, month);
-      try {
-        await ensureCollectionExistsV3(collectionPath);
-        const endpoint = `collections/${collectionPath}/documents?limit=9999`;
-        const response = await fetchFromApiV3(endpoint);
-        
-        if (response && Array.isArray(response.documents)) {
-          const routinesFromMonth = response.documents
-            .map((doc: { id: string, data: any }) => ({
-              id: doc.id,
-              ...doc.data
-            } as DailyRoutine));
-          allRoutines.push(...routinesFromMonth);
-        }
-      } catch (error) {
-        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-          continue; // It's okay if a month's collection doesn't exist
-        }
-        throw error; // Re-throw other errors
-      }
-    }
-    return allRoutines;
+    const rows = await query<any[]>(`SELECT data_json FROM ${ENTRIES_TABLE} WHERE user_id = ?`, [userId]);
+    return rows.map(row => ({
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as DailyRoutine));
   } catch (error) {
-    console.error(`Error fetching routine entries for user ${userId} via API v3:`, error);
+    console.error(`Error fetching routine entries for user ${userId} from MySQL:`, error);
     return [];
   }
 };
 
 export const getRoutineById = async (routineId: string, userId: string): Promise<DailyRoutine | null> => {
-    if (!routineId || !userId) return null;
-    const dateFromId = new Date(routineId);
-    const collectionPath = getDailyCollectionName(userId, dateFromId);
-    const endpoint = `collections/${collectionPath}/documents/${routineId}`;
-    try {
-        await ensureCollectionExistsV3(collectionPath);
-        const response = await fetchFromApiV3(endpoint);
-        return { id: response.id, ...response.data } as DailyRoutine;
-    } catch (error) {
-       if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-          return null;
-       }
-        console.error(`Error fetching routine by ID ${routineId} from ${collectionPath} via API v3:`, error);
-        return null;
+  if (!routineId || !userId) return null;
+  try {
+    const rows = await query<any[]>(`SELECT data_json FROM ${ENTRIES_TABLE} WHERE id = ? AND user_id = ?`, [routineId, userId]);
+    if (rows.length > 0) {
+      return { ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as DailyRoutine;
     }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching routine ${routineId} from MySQL:`, error);
+    return null;
+  }
 };
 
 export const toggleRoutineTask = async (userId: string, date: string, taskId: string): Promise<DailyRoutine | null> => {
   if (!userId || !date || !taskId) return null;
-  const dateObj = new Date(date);
-  const collectionPath = getDailyCollectionName(userId, dateObj);
-  const docId = date;
-  const endpoint = `collections/${collectionPath}/documents/${docId}`;
-  
   try {
-    await ensureCollectionExistsV3(collectionPath);
-    let existingDoc = await getRoutineById(docId, userId);
-
+    let existingDoc = await getRoutineById(date, userId);
     let updatedTasks: Record<string, string>;
 
     if (!existingDoc) {
-      // If the document for the day doesn't exist, create it with the first completed task.
       updatedTasks = { [taskId]: new Date().toISOString() };
-      const newRoutine: Omit<DailyRoutine, 'id'> = {
+      const newRoutine: DailyRoutine = {
+        id: date,
         userId,
         completedTasks: updatedTasks,
         updatedAt: new Date().toISOString(),
-      };
-      const payload = {
-        id: docId, 
-        data: newRoutine 
-      };
-      await fetchFromApiV3(`collections/${collectionPath}/documents`, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-      });
-      return { id: docId, ...newRoutine };
+      } as DailyRoutine;
+
+      await query(`INSERT INTO ${ENTRIES_TABLE} (id, user_id, data_json) VALUES (?, ?, ?)`,
+        [date, userId, JSON.stringify(newRoutine)]);
+      return newRoutine;
     } else {
-      // If the document exists, toggle the task in the object.
       const currentTasks = existingDoc.completedTasks || {};
-      
       if (currentTasks[taskId]) {
-        // Task exists, so we are unchecking it. Remove it.
         const { [taskId]: _, ...remainingTasks } = currentTasks;
         updatedTasks = remainingTasks;
       } else {
-        // Task does not exist, so we are checking it. Add it with a timestamp.
         updatedTasks = { ...currentTasks, [taskId]: new Date().toISOString() };
       }
-      
+
       const updates = {
         completedTasks: updatedTasks,
         updatedAt: new Date().toISOString(),
       };
 
       const finalData = { ...existingDoc, ...updates };
-      delete (finalData as any).id;
+      await query(`UPDATE ${ENTRIES_TABLE} SET data_json = ? WHERE id = ? AND user_id = ?`,
+        [JSON.stringify(finalData), date, userId]);
 
-      await fetchFromApiV3(endpoint, {
-          method: 'PUT',
-          body: JSON.stringify({ data: finalData })
-      });
-      
-      return { ...existingDoc, ...updates };
+      return finalData as DailyRoutine;
     }
   } catch (error) {
-    console.error(`Error toggling routine task in ${collectionPath} via API v3:`, error);
-    if (error instanceof Error) throw error;
+    console.error(`Error toggling routine task in MySQL:`, error);
     return null;
   }
 };

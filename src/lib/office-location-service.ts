@@ -1,9 +1,9 @@
 
 "use server";
 
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 
-const COLLECTION_NAME = 'officeLocation';
+const TABLE_NAME = 'office_locations';
 
 export interface CompanyLocation {
     id: string;
@@ -14,61 +14,53 @@ export interface CompanyLocation {
 }
 
 export const getOfficeLocations = async (): Promise<CompanyLocation[]> => {
-  try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=50`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data
-      } as CompanyLocation));
+    try {
+        const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME}`);
+        return rows.map(row => ({
+            id: row.id,
+            ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+        } as CompanyLocation));
+    } catch (error) {
+        console.error("Error fetching office locations from MySQL:", error);
+        return [];
     }
-    return [];
-  } catch (error) {
-    console.error("Error fetching office locations via API v3:", error);
-    return [];
-  }
 };
 
 export const addOfficeLocation = async (locationData: Omit<CompanyLocation, 'id'>): Promise<CompanyLocation | null> => {
     try {
-        await ensureCollectionExistsV3(COLLECTION_NAME);
-        const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-            method: 'POST',
-            body: JSON.stringify({ data: locationData }),
-        });
-        return { id: newDoc.id, ...newDoc.data } as CompanyLocation;
+        const { v4: uuidv4 } = require('uuid');
+        const id = uuidv4();
+        const dataWithId = { ...locationData, id };
+        await query(`INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(dataWithId)]);
+        return dataWithId as CompanyLocation;
     } catch (error) {
-        console.error("Error adding office location via API v3:", error);
+        console.error("Error adding office location to MySQL:", error);
         return null;
     }
 };
 
 export const updateOfficeLocation = async (id: string, updates: Partial<CompanyLocation>): Promise<boolean> => {
     try {
-        await ensureCollectionExistsV3(COLLECTION_NAME);
-        const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
-        const finalData = { ...existingDoc.data, ...updates };
-        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ data: finalData })
-        });
+        const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+        if (rows.length === 0) return false;
+
+        const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+        const finalData = { ...existingData, ...updates };
+
+        await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
         return true;
     } catch (error) {
-        console.error(`Error updating office location ${id} via API v3:`, error);
+        console.error(`Error updating office location ${id} in MySQL:`, error);
         return false;
     }
 };
 
 export const deleteOfficeLocation = async (id: string): Promise<boolean> => {
     try {
-        await ensureCollectionExistsV3(COLLECTION_NAME);
-        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-            method: 'DELETE'
-        });
+        await query(`DELETE FROM ${TABLE_NAME} WHERE id = ?`, [id]);
         return true;
     } catch (error) {
-        console.error(`Error deleting office location ${id} via API v3:`, error);
+        console.error(`Error deleting office location ${id} from MySQL:`, error);
         return false;
     }
 };

@@ -1,100 +1,104 @@
+"use server";
 
-
+import { query } from './mysql';
 import type { CustomStatus, UserRole } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
-const STATUSES_COLLECTION = 'customOrderStatuses';
-export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
-export const ORDER_SUBMITTED_ID = 'order-submitted'; 
-export const CANCELLED_STATUS_ID = 'cancelled'; 
-export const ON_HOLD_STATUS_ID = 'on-hold'; 
-export const LOGISTICS_STATUS_ID = 'logistics'; 
-export const QUALITY_CHECK_STATUS_ID = 'quality-check';
-export const SHIPPED_STATUS_ID = 'shipped'; // Added SHIPPED_STATUS_ID
-export const DELIVERED_STATUS_ID = 'delivered';
+const STATUSES_TABLE = 'order_statuses';
+
+import {
+  READY_FOR_DESIGN_STATUS_ID,
+  ORDER_SUBMITTED_ID,
+  CANCELLED_STATUS_ID,
+  ON_HOLD_STATUS_ID,
+  LOGISTICS_STATUS_ID,
+  QUALITY_CHECK_STATUS_ID,
+  SHIPPED_STATUS_ID,
+  DELIVERED_STATUS_ID
+} from './status-constants';
+
 
 // Default statuses with names, colors, and default allowed roles
-const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible' | 'xid'> & { id: string, defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
-  { id: ORDER_SUBMITTED_ID, defaultName: 'Order Submitted', color: '#8B5CF6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { id: READY_FOR_DESIGN_STATUS_ID, defaultName: 'Ready for Design', color: '#14B8A6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { id: 'design-in-progress', defaultName: 'Design in Progress', color: '#3B82F6', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { id: 'pending-client-approval', defaultName: 'Pending Client Approval', color: '#F59E0B', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { id: 'changes-requested', defaultName: 'Changes Requested', color: '#EF4444', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { id: 'approved-for-production', defaultName: 'Approved for Production', color: '#10B981', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { id: 'in-production', defaultName: 'In Production', color: '#0EA5E9', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
-  { id: QUALITY_CHECK_STATUS_ID, defaultName: 'Quality Check', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: quality-check
-  { id: LOGISTICS_STATUS_ID, defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: logistics
-  { id: SHIPPED_STATUS_ID, defaultName: 'Shipped', color: '#22C55E', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: shipped
-  { id: DELIVERED_STATUS_ID, defaultName: 'Delivered', color: '#65A30D', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
-  { id: CANCELLED_STATUS_ID, defaultName: 'Cancelled', color: '#71717A', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
-  { id: ON_HOLD_STATUS_ID, defaultName: 'On Hold', color: '#A1A1AA', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible' | 'xid'> & { id: string }> = [
+  { id: ORDER_SUBMITTED_ID, name: 'Order Submitted', color: '#8B5CF6', allowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: READY_FOR_DESIGN_STATUS_ID, name: 'Ready for Design', color: '#14B8A6', allowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'design-in-progress', name: 'Design in Progress', color: '#3B82F6', allowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'pending-client-approval', name: 'Pending Client Approval', color: '#F59E0B', allowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'changes-requested', name: 'Changes Requested', color: '#EF4444', allowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'approved-for-production', name: 'Approved for Production', color: '#10B981', allowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'in-production', name: 'In Production', color: '#0EA5E9', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { id: QUALITY_CHECK_STATUS_ID, name: 'Quality Check', color: '#F97316', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { id: LOGISTICS_STATUS_ID, name: 'Logistics', color: '#F97316', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
+  { id: SHIPPED_STATUS_ID, name: 'Shipped', color: '#22C55E', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
+  { id: DELIVERED_STATUS_ID, name: 'Delivered', color: '#65A30D', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
+  { id: CANCELLED_STATUS_ID, name: 'Cancelled', color: '#71717A', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { id: ON_HOLD_STATUS_ID, name: 'On Hold', color: '#A1A1AA', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
 ];
+
+const mapRowToStatus = (row: any): CustomStatus => ({
+  id: row.id,
+  name: row.name,
+  color: row.color,
+  isSystemStatus: Boolean(row.is_system_status),
+  isVisible: Boolean(row.is_visible),
+  allowedRoles: typeof row.allowed_roles === 'string' ? JSON.parse(row.allowed_roles) : (row.allowed_roles || []),
+  xid: row.xid || row.id,
+});
 
 export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
   const createdStatuses: CustomStatus[] = [];
-  await ensureCollectionExistsV3(STATUSES_COLLECTION);
-  
+
   for (const statusData of defaultStatusesData) {
     const statusPayload = {
-      name: statusData.defaultName,
+      id: statusData.id,
+      name: statusData.name,
       color: statusData.color,
       isSystemStatus: true,
       isVisible: true,
-      allowedRoles: statusData.defaultAllowedRoles || [],
+      allowedRoles: JSON.stringify(statusData.allowedRoles || []),
       xid: statusData.id,
     };
 
     try {
-        const requestBody = {
-            id: statusData.id,
-            data: statusPayload
-        };
-        
-        await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents`, {
-            method: 'POST',
-            body: JSON.stringify(requestBody)
-        });
-        
-        createdStatuses.push({
-            id: statusData.id,
-            ...statusPayload
-        });
+      await query(
+        `INSERT INTO ${STATUSES_TABLE} (id, name, color, is_system_status, is_visible, allowed_roles, xid) 
+             VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), color=VALUES(color)`,
+        [statusPayload.id, statusPayload.name, statusPayload.color, true, true, statusPayload.allowedRoles, statusPayload.id]
+      );
+      createdStatuses.push({
+        id: statusData.id,
+        name: statusData.name,
+        color: statusData.color,
+        isSystemStatus: true,
+        isVisible: true,
+        allowedRoles: statusData.allowedRoles || [],
+        xid: statusData.id,
+      });
 
-    } catch(error) {
-        console.error(`Failed to seed status with custom ID: ${statusData.id}`, error);
+    } catch (error) {
+      console.error(`Failed to seed status: ${statusData.id}`, error);
     }
   }
-  console.log('Default statuses seeded via API v3 using custom IDs.');
   return createdStatuses;
 };
 
 
 export const getStatuses = async (): Promise<CustomStatus[]> => {
   try {
-    await ensureCollectionExistsV3(STATUSES_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents?limit=4444`);
-    
-    if (response && Array.isArray(response.documents)) {
-      if (response.documents.length === 0) {
-        console.log("No statuses found, seeding defaults via API v3.");
-        return await seedDefaultStatuses();
-      }
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data,
-        xid: doc.data.xid || doc.id, // Fallback for older data
-        isVisible: doc.data.isVisible !== false,
-        allowedRoles: doc.data.allowedRoles || [],
-      } as CustomStatus)).sort((a, b) => {
-        if (a.isSystemStatus && !b.isSystemStatus) return -1;
-        if (!a.isSystemStatus && b.isSystemStatus) return 1;
-        return a.name.localeCompare(b.name);
-      });
+    const results = await query<any[]>(`SELECT * FROM ${STATUSES_TABLE}`);
+
+    if (results.length === 0) {
+      console.log("No statuses found, seeding defaults.");
+      return await seedDefaultStatuses();
     }
-    return [];
+
+    return results.map(mapRowToStatus).sort((a, b) => {
+      if (a.isSystemStatus && !b.isSystemStatus) return -1;
+      if (!a.isSystemStatus && b.isSystemStatus) return 1;
+      return a.name.localeCompare(b.name);
+    });
   } catch (error) {
-    console.error("Error fetching statuses from API v3:", error);
+    console.error("Error fetching statuses from MySQL:", error);
     return [];
   }
 };
@@ -102,24 +106,13 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
 export const getStatusById = async (id: string): Promise<CustomStatus | undefined> => {
   if (!id) return undefined;
   try {
-    const response = await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents/${id}`);
-    if (response && response.data) {
-      return { 
-        id: response.id, 
-        ...response.data,
-        xid: response.data.xid || response.id, // Fallback
-        isVisible: response.data.isVisible !== false,
-        allowedRoles: response.data.allowedRoles || [],
-      } as CustomStatus;
+    const results = await query<any[]>(`SELECT * FROM ${STATUSES_TABLE} WHERE id = ?`, [id]);
+    if (results.length > 0) {
+      return mapRowToStatus(results[0]);
     }
     return undefined;
   } catch (error) {
-    // If a document is not found, the API throws an error. We should handle this gracefully.
-    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-      console.warn(`Status with ID "${id}" not found in API database.`);
-      return undefined;
-    }
-    console.error(`Error fetching status by ID "${id}" from API v3:`, error);
+    console.error(`Error fetching status by ID "${id}" from MySQL:`, error);
     return undefined;
   }
 };
@@ -131,88 +124,73 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
   try {
     const customDocId = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-    const newStatusData: Omit<CustomStatus, 'id' | 'xid'> = {
+    await query(
+      `INSERT INTO ${STATUSES_TABLE} (id, name, color, is_system_status, is_visible, allowed_roles, xid) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [customDocId, name.trim(), color, false, isVisible, JSON.stringify(allowedRoles), customDocId]
+    );
+
+    return {
+      id: customDocId,
+      xid: customDocId,
       name: name.trim(),
       color,
       isSystemStatus: false,
       isVisible,
       allowedRoles,
     };
-
-    const payload = {
-        id: customDocId,
-        data: newStatusData
-    };
-    
-    await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    });
-
-    const createdStatus: CustomStatus = {
-        id: customDocId,
-        xid: customDocId,
-        ...newStatusData
-    };
-
-    return createdStatus;
   } catch (error) {
-    console.error("Error adding status via API v3:", error);
+    console.error("Error adding status in MySQL:", error);
     if (error instanceof Error) throw error;
     return null;
   }
 };
 
 export async function updateStatus(
-    id: string, 
-    name: string, 
-    color: string, 
-    isVisible: boolean, 
-    allowedRoles: UserRole[], 
-    actingUserRole?: UserRole
+  id: string,
+  name: string,
+  color: string,
+  isVisible: boolean,
+  allowedRoles: UserRole[],
+  actingUserRole?: UserRole
 ): Promise<boolean> {
   try {
     const existingStatus = await getStatusById(id);
     if (!existingStatus) {
       throw new Error(`Status with ID "${id}" not found for update.`);
     }
-    
-    const updates: Partial<Omit<CustomStatus, 'id'>> = {};
-    
+
+    const updates: { [key: string]: any } = {};
     if (name !== existingStatus.name) {
       if (existingStatus.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
         throw new Error("Only System Administrators can change the name of system statuses.");
       }
       updates.name = name;
-      // Also update the xid if it's not a system status
       if (!existingStatus.isSystemStatus) {
         updates.xid = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       }
     }
     if (color !== existingStatus.color) { updates.color = color; }
-    if (isVisible !== (existingStatus.isVisible !== false)) { updates.isVisible = isVisible; }
+    if (isVisible !== existingStatus.isVisible) { updates.is_visible = isVisible; }
 
     const sortedNewRoles = [...allowedRoles].sort();
     const sortedExistingRoles = [...(existingStatus.allowedRoles || [])].sort();
     if (JSON.stringify(sortedNewRoles) !== JSON.stringify(sortedExistingRoles)) {
-        if (existingStatus.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
-            throw new Error("Only System Administrators can change assignment permissions for system statuses.");
-        }
-        updates.allowedRoles = allowedRoles;
+      if (existingStatus.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
+        throw new Error("Only System Administrators can change assignment permissions for system statuses.");
+      }
+      updates.allowed_roles = JSON.stringify(allowedRoles);
     }
-    
+
     if (Object.keys(updates).length === 0) return true;
 
-    const dataToSend = { ...existingStatus, ...updates };
-    delete (dataToSend as any).id;
-    
-    await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: dataToSend })
-    });
+    const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const params = [...Object.values(updates), id];
+
+    await query(`UPDATE ${STATUSES_TABLE} SET ${fields} WHERE id = ?`, params);
     return true;
   } catch (error) {
-    console.error(`Error updating status ID '${id}' via API v3:`, error);
+    console.error(`Error updating status ID '${id}' in MySQL:`, error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -227,44 +205,16 @@ export const deleteStatus = async (id: string): Promise<boolean> => {
     if (statusToDelete.isSystemStatus) {
       throw new Error("System statuses cannot be deleted.");
     }
-    await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents/${id}`, { method: 'DELETE' });
+    await query(`DELETE FROM ${STATUSES_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error("Error deleting status from API v3:", error);
+    console.error("Error deleting status from MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
 };
 
 
-export const getContrastTextColor = (hexColor: string): string => {
-  try {
-    if (!hexColor || typeof hexColor !== 'string' || hexColor.length < 4) return '#FFFFFF'; // Default to white for safety
-    
-    let rStr = '0', gStr = '0', bStr = '0';
-    if (hexColor.length === 4) { 
-      rStr = hexColor[1] + hexColor[1];
-      gStr = hexColor[2] + hexColor[2];
-      bStr = hexColor[3] + hexColor[3];
-    } else if (hexColor.length === 7) { 
-      rStr = hexColor.slice(1, 3);
-      gStr = hexColor.slice(3, 5);
-      bStr = hexColor.slice(5, 7);
-    } else {
-        return '#FFFFFF'; // Default for invalid format
-    }
-    
-    const r = parseInt(rStr, 16);
-    const g = parseInt(gStr, 16);
-    const b = parseInt(bStr, 16);
 
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return '#FFFFFF'; // Default for parsing error
-    
-    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-    // Lowered threshold to favor white text on more colors
-    return yiq >= 150 ? '#000000' : '#FFFFFF'; 
-  } catch (e) {
-    console.error("Error parsing hexColor for contrast:", hexColor, e);
-    return '#FFFFFF'; // Default to white on any error
-  }
-};
+
+

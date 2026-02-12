@@ -2,23 +2,23 @@
 "use server";
 
 import type { ServiceModelItem } from '@/types';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
+import { v4 as uuidv4 } from 'uuid';
 
-const STOCK_COLLECTION = 'stock';
+const TABLE_NAME = 'stock';
 
 export const getStockItems = async (): Promise<ServiceModelItem[]> => {
   try {
-    await ensureCollectionExistsV3(STOCK_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${STOCK_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data
-      } as ServiceModelItem));
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ORDER BY id ASC`);
+    return rows.map(row => {
+      const data = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return {
+        id: row.id,
+        ...data
+      } as ServiceModelItem;
+    }).sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error("Error fetching stock items via API v3:", error);
+    console.error("Error fetching stock items from MySQL:", error);
     return [];
   }
 };
@@ -32,27 +32,22 @@ export const addStockItem = async (name: string, buyingPrice?: number, sellingPr
   const finalStockCount = (isReadyMade && stockCount !== undefined) ? stockCount : 0;
 
   try {
-    await ensureCollectionExistsV3(STOCK_COLLECTION);
-    const newItemData: Omit<ServiceModelItem, 'id' | 'totalSold'> = { 
-      name: name.trim(), 
-      buyingPrice: numBuyingPrice, 
-      sellingPrice: numSellingPrice, 
+    const id = uuidv4();
+    const newItemData: ServiceModelItem = {
+      id,
+      name: name.trim(),
+      buyingPrice: numBuyingPrice,
+      sellingPrice: numSellingPrice,
       imageUrl: imageUrl || null,
       isReadyMade: isReadyMade || false,
       stockCount: finalStockCount,
-    };
-
-    const newDoc = await fetchFromApiV3(`collections/${STOCK_COLLECTION}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ data: newItemData }),
-    });
-
-    return {
-        id: newDoc.id,
-        ...newDoc.data
+      totalSold: 0
     } as ServiceModelItem;
+
+    await query(`INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItemData)]);
+    return newItemData;
   } catch (error) {
-    console.error("Error adding stock item via API v3:", error);
+    console.error("Error adding stock item to MySQL:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -62,38 +57,36 @@ export const updateStockItem = async (id: string, name: string, buyingPrice?: nu
   if (!name.trim()) {
     throw new Error("Item name cannot be empty.");
   }
-  
+
   try {
-    const existingDoc = await fetchFromApiV3(`collections/${STOCK_COLLECTION}/documents/${id}`);
-    if (!existingDoc || !existingDoc.data) {
-        throw new Error("Document does not exist!");
+    const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+    if (rows.length === 0) {
+      throw new Error("Document does not exist!");
     }
 
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
     const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
     const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
 
-    const currentStock = existingDoc.data.stockCount || 0;
+    const currentStock = existingData.stockCount || 0;
     const stockToAdd = (isReadyMade && stockCountChange !== undefined) ? stockCountChange : 0;
     const finalStockCount = currentStock + stockToAdd;
-    
+
     const updates = {
       name: name.trim(),
       buyingPrice: numBuyingPrice,
       sellingPrice: numSellingPrice,
-      imageUrl: imageUrl === undefined ? existingDoc.data.imageUrl : imageUrl,
-      isReadyMade: isReadyMade === undefined ? existingDoc.data.isReadyMade : isReadyMade,
+      imageUrl: imageUrl === undefined ? existingData.imageUrl : imageUrl,
+      isReadyMade: isReadyMade === undefined ? existingData.isReadyMade : isReadyMade,
       stockCount: finalStockCount,
     };
-    
-    const finalData = { ...existingDoc.data, ...updates };
 
-    await fetchFromApiV3(`collections/${STOCK_COLLECTION}/documents/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData })
-    });
+    const finalData = { ...existingData, ...updates };
+
+    await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
     return true;
   } catch (error) {
-    console.error("Error updating stock item via API v3:", error);
+    console.error("Error updating stock item in MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -101,13 +94,11 @@ export const updateStockItem = async (id: string, name: string, buyingPrice?: nu
 
 export const deleteStockItem = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApiV3(`collections/${STOCK_COLLECTION}/documents/${id}`, {
-        method: 'DELETE'
-    });
+    await query(`DELETE FROM ${TABLE_NAME} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error("Error deleting stock item via API v3:", error);
-    if (error instanceof Error) throw error; 
+    console.error("Error deleting stock item from MySQL:", error);
+    if (error instanceof Error) throw error;
     return false;
   }
 };

@@ -46,7 +46,7 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
-import { LeadListView } from './LeadListView'; 
+import { LeadListView } from './LeadListView';
 import { LeadReportView } from './LeadReportView';
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
@@ -89,18 +89,18 @@ export function PipelineClient() {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
-  
+
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
   const [isCrmFilterOpen, setIsCrmFilterOpen] = useState(false);
   const [crmSearchQuery, setCrmSearchQuery] = useState("");
-  
+
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isBulkTransferOpen, setIsBulkTransferOpen] = useState(false);
-  
+
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
 
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
@@ -111,10 +111,11 @@ export function PipelineClient() {
 
   const [leadToView, setLeadToView] = useState<Lead | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  
+
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'calendar' | 'report'>('list');
   const [currentPage, setCurrentPage] = useState(1);
-  
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
+
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),
     to: new Date(),
@@ -179,24 +180,24 @@ export function PipelineClient() {
     if (selectedCrmId !== 'all') {
       baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
-    
+
     // Date filter
     if (selectedDateRange?.from) {
       const startDate = startOfDay(selectedDateRange.from);
       const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-      
+
       const dateKey: 'date' | 'schedule' = viewMode === 'calendar' ? 'schedule' : 'date';
 
       if (viewMode === 'report') {
         baseLeads = baseLeads.filter(lead => {
-            const dateToFilter = lead.updatedAt;
-            if (!dateToFilter) return false;
-            try {
-              const leadDate = parseISO(dateToFilter);
-              return isWithinInterval(leadDate, { start: startDate, end: endDate });
-            } catch {
-              return false;
-            }
+          const dateToFilter = lead.updatedAt;
+          if (!dateToFilter) return false;
+          try {
+            const leadDate = parseISO(dateToFilter);
+            return isWithinInterval(leadDate, { start: startDate, end: endDate });
+          } catch {
+            return false;
+          }
         });
       } else {
         baseLeads = baseLeads.filter(lead => {
@@ -214,11 +215,11 @@ export function PipelineClient() {
 
     // Activity filter
     if (activityFilter !== 'all') {
-      baseLeads = baseLeads.filter(lead => 
+      baseLeads = baseLeads.filter(lead =>
         lead.activityHistory?.some(activity => activity.activity === activityFilter)
       );
     }
-    
+
     // Category filter (only for list view)
     if (viewMode === 'list' && categoryFilter !== 'all') {
       baseLeads = baseLeads.filter(lead => lead.category === categoryFilter);
@@ -228,39 +229,39 @@ export function PipelineClient() {
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
       baseLeads = baseLeads.filter(lead =>
-          lead.contactName.toLowerCase().includes(lowercasedFilter) ||
-          lead.businessName.toLowerCase().includes(lowercasedFilter) ||
-          lead.phone.toLowerCase().includes(lowercasedFilter) ||
-          lead.source.toLowerCase().includes(lowercasedFilter) ||
-          (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
+        lead.contactName.toLowerCase().includes(lowercasedFilter) ||
+        lead.businessName.toLowerCase().includes(lowercasedFilter) ||
+        lead.phone.toLowerCase().includes(lowercasedFilter) ||
+        lead.source.toLowerCase().includes(lowercasedFilter) ||
+        (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
       );
     }
-    
+
     // Sorting logic
     if (viewMode === 'report') {
-        return baseLeads.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+      return baseLeads.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
     }
-    
+
     return baseLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   }, [leads, searchTerm, selectedCrmId, selectedDateRange, categoryFilter, viewMode, activityFilter]);
-  
-  const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
+
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
 
   const paginatedLeads = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredLeads.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredLeads, currentPage]);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredLeads.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredLeads, currentPage, itemsPerPage]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedCrmId, viewMode, selectedDateRange, categoryFilter, activityFilter]);
-  
+
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
     return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CRM";
   }, [selectedCrmId, allCrmUsers]);
-  
+
   const filteredCrmUsersForDropdown = useMemo(() => {
     const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
     const baseUsers = [allCrmsOption, ...allCrmUsers.filter(u => !u.isBanned)];
@@ -286,29 +287,29 @@ export function PipelineClient() {
     setEditingLead(null);
     setIsAddEditOpen(true);
   };
-  
+
   const handleLeadSaved = (savedLead?: Lead, isEdit?: boolean) => {
     setIsAddEditOpen(false);
     setEditingLead(null);
     if (savedLead) {
-        if (isEdit) {
-            setLeads(prev => prev.map(l => (l.id === savedLead.id ? savedLead : l)));
-        } else {
-            setLeads(prev => [savedLead, ...prev]);
-        }
+      if (isEdit) {
+        setLeads(prev => prev.map(l => (l.id === savedLead.id ? savedLead : l)));
+      } else {
+        setLeads(prev => [savedLead, ...prev]);
+      }
     } else {
-        fetchLeadsAndUsers();
+      fetchLeadsAndUsers();
     }
   };
 
   const handleLeadUpdatedFromView = (updatedLead: Lead) => {
     setLeads(prev => prev.map(l => (l.id === updatedLead.id ? updatedLead : l)));
   };
-  
+
   const handleDeleteRequest = (lead: Lead) => {
     setLeadToDelete(lead);
   };
-  
+
   const handleTransferRequest = (lead: Lead) => {
     setLeadToTransfer(lead);
     setIsTransferDialogOpen(true);
@@ -346,7 +347,7 @@ export function PipelineClient() {
       toast({ title: "Lead Updated", description: `Lead "${lead.contactName}" moved to ${newCategory}.` });
     }
   };
-  
+
   const handleExport = () => {
     if (filteredLeads.length === 0) {
       toast({ title: "No Data to Export", description: "There is no data matching the current filters." });
@@ -374,7 +375,7 @@ export function PipelineClient() {
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveLead(null);
     const { active, over } = event;
-  
+
     if (!over || !active.data.current?.lead) return;
     const lead = active.data.current.lead as Lead;
     const newCategory = over.id as LeadCategory;
@@ -401,11 +402,11 @@ export function PipelineClient() {
       setSelectedLeadIds(new Set());
     }
   };
-  
+
   const renderPagination = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
-    
+    const maxPagesToShow = 5;
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
@@ -414,7 +415,7 @@ export function PipelineClient() {
 
       if (currentPage < 3) endPage = maxPagesToShow;
       else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-      
+
       if (startPage > 1) {
         pageNumbers.push(1);
         if (startPage > 2) pageNumbers.push('...');
@@ -426,19 +427,19 @@ export function PipelineClient() {
       }
     }
     return pageNumbers.map((page, index) => (
-        <PaginationItem key={index}>
+      <PaginationItem key={index}>
         {page === '...' ? <PaginationEllipsis />
-        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+          : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
             {page}
           </PaginationLink>
         }
-        </PaginationItem>
+      </PaginationItem>
     ));
   };
 
   const handleDateRangeChange = (
     range: DateRange | undefined,
-    displayLabel: string, 
+    displayLabel: string,
     predefinedValue: PredefinedRange | "custom" | null
   ) => {
     setSelectedDateRange(range);
@@ -448,7 +449,7 @@ export function PipelineClient() {
     setLeadToView(lead);
     setIsViewDialogOpen(true);
   };
-  
+
   const openEditDialogFromView = (lead: Lead) => {
     setIsViewDialogOpen(false);
     setLeadToView(null);
@@ -471,12 +472,12 @@ export function PipelineClient() {
   if (!currentUser) return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
-    <DndContext 
-        sensors={sensors} 
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd} 
-        onDragCancel={handleDragCancel}
-        collisionDetection={closestCorners}
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+      collisionDetection={closestCorners}
     >
       <div className={cn("flex flex-col", viewMode !== 'list' ? 'h-[calc(100vh-theme(spacing.24))]' : '')}>
         <div className="flex flex-col lg:flex-row gap-4 mb-4 px-4 sm:px-0">
@@ -490,7 +491,7 @@ export function PipelineClient() {
               </CommandGroup></CommandList></Command></PopoverContent>
             </Popover>
             <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
-            
+
             <Select value={activityFilter} onValueChange={setActivityFilter}>
               <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/50 focus:border-primary h-10">
                 <div className="flex items-center gap-2 truncate">
@@ -528,7 +529,7 @@ export function PipelineClient() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            
+
             {isAdmin && viewMode === 'list' && !isSelectionMode && (
               <Button onClick={() => setIsSelectionMode(true)} variant="outline" className="w-full sm:w-auto h-10">
                 <Check className="mr-2 h-4 w-4" /> Select to Transfer
@@ -566,41 +567,74 @@ export function PipelineClient() {
         ) : viewMode === 'list' ? (
           <>
             <LeadListView
-               leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
-               onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
-               onUpdateLeadCategory={handleUpdateLeadCategory} allUsers={allUsers}
-               isSelectionMode={isSelectionMode}
-               selectedLeadIds={selectedLeadIds}
-               onSelectionChange={handleSelectionChange}
-               onSelectAll={handleSelectAll}
+              leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
+              onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
+              onUpdateLeadCategory={handleUpdateLeadCategory} allUsers={allUsers}
+              isSelectionMode={isSelectionMode}
+              selectedLeadIds={selectedLeadIds}
+              onSelectionChange={handleSelectionChange}
+              onSelectAll={handleSelectAll}
             />
-            {totalPages > 1 && (
-              <div className="mt-4 flex justify-center"><Pagination><PaginationContent>
-                <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                {renderPagination()}
-                <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-              </PaginationContent></Pagination></div>
-            )}
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Show</span>
+                <Select value={itemsPerPage.toString()} onValueChange={(val) => { setItemsPerPage(Number(val)); setCurrentPage(1); }}>
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={itemsPerPage.toString()} />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[10, 25, 50, 100].map(size => (
+                      <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span>of {filteredLeads.length} leads</span>
+              </div>
+
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); if (currentPage > 1) setCurrentPage(p => p - 1); }}
+                        aria-disabled={currentPage === 1}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {renderPagination()}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) setCurrentPage(p => p + 1); }}
+                        aria-disabled={currentPage === totalPages}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
           </>
         ) : viewMode === 'report' ? (
           <LeadReportView leads={filteredLeads} allUsers={allUsers} />
         ) : (
           <div className="flex-1 mt-4 flex flex-col">
-            <LeadCalendarView 
-              leads={filteredLeads} 
+            <LeadCalendarView
+              leads={filteredLeads}
               onViewLead={openViewDialog}
             />
           </div>
         )}
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} allUsers={allUsers} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => { }} onDeleteLead={() => { }} onTransferLead={() => { }} allUsers={allUsers} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
       {currentUser.role !== 'CRM' && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
-      {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
+      {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser} />)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (
         <AlertDialog open={!!leadToDelete} onOpenChange={() => setLeadToDelete(null)}>

@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -22,21 +22,21 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { 
-  getUsers, 
-  updateUserRoleInFirestore, 
-  updateUserPasswordInFirestore, 
-  updateUserAvatarInFirestore, 
-  updateUserTargetsInFirestore,
+import {
+  getUsers,
+  updateUserRole,
+  updateUserPassword,
+  updateUserAvatar,
+  updateUserTargets,
 } from '@/lib/user-service';
 import { getRoles } from '@/lib/user-role-service';
-import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction } from './actions'; 
+import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getContrastTextColor } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 
 const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
@@ -48,21 +48,21 @@ const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-di
 
 
 export default function UsersPage() {
-  const { currentUser, refreshCurrentUser } = useAuth(); 
+  const { currentUser, refreshCurrentUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  
+
   const [users, setUsers] = useState<User[]>([]);
   const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Banned'>('Active');
-  
+
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
   const [isBanDialogVisible, setIsBanDialogVisible] = useState(false);
-  
+
   const [userToEditInfo, setUserToEditInfo] = useState<User | null>(null);
   const [isEditInfoDialogOpen, setIsEditInfoDialogOpen] = useState(false);
 
@@ -71,7 +71,7 @@ export default function UsersPage() {
 
   const [userToChangePassword, setUserToChangePassword] = useState<User | null>(null);
   const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
-  
+
   const [userToSetAvatar, setUserToSetAvatar] = useState<User | null>(null);
   const [isSetAvatarDialogOpen, setIsSetAvatarDialogOpen] = useState(false);
 
@@ -104,21 +104,21 @@ export default function UsersPage() {
     if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
       fetchUsers();
     } else if (currentUser) {
-      router.replace('/dashboard'); 
+      router.replace('/dashboard');
     }
   }, [currentUser, router, fetchUsers]);
 
   const handleUserAdded = async () => {
-    toast({ title: "User Added", description: `New user has been added. Default password is 'password'.`});
-    await fetchUsers(); 
+    toast({ title: "User Added", description: `New user has been added. Default password is 'password'.` });
+    await fetchUsers();
     setIsAddUserDialogOpen(false);
   };
 
   const handleUserRoleUpdated = async () => {
-    toast({ title: "Role Updated", description: `User role has been updated.`});
+    toast({ title: "Role Updated", description: `User role has been updated.` });
     await fetchUsers();
     if (currentUser && userToEditRole && userToEditRole.id === currentUser.id && typeof refreshCurrentUser === 'function') {
-        await refreshCurrentUser();
+      await refreshCurrentUser();
     }
     setIsEditRoleDialogOpen(false);
     setUserToEditRole(null);
@@ -128,7 +128,7 @@ export default function UsersPage() {
     toast({ title: "Password Updated", description: `Password for user has been updated successfully.` });
     await fetchUsers();
     if (currentUser && userToChangePassword && userToChangePassword.id === currentUser.id && typeof refreshCurrentUser === 'function') {
-        await refreshCurrentUser();
+      await refreshCurrentUser();
     }
     setIsChangePasswordDialogOpen(false);
     setUserToChangePassword(null);
@@ -136,19 +136,19 @@ export default function UsersPage() {
 
   const handleUserAvatarSetByAdmin = async () => {
     toast({ title: "Avatar Updated", description: "User's avatar has been set." });
-    await fetchUsers(); 
+    await fetchUsers();
     if (currentUser && userToSetAvatar && userToSetAvatar.id === currentUser.id && typeof refreshCurrentUser === 'function') {
-        await refreshCurrentUser(); 
+      await refreshCurrentUser();
     }
     setIsSetAvatarDialogOpen(false);
     setUserToSetAvatar(null);
   };
-  
+
   const handleUserTargetsSetByAdmin = async () => {
     toast({ title: "Sales Targets Updated", description: "User's sales targets have been set." });
     await fetchUsers();
     if (currentUser && userToSetTargets && userToSetTargets.id === currentUser.id && typeof refreshCurrentUser === 'function') {
-        await refreshCurrentUser();
+      await refreshCurrentUser();
     }
     setIsSetTargetsDialogOpen(false);
     setUserToSetTargets(null);
@@ -164,9 +164,9 @@ export default function UsersPage() {
         title: `User ${result.newBanStatus ? 'Banned' : 'Unbanned'}`,
         description: `${userToToggleBan.name} has been ${result.newBanStatus ? 'banned' : 'unbanned'}.`,
       });
-      await fetchUsers(); 
+      await fetchUsers();
       if (currentUser && userToToggleBan.id === currentUser.id && result.newBanStatus && typeof refreshCurrentUser === 'function') {
-         await refreshCurrentUser(); 
+        await refreshCurrentUser();
       }
     } else {
       toast({
@@ -179,14 +179,14 @@ export default function UsersPage() {
     setUserToToggleBan(null);
   };
 
-  const handleUserInfoUpdated = async () => { 
+  const handleUserInfoUpdated = async () => {
     toast({ title: "User Info Updated", description: "User's information has been updated." });
     await fetchUsers();
     if (currentUser && userToEditInfo && userToEditInfo.id === currentUser.id && typeof refreshCurrentUser === 'function') {
-        await refreshCurrentUser();
+      await refreshCurrentUser();
     }
-    setIsEditInfoDialogOpen(false); 
-    setUserToEditInfo(null); 
+    setIsEditInfoDialogOpen(false);
+    setUserToEditInfo(null);
   };
 
   const handleConfirmDeleteUser = async () => {
@@ -220,7 +220,7 @@ export default function UsersPage() {
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
   }
-  
+
   const usersToDisplay = useMemo(() => {
     if (!currentUser) return [];
     let displayableUsers = users;
@@ -245,27 +245,27 @@ export default function UsersPage() {
 
     // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.role.toLowerCase().replace(/_/g, ' ').includes(searchTerm.toLowerCase()) ||
         (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    
+
     // Sort the results by role priority then name
     const rolePriority = availableRoles.map(r => r.id);
     return filtered.sort((a, b) => {
       const roleAIndex = rolePriority.indexOf(a.role);
       const roleBIndex = rolePriority.indexOf(b.role);
-      
+
       if (roleAIndex === -1 && roleBIndex !== -1) return 1;
       if (roleAIndex !== -1 && roleBIndex === -1) return -1;
-      
+
       if (roleAIndex !== roleBIndex) {
         return roleAIndex - roleBIndex;
       }
-      
+
       return a.name.localeCompare(b.name);
     });
   }, [usersToDisplay, searchTerm, statusFilter, availableRoles]);
@@ -274,10 +274,10 @@ export default function UsersPage() {
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
     return null;
   }
-  
+
   const canCurrentUserEditRoleOf = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
-    if (currentUser.role === 'SYSTEM_ADMIN') return true; 
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
     if (currentUser.role === 'ADMIN') {
       return !(currentUser.id === targetUser.id || targetUser.role === 'ADMIN' || targetUser.role === 'SYSTEM_ADMIN');
     }
@@ -290,16 +290,16 @@ export default function UsersPage() {
       return targetUser.id !== currentUser.id && targetUser.role !== 'SYSTEM_ADMIN';
     }
     if (currentUser.role === 'ADMIN') {
-      if (targetUser.id === currentUser.id) return true; 
+      if (targetUser.id === currentUser.id) return true;
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR' || targetUser.role === 'LR' || targetUser.role === 'CO';
     }
-    return false; 
+    return false;
   }, [currentUser]);
-  
+
   const canAdminDeleteTargetUser = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
-    if (targetUser.id === currentUser.id) return false; 
-    if (currentUser.role === 'SYSTEM_ADMIN') return targetUser.role !== 'SYSTEM_ADMIN'; 
+    if (targetUser.id === currentUser.id) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN') return targetUser.role !== 'SYSTEM_ADMIN';
     if (currentUser.role === 'ADMIN') {
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR' || targetUser.role === 'LR' || targetUser.role === 'CO';
     }
@@ -308,7 +308,7 @@ export default function UsersPage() {
 
   const canSystemAdminToggleBan = useCallback((targetUser: User): boolean => {
     if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') return false;
-    if (targetUser.id === currentUser.id) return false; 
+    if (targetUser.id === currentUser.id) return false;
     if (targetUser.role === 'SYSTEM_ADMIN') return false;
     return true;
   }, [currentUser]);
@@ -321,7 +321,7 @@ export default function UsersPage() {
         <div>
           <h1 className="page-title">User Management</h1>
           <p className="page-description">
-            Manage user accounts, roles, and permissions from Firestore.
+            Manage user accounts, roles, and permissions from MySQL database.
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -331,8 +331,8 @@ export default function UsersPage() {
             isOpen={isAddUserDialogOpen}
             onOpenChange={setIsAddUserDialogOpen}
           >
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10"
             >
               <PlusCircle className="mr-2 h-5 w-5" />
@@ -341,36 +341,36 @@ export default function UsersPage() {
           </AddUserDialog>
         </div>
       </div>
-      
+
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle className="text-card-foreground text-xl">All Users</CardTitle>
-             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                <div className="relative flex-grow w-full sm:w-auto sm:max-w-xs">
-                    <Input 
-                        placeholder="Search users..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="bg-background h-10 rounded-md shadow-sm w-full"
-                    />
-                </div>
-                {showBanStatusColumn && (
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Banned')}>
-                      <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-md bg-background">
-                          <div className="flex items-center gap-2">
-                              <Filter className="h-4 w-4 text-muted-foreground" />
-                              <SelectValue placeholder="Filter by status" />
-                          </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="Active">Active</SelectItem>
-                          <SelectItem value="Banned">Banned</SelectItem>
-                          <SelectItem value="all">All Users</SelectItem>
-                      </SelectContent>
-                  </Select>
-                )}
-             </div>
+            <CardTitle className="text-card-foreground text-xl">All Users</CardTitle>
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+              <div className="relative flex-grow w-full sm:w-auto sm:max-w-xs">
+                <Input
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-background h-10 rounded-md shadow-sm w-full"
+                />
+              </div>
+              {showBanStatusColumn && (
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Banned')}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-md bg-background">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Filter by status" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Banned">Banned</SelectItem>
+                    <SelectItem value="all">All Users</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -409,7 +409,7 @@ export default function UsersPage() {
                     const roleDef = roleDefinitionsMap.get(user.role);
                     const badgeColor = roleDef?.color || '#6b7280';
                     const textColor = getContrastTextColor(badgeColor);
-                    
+
                     return (
                       <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-mono text-muted-foreground">{index + 1}</TableCell>
@@ -422,7 +422,7 @@ export default function UsersPage() {
                         <TableCell className="font-medium text-foreground">{user.name}</TableCell>
                         <TableCell className="text-muted-foreground">{user.email}</TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             style={{ backgroundColor: badgeColor, color: textColor }}
                             className="border-none"
                           >
@@ -430,15 +430,15 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         {showBanStatusColumn && (
-                            <TableCell>
+                          <TableCell>
                             <Badge variant={user.isBanned ? "destructive" : "default"} className={user.isBanned ? "bg-red-500/20 text-red-700 border-red-500/30" : "bg-green-500/20 text-green-700 border-green-500/30"}>
-                                {user.isBanned ? "Banned" : "Active"}
+                              {user.isBanned ? "Banned" : "Active"}
                             </Badge>
-                            </TableCell>
+                          </TableCell>
                         )}
                         <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
                         <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
-                           <DropdownMenu>
+                          <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-9 w-9" title="User Actions">
                                 <MoreVertical className="h-4 w-4" />
@@ -448,7 +448,7 @@ export default function UsersPage() {
                               <DropdownMenuLabel>Actions for {user.name}</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuGroup>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
                                   disabled={!canAdminModifyTargetUser(user)}
                                   className="cursor-pointer"
@@ -456,7 +456,7 @@ export default function UsersPage() {
                                   <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
                                 </DropdownMenuItem>
                                 {currentUser?.role === 'SYSTEM_ADMIN' && (
-                                  <DropdownMenuItem 
+                                  <DropdownMenuItem
                                     onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
                                     className={`cursor-pointer ${user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}`}
                                     disabled={!canSystemAdminToggleBan(user)}
@@ -465,30 +465,30 @@ export default function UsersPage() {
                                     {user.isBanned ? "Unban User" : "Ban User"}
                                   </DropdownMenuItem>
                                 )}
-                                 <DropdownMenuItem 
-                                    onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
-                                    disabled={!canAdminModifyTargetUser(user)}
-                                    className="cursor-pointer"
-                                  >
-                                    <UserCog className="mr-2 h-4 w-4" /> Set Avatar
-                                  </DropdownMenuItem>
-                                 <DropdownMenuItem 
-                                    onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true);}}
-                                    disabled={!canAdminModifyTargetUser(user)}
-                                    className="cursor-pointer"
-                                  >
-                                    <KeyRound className="mr-2 h-4 w-4" /> Change Password
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true);}}
-                                    disabled={!canCurrentUserEditRoleOf(user)}
-                                    className="cursor-pointer"
-                                  >
-                                    <Edit className="mr-2 h-4 w-4" /> Edit Role
-                                  </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
+                                  disabled={!canAdminModifyTargetUser(user)}
+                                  className="cursor-pointer"
+                                >
+                                  <UserCog className="mr-2 h-4 w-4" /> Set Avatar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true); }}
+                                  disabled={!canAdminModifyTargetUser(user)}
+                                  className="cursor-pointer"
+                                >
+                                  <KeyRound className="mr-2 h-4 w-4" /> Change Password
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true); }}
+                                  disabled={!canCurrentUserEditRoleOf(user)}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit className="mr-2 h-4 w-4" /> Edit Role
+                                </DropdownMenuItem>
                                 {user.role === 'CRM' && (
-                                   <DropdownMenuItem 
-                                    onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true);}}
+                                  <DropdownMenuItem
+                                    onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true); }}
                                     disabled={!canAdminModifyTargetUser(user)}
                                     className="cursor-pointer"
                                   >
@@ -497,8 +497,8 @@ export default function UsersPage() {
                                 )}
                               </DropdownMenuGroup>
                               <DropdownMenuSeparator />
-                               <DropdownMenuItem 
-                                onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true);}}
+                              <DropdownMenuItem
+                                onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true); }}
                                 disabled={!canAdminDeleteTargetUser(user)}
                                 className="cursor-pointer text-destructive focus:text-destructive"
                               >
@@ -510,60 +510,55 @@ export default function UsersPage() {
                       </TableRow>
                     );
                   })
-                 ) : (
-                    <TableRow>
-                        <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
-                             <svg
-                                width="64"
-                                height="64"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mx-auto mb-6 opacity-50", "h-16 w-16")}
-                              >
-                                <path
-                                  d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                                <path
-                                  d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                                <path
-                                  d="M17 4.5L7 9.5"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            <p className="text-lg text-muted-foreground font-medium">
-                              {searchTerm ? "No users match your search." : "No users found in database."}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                {searchTerm ? "Try a different search term." : (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') ? "Add users to manage them here." : "User data could not be loaded."}
-                            </p>
-                        </TableCell>
-                    </TableRow>
-                 )}
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
+                      <svg
+                        width="64"
+                        height="64"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mx-auto mb-6 opacity-50", "h-16 w-16")}
+                      >
+                        <path
+                          d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M17 4.5L7 9.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <p className="text-lg text-muted-foreground font-medium">
+                        {searchTerm ? "No users match your search." : "No users found in database."}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {searchTerm ? "Try a different search term." : (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') ? "Add users to manage them here." : "User data could not be loaded."}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      <AddUserDialog 
-        onUserAdded={handleUserAdded}
-        currentUser={currentUser}
-        isOpen={isAddUserDialogOpen}
-        onOpenChange={setIsAddUserDialogOpen}
-      />
+
 
       {isEditInfoDialogOpen && userToEditInfo && (
         <EditUserInfoDialog
@@ -572,27 +567,27 @@ export default function UsersPage() {
           isOpen={isEditInfoDialogOpen}
           onOpenChange={(open) => {
             setIsEditInfoDialogOpen(open);
-            if (!open) setUserToEditInfo(null); 
+            if (!open) setUserToEditInfo(null);
           }}
         />
       )}
 
       {userToToggleBan && isBanDialogVisible && (
-        <AlertDialog open={isBanDialogVisible} onOpenChange={(open) => { if(!open) { setUserToToggleBan(null); setIsBanDialogVisible(false); }}}>
+        <AlertDialog open={isBanDialogVisible} onOpenChange={(open) => { if (!open) { setUserToToggleBan(null); setIsBanDialogVisible(false); } }}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className={`h-6 w-6 ${userToToggleBan.isBanned ? 'text-green-600' : 'text-destructive'}`} /> 
+                <AlertTriangle className={`h-6 w-6 ${userToToggleBan.isBanned ? 'text-green-600' : 'text-destructive'}`} />
                 Are you sure?
-                </AlertDialogTitle>
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to {userToToggleBan.isBanned ? 'unban' : 'ban'} the user 
-                "<span className="font-semibold">{userToToggleBan.name}</span>". 
+                You are about to {userToToggleBan.isBanned ? 'unban' : 'ban'} the user
+                "<span className="font-semibold">{userToToggleBan.name}</span>".
                 {userToToggleBan.isBanned ? ' They will be able to log in again.' : ' They will no longer be able to log in.'}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => {setUserToToggleBan(null); setIsBanDialogVisible(false);}} disabled={isLoadingUsers}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => { setUserToToggleBan(null); setIsBanDialogVisible(false); }} disabled={isLoadingUsers}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleToggleBanStatus} className={userToToggleBan.isBanned ? "bg-green-600 hover:bg-green-700 text-white" : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"} disabled={isLoadingUsers}>
                 {userToToggleBan.isBanned ? "Yes, Unban User" : "Yes, Ban User"}
               </AlertDialogAction>
@@ -602,10 +597,10 @@ export default function UsersPage() {
       )}
 
       {isSetAvatarDialogOpen && userToSetAvatar && (
-        <SetUserAvatarDialog 
-          user={userToSetAvatar} 
+        <SetUserAvatarDialog
+          user={userToSetAvatar}
           onAvatarChanged={async (userId, avatarUrl) => {
-            const success = await updateUserAvatarInFirestore(userId, avatarUrl);
+            const success = await updateUserAvatar(userId, avatarUrl);
             if (success) handleUserAvatarSetByAdmin();
             return success;
           }}
@@ -618,10 +613,10 @@ export default function UsersPage() {
       )}
 
       {isChangePasswordDialogOpen && userToChangePassword && (
-        <ChangePasswordDialog 
-          user={userToChangePassword} 
+        <ChangePasswordDialog
+          user={userToChangePassword}
           onPasswordChanged={async (userId, newPassword) => {
-            const success = await updateUserPasswordInFirestore(userId, newPassword);
+            const success = await updateUserPassword(userId, newPassword);
             if (success) handlePasswordChanged();
             return success;
           }}
@@ -632,13 +627,13 @@ export default function UsersPage() {
           }}
         />
       )}
-      
+
       {isEditRoleDialogOpen && userToEditRole && currentUser && (
-        <EditUserRoleDialog 
-          user={userToEditRole} 
-          currentUser={currentUser} 
+        <EditUserRoleDialog
+          user={userToEditRole}
+          currentUser={currentUser}
           onUserRoleUpdated={async (userId, newRole) => {
-            const success = await updateUserRoleInFirestore(userId, newRole);
+            const success = await updateUserRole(userId, newRole);
             if (success) handleUserRoleUpdated();
           }}
           isOpen={isEditRoleDialogOpen}
@@ -650,31 +645,31 @@ export default function UsersPage() {
       )}
 
       {isSetTargetsDialogOpen && userToSetTargets && userToSetTargets.role === 'CRM' && (
-         <SetUserSalesTargetDialog 
-            user={userToSetTargets} 
-            onTargetsSet={async (userId, monthlyTarget, weeklyTarget) => {
-                const success = await updateUserTargetsInFirestore(userId, monthlyTarget, weeklyTarget);
-                if (success) handleUserTargetsSetByAdmin();
-                return success;
-            }}
-            isOpen={isSetTargetsDialogOpen}
-            onOpenChange={(open) => {
-              setIsSetTargetsDialogOpen(open);
-              if (!open) setUserToSetTargets(null);
-            }}
-          />
+        <SetUserSalesTargetDialog
+          user={userToSetTargets}
+          onTargetsSet={async (userId, monthlyTarget, weeklyTarget) => {
+            const success = await updateUserTargets(userId, monthlyTarget, weeklyTarget);
+            if (success) handleUserTargetsSetByAdmin();
+            return success;
+          }}
+          isOpen={isSetTargetsDialogOpen}
+          onOpenChange={(open) => {
+            setIsSetTargetsDialogOpen(open);
+            if (!open) setUserToSetTargets(null);
+          }}
+        />
       )}
 
       {isDeleteUserDialogOpen && userToDelete && (
-        <DeleteUserDialog 
-          user={userToDelete} 
+        <DeleteUserDialog
+          user={userToDelete}
           onConfirmDelete={handleConfirmDeleteUser}
           isDeleting={isDeletingUser}
           isOpen={isDeleteUserDialogOpen}
           onOpenChange={(open) => {
             if (!isDeletingUser) {
-                setIsDeleteUserDialogOpen(open);
-                if (!open) setUserToDelete(null);
+              setIsDeleteUserDialogOpen(open);
+              if (!open) setUserToDelete(null);
             }
           }}
         />

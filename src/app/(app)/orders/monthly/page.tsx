@@ -11,7 +11,8 @@ import { ArrowLeft, Eye, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { TrackingLink, CustomStatus } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getStatuses } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { useToast } from '@/hooks/use-toast';
 import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format as formatDateFns } from 'date-fns';
 
@@ -49,7 +50,7 @@ export default function MonthlyOrdersPage() {
       const filteredMonthlyOrders = fetchedOrders.filter(order => {
         return isWithinInterval(parseISO(order.createdAt), { start: monthStart, end: monthEnd });
       });
-      
+
       setMonthlyOrders(filteredMonthlyOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 
     } catch (error) {

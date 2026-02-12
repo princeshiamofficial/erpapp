@@ -1,92 +1,86 @@
 
+"use server";
 
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 import { getOrders } from './order-service';
 
-
-const MODELS_COLLECTION = 'serviceModels';
-const LAMINATIONS_COLLECTION = 'serviceLaminations';
-const PAYMENT_METHODS_COLLECTION = 'servicePaymentMethods';
-const GIFTS_COLLECTION = 'serviceGifts';
-
+const MODELS_TABLE = 'service_models';
+const LAMINATIONS_TABLE = 'service_laminations';
+const PAYMENT_METHODS_TABLE = 'service_payment_methods';
+const GIFTS_TABLE = 'service_gifts';
 
 // --- Model Functions ---
 
 const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
-    await ensureCollectionExistsV3(MODELS_COLLECTION);
-    const createdItems: ServiceModelItem[] = [];
-    const defaultModelsData = [
-        { name: "Design Charge", sellingPrice: 500 },
-        { name: "Menu Book", sellingPrice: 1200 },
-        { name: "Pizza Box", sellingPrice: 30 },
-        { name: "Business Card", sellingPrice: 2 },
-        { name: "Visiting Card", sellingPrice: 2 },
-        { name: "T-shirt", sellingPrice: 450 },
-        { name: "Poster", sellingPrice: 15 },
-        { name: "Sticker", sellingPrice: 1 },
-    ];
+  const createdItems: ServiceModelItem[] = [];
+  const defaultModelsData = [
+    { name: "Design Charge", sellingPrice: 500 },
+    { name: "Menu Book", sellingPrice: 1200 },
+    { name: "Pizza Box", sellingPrice: 30 },
+    { name: "Business Card", sellingPrice: 2 },
+    { name: "Visiting Card", sellingPrice: 2 },
+    { name: "T-shirt", sellingPrice: 450 },
+    { name: "Poster", sellingPrice: 15 },
+    { name: "Sticker", sellingPrice: 1 },
+  ];
 
-    for (const modelData of defaultModelsData) {
-        try {
-            const newModel: Omit<ServiceModelItem, 'id'> = {
-                name: modelData.name,
-                buyingPrice: 0,
-                sellingPrice: modelData.sellingPrice,
-                imageUrl: null,
-                isReadyMade: false,
-                stockCount: 0,
-            };
-            const newDoc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents`, {
-                method: 'POST',
-                body: JSON.stringify({ data: newModel }),
-            });
-            createdItems.push({ id: newDoc.id, ...newDoc.data });
-        } catch (error) {
-            console.error(`Error seeding model "${modelData.name}" via API v3:`, error);
-        }
+  for (const modelData of defaultModelsData) {
+    try {
+      const id = uuidv4();
+      const newModel: ServiceModelItem = {
+        id,
+        name: modelData.name,
+        buyingPrice: 0,
+        sellingPrice: modelData.sellingPrice,
+        imageUrl: null,
+        isReadyMade: false,
+        stockCount: 0,
+        totalSold: 0
+      };
+      await query(`INSERT INTO ${MODELS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newModel)]);
+      createdItems.push(newModel);
+    } catch (error) {
+      console.error(`Error seeding model "${modelData.name}" in MySQL:`, error);
     }
-    console.log('Default service models seeded via API v3.');
-    return createdItems;
+  }
+  console.log('Default service models seeded in MySQL.');
+  return createdItems;
 };
 
 export const getModels = async (): Promise<ServiceModelItem[]> => {
   try {
-    await ensureCollectionExistsV3(MODELS_COLLECTION);
-    const [modelsResponse, allOrders] = await Promise.all([
-        fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`),
-        getOrders()
+    const [rows, allOrders] = await Promise.all([
+      query<any[]>(`SELECT id, data_json FROM ${MODELS_TABLE} ORDER BY id ASC`),
+      getOrders()
     ]);
 
-    if (modelsResponse && Array.isArray(modelsResponse.documents)) {
-        let models = modelsResponse.documents.map((doc: { id: string, data: any }) => ({
-            id: doc.id,
-            ...doc.data
-        } as ServiceModelItem));
+    let models = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as ServiceModelItem));
 
-        if (models.length === 0) {
-            console.log("No service models found, seeding defaults via API v3.");
-            models = await seedDefaultModels();
-        }
-
-        // Calculate sold counts
-        const soldCounts = new Map<string, number>();
-        allOrders.forEach(order => {
-            order.orderItems.forEach(item => {
-                soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
-            });
-        });
-        
-        // Add totalSold to each model
-        return models.map(model => ({
-            ...model,
-            totalSold: soldCounts.get(model.name) || 0
-        }));
+    if (models.length === 0) {
+      console.log("No service models found, seeding defaults in MySQL.");
+      models = await seedDefaultModels();
     }
-    return [];
+
+    // Calculate sold counts
+    const soldCounts = new Map<string, number>();
+    allOrders.forEach(order => {
+      order.orderItems.forEach(item => {
+        soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
+      });
+    });
+
+    // Add totalSold to each model and sort by name
+    return models.map(model => ({
+      ...model,
+      totalSold: soldCounts.get(model.name) || 0
+    })).sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error("Error fetching service models via API v3:", error);
+    console.error("Error fetching service models from MySQL:", error);
     return [];
   }
 };
@@ -100,27 +94,22 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
   const finalStockCount = (isReadyMade && stockCount !== undefined) ? stockCount : 0;
 
   try {
-    await ensureCollectionExistsV3(MODELS_COLLECTION);
-    const newModelData: Omit<ServiceModelItem, 'id' | 'totalSold'> = { 
-      name: name.trim(), 
-      buyingPrice: numBuyingPrice, 
-      sellingPrice: numSellingPrice, 
+    const id = uuidv4();
+    const newModelData: ServiceModelItem = {
+      id,
+      name: name.trim(),
+      buyingPrice: numBuyingPrice,
+      sellingPrice: numSellingPrice,
       imageUrl: imageUrl || null,
       isReadyMade: isReadyMade || false,
       stockCount: finalStockCount,
-    };
-
-    const newDoc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ data: newModelData }),
-    });
-
-    return {
-        id: newDoc.id,
-        ...newDoc.data
+      totalSold: 0
     } as ServiceModelItem;
+
+    await query(`INSERT INTO ${MODELS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newModelData)]);
+    return newModelData;
   } catch (error) {
-    console.error("Error adding service model via API v3:", error);
+    console.error("Error adding service model to MySQL:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -130,74 +119,68 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
-  
+
   try {
-    const existingDoc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${id}`);
-    if (!existingDoc || !existingDoc.data) {
-        throw new Error("Document does not exist!");
+    const rows = await query<any[]>(`SELECT data_json FROM ${MODELS_TABLE} WHERE id = ?`, [id]);
+    if (rows.length === 0) {
+      throw new Error("Document does not exist!");
     }
 
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
     const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
     const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
 
-    const currentStock = existingDoc.data.stockCount || 0;
+    const currentStock = existingData.stockCount || 0;
     const stockToAdd = (isReadyMade && stockCountChange !== undefined) ? stockCountChange : 0;
     const finalStockCount = currentStock + stockToAdd;
-    
+
     const updates = {
       name: name.trim(),
       buyingPrice: numBuyingPrice,
       sellingPrice: numSellingPrice,
-      imageUrl: imageUrl === undefined ? existingDoc.data.imageUrl : imageUrl,
-      isReadyMade: isReadyMade === undefined ? existingDoc.data.isReadyMade : isReadyMade,
+      imageUrl: imageUrl === undefined ? existingData.imageUrl : imageUrl,
+      isReadyMade: isReadyMade === undefined ? existingData.isReadyMade : isReadyMade,
       stockCount: finalStockCount,
     };
-    
-    const finalData = { ...existingDoc.data, ...updates };
 
-    await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData })
-    });
+    const finalData = { ...existingData, ...updates };
+
+    await query(`UPDATE ${MODELS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
     return true;
   } catch (error) {
-    console.error("Error updating service model via API v3:", error);
+    console.error("Error updating service model in MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
 };
 
 export const updateModelStock = async (modelId: string, quantityChange: number): Promise<boolean> => {
-    try {
-        const doc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${modelId}`);
-        if (!doc || !doc.data) {
-            throw new Error("Model not found for stock update.");
-        }
-        const currentStock = doc.data.stockCount || 0;
-        const newStock = currentStock + quantityChange;
-        
-        const finalData = { ...doc.data, stockCount: newStock };
-        
-        await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${modelId}`, {
-            method: 'PUT',
-            body: JSON.stringify({ data: finalData })
-        });
-        return true;
-    } catch (error) {
-        console.error(`Error updating stock for model ${modelId} via API v3:`, error);
-        return false;
+  try {
+    const rows = await query<any[]>(`SELECT data_json FROM ${MODELS_TABLE} WHERE id = ?`, [modelId]);
+    if (rows.length === 0) {
+      throw new Error("Model not found for stock update.");
     }
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const currentStock = existingData.stockCount || 0;
+    const newStock = currentStock + quantityChange;
+
+    const finalData = { ...existingData, stockCount: newStock };
+
+    await query(`UPDATE ${MODELS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), modelId]);
+    return true;
+  } catch (error) {
+    console.error(`Error updating stock for model ${modelId} in MySQL:`, error);
+    return false;
+  }
 };
 
 export const deleteModel = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${id}`, {
-        method: 'DELETE'
-    });
+    await query(`DELETE FROM ${MODELS_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error("Error deleting service model via API v3:", error);
-    if (error instanceof Error) throw error; 
+    console.error("Error deleting service model from MySQL:", error);
+    if (error instanceof Error) throw error;
     return false;
   }
 };
@@ -206,44 +189,38 @@ export const deleteModel = async (id: string): Promise<boolean> => {
 // --- Lamination Functions ---
 
 const seedDefaultLaminations = async (): Promise<ServiceLaminationItem[]> => {
-  await ensureCollectionExistsV3(LAMINATIONS_COLLECTION);
   const createdLaminations: ServiceLaminationItem[] = [];
   const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 
   for (const name of defaultLaminationsData) {
     const id = uuidv4();
-    const newLamination: Omit<ServiceLaminationItem, 'id'> = { name };
+    const newLamination: ServiceLaminationItem = { id, name };
     try {
-        const newDoc = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents`, {
-            method: 'POST',
-            body: JSON.stringify({ id, data: newLamination }),
-        });
-        createdLaminations.push({ id, ...newDoc.data });
+      await query(`INSERT INTO ${LAMINATIONS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newLamination)]);
+      createdLaminations.push(newLamination);
     } catch (error) {
-        console.error(`Error seeding lamination "${name}" via API v3:`, error);
+      console.error(`Error seeding lamination "${name}" in MySQL:`, error);
     }
   }
-  console.log('Default service laminations seeded via API v3.');
+  console.log('Default service laminations seeded in MySQL.');
   return createdLaminations;
 };
 
 export const getLaminations = async (): Promise<ServiceLaminationItem[]> => {
   try {
-    await ensureCollectionExistsV3(LAMINATIONS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-      if (response.documents.length === 0) {
-        console.log("No service laminations found, seeding defaults via API v3.");
-        return await seedDefaultLaminations();
-      }
-      return response.documents.map((doc: { id: string; data: any }) => ({
-        id: doc.id,
-        ...doc.data,
-      }));
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${LAMINATIONS_TABLE} ORDER BY id ASC`);
+    let laminations = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as ServiceLaminationItem));
+
+    if (laminations.length === 0) {
+      console.log("No service laminations found, seeding defaults in MySQL.");
+      laminations = await seedDefaultLaminations();
     }
-    return [];
+    return laminations.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error("Error fetching service laminations via API v3:", error);
+    console.error("Error fetching service laminations from MySQL:", error);
     return [];
   }
 };
@@ -253,14 +230,12 @@ export const addLamination = async (name: string): Promise<ServiceLaminationItem
     throw new Error("Lamination name cannot be empty.");
   }
   try {
-    const newLaminationData: Omit<ServiceLaminationItem, 'id'> = { name: name.trim() };
-    const newDoc = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents`, {
-      method: 'POST',
-      body: JSON.stringify({ data: newLaminationData }),
-    });
-    return { id: newDoc.id, ...newDoc.data };
+    const id = uuidv4();
+    const newLaminationData: ServiceLaminationItem = { id, name: name.trim() };
+    await query(`INSERT INTO ${LAMINATIONS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newLaminationData)]);
+    return newLaminationData;
   } catch (error) {
-    console.error("Error adding service lamination via API v3:", error);
+    console.error("Error adding service lamination to MySQL:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -271,14 +246,14 @@ export const updateLamination = async (id: string, name: string): Promise<boolea
     throw new Error("Lamination name cannot be empty.");
   }
   try {
-    const existingDoc = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`);
-    await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
-    });
+    const rows = await query<any[]>(`SELECT data_json FROM ${LAMINATIONS_TABLE} WHERE id = ?`, [id]);
+    if (rows.length === 0) return false;
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const finalData = { ...existingData, name: name.trim() };
+    await query(`UPDATE ${LAMINATIONS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
     return true;
   } catch (error) {
-    console.error("Error updating service lamination via API v3:", error);
+    console.error("Error updating service lamination in MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -286,12 +261,10 @@ export const updateLamination = async (id: string, name: string): Promise<boolea
 
 export const deleteLamination = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
-      method: 'DELETE',
-    });
+    await query(`DELETE FROM ${LAMINATIONS_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error("Error deleting service lamination via API v3:", error);
+    console.error("Error deleting service lamination from MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -301,56 +274,50 @@ export const deleteLamination = async (id: string): Promise<boolean> => {
 // --- Payment Method Functions ---
 
 const seedDefaultPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
-  await ensureCollectionExistsV3(PAYMENT_METHODS_COLLECTION);
   const createdItems: ServicePaymentMethodItem[] = [];
   const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
 
   for (const name of defaultPaymentMethodsData) {
     const id = uuidv4();
-    const newItem: Omit<ServicePaymentMethodItem, 'id'> = { name };
+    const newItem: ServicePaymentMethodItem = { id, name };
     try {
-      const newDoc = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ id, data: newItem }),
-      });
-      createdItems.push({ id, ...newDoc.data });
+      await query(`INSERT INTO ${PAYMENT_METHODS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItem)]);
+      createdItems.push(newItem);
     } catch (error) {
-      console.error(`Error seeding payment method "${name}" via API v3:`, error);
+      console.error(`Error seeding payment method "${name}" in MySQL:`, error);
     }
   }
-  console.log('Default payment methods seeded via API v3.');
+  console.log('Default payment methods seeded in MySQL.');
   return createdItems;
 };
 
 
 export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
   try {
-    await ensureCollectionExistsV3(PAYMENT_METHODS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-        if (response.documents.length === 0) {
-            console.log("No payment methods found, seeding defaults via API v3.");
-            return await seedDefaultPaymentMethods();
-        }
-        
-        // Filter out duplicates
-        const uniqueMethods: ServicePaymentMethodItem[] = [];
-        const seenNames = new Set<string>();
-        response.documents.forEach((doc: { id: string; data: any }) => {
-            if (!seenNames.has(doc.data.name)) {
-                seenNames.add(doc.data.name);
-                uniqueMethods.push({
-                    id: doc.id,
-                    ...doc.data,
-                });
-            }
-        });
-        return uniqueMethods;
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${PAYMENT_METHODS_TABLE} ORDER BY id ASC`);
+    let methods = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as ServicePaymentMethodItem));
+
+    if (methods.length === 0) {
+      console.log("No payment methods found, seeding defaults in MySQL.");
+      methods = await seedDefaultPaymentMethods();
     }
-    return [];
+
+    // Filter out duplicates (if any)
+    const uniqueMethods: ServicePaymentMethodItem[] = [];
+    const seenNames = new Set<string>();
+    methods.forEach((m) => {
+      if (!seenNames.has(m.name)) {
+        seenNames.add(m.name);
+        uniqueMethods.push(m);
+      }
+    });
+    return uniqueMethods.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-      console.error("Error fetching payment methods via API v3:", error);
-      return [];
+    console.error("Error fetching payment methods from MySQL:", error);
+    return [];
   }
 };
 
@@ -360,14 +327,12 @@ export const addPaymentMethod = async (name: string): Promise<ServicePaymentMeth
     throw new Error("Payment method name cannot be empty.");
   }
   try {
-    const newItemData: Omit<ServicePaymentMethodItem, 'id'> = { name: name.trim() };
-    const newDoc = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
-      method: 'POST',
-      body: JSON.stringify({ data: newItemData }),
-    });
-    return { id: newDoc.id, ...newDoc.data };
+    const id = uuidv4();
+    const newItemData: ServicePaymentMethodItem = { id, name: name.trim() };
+    await query(`INSERT INTO ${PAYMENT_METHODS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItemData)]);
+    return newItemData;
   } catch (error) {
-    console.error("Error adding payment method via API v3:", error);
+    console.error("Error adding payment method to MySQL:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -378,14 +343,14 @@ export const updatePaymentMethod = async (id: string, name: string): Promise<boo
     throw new Error("Payment method name cannot be empty.");
   }
   try {
-    const existingDoc = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`);
-    await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
-    });
+    const rows = await query<any[]>(`SELECT data_json FROM ${PAYMENT_METHODS_TABLE} WHERE id = ?`, [id]);
+    if (rows.length === 0) return false;
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const finalData = { ...existingData, name: name.trim() };
+    await query(`UPDATE ${PAYMENT_METHODS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
     return true;
   } catch (error) {
-    console.error("Error updating payment method via API v3:", error);
+    console.error("Error updating payment method in MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -393,12 +358,10 @@ export const updatePaymentMethod = async (id: string, name: string): Promise<boo
 
 export const deletePaymentMethod = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
-      method: 'DELETE',
-    });
+    await query(`DELETE FROM ${PAYMENT_METHODS_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error("Error deleting payment method via API v3:", error);
+    console.error("Error deleting payment method from MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -407,44 +370,38 @@ export const deletePaymentMethod = async (id: string): Promise<boolean> => {
 // --- Gift Functions ---
 
 const seedDefaultGifts = async (): Promise<ServiceGiftItem[]> => {
-  await ensureCollectionExistsV3(GIFTS_COLLECTION);
   const createdItems: ServiceGiftItem[] = [];
   const defaultGiftsData: string[] = ["Pen", "Mug", "Keychain"];
 
   for (const name of defaultGiftsData) {
     const id = uuidv4();
-    const newItem: Omit<ServiceGiftItem, 'id'> = { name };
+    const newItem: ServiceGiftItem = { id, name };
     try {
-      const newDoc = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ id, data: newItem }),
-      });
-      createdItems.push({ id, ...newDoc.data });
+      await query(`INSERT INTO ${GIFTS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItem)]);
+      createdItems.push(newItem);
     } catch (error) {
-      console.error(`Error seeding gift "${name}" via API v3:`, error);
+      console.error(`Error seeding gift "${name}" in MySQL:`, error);
     }
   }
-  console.log('Default gifts seeded via API v3.');
+  console.log('Default gifts seeded in MySQL.');
   return createdItems;
 };
 
 export const getGifts = async (): Promise<ServiceGiftItem[]> => {
   try {
-    await ensureCollectionExistsV3(GIFTS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents?limit=4444&orderBy=name&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-      if (response.documents.length === 0) {
-        console.log("No gifts found, seeding defaults via API v3.");
-        return await seedDefaultGifts();
-      }
-      return response.documents.map((doc: { id: string; data: any }) => ({
-        id: doc.id,
-        ...doc.data,
-      }));
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${GIFTS_TABLE} ORDER BY id ASC`);
+    let gifts = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as ServiceGiftItem));
+
+    if (gifts.length === 0) {
+      console.log("No gifts found, seeding defaults in MySQL.");
+      gifts = await seedDefaultGifts();
     }
-    return [];
+    return gifts.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error("Error fetching gifts via API v3:", error);
+    console.error("Error fetching gifts from MySQL:", error);
     return [];
   }
 };
@@ -454,14 +411,12 @@ export const addGift = async (name: string): Promise<ServiceGiftItem | null> => 
     throw new Error("Gift name cannot be empty.");
   }
   try {
-    const newItemData: Omit<ServiceGiftItem, 'id'> = { name: name.trim() };
-    const newDoc = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents`, {
-      method: 'POST',
-      body: JSON.stringify({ data: newItemData }),
-    });
-    return { id: newDoc.id, ...newDoc.data };
+    const id = uuidv4();
+    const newItemData: ServiceGiftItem = { id, name: name.trim() };
+    await query(`INSERT INTO ${GIFTS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItemData)]);
+    return newItemData;
   } catch (error) {
-    console.error("Error adding gift via API v3:", error);
+    console.error("Error adding gift to MySQL:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -472,14 +427,14 @@ export const updateGift = async (id: string, name: string): Promise<boolean> => 
     throw new Error("Gift name cannot be empty.");
   }
   try {
-    const existingDoc = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents/${id}`);
-    await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
-    });
+    const rows = await query<any[]>(`SELECT data_json FROM ${GIFTS_TABLE} WHERE id = ?`, [id]);
+    if (rows.length === 0) return false;
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const finalData = { ...existingData, name: name.trim() };
+    await query(`UPDATE ${GIFTS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
     return true;
   } catch (error) {
-    console.error("Error updating gift via API v3:", error);
+    console.error("Error updating gift in MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -487,12 +442,10 @@ export const updateGift = async (id: string, name: string): Promise<boolean> => 
 
 export const deleteGift = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents/${id}`, {
-      method: 'DELETE',
-    });
+    await query(`DELETE FROM ${GIFTS_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
-    console.error("Error deleting gift via API v3:", error);
+    console.error("Error deleting gift from MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }

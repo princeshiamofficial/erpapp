@@ -16,9 +16,7 @@ import {
   updatePersonalNote as updatePersonalNoteService,
   deletePersonalNote as deletePersonalNoteService,
 } from "@/lib/personal-finance-service";
-import { adminApp } from '@/lib/firebase-admin';
 import { getUserById } from '@/lib/user-service';
-import type { messaging } from 'firebase-admin';
 import { getGlobalSettings } from '@/lib/settings-service';
 
 const formatAmountForNotification = (amount: number): string => {
@@ -94,38 +92,8 @@ export async function addTransactionAction(
           transaction: primaryTransaction,
           error: "Admin expense recorded, but failed to record income for recipient. Please check logs for recipient ID: " + transactionData.sentToUserId
         };
-      } else {
-        console.log(`Successfully created income transaction ${recipientTransaction.id} for recipient ${transactionData.sentToUserName} (ID: ${transactionData.sentToUserId})`);
-        try {
-          const recipientUser = await getUserById(transactionData.sentToUserId);
-          if (recipientUser && recipientUser.fcmToken) {
-            console.log(`[addTransactionAction - Send Money] Recipient ${recipientUser.name} has FCM token. Attempting to send push notification.`);
-            const globalSettings = await getGlobalSettings();
-            const customSoundUrl = globalSettings.toastSoundUrl;
-            const notificationTitle = "Funds Received!";
-            const notificationBody = `You have received ${formatAmountForNotification(transactionData.amount)} from ${currentUser.name}.`;
-            const targetUrl = '/finance-manager';
-            const fcmMessage: messaging.Message = {
-              token: recipientUser.fcmToken,
-              notification: { title: notificationTitle, body: notificationBody, icon: '/icons/icon-192x192.png' },
-              data: { title: notificationTitle, body: notificationBody, iconUrl: '/icons/icon-192x192.png', targetUrl: targetUrl, click_action: targetUrl, ...(customSoundUrl && { customSoundUrl: customSoundUrl }) },
-              webpush: { notification: { icon: '/icons/icon-192x192.png', badge: '/icons/icon-72x72.png', ...(customSoundUrl ? {} : { sound: "default" }) }, fcmOptions: { link: targetUrl } },
-            };
-            if (adminApp && typeof adminApp.messaging === 'function') {
-                await adminApp.messaging().send(fcmMessage);
-                console.log(`[addTransactionAction - Send Money] Push notification sent to ${recipientUser.name} for received funds.`);
-            } else {
-                console.warn("[addTransactionAction - Send Money] Firebase Admin SDK not properly initialized. Cannot send push notification for received funds.");
-            }
-          } else if (recipientUser) {
-            console.log(`[addTransactionAction - Send Money] Recipient ${recipientUser.name} does not have an FCM token. Skipping push notification.`);
-          } else {
-            console.warn(`[addTransactionAction - Send Money] Could not fetch recipient user details for ID ${transactionData.sentToUserId}. Skipping push notification.`);
-          }
-        } catch (notifError) {
-          console.error(`[addTransactionAction - Send Money] Error sending push notification for received funds to user ${transactionData.sentToUserId}:`, notifError);
-        }
       }
+      console.log(`Successfully created income transaction ${recipientTransaction.id} for recipient ${transactionData.sentToUserName} (ID: ${transactionData.sentToUserId})`);
     }
     revalidatePath("/(app)/finance-manager");
     return { success: true, transaction: primaryTransaction };
@@ -135,6 +103,7 @@ export async function addTransactionAction(
     return { success: false, error: errorMessage };
   }
 }
+
 
 export async function deleteTransactionAction(
   transactionId: string,
@@ -161,7 +130,7 @@ export async function deleteTransactionAction(
       return { success: false, error: "Cannot delete income transactions received from system transfers." };
     }
     if (transaction.userId !== userIdVerifying) {
-        return { success: false, error: "You do not have permission to delete this transaction." };
+      return { success: false, error: "You do not have permission to delete this transaction." };
     }
     const success = await deleteTransactionService(transactionId);
     if (success) {
@@ -209,17 +178,17 @@ export async function updateTransactionAction(
     if (transaction.type === 'income' && transaction.receivedFromUserId && userIdVerifying === transaction.userId && userRoleVerifying !== 'SYSTEM_ADMIN') {
       return { success: false, error: "Cannot edit income transactions received from system transfers." };
     }
-     if (transaction.userId !== userIdVerifying) {
-        return { success: false, error: "You do not have permission to edit this transaction." };
+    if (transaction.userId !== userIdVerifying) {
+      return { success: false, error: "You do not have permission to edit this transaction." };
     }
-    
+
     // Non-admin can't change type of 'expense' (sent money) to something else if it's a system-generated pair.
     if (transaction.type === 'expense' && transaction.sentToUserId && updates.type && updates.type !== 'expense') {
-        return { success: false, error: "Cannot change the type of a 'Sent Money' transaction."};
+      return { success: false, error: "Cannot change the type of a 'Sent Money' transaction." };
     }
     // Similarly for 'income' (received money)
     if (transaction.type === 'income' && transaction.receivedFromUserId && updates.type && updates.type !== 'income') {
-        return { success: false, error: "Cannot change the type of a 'Received Money' transaction."};
+      return { success: false, error: "Cannot change the type of a 'Received Money' transaction." };
     }
 
     const success = await updateTransactionService(transactionId, sanitizedUpdates);

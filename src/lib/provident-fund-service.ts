@@ -1,10 +1,10 @@
 
 "use server";
 
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 import type { ProvidentFundRecord } from '@/types';
 
-const COLLECTION_NAME = 'providentFund';
+const TABLE_NAME = 'provident_fund';
 
 /**
  * Fetches all provident fund records, optionally filtered by employee ID.
@@ -13,24 +13,25 @@ const COLLECTION_NAME = 'providentFund';
  */
 export const getProvidentFundRecords = async (employeeId?: string): Promise<ProvidentFundRecord[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    let url = `collections/${COLLECTION_NAME}/documents?limit=9999`;
-    
-    const response = await fetchFromApiV3(url);
-    if (response && Array.isArray(response.documents)) {
-      const records = response.documents.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data
-      } as ProvidentFundRecord));
+    let sql = `SELECT id, data_json FROM ${TABLE_NAME}`;
+    let params: any[] = [];
 
-      if (employeeId) {
-          return records.filter(r => r.employeeId === employeeId);
-      }
-      return records;
+    // In MySQL version, we might fetch all and filter in JS if the schema is JSON-based, 
+    // or use JSON_EXTRACT if we want to filter in SQL. 
+    // Given the current pattern, let's fetch and filter in JS for consistency with the JSON blob strategy.
+
+    const rows = await query<any[]>(sql, params);
+    const records = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as ProvidentFundRecord));
+
+    if (employeeId) {
+      return records.filter(r => r.employeeId === employeeId);
     }
-    return [];
+    return records;
   } catch (error) {
-    console.error("Error fetching Provident Fund records via API v3:", error);
+    console.error("Error fetching Provident Fund records from MySQL:", error);
     return [];
   }
 };
@@ -41,21 +42,17 @@ export const getProvidentFundRecords = async (employeeId?: string): Promise<Prov
  * @returns True if successful, false otherwise.
  */
 export const updateProvidentFundRecord = async (record: ProvidentFundRecord): Promise<boolean> => {
-    try {
-        await ensureCollectionExistsV3(COLLECTION_NAME);
-        const docId = record.id;
-        const payload = { id: docId, data: record };
-        
-        // Use PUT to create or update the document with a predictable ID
-        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${docId}`, {
-            method: 'PUT',
-            body: JSON.stringify(payload)
-        });
-        return true;
-    } catch (error) {
-        console.error(`Error updating Provident Fund record ${record.id} via API v3:`, error);
-        return false;
-    }
+  try {
+    const docId = record.id;
+    await query(
+      `INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE data_json = VALUES(data_json)`,
+      [docId, JSON.stringify(record)]
+    );
+    return true;
+  } catch (error) {
+    console.error(`Error updating Provident Fund record ${record.id} in MySQL:`, error);
+    return false;
+  }
 };
 
 /**
@@ -64,13 +61,11 @@ export const updateProvidentFundRecord = async (record: ProvidentFundRecord): Pr
  * @returns True if successful, false otherwise.
  */
 export const deleteProvidentFundRecord = async (id: string): Promise<boolean> => {
-    try {
-        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-            method: 'DELETE'
-        });
-        return true;
-    } catch (error) {
-        console.error(`Error deleting Provident Fund record ${id} via API v3:`, error);
-        return false;
-    }
+  try {
+    await query(`DELETE FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+    return true;
+  } catch (error) {
+    console.error(`Error deleting Provident Fund record ${id} from MySQL:`, error);
+    return false;
+  }
 };

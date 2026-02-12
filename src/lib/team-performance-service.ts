@@ -1,100 +1,68 @@
 
-
 "use server";
 
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { query } from './mysql';
 import type { UserRole } from '@/types';
-import { format } from 'date-fns';
 
-const COLLECTION_NAME = 'teamPerformance';
-const MONTHLY_TARGET_COLLECTION_NAME = 'monthlyTeamTargets';
+const TASKS_TABLE = 'team_performance_tasks';
+const TARGETS_TABLE = 'team_monthly_targets';
 
 export interface TaskEntry {
   id: string;
-  date: string; // YYYY-MM-DD format
+  date: string;
   userId: string;
   userName: string;
   role: UserRole;
   taskCount: number;
   likelihood?: number;
-  createdAt: string; // ISO string
+  createdAt: string;
 }
 
 export interface MonthlyTargetHistory {
-    id: string; // e.g., 'CRM-2024-06'
-    team: UserRole | 'all';
-    month: string; // YYYY-MM
-    target: number;
-    achieved: number;
-    undone: number;
+  id: string;
+  team: UserRole | 'all';
+  month: string;
+  target: number;
+  achieved: number;
+  undone: number;
 }
 
-
-// Get all task entries
 export const getTaskEntries = async (): Promise<TaskEntry[]> => {
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444`);
-    if (response && Array.isArray(response.documents)) {
-        return response.documents.map((doc: { id: string, data: any }) => ({
-            id: doc.id,
-            ...doc.data
-        } as TaskEntry));
-    }
-    return [];
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TASKS_TABLE}`);
+    return rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as TaskEntry));
   } catch (error) {
-    console.error("Error fetching task entries via API v3:", error);
+    console.error("Error fetching task entries from MySQL:", error);
     return [];
   }
 };
 
-// Add or update a task entry for a specific user and date.
 export const addTaskEntry = async (entry: Omit<TaskEntry, 'id' | 'createdAt'>): Promise<TaskEntry | null> => {
-  if (!entry.userId || !entry.date) {
-    console.error("addTaskEntry: userId and date are required.");
-    return null;
-  }
+  if (!entry.userId || !entry.date) return null;
+  const docId = `${entry.userId}-${entry.date}`;
   try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const docId = `${entry.userId}-${entry.date}`;
-    
-    const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${docId}`).catch(() => null);
+    const rows = await query<any[]>(`SELECT data_json FROM ${TASKS_TABLE} WHERE id = ?`, [docId]);
 
-    if (existingDoc && existingDoc.data) {
-      // Document exists, update it by adding new values
-      const updatedTaskCount = (existingDoc.data.taskCount || 0) + entry.taskCount;
-      const updatedLikelihood = (existingDoc.data.likelihood || 0) + (entry.likelihood || 0);
-      
-      const finalData = { 
-        ...existingDoc.data, 
-        taskCount: updatedTaskCount,
-        likelihood: updatedLikelihood
+    if (rows.length > 0) {
+      const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+      const finalData = {
+        ...existingData,
+        taskCount: (existingData.taskCount || 0) + entry.taskCount,
+        likelihood: (existingData.likelihood || 0) + (entry.likelihood || 0)
       };
-      
-      await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${docId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData }),
-      });
+      await query(`UPDATE ${TASKS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), docId]);
       return { id: docId, ...finalData } as TaskEntry;
-
     } else {
-      // Document does not exist, create it
-      const dataWithTimestamp = {
-          ...entry,
-          createdAt: new Date().toISOString()
-      };
-      const payload = {
-        id: docId,
-        data: dataWithTimestamp
-      };
-      await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-          method: 'POST',
-          body: JSON.stringify(payload),
-      });
-      return { id: docId, ...dataWithTimestamp };
+      const dataWithTimestamp = { ...entry, createdAt: new Date().toISOString() };
+      await query(`INSERT INTO ${TASKS_TABLE} (id, user_id, date, data_json) VALUES (?, ?, ?, ?)`,
+        [docId, entry.userId, entry.date, JSON.stringify(dataWithTimestamp)]);
+      return { id: docId, ...dataWithTimestamp } as TaskEntry;
     }
   } catch (error) {
-    console.error("Error adding/updating task entry via API v3:", error);
+    console.error("Error adding/updating task entry in MySQL:", error);
     return null;
   }
 };
@@ -104,85 +72,49 @@ export async function updateTaskEntry(
   updates: Partial<Omit<TaskEntry, 'id' | 'userId' | 'userName' | 'role' | 'createdAt'>>
 ): Promise<boolean> {
   try {
-    const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${taskId}`);
-    if (!existingDoc || !existingDoc.data) {
-      throw new Error(`Task entry with ID ${taskId} not found.`);
-    }
-
-    const updatedData = { ...existingDoc.data, ...updates };
-    
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${taskId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ data: updatedData })
-    });
+    const rows = await query<any[]>(`SELECT data_json FROM ${TASKS_TABLE} WHERE id = ?`, [taskId]);
+    if (rows.length === 0) throw new Error(`Task entry ${taskId} not found.`);
+    const updatedData = { ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json), ...updates };
+    await query(`UPDATE ${TASKS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(updatedData), taskId]);
     return true;
   } catch (error) {
-    console.error(`Error updating task entry ${taskId} via API v3:`, error);
+    console.error(`Error updating task entry ${taskId} in MySQL:`, error);
     return false;
   }
 }
 
 export async function deleteTaskEntry(taskId: string): Promise<boolean> {
   try {
-    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${taskId}`, {
-      method: 'DELETE'
-    });
+    await query(`DELETE FROM ${TASKS_TABLE} WHERE id = ?`, [taskId]);
     return true;
   } catch (error) {
-    console.error(`Error deleting task entry ${taskId} via API v3:`, error);
+    console.error(`Error deleting task entry ${taskId} from MySQL:`, error);
     return false;
   }
 }
 
-
-// New functions for monthly target history
-
 export const getMonthlyTargetHistory = async (team: UserRole | 'all'): Promise<MonthlyTargetHistory[]> => {
-    try {
-        await ensureCollectionExistsV3(MONTHLY_TARGET_COLLECTION_NAME);
-        const response = await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents?limit=4444`);
-        if (response && Array.isArray(response.documents)) {
-            return response.documents
-                .map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as MonthlyTargetHistory))
-                .filter(item => item.team === team)
-                .sort((a, b) => b.month.localeCompare(a.month)); // Sort descending by month
-        }
-        return [];
-    } catch (error) {
-        console.error(`Error fetching monthly target history for team ${team} via API v3:`, error);
-        return [];
-    }
+  try {
+    const rows = await query<any[]>(`SELECT data_json FROM ${TARGETS_TABLE} WHERE team = ? ORDER BY month DESC`, [team]);
+    return rows.map(row => ({
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as MonthlyTargetHistory));
+  } catch (error) {
+    console.error(`Error fetching monthly target history for team ${team} from MySQL:`, error);
+    return [];
+  }
 };
 
 export const setMonthlyTargetHistory = async (entry: Omit<MonthlyTargetHistory, 'id'>): Promise<MonthlyTargetHistory | null> => {
-    try {
-        await ensureCollectionExistsV3(MONTHLY_TARGET_COLLECTION_NAME);
-        const docId = `${entry.team}-${entry.month}`;
-        
-        const payload = {
-            id: docId,
-            data: entry
-        };
-
-        // Use POST to create, which will fail if the ID exists. We'll catch and then PUT.
-        try {
-             await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents`, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-            });
-        } catch (postError) {
-             // If POST fails (likely due to duplicate ID), use PUT to update.
-             await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents/${docId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ data: entry }),
-            });
-        }
-
-        return { id: docId, ...entry };
-    } catch (error) {
-        console.error("Error setting monthly target history via API v3:", error);
-        return null;
-    }
+  const docId = `${entry.team}-${entry.month}`;
+  try {
+    await query(`INSERT INTO ${TARGETS_TABLE} (id, team, month, data_json) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE team=VALUES(team), month=VALUES(month), data_json=VALUES(data_json)`,
+      [docId, entry.team, entry.month, JSON.stringify({ ...entry, id: docId })]);
+    return { id: docId, ...entry };
+  } catch (error) {
+    console.error("Error setting monthly target history in MySQL:", error);
+    return null;
+  }
 };
 
 export { deleteTaskEntry as deleteTaskEntryFromDb };

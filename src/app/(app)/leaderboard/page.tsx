@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LOGISTICS_STATUS_ID } from '@/lib/status-service';
+import { LOGISTICS_STATUS_ID } from '@/lib/status-constants';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -44,7 +44,7 @@ export interface CrmPerformanceData {
   userName: string;
   userAvatar?: string;
   ordersCompleted: number; // This is the "points" for CRs
-  reorderCount: number; 
+  reorderCount: number;
   target: number;
   designsAssigned?: number; // Specific for DRs
   designsDone?: number; // Specific for DRs
@@ -62,7 +62,7 @@ export default function LeaderboardPage() {
   const [drPerformanceData, setDrPerformanceData] = useState<CrmPerformanceData[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  
+
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
     const today = new Date();
     return {
@@ -76,7 +76,7 @@ export default function LeaderboardPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
-  
+
   const [activeTab, setActiveTab] = useState<'cr_board' | 'dr_board'>(
     currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? 'dr_board' : 'cr_board'
   );
@@ -102,11 +102,11 @@ export default function LeaderboardPage() {
     predefinedRange: PredefinedRange | "custom" | null
   ): CrmPerformanceData[] => {
     if (!dateRange?.from || !dateRange?.to) {
-        return [];
+      return [];
     }
     const periodStart = startOfDay(dateRange.from);
     const periodEnd = endOfDay(dateRange.to);
-    
+
     const roleFilteredUsers = users.filter(user => user.role === roleToCalculate && !user.isBanned);
 
     const performanceDataList = roleFilteredUsers.map(user => {
@@ -115,25 +115,25 @@ export default function LeaderboardPage() {
       let designsDone = 0;
 
       if (roleToCalculate === 'CRM') {
-        ordersCompleted = orders.filter(order => 
-            order.crmUserId === user.id &&
-            isWithinInterval(new Date(order.createdAt), { start: periodStart, end: periodEnd })
+        ordersCompleted = orders.filter(order =>
+          order.crmUserId === user.id &&
+          isWithinInterval(new Date(order.createdAt), { start: periodStart, end: periodEnd })
         ).length;
 
       } else if (roleToCalculate === 'DESIGNER_REPRESENTATIVE') {
-          designsAssigned = orders.filter(order =>
-              order.designerRepresentativeId === user.id &&
-              order.statusHistory.some(h => h.status === 'ready-for-design' && isWithinInterval(parseISO(h.timestamp), { start: periodStart, end: periodEnd }))
-          ).length;
-          designsDone = orders.filter(order =>
-              order.designerRepresentativeId === user.id &&
-              order.statusHistory.some(h => h.status === LOGISTICS_STATUS_ID && isWithinInterval(parseISO(h.timestamp), { start: periodStart, end: periodEnd }))
-          ).length;
+        designsAssigned = orders.filter(order =>
+          order.designerRepresentativeId === user.id &&
+          order.statusHistory.some(h => h.status === 'ready-for-design' && isWithinInterval(parseISO(h.timestamp), { start: periodStart, end: periodEnd }))
+        ).length;
+        designsDone = orders.filter(order =>
+          order.designerRepresentativeId === user.id &&
+          order.statusHistory.some(h => h.status === LOGISTICS_STATUS_ID && isWithinInterval(parseISO(h.timestamp), { start: periodStart, end: periodEnd }))
+        ).length;
       }
-      
+
       const roleBasedTargets = globalSettings.roleBasedTargets || {};
       const monthlyTarget = (user.monthlyOrderTarget ?? roleBasedTargets[roleToCalculate as keyof typeof roleBasedTargets] ?? 0);
-      
+
       let target = 0;
       if (predefinedRange === 'thisMonth' || predefinedRange === 'lastMonth') {
         target = monthlyTarget;
@@ -157,13 +157,13 @@ export default function LeaderboardPage() {
         pointChange: 0,
       } as CrmPerformanceData;
     });
-    
+
     const sortKey = roleToCalculate === 'DESIGNER_REPRESENTATIVE' ? 'designsDone' : 'ordersCompleted';
 
     performanceDataList.sort((a, b) => {
-        const aTotal = (a[sortKey as keyof CrmPerformanceData] as number || 0);
-        const bTotal = (b[sortKey as keyof CrmPerformanceData] as number || 0);
-        return bTotal - aTotal || a.userName.localeCompare(b.userName);
+      const aTotal = (a[sortKey as keyof CrmPerformanceData] as number || 0);
+      const bTotal = (b[sortKey as keyof CrmPerformanceData] as number || 0);
+      return bTotal - aTotal || a.userName.localeCompare(b.userName);
     });
     performanceDataList.forEach((user, index) => {
       user.rank = index + 1;
@@ -188,9 +188,9 @@ export default function LeaderboardPage() {
         ]);
 
         if (fetchedSettings.isLeaderboardRestrictedToAdmin && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
-            router.replace('/dashboard');
-            toast({ title: "Access Restricted", description: "The leaderboard is currently only available to administrators.", variant: "destructive" });
-            return;
+          router.replace('/dashboard');
+          toast({ title: "Access Restricted", description: "The leaderboard is currently only available to administrators.", variant: "destructive" });
+          return;
         }
 
         setAllUsers(fetchedUsers);
@@ -214,7 +214,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange?.from || !selectedDateRange?.to) return;
-    
+
     const rangeDuration = differenceInDays(selectedDateRange.to, selectedDateRange.from);
     const previousPeriodStart = sub(selectedDateRange.from, { days: rangeDuration + 1 });
     const previousPeriodEnd = endOfDay(sub(selectedDateRange.to, { days: rangeDuration + 1 }));
@@ -222,44 +222,44 @@ export default function LeaderboardPage() {
 
     let crData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'CRM', selectedPredefinedRange);
     const prevCrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'CRM', selectedPredefinedRange);
-    
+
     const prevCrMap = new Map(prevCrData.map(d => [d.userId, d]));
     crData = crData.map(currentData => {
-        const prevData = prevCrMap.get(currentData.userId);
-        const prevPoints = (prevData?.ordersCompleted || 0);
-        const currentPoints = currentData.ordersCompleted;
-        const pointChange = currentPoints - prevPoints;
-        return {
-            ...currentData,
-            trend: pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same',
-            pointChange: Math.abs(pointChange)
-        };
+      const prevData = prevCrMap.get(currentData.userId);
+      const prevPoints = (prevData?.ordersCompleted || 0);
+      const currentPoints = currentData.ordersCompleted;
+      const pointChange = currentPoints - prevPoints;
+      return {
+        ...currentData,
+        trend: pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same',
+        pointChange: Math.abs(pointChange)
+      };
     });
 
     let drData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'DESIGNER_REPRESENTATIVE', selectedPredefinedRange);
     const prevDrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'DESIGNER_REPRESENTATIVE', selectedPredefinedRange);
     const prevDrMap = new Map(prevDrData.map(d => [d.userId, d]));
     drData = drData.map(currentData => {
-        const prevData = prevDrMap.get(currentData.userId);
-        const pointChange = (currentData.designsDone || 0) - (prevData?.designsDone || 0);
-        return {
-            ...currentData,
-            trend: pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same',
-            pointChange: Math.abs(pointChange)
-        };
+      const prevData = prevDrMap.get(currentData.userId);
+      const pointChange = (currentData.designsDone || 0) - (prevData?.designsDone || 0);
+      return {
+        ...currentData,
+        trend: pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same',
+        pointChange: Math.abs(pointChange)
+      };
     });
 
     setPerformanceData(crData);
     setDrPerformanceData(drData);
 
   }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, calculatePerformance, selectedPredefinedRange]);
-  
+
   const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(displayLabel);
     setSelectedPredefinedRange(predefinedValue);
   };
-  
+
   const showTabs = useMemo(() => {
     if (!currentUser) return false;
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
@@ -272,12 +272,12 @@ export default function LeaderboardPage() {
       <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')"}}
+          style={{ backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')" }}
           data-ai-hint="abstract orange fire particles"
         ></div>
         <header className="relative z-10 flex items-center justify-center text-center py-3 px-2 mb-6">
-            <h1 className="text-xl font-semibold tracking-wider">LEADERBOARD</h1>
-            <div className="absolute right-4"><Skeleton className="h-9 w-36 rounded-md bg-white/10" /></div>
+          <h1 className="text-xl font-semibold tracking-wider">LEADERBOARD</h1>
+          <div className="absolute right-4"><Skeleton className="h-9 w-36 rounded-md bg-white/10" /></div>
         </header>
         <div className="relative z-10 text-center mb-8">
           <Crown className="h-10 w-10 text-[hsl(var(--leaderboard-gold))] mx-auto mb-2 opacity-50" />
@@ -297,18 +297,18 @@ export default function LeaderboardPage() {
   }
 
   if (fetchError) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
-            <h1 className="text-xl font-semibold mb-4">Error</h1>
-            <p>{fetchError}</p>
-        </div>
-      );
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
+        <h1 className="text-xl font-semibold mb-4">Error</h1>
+        <p>{fetchError}</p>
+      </div>
+    );
   }
 
   const bgStyle = currentLeaderboardBackground
     ? { backgroundImage: `url('${currentLeaderboardBackground}')` }
     : { backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')" };
-    
+
   const dataForActiveTab = activeTab === 'cr_board' ? performanceData : drPerformanceData;
   const currentLeaderboardData = dataForActiveTab.map(d =>
     currentUser && d.userId === currentUser.id
@@ -327,45 +327,45 @@ export default function LeaderboardPage() {
         <header className="relative z-10 flex items-center justify-center text-center py-4 px-4 sm:px-6 mb-4 sm:mb-6">
           <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
           <div className="absolute right-4 sm:right-6 flex items-center gap-2">
-              {selectedDateRange && (
-                  <DateRangePicker 
-                    initialRange={selectedDateRange} 
-                    onDateRangeChange={handleDateRangeChange}
-                    className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
-                  />
-              )}
+            {selectedDateRange && (
+              <DateRangePicker
+                initialRange={selectedDateRange}
+                onDateRangeChange={handleDateRangeChange}
+                className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
+              />
+            )}
           </div>
         </header>
-        
+
         {showTabs ? (
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'cr_board' | 'dr_board')} className="w-full relative z-10">
-              <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto bg-black/30 border-none text-white/80">
-                <TabsTrigger value="cr_board">CR Board</TabsTrigger>
-                <TabsTrigger value="dr_board">DR Board</TabsTrigger>
-              </TabsList>
-              <TabsContent value="cr_board" className="mt-4">
-                  <LeaderboardDisplay
-                      performanceData={currentLeaderboardData}
-                      currentUser={currentUser}
-                      timePeriodLabel={currentDateRangeLabel}
-                  />
-              </TabsContent>
-              <TabsContent value="dr_board" className="mt-4">
-                  <LeaderboardDisplay
-                      performanceData={currentLeaderboardData}
-                      currentUser={currentUser}
-                      timePeriodLabel={currentDateRangeLabel}
-                  />
-              </TabsContent>
-            </Tabs>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'cr_board' | 'dr_board')} className="w-full relative z-10">
+            <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto bg-black/30 border-none text-white/80">
+              <TabsTrigger value="cr_board">CR Board</TabsTrigger>
+              <TabsTrigger value="dr_board">DR Board</TabsTrigger>
+            </TabsList>
+            <TabsContent value="cr_board" className="mt-4">
+              <LeaderboardDisplay
+                performanceData={currentLeaderboardData}
+                currentUser={currentUser}
+                timePeriodLabel={currentDateRangeLabel}
+              />
+            </TabsContent>
+            <TabsContent value="dr_board" className="mt-4">
+              <LeaderboardDisplay
+                performanceData={currentLeaderboardData}
+                currentUser={currentUser}
+                timePeriodLabel={currentDateRangeLabel}
+              />
+            </TabsContent>
+          </Tabs>
         ) : (
-            <div className="mt-4">
-                <LeaderboardDisplay
-                    performanceData={currentLeaderboardData}
-                    currentUser={currentUser}
-                    timePeriodLabel={currentDateRangeLabel}
-                />
-            </div>
+          <div className="mt-4">
+            <LeaderboardDisplay
+              performanceData={currentLeaderboardData}
+              currentUser={currentUser}
+              timePeriodLabel={currentDateRangeLabel}
+            />
+          </div>
         )}
       </div>
 
@@ -374,77 +374,77 @@ export default function LeaderboardPage() {
         <p className="text-center text-muted-foreground text-sm mb-6">
           Date Range: {currentDateRangeLabel} ({format(selectedDateRange?.from || new Date(), 'd MMM yyyy')} - {format(selectedDateRange?.to || new Date(), 'd MMM yyyy')})
         </p>
-        
+
         <div className={cn('print-cr-section', activeTab === 'cr_board' ? 'block' : 'hidden')}>
           <h2 className="text-lg font-semibold mb-2">CR Performance</h2>
           <Table>
-              <TableHeader>
-                  <TableRow>
-                      <TableHead className="w-16">Rank</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="text-center">Sales</TableHead>
-                      <TableHead className="text-center">Target</TableHead>
-                      <TableHead className="text-center">Trend</TableHead>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">Rank</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-center">Sales</TableHead>
+                <TableHead className="text-center">Target</TableHead>
+                <TableHead className="text-center">Trend</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {performanceData.map(user => {
+                const totalPoints = user.ordersCompleted;
+                return (
+                  <TableRow key={`print-cr-${user.userId}`}>
+                    <TableCell className="font-bold text-lg">{user.rank}</TableCell>
+                    <TableCell>{user.userName}</TableCell>
+                    <TableCell className="text-center font-mono">{totalPoints}</TableCell>
+                    <TableCell className="text-center font-mono">{user.target}</TableCell>
+                    <TableCell className={cn(
+                      "text-center font-semibold flex items-center justify-center gap-1",
+                      user.trend === 'up' && 'text-green-600',
+                      user.trend === 'down' && 'text-red-600',
+                    )}>
+                      {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
+                      {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
+                      {user.pointChange !== 0 ? user.pointChange : '-'}
+                    </TableCell>
                   </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {performanceData.map(user => {
-                    const totalPoints = user.ordersCompleted;
-                    return (
-                      <TableRow key={`print-cr-${user.userId}`}>
-                          <TableCell className="font-bold text-lg">{user.rank}</TableCell>
-                          <TableCell>{user.userName}</TableCell>
-                          <TableCell className="text-center font-mono">{totalPoints}</TableCell>
-                          <TableCell className="text-center font-mono">{user.target}</TableCell>
-                          <TableCell className={cn(
-                            "text-center font-semibold flex items-center justify-center gap-1",
-                            user.trend === 'up' && 'text-green-600',
-                            user.trend === 'down' && 'text-red-600',
-                          )}>
-                            {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
-                            {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
-                            {user.pointChange !== 0 ? user.pointChange : '-'}
-                          </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
+                );
+              })}
+            </TableBody>
           </Table>
         </div>
 
         <div className={cn('print-dr-section', activeTab === 'dr_board' ? 'block' : 'hidden')}>
           <h2 className="text-lg font-semibold mb-2 mt-8">Designer Representative Performance</h2>
           <Table>
-              <TableHeader>
-                  <TableRow>
-                      <TableHead className="w-16">Rank</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="text-center">Designs Done</TableHead>
-                      <TableHead className="text-center">Designs Assigned</TableHead>
-                      <TableHead className="text-center">Trend</TableHead>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">Rank</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-center">Designs Done</TableHead>
+                <TableHead className="text-center">Designs Assigned</TableHead>
+                <TableHead className="text-center">Trend</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {drPerformanceData.map(user => {
+                return (
+                  <TableRow key={`print-dr-${user.userId}`}>
+                    <TableCell className="font-bold text-lg">{user.rank}</TableCell>
+                    <TableCell>{user.userName}</TableCell>
+                    <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
+                    <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
+                    <TableCell className={cn(
+                      "text-center font-semibold flex items-center justify-center gap-1",
+                      user.trend === 'up' && 'text-green-600',
+                      user.trend === 'down' && 'text-red-600',
+                    )}>
+                      {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
+                      {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
+                      {user.pointChange !== 0 ? user.pointChange : '-'}
+                    </TableCell>
                   </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {drPerformanceData.map(user => {
-                      return (
-                          <TableRow key={`print-dr-${user.userId}`}>
-                              <TableCell className="font-bold text-lg">{user.rank}</TableCell>
-                              <TableCell>{user.userName}</TableCell>
-                              <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
-                              <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
-                              <TableCell className={cn(
-                                "text-center font-semibold flex items-center justify-center gap-1",
-                                user.trend === 'up' && 'text-green-600',
-                                user.trend === 'down' && 'text-red-600',
-                              )}>
-                                {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
-                                {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
-                                {user.pointChange !== 0 ? user.pointChange : '-'}
-                              </TableCell>
-                          </TableRow>
-                      );
-                  })}
-              </TableBody>
+                );
+              })}
+            </TableBody>
           </Table>
         </div>
       </div>

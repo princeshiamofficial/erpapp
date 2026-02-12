@@ -11,7 +11,8 @@ import { ArrowLeft, Eye, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { TrackingLink, CustomStatus } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getStatuses } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/color-utils';
 import { useToast } from '@/hooks/use-toast';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format as formatDateFns } from 'date-fns';
 
@@ -61,13 +62,13 @@ export default function WeeklyDeliveriesPage() {
           log.status === delivStatus.id && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
         );
       });
-      
+
       setDeliveredOrders(weeklyDelivered.sort((a, b) => {
-          const aDeliveryLog = a.statusHistory.find(l => l.status === delivStatus.id);
-          const bDeliveryLog = b.statusHistory.find(l => l.status === delivStatus.id);
-          if (!aDeliveryLog || !bDeliveryLog) return 0; 
-          return new Date(bDeliveryLog.timestamp).getTime() - new Date(aDeliveryLog.timestamp).getTime();
-        })
+        const aDeliveryLog = a.statusHistory.find(l => l.status === delivStatus.id);
+        const bDeliveryLog = b.statusHistory.find(l => l.status === delivStatus.id);
+        if (!aDeliveryLog || !bDeliveryLog) return 0;
+        return new Date(bDeliveryLog.timestamp).getTime() - new Date(aDeliveryLog.timestamp).getTime();
+      })
       );
 
     } catch (error) {

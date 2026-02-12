@@ -1,39 +1,34 @@
 
 "use server";
 
-import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
-import type { SoldHistoryEntry, ServiceModelItem } from '@/types'; 
-import { getStockItems, updateStockItem } from './stock-service'; 
+import { query } from './mysql';
+import type { SoldHistoryEntry } from '@/types';
+import { getStockItems, updateStockItem } from './stock-service';
+import { v4 as uuidv4 } from 'uuid';
 
-const COLLECTION_NAME = 'soldhistory';
+const TABLE_NAME = 'sold_history';
 
 export const getSoldHistory = async (): Promise<SoldHistoryEntry[]> => {
-  try {
-    await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=4444&orderBy=saleDate&direction=desc`);
-    if (response && Array.isArray(response.documents)) {
-      return response.documents.map((doc: { id: string, data: any }) => ({
-        id: doc.id,
-        ...doc.data
-      } as SoldHistoryEntry));
+    try {
+        const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ORDER BY id DESC`);
+        const history = rows.map(row => ({
+            id: row.id,
+            ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+        } as SoldHistoryEntry));
+
+        return history.sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
+    } catch (error) {
+        console.error("Error fetching sold history from MySQL:", error);
+        return [];
     }
-    return [];
-  } catch (error) {
-    console.error("Error fetching sold history via API v3:", error);
-    return [];
-  }
 };
 
 export const addSoldHistoryEntry = async (entryData: Omit<SoldHistoryEntry, 'id'>): Promise<SoldHistoryEntry | null> => {
     try {
-        await ensureCollectionExistsV3(COLLECTION_NAME);
-        const payload = { data: entryData };
-        const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-        });
+        const id = uuidv4();
+        const newEntry: SoldHistoryEntry = { id, ...entryData } as SoldHistoryEntry;
 
-        const newEntry = { id: newDoc.id, ...newDoc.data } as SoldHistoryEntry;
+        await query(`INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newEntry)]);
 
         // --- STOCK DEDUCTION LOGIC ---
         const allStockItems = await getStockItems();
@@ -51,40 +46,39 @@ export const addSoldHistoryEntry = async (entryData: Omit<SoldHistoryEntry, 'id'
                 stockChange
             );
         } else {
-            console.warn(`[addSoldHistoryEntry] Product "${newEntry.productName}" not found in stock collection. Stock not deducted.`);
+            console.warn(`[addSoldHistoryEntry] Product "${newEntry.productName}" not found in stock table. Stock not deducted.`);
         }
         // --- END STOCK DEDUCTION LOGIC ---
 
         return newEntry;
     } catch (error) {
-        console.error("Error adding sold history entry via API v3:", error);
+        console.error("Error adding sold history entry to MySQL:", error);
         return null;
     }
 };
 
 export const updateSoldHistoryEntry = async (id: string, updates: Partial<SoldHistoryEntry>): Promise<boolean> => {
     try {
-        const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
-        const finalData = { ...existingDoc.data, ...updates };
-        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ data: finalData })
-        });
+        const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+        if (rows.length === 0) return false;
+
+        const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+        const finalData = { ...existingData, ...updates };
+
+        await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
         return true;
     } catch (error) {
-        console.error(`Error updating sold history entry ${id} via API v3:`, error);
+        console.error(`Error updating sold history entry ${id} in MySQL:`, error);
         return false;
     }
 };
 
 export const deleteSoldHistoryEntry = async (id: string): Promise<boolean> => {
     try {
-        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
-            method: 'DELETE'
-        });
+        await query(`DELETE FROM ${TABLE_NAME} WHERE id = ?`, [id]);
         return true;
     } catch (error) {
-        console.error(`Error deleting sold history entry ${id} via API v3:`, error);
+        console.error(`Error deleting sold history entry ${id} from MySQL:`, error);
         return false;
     }
 };

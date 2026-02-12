@@ -4,17 +4,17 @@
 
 import { revalidatePath } from "next/cache";
 import type { Comment, TrackingLink, User, UserRole } from "@/types";
-import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered, deleteComment as deleteCommentFromOrder } from "@/lib/order-service"; 
-import { DELIVERED_STATUS_ID } from '@/lib/status-service';
+import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered, deleteComment as deleteCommentFromOrder } from "@/lib/order-service";
+import { DELIVERED_STATUS_ID } from '@/lib/status-constants';
 
 // For top-level comments from the main form (typically by client or general update)
 export async function submitCommentAction(
   orderId: string,
   commentData: {
-    userName: string; 
+    userName: string;
     text: string;
     isInternal: boolean;
-    userId?: string; 
+    userId?: string;
     userRole?: UserRole | 'Client';
   }
 ): Promise<TrackingLink | { error: string }> {
@@ -43,13 +43,13 @@ export async function submitReplyAction(
   parentCommentId: string,
   replyText: string,
   isInternal: boolean,
-  actingUser: User 
+  actingUser: User
 ): Promise<TrackingLink | { error: string }> {
   if (!replyText.trim()) {
     return { error: "Reply text cannot be empty." };
   }
   if (!actingUser || !actingUser.id || !actingUser.name || !actingUser.role) {
-    return { error: "Authenticated user information is missing for reply."};
+    return { error: "Authenticated user information is missing for reply." };
   }
 
   try {
@@ -67,7 +67,7 @@ export async function submitReplyAction(
       return { error: "Failed to add reply to comment." };
     }
 
-    revalidatePath(`/track/${orderId}`); 
+    revalidatePath(`/track/${orderId}`);
     return updatedOrder;
   } catch (error) {
     console.error("Error in submitReplyAction (authenticated):", error);
@@ -92,7 +92,7 @@ export async function submitClientReplyAction(
       userName: "Client", // Or use clientName if you add an input for it
       userRole: 'Client',
       text: replyText,
-      isInternal: false, 
+      isInternal: false,
     };
 
     const updatedOrder = await addReplyToComment(orderId, parentCommentId, replyDataForService);
@@ -101,7 +101,7 @@ export async function submitClientReplyAction(
       return { error: "Failed to add client reply to comment." };
     }
 
-    revalidatePath(`/track/${orderId}`); 
+    revalidatePath(`/track/${orderId}`);
     return updatedOrder;
   } catch (error) {
     console.error("Error in submitClientReplyAction:", error);
@@ -115,8 +115,8 @@ export async function toggleOrderCommentReactionAction(
   targetCommentId: string,
   isReply: boolean,
   parentCommentIdIfReply: string | undefined,
-  reactorId: string, 
-  reactionType: 'like' 
+  reactorId: string,
+  reactionType: 'like'
 ): Promise<TrackingLink | { error: string }> {
   if (!reactorId) {
     return { error: "Reactor ID is missing." };
@@ -219,7 +219,7 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
         // Don't block the return of the status, just log the error.
       }
     }
-    
+
     return { delivery_status: responseData.delivery_status };
   } catch (error) {
     console.error('Error calling Packzy API:', error);
