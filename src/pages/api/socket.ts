@@ -18,6 +18,13 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
         const io = new ServerIO(httpServer, {
             path: path,
             addTrailingSlash: false,
+            cors: {
+                origin: "*",
+                methods: ["GET", "POST"],
+                credentials: true
+            },
+            transports: ["polling", "websocket"],
+            allowEIO3: true
         });
 
         io.on("connection", (socket) => {
