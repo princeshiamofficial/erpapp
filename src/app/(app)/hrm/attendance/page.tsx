@@ -20,10 +20,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
@@ -44,7 +44,7 @@ import { Separator } from '@/components/ui/separator';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
-  ssr: false,
+    ssr: false,
 });
 const AttendanceTypeDialog = dynamic(() => import('@/components/hrm/AttendanceTypeDialog').then(mod => mod.AttendanceTypeDialog));
 const AddEditHolidayDialog = dynamic(() => import('@/components/hrm/AddEditHolidayDialog').then(mod => mod.AddEditHolidayDialog));
@@ -55,25 +55,25 @@ const EditAttendanceDialog = dynamic(() => import('@/components/hrm/EditAttendan
 const ITEMS_PER_PAGE = 25;
 
 const getInitials = (name: string) => {
-  if (!name) return '??';
-  const names = name.split(' ');
-  if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
 const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent' | 'Weekend') => {
-  switch (status) {
-    case 'On Time':
-      return 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200';
-    case 'Late':
-      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200';
-    case 'Absent':
-      return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
-    case 'Weekend':
-      return 'bg-blue-50 text-blue-700 border-blue-100';
-    default:
-      return 'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200';
-  }
+    switch (status) {
+        case 'On Time':
+            return 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200';
+        case 'Late':
+            return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200';
+        case 'Absent':
+            return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
+        case 'Weekend':
+            return 'bg-blue-50 text-blue-700 border-blue-100';
+        default:
+            return 'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200';
+    }
 };
 
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -95,26 +95,26 @@ export default function AttendancePage() {
     const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
     const [selectedWeekends, setSelectedWeekends] = useState<string[]>([]);
     const [isAttendanceTypeDialogOpen, setIsAttendanceTypeDialogOpen] = useState(false);
-    
+
     const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
-    const [holidayToEdit, setHolidayToEdit] = useState(null); 
-    const [holidays, setHolidays] = useState([{id: '1', title: 'National Mourning Day', date: '19 Nov 2006'}]); 
+    const [holidayToEdit, setHolidayToEdit] = useState(null);
+    const [holidays, setHolidays] = useState([{ id: '1', title: 'National Mourning Day', date: '19 Nov 2006' }]);
 
     const [isOfficeTimeDialogOpen, setIsOfficeTimeDialogOpen] = useState(false);
     const [officeTimeToEdit, setOfficeTimeToEdit] = useState<OfficeTime | null>(null);
     const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
 
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-    
+
     const [reportDateRange, setReportDateRange] = useState<DateRange | undefined>(() => {
-      const now = new Date();
-      return {
-        from: startOfMonth(now),
-        to: endOfDay(now),
-      };
+        const now = new Date();
+        return {
+            from: startOfMonth(now),
+            to: endOfDay(now),
+        };
     });
     const [reportSearchTerm, setReportSearchTerm] = useState('');
-    
+
     const [selectedUserId, setSelectedUserId] = useState<string>('all');
     const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
 
@@ -131,55 +131,55 @@ export default function AttendancePage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-          const [
-            fetchedEmployees, 
-            fetchedOfficeTimes, 
-            attendanceMonth1, 
-            attendanceMonth2, 
-            attendanceMonth3, 
-            fetchedUsers, 
-            fetchedWeekendSettings,
-            fetchedRoles
-          ] = await Promise.all([
-            getEmployees(),
-            getOfficeTimes(),
-            getAttendanceForMonth(new Date()), 
-            getAttendanceForMonth(subDays(new Date(), 30)),
-            getAttendanceForMonth(subDays(new Date(), 60)),
-            getUsers(),
-            getWeekendSettings(),
-            getRoles()
-          ]);
+            const [
+                fetchedEmployees,
+                fetchedOfficeTimes,
+                attendanceMonth1,
+                attendanceMonth2,
+                attendanceMonth3,
+                fetchedUsers,
+                fetchedWeekendSettings,
+                fetchedRoles
+            ] = await Promise.all([
+                getEmployees(),
+                getOfficeTimes(),
+                getAttendanceForMonth(new Date()),
+                getAttendanceForMonth(subDays(new Date(), 30)),
+                getAttendanceForMonth(subDays(new Date(), 60)),
+                getUsers(),
+                getWeekendSettings(),
+                getRoles()
+            ]);
 
-          const allAttendance = [
-            ...(attendanceMonth1 || []), 
-            ...(attendanceMonth2 || []), 
-            ...(attendanceMonth3 || [])
-          ];
-          const uniqueAttendance = Array.from(new Map(allAttendance.map(item => [item.id, item])).values());
-          
-          setEmployees(fetchedEmployees);
-          setOfficeTimes(fetchedOfficeTimes);
-          setAttendanceData(uniqueAttendance);
-          setAllUsers(fetchedUsers);
-          setSelectedWeekends(fetchedWeekendSettings.days);
-          setAvailableRoles(fetchedRoles);
+            const allAttendance = [
+                ...(attendanceMonth1 || []),
+                ...(attendanceMonth2 || []),
+                ...(attendanceMonth3 || [])
+            ];
+            const uniqueAttendance = Array.from(new Map(allAttendance.map(item => [item.id, item])).values());
+
+            setEmployees(fetchedEmployees);
+            setOfficeTimes(fetchedOfficeTimes);
+            setAttendanceData(uniqueAttendance);
+            setAllUsers(fetchedUsers);
+            setSelectedWeekends(fetchedWeekendSettings.days);
+            setAvailableRoles(fetchedRoles);
         } catch (error) {
-          console.error("Failed to fetch page data:", error);
-          toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
+            console.error("Failed to fetch page data:", error);
+            toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
         } finally {
-          setIsLoading(false);
+            setIsLoading(false);
         }
     }, [toast]);
 
     useEffect(() => {
         if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
-          fetchData();
+            fetchData();
         } else if (currentUser) {
-          router.replace('/dashboard');
+            router.replace('/dashboard');
         }
     }, [currentUser, router, fetchData]);
-    
+
     const filteredEmployees = useMemo(() => {
         let results = employees.filter(employee => {
             if (employee.status !== 'Active') return false;
@@ -191,23 +191,23 @@ export default function AttendancePage() {
                 return false;
             }
         });
-    
+
         if (searchTerm) {
-          const lowercasedFilter = searchTerm.toLowerCase();
-          results = results.filter(employee =>
-            employee.name.toLowerCase().includes(lowercasedFilter) ||
-            employee.employeeId.toLowerCase().includes(lowercasedFilter) ||
-            employee.designation.toLowerCase().includes(lowercasedFilter)
-          );
+            const lowercasedFilter = searchTerm.toLowerCase();
+            results = results.filter(employee =>
+                employee.name.toLowerCase().includes(lowercasedFilter) ||
+                employee.employeeId.toLowerCase().includes(lowercasedFilter) ||
+                employee.designation.toLowerCase().includes(lowercasedFilter)
+            );
         }
         return results;
     }, [employees, searchTerm]);
-    
+
     const individualAttendanceHistoryData = useMemo(() => {
         if (selectedUserId === 'all') {
-             return attendanceData
+            return attendanceData
                 .filter(entry => isSameDay(parseISO(entry.date), parseISO(attendanceDateFilter)))
-                .map(entry => ({...entry, date: parseISO(entry.date)}));
+                .map(entry => ({ ...entry, date: parseISO(entry.date) }));
         }
 
         const targetDate = new Date(parseInt(attendanceYear), parseInt(attendanceMonth));
@@ -215,44 +215,46 @@ export default function AttendancePage() {
         const dailyData: (AttendanceRecord | { date: Date, status: 'Absent' | 'Weekend', employeeId: string, employeeName: string, id: string, checkInTime: string })[] = [];
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
+        const selectedUserName = allUsers.find(u => u.id === selectedUserId)?.name;
         for (let i = 1; i <= daysInMonth; i++) {
             const currentDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
             if (isAfter(currentDate, new Date())) {
                 break;
             }
-            
-            const attendanceRecord = attendanceData.find(entry => 
+
+            const attendanceRecord = attendanceData.find(entry =>
                 entry.employeeId === selectedUserId &&
+                entry.employeeName === selectedUserName &&
                 isSameDay(parseISO(entry.date), currentDate)
             );
-            
+
             if (attendanceRecord) {
                 dailyData.push({ ...attendanceRecord, date: parseISO(attendanceRecord.date) });
             } else {
                 const dayOfWeek = getDay(currentDate);
                 if (weekendDayIndexes.includes(dayOfWeek)) {
-                     dailyData.push({
+                    dailyData.push({
                         id: `${selectedUserId}_${format(currentDate, 'yyyy-MM-dd')}`,
                         date: currentDate,
                         status: 'Weekend',
                         employeeId: selectedUserId,
-                        employeeName: allUsers.find(u => u.id === selectedUserId)?.name || 'Unknown',
+                        employeeName: selectedUserName || 'Unknown',
                         checkInTime: '',
                     });
                 } else {
-                     dailyData.push({
+                    dailyData.push({
                         id: `${selectedUserId}_${format(currentDate, 'yyyy-MM-dd')}`,
                         date: currentDate,
                         status: 'Absent',
                         employeeId: selectedUserId,
-                        employeeName: allUsers.find(u => u.id === selectedUserId)?.name || 'Unknown',
+                        employeeName: selectedUserName || 'Unknown',
                         checkInTime: '',
                     });
                 }
             }
         }
-        
-        return dailyData.sort((a,b) => b.date.getTime() - a.date.getTime());
+
+        return dailyData.sort((a, b) => b.date.getTime() - a.date.getTime());
     }, [attendanceData, attendanceMonth, attendanceYear, selectedUserId, selectedWeekends, allUsers, attendanceDateFilter]);
 
 
@@ -269,24 +271,24 @@ export default function AttendancePage() {
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
         let totalWorkingDays = 0;
-        
+
         for (let i = 1; i <= daysInMonth; i++) {
             const currentDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
             if (isAfter(currentDate, new Date())) {
-                continue; 
+                continue;
             }
             const dayOfWeek = getDay(currentDate);
-            
+
             if (!weekendDayIndexes.includes(dayOfWeek)) {
                 totalWorkingDays++;
             }
         }
-        
+
         const presentDays = individualAttendanceHistoryData.filter(
             (entry) => entry.status === 'On Time' || entry.status === 'Late'
         ).length;
-        
-        const totalLeave = selectedEmployee.leaveHistory?.filter(leave => 
+
+        const totalLeave = selectedEmployee.leaveHistory?.filter(leave =>
             isSameMonth(parseISO(leave.date), targetDate)
         ).reduce((sum, leave) => sum + leave.days, 0) || 0;
 
@@ -327,11 +329,11 @@ export default function AttendancePage() {
         const endIndex = startIndex + ITEMS_PER_PAGE;
         return filteredEmployees.slice(startIndex, endIndex);
     }, [filteredEmployees, currentPage]);
-    
+
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, activeTab]);
-    
+
     const handleWeekendChange = (day: string, checked: boolean | "indeterminate") => {
         if (checked) {
             setSelectedWeekends(prev => [...prev, day]);
@@ -339,7 +341,7 @@ export default function AttendancePage() {
             setSelectedWeekends(prev => prev.filter(d => d !== day));
         }
     };
-    
+
     const handleSaveWeekends = async () => {
         const result = await saveWeekendSettingsAction(selectedWeekends);
         if (result.success) {
@@ -348,7 +350,7 @@ export default function AttendancePage() {
                 description: "Weekend days have been updated.",
             });
         } else {
-             toast({
+            toast({
                 title: "Error",
                 description: result.error || "Failed to save weekend settings.",
                 variant: "destructive",
@@ -361,11 +363,11 @@ export default function AttendancePage() {
             title: "Success",
             description: "Holiday list has been updated."
         });
-        fetchData(); 
+        fetchData();
         setIsHolidayDialogOpen(false);
         setHolidayToEdit(null);
     }
-    
+
     const openAddHolidayDialog = () => {
         setHolidayToEdit(null);
         setIsHolidayDialogOpen(true);
@@ -377,14 +379,14 @@ export default function AttendancePage() {
     };
 
     const handleOfficeTimeSaved = () => {
-      fetchData(); 
-      setIsOfficeTimeDialogOpen(false);
-      setOfficeTimeToEdit(null);
+        fetchData();
+        setIsOfficeTimeDialogOpen(false);
+        setOfficeTimeToEdit(null);
     };
 
     const openAddOfficeTimeDialog = () => {
-      setOfficeTimeToEdit(null);
-      setIsOfficeTimeDialogOpen(true);
+        setOfficeTimeToEdit(null);
+        setIsOfficeTimeDialogOpen(true);
     };
 
     const openEditOfficeTimeDialog = (officeTime: any) => {
@@ -394,7 +396,7 @@ export default function AttendancePage() {
 
     const handleDeleteOfficeTime = async (officeTime: OfficeTime) => {
         if (!confirm(`Are you sure you want to delete the office time "${officeTime.name}"?`)) return;
-        
+
         const success = await deleteOfficeTime(officeTime.id);
         if (success) {
             toast({ title: "Success", description: "Office time has been deleted." });
@@ -408,25 +410,27 @@ export default function AttendancePage() {
         if (!reportDateRange?.from) return [];
         const startDate = startOfDay(reportDateRange.from);
         const endDate = endOfDay(reportDateRange.to || reportDateRange.from);
-        
+
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
-        
+
         const activeEmployees = employees.filter(e => e.status === 'Active');
-        
+
         let totalFridaysInRange = 0;
         const numDaysForFridayCount = differenceInDays(endDate, startDate) + 1;
         for (let i = 0; i < numDaysForFridayCount; i++) {
             const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
-            if (currentDate.getDay() === 5) { 
+            if (currentDate.getDay() === 5) {
                 totalFridaysInRange++;
             }
         }
 
         const baseReport = activeEmployees.map(employee => {
-            const userAttendanceInRange = attendanceData.filter(att => 
-                att.employeeId === employee.userId && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
+            const userAttendanceInRange = attendanceData.filter(att =>
+                att.employeeId === employee.userId &&
+                att.employeeName === employee.name &&
+                isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
             );
-            
+
             let totalWorkingDays = 0;
             const numDays = differenceInDays(endDate, startDate) + 1;
             for (let i = 0; i < numDays; i++) {
@@ -440,9 +444,9 @@ export default function AttendancePage() {
             const totalPresentDays = presentDays + totalFridaysInRange;
             const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
-            
+
             const absentDays = totalWorkingDays - presentDays - totalFridaysInRange;
-            
+
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
 
             return {
@@ -451,9 +455,9 @@ export default function AttendancePage() {
                 employeeName: employee.name,
                 designation: employee.designation,
                 presentDays,
-                totalFridays: totalFridaysInRange, 
+                totalFridays: totalFridaysInRange,
                 totalPresentDays,
-                totalAbsentDays: Math.max(0, absentDays), 
+                totalAbsentDays: Math.max(0, absentDays),
                 ontimeCheckInDays,
                 lateCheckInDays,
                 earlyCheckoutDays
@@ -465,7 +469,7 @@ export default function AttendancePage() {
         }
 
         const lowercasedSearch = reportSearchTerm.toLowerCase();
-        return baseReport.filter(item => 
+        return baseReport.filter(item =>
             item && (
                 item.employeeName.toLowerCase().includes(lowercasedSearch) ||
                 item.designation.toLowerCase().includes(lowercasedSearch)
@@ -473,16 +477,16 @@ export default function AttendancePage() {
         );
 
     }, [allUsers, employees, attendanceData, selectedWeekends, reportDateRange, reportSearchTerm]);
-    
+
     const handleExportIndividualAttendance = () => {
         if (!individualAttendanceHistoryData || individualAttendanceHistoryData.length === 0) {
-          toast({ title: "No Data to Export", description: "There is no attendance data for the selected employee and period." });
-          return;
+            toast({ title: "No Data to Export", description: "There is no attendance data for the selected employee and period." });
+            return;
         }
-        
+
         const employeeName = selectedUserId !== 'all' ? allUsers.find(u => u.id === selectedUserId)?.name : 'All_Employees';
-        const dateRange = selectedUserId === 'all' 
-            ? attendanceDateFilter 
+        const dateRange = selectedUserId === 'all'
+            ? attendanceDateFilter
             : `${format(new Date(parseInt(attendanceYear), parseInt(attendanceMonth)), 'MMMM_yyyy')}`;
 
         const filename = `Attendance_History_${employeeName}_${dateRange}.csv`;
@@ -509,19 +513,19 @@ export default function AttendancePage() {
         link.click();
         document.body.removeChild(link);
     };
-    
+
     const availableYears = useMemo(() => {
-      const currentYear = new Date().getFullYear();
-      const years = [];
-      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
-          years.push(i);
-      }
-      return years.reverse();
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+            years.push(i);
+        }
+        return years.reverse();
     }, []);
 
     const monthsForFilter = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
-      value: i.toString(),
-      label: format(new Date(0, i), 'MMMM'),
+        value: i.toString(),
+        label: format(new Date(0, i), 'MMMM'),
     })), []);
 
 
@@ -529,31 +533,31 @@ export default function AttendancePage() {
 
     const renderPagination = () => {
         const pageNumbers = [];
-        const maxPagesToShow = 5; 
+        const maxPagesToShow = 5;
         if (totalPages <= maxPagesToShow) {
-          for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+            for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
         } else {
-          let startPage = Math.max(1, currentPage - 2);
-          let endPage = Math.min(totalPages, currentPage + 2);
-          if (currentPage < 3) endPage = maxPagesToShow;
-          else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-          if (startPage > 1) {
-            pageNumbers.push(1);
-            if (startPage > 2) pageNumbers.push('...');
-          }
-          for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
-          if (endPage < totalPages) {
-            if (endPage < totalPages - 1) pageNumbers.push('...');
-            pageNumbers.push(totalPages);
-          }
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+            if (currentPage < 3) endPage = maxPagesToShow;
+            else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+            if (startPage > 1) {
+                pageNumbers.push(1);
+                if (startPage > 2) pageNumbers.push('...');
+            }
+            for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) pageNumbers.push('...');
+                pageNumbers.push(totalPages);
+            }
         }
         return pageNumbers.map((page, index) => (
             <PaginationItem key={index}>
-            {page === '...' ? <PaginationEllipsis />
-            : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
-                {page}
-              </PaginationLink>
-            }
+                {page === '...' ? <PaginationEllipsis />
+                    : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+                        {page}
+                    </PaginationLink>
+                }
             </PaginationItem>
         ));
     };
@@ -571,78 +575,78 @@ export default function AttendancePage() {
         <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
             <CardHeader className="p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardTitle className="text-xl font-bold text-gray-800">Attendance History</CardTitle>
-                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                    <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[200px] justify-between h-10 rounded-full">
-                                {selectedUserId === 'all' ? 'All Employees' : nonBannedUsers.find(u => u.id === selectedUserId)?.name || 'Select Employee'}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput placeholder="Search employee..." />
-                                <CommandList>
-                                    <CommandEmpty>No user found.</CommandEmpty>
-                                    <CommandGroup>
-                                        <CommandItem onSelect={() => { setSelectedUserId('all'); setIsUserPopoverOpen(false); }}>
-                                            <Check className={cn("mr-2 h-4 w-4", selectedUserId === 'all' ? "opacity-100" : "opacity-0")} />
-                                            All Employees
-                                        </CommandItem>
-                                        {nonBannedUsers.map((user) => (
-                                            <CommandItem key={user.id} onSelect={() => { setSelectedUserId(user.id); setIsUserPopoverOpen(false); }}>
-                                                <Check className={cn("mr-2 h-4 w-4", selectedUserId === user.id ? "opacity-100" : "opacity-0")} />
-                                                {user.name}
+                    <CardTitle className="text-xl font-bold text-gray-800">Attendance History</CardTitle>
+                    <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                        <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[200px] justify-between h-10 rounded-full">
+                                    {selectedUserId === 'all' ? 'All Employees' : nonBannedUsers.find(u => u.id === selectedUserId)?.name || 'Select Employee'}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Search employee..." />
+                                    <CommandList>
+                                        <CommandEmpty>No user found.</CommandEmpty>
+                                        <CommandGroup>
+                                            <CommandItem onSelect={() => { setSelectedUserId('all'); setIsUserPopoverOpen(false); }}>
+                                                <Check className={cn("mr-2 h-4 w-4", selectedUserId === 'all' ? "opacity-100" : "opacity-0")} />
+                                                All Employees
                                             </CommandItem>
+                                            {nonBannedUsers.map((user) => (
+                                                <CommandItem key={user.id} onSelect={() => { setSelectedUserId(user.id); setIsUserPopoverOpen(false); }}>
+                                                    <Check className={cn("mr-2 h-4 w-4", selectedUserId === user.id ? "opacity-100" : "opacity-0")} />
+                                                    {user.name}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        {selectedUserId === 'all' ? (
+                            <div className="relative flex-grow sm:flex-grow-0">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder="Filter by date..."
+                                    className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                                    type="date"
+                                    value={attendanceDateFilter}
+                                    onChange={(e) => setAttendanceDateFilter(e.target.value)}
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <Select value={attendanceMonth} onValueChange={setAttendanceMonth}>
+                                    <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
+                                        <SelectValue placeholder="Select Month" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {monthsForFilter.map(month => (
+                                            <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
                                         ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                    {selectedUserId === 'all' ? (
-                        <div className="relative flex-grow sm:flex-grow-0">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Filter by date..."
-                                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                                type="date"
-                                value={attendanceDateFilter}
-                                onChange={(e) => setAttendanceDateFilter(e.target.value)}
-                            />
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2">
-                            <Select value={attendanceMonth} onValueChange={setAttendanceMonth}>
-                                <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
-                                    <SelectValue placeholder="Select Month" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {monthsForFilter.map(month => (
-                                        <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select value={attendanceYear} onValueChange={setAttendanceYear}>
-                                <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
-                                    <SelectValue placeholder="Select Year" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableYears.map(year => (
-                                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-                    {selectedUserId !== 'all' && (
-                        <Button variant="outline" onClick={handleExportIndividualAttendance} className="h-10 rounded-full border-gray-200 bg-white">
-                            <Download className="mr-2 h-4 w-4"/>
-                            Export CSV
-                        </Button>
-                    )}
-                </div>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={attendanceYear} onValueChange={setAttendanceYear}>
+                                    <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+                                        <SelectValue placeholder="Select Year" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableYears.map(year => (
+                                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        {selectedUserId !== 'all' && (
+                            <Button variant="outline" onClick={handleExportIndividualAttendance} className="h-10 rounded-full border-gray-200 bg-white">
+                                <Download className="mr-2 h-4 w-4" />
+                                Export CSV
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="p-6 pt-0">
@@ -709,545 +713,548 @@ export default function AttendancePage() {
                     </>
                 )}
                 <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead>SL</TableHead>
-                        <TableHead>Date</TableHead>
-                        {selectedUserId !== 'all' && <TableHead>Day</TableHead>}
-                        <TableHead>Employee ID</TableHead>
-                        <TableHead>Employee</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>In Time</TableHead>
-                        <TableHead>Out Time</TableHead>
-                        <TableHead>Hours Worked</TableHead>
-                        <TableHead>Location</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                         {isLoading ? (
-                            [...Array(3)].map((_, index) => (
-                                <TableRow key={index}>
-                                    <TableCell colSpan={10}><Skeleton className="h-10 w-full" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : individualAttendanceHistoryData.length > 0 ? (
-                            individualAttendanceHistoryData.map((entry, index) => {
-                                const user = allUsers.find(u => u.id === entry.employeeId);
-                                const employee = employees.find(e => e.userId === entry.employeeId);
-                                const entryDate = entry.date;
-                                const isFriday = getDay(entryDate) === 5;
-                                return (
-                                <TableRow 
-                                    key={entry.id || index} 
-                                    className={cn(
-                                        "transition-colors",
-                                        isAdmin && "cursor-pointer hover:bg-muted/50",
-                                        isFriday && "bg-red-50 dark:bg-red-900/20"
-                                    )}
-                                    onDoubleClick={() => {
-                                        if (isAdmin) {
-                                            setAttendanceToEdit(entry);
-                                            setIsEditAttendanceDialogOpen(true);
-                                        }
-                                    }}
-                                >
-                                    <TableCell>{individualAttendanceHistoryData.length - index}</TableCell>
-                                    <TableCell>{format(entryDate, 'dd-MMM-yyyy')}</TableCell>
-                                    {selectedUserId !== 'all' && <TableCell>{format(entryDate, 'EEEE')}</TableCell>}
-                                    <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={user?.avatarUrl || undefined} alt={entry.employeeName} />
-                                                <AvatarFallback>{getInitials(entry.employeeName)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">{entry.employeeName}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge className={cn(getStatusBadgeClass(entry.status), 'border')}>
-                                            {entry.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{entry.checkInTime ? format(new Date(entry.checkInTime), 'h:mm a') : '-'}</TableCell>
-                                    <TableCell>{entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : '-'}</TableCell>
-                                    <TableCell>{entry.hoursWorked || '-'}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                disabled={!entry.checkInLocation?.lat || !entry.checkInLocation?.lng}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (entry.checkInLocation?.lat && entry.checkInLocation?.lng) {
-                                                        setViewingLocation({ 
-                                                            lat: entry.checkInLocation.lat, 
-                                                            lng: entry.checkInLocation.lng,
-                                                            employeeName: entry.employeeName,
-                                                            employeeAvatar: user?.avatarUrl || undefined
-                                                        });
-                                                    }
-                                                }}
-                                            >
-                                                <MapPin className="mr-2 h-4 w-4" />
-                                                In
-                                            </Button>
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                disabled={!entry.checkOutLocation?.lat || !entry.checkOutLocation?.lng}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (entry.checkOutLocation?.lat && entry.checkOutLocation?.lng) {
-                                                        setViewingLocation({ 
-                                                            lat: entry.checkOutLocation.lat, 
-                                                            lng: entry.checkOutLocation.lng,
-                                                            employeeName: entry.employeeName,
-                                                            employeeAvatar: user?.avatarUrl || undefined
-                                                        });
-                                                    }
-                                                }}
-                                            >
-                                                <MapPin className="mr-2 h-4 w-4" />
-                                                Out
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )})
-                        ) : (
-                             <TableRow>
-                                <TableCell colSpan={10} className="text-center h-48 text-gray-500">
-                                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                                    No attendance data recorded for the selected criteria.
-                                </TableCell>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>SL</TableHead>
+                                <TableHead>Date</TableHead>
+                                {selectedUserId !== 'all' && <TableHead>Day</TableHead>}
+                                <TableHead>Employee ID</TableHead>
+                                <TableHead>Employee</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>In Time</TableHead>
+                                <TableHead>Out Time</TableHead>
+                                <TableHead>Hours Worked</TableHead>
+                                <TableHead>Location</TableHead>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                [...Array(3)].map((_, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell colSpan={10}><Skeleton className="h-10 w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : individualAttendanceHistoryData.length > 0 ? (
+                                individualAttendanceHistoryData.map((entry, index) => {
+                                    const user = allUsers.find(u => u.id === entry.employeeId);
+                                    const employee = employees.find(e => e.userId === entry.employeeId);
+                                    const entryDate = entry.date;
+                                    const isFriday = getDay(entryDate) === 5;
+                                    return (
+                                        <TableRow
+                                            key={entry.id || index}
+                                            className={cn(
+                                                "transition-colors",
+                                                isAdmin && "cursor-pointer hover:bg-muted/50",
+                                                isFriday && "bg-red-50 dark:bg-red-900/20"
+                                            )}
+                                            onDoubleClick={() => {
+                                                if (isAdmin) {
+                                                    setAttendanceToEdit(entry);
+                                                    setIsEditAttendanceDialogOpen(true);
+                                                }
+                                            }}
+                                        >
+                                            <TableCell>{individualAttendanceHistoryData.length - index}</TableCell>
+                                            <TableCell>{format(entryDate, 'dd-MMM-yyyy')}</TableCell>
+                                            {selectedUserId !== 'all' && <TableCell>{format(entryDate, 'EEEE')}</TableCell>}
+                                            <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={user?.avatarUrl || undefined} alt={entry.employeeName} />
+                                                        <AvatarFallback>{getInitials(entry.employeeName)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="font-medium">{entry.employeeName}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={cn(getStatusBadgeClass(entry.status), 'border')}>
+                                                    {entry.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{entry.checkInTime ? format(new Date(entry.checkInTime), 'h:mm a') : '-'}</TableCell>
+                                            <TableCell>{entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : '-'}</TableCell>
+                                            <TableCell>{entry.hoursWorked || '-'}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={!entry.checkInLocation?.lat || !entry.checkInLocation?.lng}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (entry.checkInLocation?.lat && entry.checkInLocation?.lng) {
+                                                                setViewingLocation({
+                                                                    lat: entry.checkInLocation.lat,
+                                                                    lng: entry.checkInLocation.lng,
+                                                                    employeeName: entry.employeeName,
+                                                                    employeeAvatar: user?.avatarUrl || undefined
+                                                                });
+                                                            }
+                                                        }}
+                                                    >
+                                                        <MapPin className="mr-2 h-4 w-4" />
+                                                        In
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={!entry.checkOutLocation?.lat || !entry.checkOutLocation?.lng}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (entry.checkOutLocation?.lat && entry.checkOutLocation?.lng) {
+                                                                setViewingLocation({
+                                                                    lat: entry.checkOutLocation.lat,
+                                                                    lng: entry.checkOutLocation.lng,
+                                                                    employeeName: entry.employeeName,
+                                                                    employeeAvatar: user?.avatarUrl || undefined
+                                                                });
+                                                            }
+                                                        }}
+                                                    >
+                                                        <MapPin className="mr-2 h-4 w-4" />
+                                                        Out
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={10} className="text-center h-48 text-gray-500">
+                                        <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                                        No attendance data recorded for the selected criteria.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </div>
             </CardContent>
         </Card>
     );
 
     const leaveManagementContent = (
-      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="text-xl font-bold text-gray-800">Leave Management</CardTitle>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-grow sm:flex-grow-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search employee..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                />
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>SL</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Name of Employee</TableHead>
-                  <TableHead>Designation</TableHead>
-                  <TableHead>Joining Date</TableHead>
-                  <TableHead>Total Accrued</TableHead>
-                  <TableHead>Leave Taken</TableHead>
-                  <TableHead>Available</TableHead>
-                  <TableHead className="text-center">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(5)].map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
-                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : paginatedEmployees.length > 0 ? (
-                   paginatedEmployees.map((employee, index) => {
-                     const user = allUsers.find(u => u.id === (employee as Employee).userId);
-                     const now = new Date();
-                     const joiningDate = new Date(employee.joiningDate);
-                     
-                     let totalLeaveAccrued = 0;
-                     if (isAfter(now, joiningDate)) {
-                        const joiningMonth = getMonth(joiningDate);
-                        const currentMonth = getMonth(now);
-                        const joiningYear = getYear(joiningDate);
-                        const currentYear = getYear(now);
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <CardTitle className="text-xl font-bold text-gray-800">Leave Management</CardTitle>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="relative flex-grow sm:flex-grow-0">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                                placeholder="Search employee..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>SL</TableHead>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Name of Employee</TableHead>
+                                <TableHead>Designation</TableHead>
+                                <TableHead>Joining Date</TableHead>
+                                <TableHead>Total Accrued</TableHead>
+                                <TableHead>Leave Taken</TableHead>
+                                <TableHead>Available</TableHead>
+                                <TableHead className="text-center">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                [...Array(5)].map((_, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24" /></div></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                        <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : paginatedEmployees.length > 0 ? (
+                                paginatedEmployees.map((employee, index) => {
+                                    const user = allUsers.find(u => u.id === (employee as Employee).userId);
+                                    const now = new Date();
+                                    const joiningDate = new Date(employee.joiningDate);
 
-                        if (currentYear > joiningYear) {
-                            totalLeaveAccrued += (12 - (joiningMonth + 1)); 
-                            totalLeaveAccrued += (currentYear - joiningYear - 1) * 12; 
-                            totalLeaveAccrued += currentMonth + 1; 
-                        } else { 
-                            totalLeaveAccrued += currentMonth - (joiningMonth + 1);
-                        }
-                    }
-                     
-                     const leaveTaken = (employee.leaveHistory || []).reduce((sum, leave) => sum + leave.days, 0);
-                     const availableLeave = totalLeaveAccrued - leaveTaken;
-                     
-                     return (
-                      <TableRow key={employee.id}>
-                          <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                          <TableCell>{(employee as Employee).nationalId || 'N/A'}</TableCell>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
-                                    <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
-                                </Avatar>
-                                <span>{employee.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{(employee as Employee).designation}</TableCell>
-                          <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
-                          <TableCell className="font-semibold text-blue-600">{totalLeaveAccrued}</TableCell>
-                          <TableCell className="font-semibold text-red-600">{leaveTaken}</TableCell>
-                          <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
-                          <TableCell className="text-center">
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee as Employee)}>Manage</Button>
-                          </TableCell>
-                      </TableRow>
-                   )})
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center h-48 text-gray-500">
-                      <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                       No employees to manage leave for.
-                    </TableCell>
-                  </TableRow>
+                                    let totalLeaveAccrued = 0;
+                                    if (isAfter(now, joiningDate)) {
+                                        const joiningMonth = getMonth(joiningDate);
+                                        const currentMonth = getMonth(now);
+                                        const joiningYear = getYear(joiningDate);
+                                        const currentYear = getYear(now);
+
+                                        if (currentYear > joiningYear) {
+                                            totalLeaveAccrued += (12 - (joiningMonth + 1));
+                                            totalLeaveAccrued += (currentYear - joiningYear - 1) * 12;
+                                            totalLeaveAccrued += currentMonth + 1;
+                                        } else {
+                                            totalLeaveAccrued += currentMonth - (joiningMonth + 1);
+                                        }
+                                    }
+
+                                    const leaveTaken = (employee.leaveHistory || []).reduce((sum, leave) => sum + leave.days, 0);
+                                    const availableLeave = totalLeaveAccrued - leaveTaken;
+
+                                    return (
+                                        <TableRow key={employee.id}>
+                                            <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
+                                            <TableCell>{(employee as Employee).nationalId || 'N/A'}</TableCell>
+                                            <TableCell className="font-medium">
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
+                                                        <AvatarFallback>{getInitials(employee.name)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span>{employee.name}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{(employee as Employee).designation}</TableCell>
+                                            <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
+                                            <TableCell className="font-semibold text-blue-600">{totalLeaveAccrued}</TableCell>
+                                            <TableCell className="font-semibold text-red-600">{leaveTaken}</TableCell>
+                                            <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
+                                            <TableCell className="text-center">
+                                                <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee as Employee)}>Manage</Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center h-48 text-gray-500">
+                                        <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                                        No employees to manage leave for.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="mt-6 flex justify-center">
+                        <Pagination><PaginationContent>
+                            <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+                            {renderPagination()}
+                            <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+                        </PaginationContent></Pagination>
+                    </div>
                 )}
-              </TableBody>
-            </Table>
-        </div>
-        {totalPages > 1 && (
-            <div className="mt-6 flex justify-center">
-                 <Pagination><PaginationContent>
-                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                    {renderPagination()}
-                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                </PaginationContent></Pagination>
-            </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+            </CardContent>
+        </Card>
+    );
 
     const settingsContent = (
-      <div className="space-y-6">
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-          <CardHeader className="p-6 border-b">
-              <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Weekend</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead>Days</TableHead>
-                          {WEEK_DAYS.map(day => <TableHead key={day}>{day}</TableHead>)}
-                          <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      <TableRow>
-                          <TableCell className="font-medium">Weekend</TableCell>
-                          {WEEK_DAYS.map(day => (
-                              <TableCell key={day}>
-                                  <Checkbox 
-                                      checked={selectedWeekends.includes(day)}
-                                      onCheckedChange={(checked) => handleWeekendChange(day, checked)}
-                                  />
-                              </TableCell>
-                          ))}
-                          <TableCell className="text-right">
-                              <Button size="sm" onClick={handleSaveWeekends}>Save</Button>
-                          </TableCell>
-                      </TableRow>
-                  </TableBody>
-              </Table>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                <CardHeader className="p-6 border-b">
+                    <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Weekend</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Days</TableHead>
+                                {WEEK_DAYS.map(day => <TableHead key={day}>{day}</TableHead>)}
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow>
+                                <TableCell className="font-medium">Weekend</TableCell>
+                                {WEEK_DAYS.map(day => (
+                                    <TableCell key={day}>
+                                        <Checkbox
+                                            checked={selectedWeekends.includes(day)}
+                                            onCheckedChange={(checked) => handleWeekendChange(day, checked)}
+                                        />
+                                    </TableCell>
+                                ))}
+                                <TableCell className="text-right">
+                                    <Button size="sm" onClick={handleSaveWeekends}>Save</Button>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
 
+            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                <CardHeader className="p-6 border-b">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button className="bg-black text-white hover:bg-gray-800" onClick={() => setIsAttendanceTypeDialogOpen(true)} disabled>
+                                Attendance Type
+                            </Button>
+                            <Button>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[50px]">#</TableHead>
+                                <TableHead>IP</TableHead>
+                                <TableHead>Wifi Name</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center h-24 text-gray-500">
+                                    No IP/Wifi details is available
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                <CardHeader className="p-6 border-b">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Holidays</CardTitle>
+                        </div>
+                        <Button onClick={openAddHolidayDialog}><PlusCircle className="mr-2 h-4 w-4" /> Add Holiday</Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[50px]">#</TableHead>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Holiday Date</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {holidays.length > 0 ? holidays.map((holiday, index) => (
+                                <TableRow key={holiday.id}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>{holiday.title}</TableCell>
+                                    <TableCell>{holiday.date}</TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => openEditHolidayDialog(holiday)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center h-24 text-gray-500">
+                                        No holidays defined yet.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+        </div>
+    );
+
+    const officeTimeContent = (
         <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6 border-b">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button className="bg-black text-white hover:bg-gray-800" onClick={() => setIsAttendanceTypeDialogOpen(true)} disabled>
-                          Attendance Type
-                        </Button>
-                        <Button>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi
-                        </Button>
-                    </div>
+            <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <div>
+                    <CardTitle className="text-xl font-bold text-gray-800">Office Time Settings</CardTitle>
+                    <CardDescription>Manage office hours, shifts, and grace periods.</CardDescription>
                 </div>
+                <Button onClick={openAddOfficeTimeDialog}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Time
+                </Button>
             </CardHeader>
-            <CardContent className="p-6">
-                 <Table>
+            <CardContent className="p-6 pt-0">
+                <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[50px]">#</TableHead>
-                            <TableHead>IP</TableHead>
-                            <TableHead>Wifi Name</TableHead>
+                            <TableHead>Office Hour</TableHead>
+                            <TableHead>Start Time</TableHead>
+                            <TableHead>End Time</TableHead>
+                            <TableHead>Grace Time</TableHead>
+                            <TableHead>Shift</TableHead>
+                            <TableHead>Applicable Roles</TableHead>
                             <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow>
-                            <TableCell colSpan={4} className="text-center h-24 text-gray-500">
-                                No IP/Wifi details is available
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                 </Table>
-            </CardContent>
-        </Card>
-        
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6 border-b">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Holidays</CardTitle>
-                    </div>
-                    <Button onClick={openAddHolidayDialog}><PlusCircle className="mr-2 h-4 w-4" /> Add Holiday</Button>
-                </div>
-            </CardHeader>
-            <CardContent className="p-6">
-                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px]">#</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Holiday Date</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {holidays.length > 0 ? holidays.map((holiday, index) => (
-                           <TableRow key={holiday.id}>
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell>{holiday.title}</TableCell>
-                            <TableCell>{holiday.date}</TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onSelect={() => openEditHolidayDialog(holiday)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                        </TableRow>
-                        )) : (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center h-24 text-gray-500">
-                                No holidays defined yet.
-                            </TableCell>
-                          </TableRow>
+                        {isLoading ? (
+                            <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                        ) : officeTimes.length > 0 ? (
+                            officeTimes.map(time => (
+                                <TableRow key={time.id}>
+                                    <TableCell>{time.name}</TableCell>
+                                    <TableCell>{time.startTime}</TableCell>
+                                    <TableCell>{time.endTime}</TableCell>
+                                    <TableCell>{time.graceTime} minutes</TableCell>
+                                    <TableCell>{time.shift}</TableCell>
+                                    <TableCell>
+                                        {time.applicableRoles === 'all' ? (
+                                            <Badge variant="secondary">All Roles</Badge>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-1">
+                                                {(time.applicableRoles || []).map(role => (
+                                                    <Badge key={role} variant="outline">{role.replace(/_/g, ' ')}</Badge>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => openEditOfficeTimeDialog(time)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteOfficeTime(time)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow><TableCell colSpan={7} className="text-center h-24 text-gray-500">No office time configurations found.</TableCell></TableRow>
                         )}
                     </TableBody>
-                 </Table>
+                </Table>
             </CardContent>
         </Card>
-
-      </div>
-    );
-    
-    const officeTimeContent = (
-      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <div>
-              <CardTitle className="text-xl font-bold text-gray-800">Office Time Settings</CardTitle>
-              <CardDescription>Manage office hours, shifts, and grace periods.</CardDescription>
-            </div>
-            <Button onClick={openAddOfficeTimeDialog}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Time
-            </Button>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
-          <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Office Hour</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead>End Time</TableHead>
-                    <TableHead>Grace Time</TableHead>
-                    <TableHead>Shift</TableHead>
-                    <TableHead>Applicable Roles</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {isLoading ? (
-                    <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-                ) : officeTimes.length > 0 ? (
-                    officeTimes.map(time => (
-                      <TableRow key={time.id}>
-                        <TableCell>{time.name}</TableCell>
-                        <TableCell>{time.startTime}</TableCell>
-                        <TableCell>{time.endTime}</TableCell>
-                        <TableCell>{time.graceTime} minutes</TableCell>
-                        <TableCell>{time.shift}</TableCell>
-                        <TableCell>
-                          {time.applicableRoles === 'all' ? (
-                            <Badge variant="secondary">All Roles</Badge>
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {(time.applicableRoles || []).map(role => (
-                                <Badge key={role} variant="outline">{role.replace(/_/g, ' ')}</Badge>
-                              ))}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => openEditOfficeTimeDialog(time)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteOfficeTime(time)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                    </TableRow>
-                    ))
-                ) : (
-                  <TableRow><TableCell colSpan={7} className="text-center h-24 text-gray-500">No office time configurations found.</TableCell></TableRow>
-                )}
-            </TableBody>
-        </Table>
-        </CardContent>
-      </Card>
     );
 
     const attendanceReportContent = (
-      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle className="text-xl font-bold text-gray-800">Attendance Report</CardTitle>
-              <CardDescription>A full month summary of attendance.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-grow sm:flex-grow-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                      placeholder="Search..."
-                      value={reportSearchTerm}
-                      onChange={(e) => setReportSearchTerm(e.target.value)}
-                      className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10"
-                  />
-              </div>
-              <DateRangePicker2 
-                  initialRange={reportDateRange} 
-                  onDateRangeChange={(range) => setReportDateRange(range)} 
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
-          <div className="overflow-x-auto">
-            <Table>
-                <TableHeader className="bg-gray-800">
-                    <TableRow className="hover:bg-gray-800">
-                        <TableHead className="text-white">SL</TableHead>
-                        <TableHead className="text-white">Employee ID</TableHead>
-                        <TableHead className="text-white">Employee Name</TableHead>
-                        <TableHead className="text-white">Designation</TableHead>
-                        <TableHead className="text-white">Present</TableHead>
-                        <TableHead className="text-white">Total Friday</TableHead>
-                        <TableHead className="text-white">Total Present</TableHead>
-                        <TableHead className="text-white">Total Absent</TableHead>
-                        <TableHead className="text-white">Ontime CheckIn</TableHead>
-                        <TableHead className="text-white">Late CheckIn</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                      [...Array(5)].map((_, i) => (
-                          <TableRow key={`skel-report-${i}`}>
-                              <TableCell colSpan={11}><Skeleton className="h-8 w-full"/></TableCell>
-                          </TableRow>
-                      ))
-                  ) : attendanceReportData.length > 0 ? (
-                      (attendanceReportData as any[]).map((data, index) => {
-                          const user = allUsers.find(u => u.id === data.employeeId);
-                          return (
-                          <TableRow key={data.employeeId} className="odd:bg-white even:bg-gray-50">
-                              <TableCell>{index + 1}</TableCell>
-                              <TableCell>{data.nationalId || 'N/A'}</TableCell>
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={user?.avatarUrl || undefined} alt={data.employeeName} />
-                                        <AvatarFallback>{getInitials(data.employeeName)}</AvatarFallback>
-                                    </Avatar>
-                                    <span>{data.employeeName}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>{data.designation}</TableCell>
-                              <TableCell>{data.presentDays}</TableCell>
-                              <TableCell>{data.totalFridays}</TableCell>
-                              <TableCell>{data.totalPresentDays}</TableCell>
-                              <TableCell>{data.totalAbsentDays}</TableCell>
-                              <TableCell>{data.ontimeCheckInDays}</TableCell>
-                              <TableCell>{data.lateCheckInDays}</TableCell>
-                          </TableRow>
-                      )})
-                  ) : (
-                       <TableRow>
-                          <TableCell colSpan={11} className="text-center h-48 text-gray-500">
-                              <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                              No attendance summary data available for this period.
-                          </TableCell>
-                      </TableRow>
-                  )}
-                </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <CardTitle className="text-xl font-bold text-gray-800">Attendance Report</CardTitle>
+                        <CardDescription>A full month summary of attendance.</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="relative flex-grow sm:flex-grow-0">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                                placeholder="Search..."
+                                value={reportSearchTerm}
+                                onChange={(e) => setReportSearchTerm(e.target.value)}
+                                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10"
+                            />
+                        </div>
+                        <DateRangePicker2
+                            initialRange={reportDateRange}
+                            onDateRangeChange={(range) => setReportDateRange(range)}
+                        />
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-gray-800">
+                            <TableRow className="hover:bg-gray-800">
+                                <TableHead className="text-white">SL</TableHead>
+                                <TableHead className="text-white">Employee ID</TableHead>
+                                <TableHead className="text-white">Employee Name</TableHead>
+                                <TableHead className="text-white">Designation</TableHead>
+                                <TableHead className="text-white">Present</TableHead>
+                                <TableHead className="text-white">Total Friday</TableHead>
+                                <TableHead className="text-white">Total Present</TableHead>
+                                <TableHead className="text-white">Total Absent</TableHead>
+                                <TableHead className="text-white">Ontime CheckIn</TableHead>
+                                <TableHead className="text-white">Late CheckIn</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <TableRow key={`skel-report-${i}`}>
+                                        <TableCell colSpan={11}><Skeleton className="h-8 w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : attendanceReportData.length > 0 ? (
+                                (attendanceReportData as any[]).map((data, index) => {
+                                    const user = allUsers.find(u => u.id === data.employeeId);
+                                    return (
+                                        <TableRow key={data.employeeId} className="odd:bg-white even:bg-gray-50">
+                                            <TableCell>{index + 1}</TableCell>
+                                            <TableCell>{data.nationalId || 'N/A'}</TableCell>
+                                            <TableCell className="font-medium">
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={user?.avatarUrl || undefined} alt={data.employeeName} />
+                                                        <AvatarFallback>{getInitials(data.employeeName)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span>{data.employeeName}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{data.designation}</TableCell>
+                                            <TableCell>{data.presentDays}</TableCell>
+                                            <TableCell>{data.totalFridays}</TableCell>
+                                            <TableCell>{data.totalPresentDays}</TableCell>
+                                            <TableCell>{data.totalAbsentDays}</TableCell>
+                                            <TableCell>{data.ontimeCheckInDays}</TableCell>
+                                            <TableCell>{data.lateCheckInDays}</TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={11} className="text-center h-48 text-gray-500">
+                                        <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                                        No attendance summary data available for this period.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
     );
 
 
@@ -1278,7 +1285,7 @@ export default function AttendancePage() {
 
     return (
         <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="sticky top-20 z-30 bg-white p-1 rounded-full shadow-sm border border-gray-200">
                     <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendance History</TabsTrigger>
                     <TabsTrigger value="attendance_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendance Report</TabsTrigger>
@@ -1290,7 +1297,7 @@ export default function AttendancePage() {
                     {renderActiveTab()}
                 </div>
             </Tabs>
-             {leaveToManage && currentUser && (
+            {leaveToManage && currentUser && (
                 <ManageLeaveDialog
                     isOpen={!!leaveToManage}
                     onOpenChange={(open) => !open && setLeaveToManage(null)}
@@ -1299,34 +1306,34 @@ export default function AttendancePage() {
                     onLeaveUpdated={fetchData}
                 />
             )}
-            <LocationMapDialog 
+            <LocationMapDialog
                 isOpen={!!viewingLocation}
                 onOpenChange={() => setViewingLocation(null)}
                 location={viewingLocation}
             />
-             <AttendanceTypeDialog
+            <AttendanceTypeDialog
                 isOpen={isAttendanceTypeDialogOpen}
                 onOpenChange={setIsAttendanceTypeDialogOpen}
-             />
-             <AddEditHolidayDialog
+            />
+            <AddEditHolidayDialog
                 isOpen={isHolidayDialogOpen}
                 onOpenChange={setIsHolidayDialogOpen}
                 onHolidaySaved={handleHolidaySaved}
                 holiday={holidayToEdit}
-             />
-             <AddEditOfficeTimeDialog
+            />
+            <AddEditOfficeTimeDialog
                 isOpen={isOfficeTimeDialogOpen}
                 onOpenChange={setIsOfficeTimeDialogOpen}
                 onOfficeTimeSaved={handleOfficeTimeSaved}
                 officeTime={officeTimeToEdit}
                 availableRoles={availableRoles}
-             />
-             <EditAttendanceDialog
+            />
+            <EditAttendanceDialog
                 isOpen={isEditAttendanceDialogOpen}
                 onOpenChange={setIsEditAttendanceDialogOpen}
                 onAttendanceSaved={fetchData}
                 attendance={attendanceToEdit}
-             />
+            />
         </div>
     );
 }
