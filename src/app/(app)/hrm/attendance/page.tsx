@@ -204,57 +204,77 @@ export default function AttendancePage() {
     }, [employees, searchTerm]);
 
     const individualAttendanceHistoryData = useMemo(() => {
-        if (selectedUserId === 'all') {
+        if (!selectedUserId || selectedUserId === 'all') {
             return attendanceData
-                .filter(entry => isSameDay(parseISO(entry.date), parseISO(attendanceDateFilter)))
-                .map(entry => ({ ...entry, date: parseISO(entry.date) }));
+                .filter(entry => entry.date === attendanceDateFilter)
+                .map(entry => ({
+                    ...entry,
+                    date: parseISO(entry.date)
+                }))
+                .sort((a, b) => b.date.getTime() - a.date.getTime());
         }
 
         const targetDate = new Date(parseInt(attendanceYear), parseInt(attendanceMonth));
         const daysInMonth = getDaysInMonth(targetDate);
-        const dailyData: (AttendanceRecord | { date: Date, status: 'Absent' | 'Weekend', employeeId: string, employeeName: string, id: string, checkInTime: string })[] = [];
+        const dailyData: any[] = [];
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
-        const selectedUserName = allUsers.find(u => u.id === selectedUserId)?.name;
+        const selectedUser = allUsers.find(u => u.id === selectedUserId);
+        const selectedUserName = selectedUser?.name;
+
+        // Use a set to keep track of dates we already have data for in this month
+        const processedDates = new Set<string>();
+
+        // Strictly filter attendance data for the selected user ID only
+        const userMonthRecords = attendanceData.filter(entry =>
+            entry.employeeId &&
+            String(entry.employeeId).trim() === String(selectedUserId).trim() &&
+            isSameMonth(parseISO(entry.date), targetDate) &&
+            getYear(parseISO(entry.date)) === targetDate.getFullYear()
+        );
+
+        userMonthRecords.forEach(record => {
+            const dateStr = record.date;
+            if (!processedDates.has(dateStr)) {
+                dailyData.push({
+                    ...record,
+                    date: parseISO(record.date),
+                    employeeId: selectedUserId,
+                    employeeName: selectedUserName || record.employeeName
+                });
+                processedDates.add(dateStr);
+            }
+        });
+
+        // Fill in missing days (Absent or Weekend) up to today
+        const today = new Date();
         for (let i = 1; i <= daysInMonth; i++) {
             const currentDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
-            if (isAfter(currentDate, new Date())) {
-                break;
+            if (isAfter(currentDate, today) && !isSameDay(currentDate, today)) {
+                continue;
             }
 
-            const attendanceRecord = attendanceData.find(entry =>
-                entry.employeeId === selectedUserId &&
-                entry.employeeName === selectedUserName &&
-                isSameDay(parseISO(entry.date), currentDate)
-            );
-
-            if (attendanceRecord) {
-                dailyData.push({ ...attendanceRecord, date: parseISO(attendanceRecord.date) });
-            } else {
-                const dayOfWeek = getDay(currentDate);
-                if (weekendDayIndexes.includes(dayOfWeek)) {
-                    dailyData.push({
-                        id: `${selectedUserId}_${format(currentDate, 'yyyy-MM-dd')}`,
-                        date: currentDate,
-                        status: 'Weekend',
-                        employeeId: selectedUserId,
-                        employeeName: selectedUserName || 'Unknown',
-                        checkInTime: '',
-                    });
-                } else {
-                    dailyData.push({
-                        id: `${selectedUserId}_${format(currentDate, 'yyyy-MM-dd')}`,
-                        date: currentDate,
-                        status: 'Absent',
-                        employeeId: selectedUserId,
-                        employeeName: selectedUserName || 'Unknown',
-                        checkInTime: '',
-                    });
-                }
+            const dateStr = format(currentDate, 'yyyy-MM-dd');
+            if (processedDates.has(dateStr)) {
+                continue;
             }
+
+            const dayOfWeek = getDay(currentDate);
+            const status = weekendDayIndexes.includes(dayOfWeek) ? 'Weekend' : 'Absent';
+
+            dailyData.push({
+                id: `${selectedUserId}_${dateStr}`,
+                date: currentDate,
+                status: status,
+                employeeId: selectedUserId,
+                employeeName: selectedUserName || 'Unknown',
+                checkInTime: '',
+            });
+            processedDates.add(dateStr);
         }
 
-        return dailyData.sort((a, b) => b.date.getTime() - a.date.getTime());
+        // Final sort to ensure sequential date order (Descending: latest first)
+        return dailyData.sort((a, b) => (b.date as Date).getTime() - (a.date as Date).getTime());
     }, [attendanceData, attendanceMonth, attendanceYear, selectedUserId, selectedWeekends, allUsers, attendanceDateFilter]);
 
 
@@ -297,15 +317,20 @@ export default function AttendancePage() {
         const totalLate = individualAttendanceHistoryData.filter(entry => entry.status === 'Late').length;
 
         let totalMinutesWorked = 0;
-        individualAttendanceHistoryData.forEach(entry => {
-            if (entry.hoursWorked && typeof entry.hoursWorked === 'string') {
-                const parts = entry.hoursWorked.split(':');
-                if (parts.length === 2) {
-                    const hours = parseInt(parts[0], 10);
-                    const minutes = parseInt(parts[1], 10);
-                    if (!isNaN(hours) && !isNaN(minutes)) {
-                        totalMinutesWorked += (hours * 60) + minutes;
+        individualAttendanceHistoryData.forEach((entry: any) => {
+            const hw = entry.hoursWorked;
+            if (hw) {
+                if (typeof hw === 'string' && hw.includes(':')) {
+                    const parts = hw.split(':');
+                    if (parts.length === 2) {
+                        const hours = parseInt(parts[0], 10);
+                        const minutes = parseInt(parts[1], 10);
+                        if (!isNaN(hours) && !isNaN(minutes)) {
+                            totalMinutesWorked += (hours * 60) + minutes;
+                        }
                     }
+                } else if (!isNaN(Number(hw))) {
+                    totalMinutesWorked += Math.round(Number(hw) * 60);
                 }
             }
         });
@@ -415,19 +440,23 @@ export default function AttendancePage() {
 
         const activeEmployees = employees.filter(e => e.status === 'Active');
 
-        let totalFridaysInRange = 0;
-        const numDaysForFridayCount = differenceInDays(endDate, startDate) + 1;
-        for (let i = 0; i < numDaysForFridayCount; i++) {
+        // Logic for counting global weekend days in the selected range
+        let totalWeekendsInRange = 0;
+        const numDaysForWeekendCount = differenceInDays(endDate, startDate) + 1;
+        for (let i = 0; i < numDaysForWeekendCount; i++) {
             const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
-            if (currentDate.getDay() === 5) {
-                totalFridaysInRange++;
+            if (weekendDayIndexes.includes(currentDate.getDay())) {
+                totalWeekendsInRange++;
             }
         }
 
         const baseReport = activeEmployees.map(employee => {
+            if (!employee.userId) return null;
+
+            // Use stricter but safer ID filtering
             const userAttendanceInRange = attendanceData.filter(att =>
-                att.employeeId === employee.userId &&
-                att.employeeName === employee.name &&
+                att.employeeId &&
+                String(att.employeeId).trim() === String(employee.userId).trim() &&
                 isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
             );
 
@@ -441,11 +470,11 @@ export default function AttendancePage() {
             }
 
             const presentDays = userAttendanceInRange.length;
-            const totalPresentDays = presentDays + totalFridaysInRange;
+            const totalPresentDays = presentDays + totalWeekendsInRange;
             const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
             const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
 
-            const absentDays = totalWorkingDays - presentDays - totalFridaysInRange;
+            const absentDays = totalWorkingDays - presentDays;
 
             const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
 
@@ -455,7 +484,7 @@ export default function AttendancePage() {
                 employeeName: employee.name,
                 designation: employee.designation,
                 presentDays,
-                totalFridays: totalFridaysInRange,
+                totalFridays: totalWeekendsInRange, // Keeping the key name as used in UI but using actual weekends count
                 totalPresentDays,
                 totalAbsentDays: Math.max(0, absentDays),
                 ontimeCheckInDays,
@@ -491,16 +520,16 @@ export default function AttendancePage() {
 
         const filename = `Attendance_History_${employeeName}_${dateRange}.csv`;
 
-        const dataToExport = individualAttendanceHistoryData.map(entry => ({
+        const dataToExport = individualAttendanceHistoryData.map((entry: any) => ({
             'Date': format(entry.date, 'yyyy-MM-dd'),
             'Day': format(entry.date, 'EEEE'),
-            'Employee ID': allUsers.find(u => u.id === entry.employeeId)?.employeeId || entry.employeeId,
+            'Employee ID': employees.find(e => e.userId === entry.employeeId)?.employeeId || entry.employeeId,
             'Employee Name': entry.employeeName,
             'Status': entry.status,
             'In Time': entry.checkInTime ? format(new Date(entry.checkInTime), 'h:mm a') : 'N/A',
-            'Out Time': entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : 'N/A',
-            'Hours Worked': entry.hoursWorked || 'N/A',
-            'Location': entry.location || 'N/A',
+            'Out Time': (entry as any).checkOutTime ? format(new Date((entry as any).checkOutTime), 'h:mm a') : 'N/A',
+            'Hours Worked': (entry as any).hoursWorked || 'N/A',
+            'Location': (entry as any).location || 'N/A',
         }));
 
         const csv = Papa.unparse(dataToExport);
@@ -728,7 +757,7 @@ export default function AttendancePage() {
                                 <TableHead>Location</TableHead>
                             </TableRow>
                         </TableHeader>
-                        <TableBody>
+                        <TableBody key={`${selectedUserId}-${attendanceMonth}-${attendanceYear}`}>
                             {isLoading ? (
                                 [...Array(3)].map((_, index) => (
                                     <TableRow key={index}>
@@ -736,92 +765,94 @@ export default function AttendancePage() {
                                     </TableRow>
                                 ))
                             ) : individualAttendanceHistoryData.length > 0 ? (
-                                individualAttendanceHistoryData.map((entry, index) => {
-                                    const user = allUsers.find(u => u.id === entry.employeeId);
-                                    const employee = employees.find(e => e.userId === entry.employeeId);
-                                    const entryDate = entry.date;
-                                    const isFriday = getDay(entryDate) === 5;
-                                    return (
-                                        <TableRow
-                                            key={entry.id || index}
-                                            className={cn(
-                                                "transition-colors",
-                                                isAdmin && "cursor-pointer hover:bg-muted/50",
-                                                isFriday && "bg-red-50 dark:bg-red-900/20"
-                                            )}
-                                            onDoubleClick={() => {
-                                                if (isAdmin) {
-                                                    setAttendanceToEdit(entry);
-                                                    setIsEditAttendanceDialogOpen(true);
-                                                }
-                                            }}
-                                        >
-                                            <TableCell>{individualAttendanceHistoryData.length - index}</TableCell>
-                                            <TableCell>{format(entryDate, 'dd-MMM-yyyy')}</TableCell>
-                                            {selectedUserId !== 'all' && <TableCell>{format(entryDate, 'EEEE')}</TableCell>}
-                                            <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={user?.avatarUrl || undefined} alt={entry.employeeName} />
-                                                        <AvatarFallback>{getInitials(entry.employeeName)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium">{entry.employeeName}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge className={cn(getStatusBadgeClass(entry.status), 'border')}>
-                                                    {entry.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>{entry.checkInTime ? format(new Date(entry.checkInTime), 'h:mm a') : '-'}</TableCell>
-                                            <TableCell>{entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : '-'}</TableCell>
-                                            <TableCell>{entry.hoursWorked || '-'}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={!entry.checkInLocation?.lat || !entry.checkInLocation?.lng}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (entry.checkInLocation?.lat && entry.checkInLocation?.lng) {
-                                                                setViewingLocation({
-                                                                    lat: entry.checkInLocation.lat,
-                                                                    lng: entry.checkInLocation.lng,
-                                                                    employeeName: entry.employeeName,
-                                                                    employeeAvatar: user?.avatarUrl || undefined
-                                                                });
-                                                            }
-                                                        }}
-                                                    >
-                                                        <MapPin className="mr-2 h-4 w-4" />
-                                                        In
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={!entry.checkOutLocation?.lat || !entry.checkOutLocation?.lng}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (entry.checkOutLocation?.lat && entry.checkOutLocation?.lng) {
-                                                                setViewingLocation({
-                                                                    lat: entry.checkOutLocation.lat,
-                                                                    lng: entry.checkOutLocation.lng,
-                                                                    employeeName: entry.employeeName,
-                                                                    employeeAvatar: user?.avatarUrl || undefined
-                                                                });
-                                                            }
-                                                        }}
-                                                    >
-                                                        <MapPin className="mr-2 h-4 w-4" />
-                                                        Out
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                })
+                                individualAttendanceHistoryData
+                                    .filter(entry => selectedUserId === 'all' || String(entry.employeeId) === String(selectedUserId))
+                                    .map((entry, index) => {
+                                        const user = allUsers.find(u => u.id === entry.employeeId);
+                                        const employee = employees.find(e => e.userId === entry.employeeId);
+                                        const entryDate = entry.date;
+                                        const isFriday = getDay(entryDate) === 5;
+                                        return (
+                                            <TableRow
+                                                key={entry.id || index}
+                                                className={cn(
+                                                    "transition-colors",
+                                                    isAdmin && "cursor-pointer hover:bg-muted/50",
+                                                    isFriday && "bg-red-50 dark:bg-red-900/20"
+                                                )}
+                                                onDoubleClick={() => {
+                                                    if (isAdmin) {
+                                                        setAttendanceToEdit(entry);
+                                                        setIsEditAttendanceDialogOpen(true);
+                                                    }
+                                                }}
+                                            >
+                                                <TableCell>{individualAttendanceHistoryData.length - index}</TableCell>
+                                                <TableCell>{format(entryDate, 'dd-MMM-yyyy')}</TableCell>
+                                                {selectedUserId !== 'all' && <TableCell>{format(entryDate, 'EEEE')}</TableCell>}
+                                                <TableCell>{employee?.nationalId || 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarImage src={user?.avatarUrl || undefined} alt={entry.employeeName} />
+                                                            <AvatarFallback>{getInitials(entry.employeeName)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="font-medium">{entry.employeeName}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge className={cn(getStatusBadgeClass(entry.status), 'border')}>
+                                                        {entry.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>{(entry as any).checkInTime ? format(new Date((entry as any).checkInTime), 'h:mm a') : '-'}</TableCell>
+                                                <TableCell>{(entry as any).checkOutTime ? format(new Date((entry as any).checkOutTime), 'h:mm a') : '-'}</TableCell>
+                                                <TableCell>{(entry as any).hoursWorked || '-'}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={!(entry as any).checkInLocation?.lat || !(entry as any).checkInLocation?.lng}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if ((entry as any).checkInLocation?.lat && (entry as any).checkInLocation?.lng) {
+                                                                    setViewingLocation({
+                                                                        lat: (entry as any).checkInLocation.lat,
+                                                                        lng: (entry as any).checkInLocation.lng,
+                                                                        employeeName: entry.employeeName,
+                                                                        employeeAvatar: user?.avatarUrl || undefined
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <MapPin className="mr-2 h-4 w-4" />
+                                                            In
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={!(entry as any).checkOutLocation?.lat || !(entry as any).checkOutLocation?.lng}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if ((entry as any).checkOutLocation?.lat && (entry as any).checkOutLocation?.lng) {
+                                                                    setViewingLocation({
+                                                                        lat: (entry as any).checkOutLocation.lat,
+                                                                        lng: (entry as any).checkOutLocation.lng,
+                                                                        employeeName: entry.employeeName,
+                                                                        employeeAvatar: user?.avatarUrl || undefined
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <MapPin className="mr-2 h-4 w-4" />
+                                                            Out
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={10} className="text-center h-48 text-gray-500">

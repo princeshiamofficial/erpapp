@@ -41,22 +41,22 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
-  
+
   const isEditMode = !!reportToEdit;
 
   useEffect(() => {
     if (isOpen) {
-        if (isEditMode && reportToEdit) {
-            setInvoiceId(reportToEdit.invoiceId);
-            setAmount(reportToEdit.amount.toString());
-            setSelectedVendor(reportToEdit.vendorId);
-            setSelectedDate(new Date(reportToEdit.date));
-        } else {
-            setInvoiceId('');
-            setAmount('');
-            setSelectedVendor('');
-            setSelectedDate(new Date());
-        }
+      if (isEditMode && reportToEdit) {
+        setInvoiceId(reportToEdit.invoiceId);
+        setAmount(reportToEdit.amount.toString());
+        setSelectedVendor(reportToEdit.vendorId);
+        setSelectedDate(new Date(reportToEdit.date));
+      } else {
+        setInvoiceId('');
+        setAmount('');
+        setSelectedVendor('');
+        setSelectedDate(new Date());
+      }
     }
   }, [isOpen, reportToEdit, isEditMode]);
 
@@ -68,7 +68,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
       return;
     }
     setIsSubmitting(true);
-    
+
     const reportData = {
       vendorId: selectedVendor,
       vendorName: vendors.find(v => v.id === selectedVendor)?.name || 'Unknown',
@@ -76,26 +76,28 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
       invoiceId,
       amount: parseFloat(amount),
       // In edit mode, preserve payment info, in add mode, initialize it
-      payment: isEditMode ? reportToEdit.payment : 0, 
-      method: isEditMode ? reportToEdit.method : 'N/A',
+      payment: (isEditMode && reportToEdit) ? reportToEdit.payment : 0,
+      method: (isEditMode && reportToEdit) ? reportToEdit.method : 'N/A',
     };
 
-    let result;
+    let result: boolean | { success: boolean; error?: string };
     if (isEditMode && reportToEdit) {
-        result = await updateBillReport(reportToEdit.id, reportData);
+      result = await updateBillReport(reportToEdit.id, reportData);
     } else {
-        result = await addBillReportAction(reportData);
+      result = await addBillReportAction(reportData);
     }
 
     setIsSubmitting(false);
 
-    if ((isEditMode && result) || (!isEditMode && result && result.success)) {
+    const isSuccess = typeof result === 'boolean' ? result : (result as any).success;
+
+    if (isSuccess) {
       toast({ title: "Success", description: "Bill has been saved." });
       onSave();
       onOpenChange(false); // This line ensures the dialog closes on success
     } else {
-       const errorMessage = !isEditMode && result ? result.error : "Failed to save bill.";
-       toast({ title: "Error", description: errorMessage, variant: "destructive" });
+      const errorMessage = (typeof result === 'object' && result && (result as any).error) ? (result as any).error : "Failed to save bill.";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     }
   };
 
@@ -112,17 +114,17 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
           <div className="space-y-1">
             <Label htmlFor="vendor">Vendor *</Label>
             <Select value={selectedVendor} onValueChange={setSelectedVendor} required>
-                <SelectTrigger id="vendor">
-                    <SelectValue placeholder="Select a vendor" />
-                </SelectTrigger>
-                <SelectContent>
-                    {vendors.map(vendor => (
-                        <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
-                    ))}
-                </SelectContent>
+              <SelectTrigger id="vendor">
+                <SelectValue placeholder="Select a vendor" />
+              </SelectTrigger>
+              <SelectContent>
+                {vendors.map(vendor => (
+                  <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
-           <div className="space-y-1">
+          <div className="space-y-1">
             <Label htmlFor="date">Date *</Label>
             <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
               <PopoverTrigger asChild>
@@ -153,7 +155,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
           </div>
           <div className="space-y-1">
             <Label htmlFor="amount">Amount *</Label>
-            <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required min="0"/>
+            <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required min="0" />
           </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
