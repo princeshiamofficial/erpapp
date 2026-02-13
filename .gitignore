@@ -38,3 +38,6 @@ next-env.d.ts
 .next/
 node_modules/
 .next/
+# uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
