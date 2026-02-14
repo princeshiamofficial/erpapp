@@ -444,7 +444,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       const formData = new FormData();
       formData.append('file', selectedPaymentProof);
       try {
-        const response = await fetch('https://erp.colorhutbd.xyz/file/upload.php', { method: 'POST', body: formData });
+        const response = await fetch('/api/upload', { method: 'POST', body: formData });
         const result = await response.json();
         if (response.ok && result.success && result.file_url) {
           uploadedProofUrl = result.file_url;

@@ -84,7 +84,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
       fileInputRef.current.value = "";
     }
   };
-  
+
   const handleRemoveAvatar = async () => {
     if (!currentUser) return;
     setIsLoading(true);
@@ -126,7 +126,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
       formData.append('file', selectedFile);
 
       try {
-        const response = await fetch('https://colorhutbd.xyz/model-image/index.php', {
+        const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
@@ -135,19 +135,19 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
           const errorText = await response.text();
           throw new Error(`Upload failed with status: ${response.status}. Response: ${errorText}`);
         }
-        
+
         const result = await response.json();
 
         if (result.success && result.file_url) {
           const success = await updateUserAvatar(result.file_url);
           if (success) {
-             toast({
-                title: "Profile Updated",
-                description: "Your profile picture has been updated.",
-             });
-             setIsOpen(false);
+            toast({
+              title: "Profile Updated",
+              description: "Your profile picture has been updated.",
+            });
+            setIsOpen(false);
           } else {
-             throw new Error("Failed to save the new avatar URL to your profile.");
+            throw new Error("Failed to save the new avatar URL to your profile.");
           }
         } else {
           throw new Error(result.message || "Failed to get file URL from server.");
@@ -160,15 +160,15 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
           variant: "destructive",
         });
       }
-    } else if (previewUrl === null && currentUser?.avatarUrl) { 
-        await updateUserAvatar(null);
+    } else if (previewUrl === null && currentUser?.avatarUrl) {
+      await updateUserAvatar(null);
     } else {
-        setIsOpen(false);
+      setIsOpen(false);
     }
 
     setIsLoading(false);
   };
-  
+
   const noChangeMade = !selectedFile && previewUrl === (currentUser?.avatarUrl || null);
 
   if (!currentUser) return null;
@@ -200,7 +200,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
                     alt="Avatar preview"
                     width={80}
                     height={80}
-                    unoptimized
+                    unoptimized={previewUrl.startsWith('http') && (typeof window !== 'undefined' ? !previewUrl.includes(window.location.host) : true)}
                     className="rounded-full object-cover border border-muted"
                     data-ai-hint="user avatar"
                   />
@@ -210,7 +210,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
                   </div>
                 )}
                 <div className="flex flex-col gap-2">
-                   <Button
+                  <Button
                     type="button"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
@@ -233,7 +233,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
                   )}
                 </div>
               </div>
-               {currentUser.avatarUrl && previewUrl && !selectedFile && (
+              {currentUser.avatarUrl && previewUrl && !selectedFile && (
                 <Button type="button" variant="link" size="sm" onClick={() => setPreviewUrl(null)} className="text-destructive hover:text-destructive/80 px-0 mt-2 flex items-center" disabled={isLoading}>
                   <Trash2 className="mr-1 h-4 w-4" /> Remove Current Avatar
                 </Button>
@@ -249,7 +249,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading || noChangeMade}>
-              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : "Save Changes"}
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>

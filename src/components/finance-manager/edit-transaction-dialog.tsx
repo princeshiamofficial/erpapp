@@ -33,17 +33,17 @@ interface EditTransactionDialogProps {
 }
 
 const expenseCategories = [
-    { value: "Office Rent", label: "Office Rent", icon: Home },
-    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
-    { value: "Transportation", label: "Transportation", icon: Car },
-    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
-    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
-    { value: "Marketing", label: "Marketing", icon: Megaphone },
-    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
-    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
-    { value: "Withdraw", label: "Withdraw", icon: Banknote },
-    { value: "Official Expend", label: "Official Expend", icon: Briefcase },
-    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+  { value: "Office Rent", label: "Office Rent", icon: Home },
+  { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
+  { value: "Transportation", label: "Transportation", icon: Car },
+  { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
+  { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
+  { value: "Marketing", label: "Marketing", icon: Megaphone },
+  { value: "Purchase", label: "Purchase", icon: ShoppingBag },
+  { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
+  { value: "Withdraw", label: "Withdraw", icon: Banknote },
+  { value: "Official Expend", label: "Official Expend", icon: Briefcase },
+  { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
 ];
 
 export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpenChange, onTransactionUpdated }: EditTransactionDialogProps) {
@@ -83,7 +83,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
         toast({ title: "File too large", description: "Please select a file smaller than 50MB.", variant: "destructive" });
         return false;
       }
-       if (!file.type.startsWith('image/')) {
+      if (!file.type.startsWith('image/')) {
         toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
         return false;
       }
@@ -104,15 +104,15 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     if (documentFileRef.current) documentFileRef.current.value = "";
     // Revert to showing currentDocumentUrl if it exists and was cleared because a new file was selected
     if (transaction.documentUrl) {
-        setCurrentDocumentUrl(transaction.documentUrl);
+      setCurrentDocumentUrl(transaction.documentUrl);
     }
   };
 
   const handleRemoveExistingDocument = () => {
-    setCurrentDocumentUrl(null); 
+    setCurrentDocumentUrl(null);
     setSelectedDocumentFile(null);
     if (documentFileRef.current) documentFileRef.current.value = "";
-    toast({ title: "Document Marked for Removal", description: "The existing document will be removed when you save changes."})
+    toast({ title: "Document Marked for Removal", description: "The existing document will be removed when you save changes." })
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); };
@@ -125,7 +125,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       e.dataTransfer.clearData();
     }
   };
-  
+
   useEffect(() => {
     const isDocRequired = (type === 'expense' || type === 'purchase') && !(type === 'expense' && !!transaction.sentToUserId);
     const handlePaste = (event: ClipboardEvent) => {
@@ -133,14 +133,14 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
-           if (items[i].type.indexOf("image") !== -1) {
+          if (items[i].type.indexOf("image") !== -1) {
             const file = items[i].getAsFile();
             if (file) {
-                const processed = processFile(file);
-                if (processed) toast({title: "File Pasted", description: "Image from clipboard has been attached."});
-                event.preventDefault(); return;
+              const processed = processFile(file);
+              if (processed) toast({ title: "File Pasted", description: "Image from clipboard has been attached." });
+              event.preventDefault(); return;
             }
-           }
+          }
         }
       }
     };
@@ -161,14 +161,14 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       return;
     }
 
-    let newUploadedDocumentUrl: string | null = currentDocumentUrl; 
+    let newUploadedDocumentUrl: string | null = currentDocumentUrl;
 
-    if (selectedDocumentFile) { 
+    if (selectedDocumentFile) {
       setIsUploadingDocument(true);
       const formData = new FormData();
       formData.append('file', selectedDocumentFile);
       try {
-        const response = await fetch('https://erp.colorhutbd.xyz/file/upload.php', {
+        const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
@@ -193,7 +193,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
         return;
       }
     }
-    
+
     const isSendMoneyTypeExpense = type === 'expense' && !!transaction.sentToUserId;
     if ((type === 'expense' || type === 'purchase') && !newUploadedDocumentUrl && !isSendMoneyTypeExpense) {
       toast({ title: "Validation Error", description: "Document is required for expenses and purchases.", variant: "destructive" });
@@ -214,7 +214,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     setIsSubmitting(false);
 
     if (result.success) {
-      onTransactionUpdated(); 
+      onTransactionUpdated();
     } else {
       toast({ title: "Error", description: result.error || "Could not update transaction.", variant: "destructive" });
     }
@@ -225,7 +225,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     if (type === 'purchase') return "e.g., Inventory, Supplies";
     return "e.g., Utilities, Rent";
   };
-  
+
   const isDocumentNowRequired = (type === 'expense' || type === 'purchase') && !(type === 'expense' && !!transaction.sentToUserId);
   const isDocumentMissingForRequiredType = isDocumentNowRequired && !currentDocumentUrl && !selectedDocumentFile;
 
@@ -241,7 +241,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-type">Type *</Label>
-              <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId) }>
+              <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId)}>
                 <SelectTrigger id="edit-transaction-type">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
@@ -251,7 +251,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                   <SelectItem value="purchase">Purchase</SelectItem>
                 </SelectContent>
               </Select>
-              {((type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId)) && 
+              {((type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId)) &&
                 <p className="text-xs text-muted-foreground">Type cannot be changed for system-generated transfer records.</p>
               }
             </div>
@@ -259,24 +259,24 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
               <Label htmlFor="edit-transaction-amount">Amount (BDT) *</Label>
               <Input id="edit-transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required disabled={isSubmitting || isUploadingDocument} />
             </div>
-             <div className="space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="transaction-category">Category *</Label>
-              <Select value={category} onValueChange={setCategory} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) }>
+              <Select value={category} onValueChange={setCategory} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId)}>
                 <SelectTrigger id="transaction-category">
-                    <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                    {expenseCategories.map(cat => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                            <div className="flex items-center gap-2">
-                                <cat.icon className="h-4 w-4 text-muted-foreground" />
-                                <span>{cat.label}</span>
-                            </div>
-                        </SelectItem>
-                    ))}
+                  {expenseCategories.map(cat => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      <div className="flex items-center gap-2">
+                        <cat.icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{cat.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-               {(type === 'expense' && !!transaction.sentToUserId) && 
+              {(type === 'expense' && !!transaction.sentToUserId) &&
                 <p className="text-xs text-muted-foreground">Category is auto-set for 'Sent Money' transactions.</p>
               }
             </div>
@@ -307,63 +307,63 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
               <Label htmlFor="edit-transaction-description">Description (Optional)</Label>
               <Input id="edit-transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Weekly supermarket run" disabled={isSubmitting || isUploadingDocument} />
             </div>
-            
+
             {isDocumentNowRequired && (
-                 <div className="space-y-1">
-                    <Label htmlFor="edit-transaction-document">Document Attachment {isDocumentNowRequired ? "*" : "(Optional)"}</Label>
-                    <div
-                        ref={dropZoneRef}
-                        className={cn(
-                            "mt-1 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors",
-                            isDraggingOver ? "border-primary bg-primary/10" : "border-border bg-background/50",
-                            (selectedDocumentFile || currentDocumentUrl) ? "border-green-500 bg-green-500/5" : ""
-                        )}
-                        onDragEnter={handleDragEnter}
-                        onDragLeave={handleDragLeave}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                        onClick={() => !selectedDocumentFile && !currentDocumentUrl && documentFileRef.current?.click()} // Only click if no file/link shown
-                    >
-                        {selectedDocumentFile ? (
-                            <div className="text-center">
-                                <Paperclip className="h-8 w-8 mb-2 text-green-600 mx-auto" />
-                                <p className="text-sm text-foreground font-medium truncate max-w-xs">{selectedDocumentFile.name}</p>
-                                <p className="text-xs text-muted-foreground">({(selectedDocumentFile.size / (1024*1024)).toFixed(2)} MB)</p>
-                                <div className="flex gap-2 mt-2 justify-center">
-                                    <Button type="button" variant="outline" size="sm" onClick={(e)=>{e.stopPropagation(); documentFileRef.current?.click();}} className="text-xs h-7">Change</Button>
-                                    <Button type="button" variant="ghost" size="sm" onClick={(e)=>{e.stopPropagation();handleRemoveSelectedFile();}} className="text-xs text-destructive h-7">Remove</Button>
-                                </div>
-                            </div>
-                        ) : currentDocumentUrl ? (
-                            <div className="text-center">
-                                 <LinkIcon className="h-8 w-8 mb-2 text-primary mx-auto" />
-                                 <p className="text-sm text-foreground font-medium">Existing document attached</p>
-                                 <NextLink href={currentDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline" onClick={e=>e.stopPropagation()}>View Current</NextLink>
-                                 <div className="flex gap-2 mt-2 justify-center">
-                                    <Button type="button" variant="outline" size="sm" onClick={(e)=>{e.stopPropagation(); documentFileRef.current?.click();}} className="text-xs h-7">Replace</Button>
-                                    <Button type="button" variant="ghost" size="sm" onClick={(e)=>{e.stopPropagation();handleRemoveExistingDocument();}} className="text-xs text-destructive h-7">Remove</Button>
-                                 </div>
-                            </div>
-                        ) : (
-                            <>
-                                <UploadCloud className={cn("h-8 w-8 mb-2 text-muted-foreground", isDraggingOver ? "text-primary": "")} />
-                                <p className="text-sm text-muted-foreground">
-                                    {isDraggingOver ? "Drop file here" : "Drag & drop, paste, or click to upload"}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Images Only)</p>
-                            </>
-                        )}
+              <div className="space-y-1">
+                <Label htmlFor="edit-transaction-document">Document Attachment {isDocumentNowRequired ? "*" : "(Optional)"}</Label>
+                <div
+                  ref={dropZoneRef}
+                  className={cn(
+                    "mt-1 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors",
+                    isDraggingOver ? "border-primary bg-primary/10" : "border-border bg-background/50",
+                    (selectedDocumentFile || currentDocumentUrl) ? "border-green-500 bg-green-500/5" : ""
+                  )}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() => !selectedDocumentFile && !currentDocumentUrl && documentFileRef.current?.click()} // Only click if no file/link shown
+                >
+                  {selectedDocumentFile ? (
+                    <div className="text-center">
+                      <Paperclip className="h-8 w-8 mb-2 text-green-600 mx-auto" />
+                      <p className="text-sm text-foreground font-medium truncate max-w-xs">{selectedDocumentFile.name}</p>
+                      <p className="text-xs text-muted-foreground">({(selectedDocumentFile.size / (1024 * 1024)).toFixed(2)} MB)</p>
+                      <div className="flex gap-2 mt-2 justify-center">
+                        <Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); documentFileRef.current?.click(); }} className="text-xs h-7">Change</Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleRemoveSelectedFile(); }} className="text-xs text-destructive h-7">Remove</Button>
+                      </div>
                     </div>
-                    <Input
-                        id="edit-transaction-document-input"
-                        type="file"
-                        ref={documentFileRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        accept="image/*" 
-                    />
-                    {isDocumentMissingForRequiredType && <p className="text-xs text-destructive mt-1">A document is required for this transaction type.</p>}
-                 </div>
+                  ) : currentDocumentUrl ? (
+                    <div className="text-center">
+                      <LinkIcon className="h-8 w-8 mb-2 text-primary mx-auto" />
+                      <p className="text-sm text-foreground font-medium">Existing document attached</p>
+                      <NextLink href={currentDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline" onClick={e => e.stopPropagation()}>View Current</NextLink>
+                      <div className="flex gap-2 mt-2 justify-center">
+                        <Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); documentFileRef.current?.click(); }} className="text-xs h-7">Replace</Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleRemoveExistingDocument(); }} className="text-xs text-destructive h-7">Remove</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud className={cn("h-8 w-8 mb-2 text-muted-foreground", isDraggingOver ? "text-primary" : "")} />
+                      <p className="text-sm text-muted-foreground">
+                        {isDraggingOver ? "Drop file here" : "Drag & drop, paste, or click to upload"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Images Only)</p>
+                    </>
+                  )}
+                </div>
+                <Input
+                  id="edit-transaction-document-input"
+                  type="file"
+                  ref={documentFileRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                {isDocumentMissingForRequiredType && <p className="text-xs text-destructive mt-1">A document is required for this transaction type.</p>}
+              </div>
             )}
 
 
@@ -371,8 +371,8 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting || isUploadingDocument}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting || isUploadingDocument || isDocumentMissingForRequiredType}>
-              {isUploadingDocument ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : 
-               isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
+              {isUploadingDocument ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> :
+                isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>

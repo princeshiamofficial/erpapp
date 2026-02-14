@@ -12,27 +12,27 @@ import { Loader2, PlusCircle, GlobeLock, Trash2, MoreVertical, Edit, MapPin } fr
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
@@ -78,7 +78,7 @@ function LocationPicker({ onLocationChange }: { onLocationChange: (lat: number, 
 export default function GeoforcePage() {
     const [locations, setLocations] = useState<CompanyLocation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // State for the form dialog
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
     const [editingLocation, setEditingLocation] = useState<CompanyLocation | null>(null);
@@ -88,9 +88,9 @@ export default function GeoforcePage() {
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
     const [radius, setRadius] = useState(500);
-    
+
     const { toast } = useToast();
-    
+
     const fetchLocations = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -168,7 +168,7 @@ export default function GeoforcePage() {
         setIsFormDialogOpen(false);
         resetForm();
     };
-    
+
     const handleDeleteLocation = async (locationToDelete: CompanyLocation) => {
         const success = await deleteOfficeLocation(locationToDelete.id);
         if (success) {
@@ -196,7 +196,7 @@ export default function GeoforcePage() {
             toast({ title: "Location Error", description: "Geolocation is not supported by your browser.", variant: "destructive" });
         }
     };
-    
+
     const MarkerPosition = useMemo(() => {
         const lat = parseFloat(latitude);
         const lng = parseFloat(longitude);
@@ -246,12 +246,12 @@ export default function GeoforcePage() {
                                 {isLoading ? (
                                     [...Array(3)].map((_, i) => (
                                         <TableRow key={i}>
-                                            <TableCell><Skeleton className="h-5 w-full"/></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-full"/></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-full"/></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-full"/></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-full"/></TableCell>
-                                            <TableCell><Skeleton className="h-5 w-full"/></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                         </TableRow>
                                     ))
                                 ) : locations.length > 0 ? (
@@ -263,7 +263,7 @@ export default function GeoforcePage() {
                                             <TableCell>{loc.latitude}</TableCell>
                                             <TableCell>{loc.radius}</TableCell>
                                             <TableCell className="text-right">
-                                                 <DropdownMenu>
+                                                <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="h-8 w-8">
                                                             <MoreVertical className="h-4 w-4" />
@@ -271,15 +271,15 @@ export default function GeoforcePage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onSelect={() => handleOpenEditDialog(loc)} className="cursor-pointer">
-                                                            <Edit className="mr-2 h-4 w-4"/>
+                                                            <Edit className="mr-2 h-4 w-4" />
                                                             Edit
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleDeleteLocation(loc)} className="text-destructive focus:text-destructive cursor-pointer">
-                                                            <Trash2 className="mr-2 h-4 w-4"/>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
                                                             Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
-                                                 </DropdownMenu>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -295,10 +295,10 @@ export default function GeoforcePage() {
                     </CardContent>
                 </Card>
             </div>
-            
-             <Dialog open={isFormDialogOpen} onOpenChange={(open) => { setIsFormDialogOpen(open); if (!open) resetForm(); }}>
+
+            <Dialog open={isFormDialogOpen} onOpenChange={(open) => { setIsFormDialogOpen(open); if (!open) resetForm(); }}>
                 <DialogContent className="max-w-2xl">
-                     <DialogHeader>
+                    <DialogHeader>
                         <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Office Location</DialogTitle>
                         <DialogDescription>
                             {isEditMode ? `Update the details for the "${editingLocation?.name}" location.` : 'Define a new geofence for attendance tracking.'}
@@ -306,7 +306,7 @@ export default function GeoforcePage() {
                     </DialogHeader>
                     <form onSubmit={handleAddOrEditLocation}>
                         <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-                           <div className="space-y-1">
+                            <div className="space-y-1">
                                 <Label htmlFor="name">Office Name</Label>
                                 <Input id="name" placeholder="e.g., Head Office" value={name} onChange={e => setName(e.target.value)} />
                             </div>
@@ -321,7 +321,7 @@ export default function GeoforcePage() {
                                 </div>
                             </div>
                             <Button type="button" variant="outline" size="sm" onClick={handleGetCurrentLocation} className="w-full">
-                                <MapPin className="mr-2 h-4 w-4"/>
+                                <MapPin className="mr-2 h-4 w-4" />
                                 Get Current Location
                             </Button>
                             <div className="space-y-1">
@@ -340,10 +340,10 @@ export default function GeoforcePage() {
                                     center={DEFAULT_MAP_CENTER}
                                     zoom={DEFAULT_MAP_ZOOM}
                                     scrollWheelZoom={true}
+                                    attributionControl={false}
                                     style={{ height: '100%', width: '100%' }}
                                 >
                                     <TileLayer
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     />
                                     {MarkerPosition && (

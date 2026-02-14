@@ -18,6 +18,7 @@ import {
   CalendarClock,
   Briefcase,
   Target,
+  BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -67,49 +68,49 @@ const ProfileLink: React.FC<ProfileLinkProps> = ({ href, icon: Icon, label, isEx
 );
 
 interface StatCardProps {
-    icon: React.ElementType;
-    title: string;
-    subtitle: string;
-    value: string;
-    isFaded?: boolean;
-    isLoading?: boolean;
+  icon: React.ElementType;
+  title: string;
+  subtitle: string;
+  value: string;
+  isFaded?: boolean;
+  isLoading?: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ icon: Icon, title, subtitle, value, isFaded, isLoading }) => {
-    if (isLoading) {
-        return (
-            <Card className="bg-card shadow-sm">
-                <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div>
-                            <Skeleton className="h-4 w-20" />
-                            <Skeleton className="h-3 w-16 mt-1" />
-                        </div>
-                    </div>
-                    <Skeleton className="h-8 w-24 mt-3" />
-                </CardContent>
-            </Card>
-        );
-    }
+  if (isLoading) {
     return (
-        <Card className={cn("bg-card shadow-sm transition-all", isFaded && "opacity-40")}>
-            <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                    <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0", 
-                        isFaded ? "bg-gray-200 dark:bg-gray-700" : "bg-orange-100 dark:bg-orange-900"
-                    )}>
-                        <Icon className={cn("h-5 w-5", isFaded ? "text-gray-400 dark:text-gray-500" : "text-orange-600 dark:text-orange-300")} />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-foreground">{title}</p>
-                        <p className="text-xs text-muted-foreground">{subtitle}</p>
-                    </div>
-                </div>
-                <p className="text-3xl font-bold text-foreground mt-3">{value}</p>
-            </CardContent>
-        </Card>
+      <Card className="bg-card shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div>
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-3 w-16 mt-1" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-24 mt-3" />
+        </CardContent>
+      </Card>
     );
+  }
+  return (
+    <Card className={cn("bg-card shadow-sm transition-all", isFaded && "opacity-40")}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+            isFaded ? "bg-gray-200 dark:bg-gray-700" : "bg-orange-100 dark:bg-orange-900"
+          )}>
+            <Icon className={cn("h-5 w-5", isFaded ? "text-gray-400 dark:text-gray-500" : "text-orange-600 dark:text-orange-300")} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">{title}</p>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          </div>
+        </div>
+        <p className="text-3xl font-bold text-foreground mt-3">{value}</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function ProfilePage() {
@@ -117,15 +118,15 @@ export default function ProfilePage() {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState('');
   const [locationAddress, setLocationAddress] = useState('Loading location...');
-  
+
   const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
   const [allTasks, setAllTasks] = useState<TaskEntry[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  
+
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
-  
+
   const [lrTaskCount, setLrTaskCount] = useState('');
   const [isLrTaskSubmitted, setIsLrTaskSubmitted] = useState(false);
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
@@ -141,25 +142,25 @@ export default function ProfilePage() {
     if (!currentUser) return;
     setIsDataLoading(true);
     try {
-        const [records, weekendSettings, tasks] = await Promise.all([
-            getAttendanceForMonth(month),
-            getWeekendSettings(),
-            getTaskEntries() // Fetch tasks
-        ]);
-        setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
-        setWeekendDays(weekendSettings.days || []);
-        setAllTasks(tasks); // Store all tasks
+      const [records, weekendSettings, tasks] = await Promise.all([
+        getAttendanceForMonth(month),
+        getWeekendSettings(),
+        getTaskEntries() // Fetch tasks
+      ]);
+      setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
+      setWeekendDays(weekendSettings.days || []);
+      setAllTasks(tasks); // Store all tasks
     } catch (error) {
-        console.error("Failed to fetch attendance or weekend settings:", error);
+      console.error("Failed to fetch attendance or weekend settings:", error);
     } finally {
-        setIsDataLoading(false);
+      setIsDataLoading(false);
     }
   }, [currentUser]);
 
   useEffect(() => {
     if (isClient) {
       setCurrentDate(format(new Date(), "eeee, d MMMM yyyy"));
-      
+
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async (position) => {
           const { latitude, longitude } = position.coords;
@@ -182,7 +183,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (currentUser && selectedDate) {
-        fetchAttendanceData(selectedDate);
+      fetchAttendanceData(selectedDate);
     }
   }, [currentUser, selectedDate, fetchAttendanceData]);
 
@@ -190,7 +191,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (currentUser?.role === 'LR' && allTasks.length > 0) {
       const today = new Date();
-      const hasSubmitted = allTasks.some(task => 
+      const hasSubmitted = allTasks.some(task =>
         task.userId === currentUser.id && isSameDay(parseISO(task.date), today)
       );
       setIsLrTaskSubmitted(hasSubmitted);
@@ -206,18 +207,18 @@ export default function ProfilePage() {
 
   const attendanceStats = useMemo(() => {
     if (isDataLoading || !selectedDate || !currentUser) {
-        return { checkIn: '--:--', checkOut: '--:--', absenceDays: 0, attendedDays: 0 };
+      return { checkIn: '--:--', checkOut: '--:--', absenceDays: 0, attendedDays: 0 };
     }
-    
+
     const recordsForSelectedMonth = monthlyRecords.filter(r => isSameMonth(parseISO(r.date), selectedDate));
-    
+
     const today = new Date();
     const todaysRecord = monthlyRecords.find(r => isSameDay(parseISO(r.date), today));
     const checkIn = todaysRecord ? format(parseISO(todaysRecord.checkInTime), 'HH:mm') : '--:--';
     const checkOut = todaysRecord?.checkOutTime ? format(parseISO(todaysRecord.checkOutTime), 'HH:mm') : '--:--';
 
     const attendedDays = recordsForSelectedMonth.length;
-    
+
     const totalDaysInMonth = getDaysInMonth(selectedDate);
     let workingDaysSoFar = 0;
     const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
@@ -225,12 +226,12 @@ export default function ProfilePage() {
     const loopEndDate = isSameMonth(selectedDate, today) ? today.getDate() : totalDaysInMonth;
 
     for (let i = 1; i <= loopEndDate; i++) {
-        const dayOfWeek = getDay(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i));
-        if (!weekendDayIndexes.includes(dayOfWeek)) { 
-            workingDaysSoFar++;
-        }
+      const dayOfWeek = getDay(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i));
+      if (!weekendDayIndexes.includes(dayOfWeek)) {
+        workingDaysSoFar++;
+      }
     }
-    
+
     const absenceDays = Math.max(0, workingDaysSoFar - attendedDays);
 
     return { checkIn, checkOut, absenceDays, attendedDays };
@@ -251,16 +252,16 @@ export default function ProfilePage() {
       setSelectedDate(newDate);
     }
   };
-  
+
   const handleLrTaskSubmit = async () => {
     if (!currentUser || !lrTaskCount) {
-        toast({ title: "Invalid Input", description: "Please enter a valid number of tasks.", variant: "destructive" });
-        return;
+      toast({ title: "Invalid Input", description: "Please enter a valid number of tasks.", variant: "destructive" });
+      return;
     }
     const taskCount = parseInt(lrTaskCount, 10);
     if (isNaN(taskCount) || taskCount < 0) {
-        toast({ title: "Invalid Input", description: "Task count must be a non-negative number.", variant: "destructive" });
-        return;
+      toast({ title: "Invalid Input", description: "Task count must be a non-negative number.", variant: "destructive" });
+      return;
     }
 
     setIsSubmittingTask(true);
@@ -268,26 +269,26 @@ export default function ProfilePage() {
     setIsSubmittingTask(false);
 
     if (result.success) {
-        toast({ title: "Tasks Submitted", description: `${taskCount} tasks have been recorded for today.` });
-        setIsLrTaskSubmitted(true);
-        fetchAttendanceData(currentDate ? new Date(currentDate) : new Date()); // Re-fetch to update submission status
+      toast({ title: "Tasks Submitted", description: `${taskCount} tasks have been recorded for today.` });
+      setIsLrTaskSubmitted(true);
+      fetchAttendanceData(currentDate ? new Date(currentDate) : new Date()); // Re-fetch to update submission status
     } else {
-        toast({ title: "Submission Failed", description: result.error || "Could not save your task entry.", variant: "destructive" });
+      toast({ title: "Submission Failed", description: result.error || "Could not save your task entry.", variant: "destructive" });
     }
   };
 
   const availableYears = useMemo(() => {
-      const currentYear = new Date().getFullYear();
-      const years = [];
-      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
-          years.push(i);
-      }
-      return years.reverse();
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+      years.push(i);
+    }
+    return years.reverse();
   }, []);
 
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
-      value: i.toString(),
-      label: format(new Date(0, i), 'MMMM'),
+    value: i.toString(),
+    label: format(new Date(0, i), 'MMMM'),
   })), []);
 
 
@@ -304,62 +305,62 @@ export default function ProfilePage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-100 dark:bg-gray-900">
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 space-y-6 pb-28">
-        
+
         {/* User Info Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 border-4 border-background shadow-md">
-                <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
-                <AvatarFallback className="text-2xl bg-muted">{getInitials(currentUser?.name)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">{currentUser?.name}</h1>
-                <p className="text-md text-muted-foreground">{currentUser?.email}</p>
-              </div>
+            <Avatar className="h-20 w-20 border-4 border-background shadow-md">
+              <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
+              <AvatarFallback className="text-2xl bg-muted">{getInitials(currentUser?.name)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{currentUser?.name}</h1>
+              <p className="text-md text-muted-foreground">{currentUser?.email}</p>
+            </div>
           </div>
           <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
 
-        
+
         {/* Attendance Summary Section */}
         <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div className="flex items-center gap-2">
-                    <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
-                        <SelectTrigger className="w-full sm:w-[150px] h-9 rounded-md border-gray-200 bg-white">
-                            <SelectValue placeholder="Select Month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {months.map(month => (
-                                <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
-                        <SelectTrigger className="w-full sm:w-[120px] h-9 rounded-md border-gray-200 bg-white">
-                            <SelectValue placeholder="Select Year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableYears.map(year => (
-                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <p className="text-sm text-muted-foreground text-right">{currentDate}</p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
+                <SelectTrigger className="w-full sm:w-[150px] h-9 rounded-md border-gray-200 bg-white">
+                  <SelectValue placeholder="Select Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map(month => (
+                    <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+                <SelectTrigger className="w-full sm:w-[120px] h-9 rounded-md border-gray-200 bg-white">
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200/50 py-1.5 px-3 max-w-full">
-              <MapPin className="h-4 w-4 mr-2"/>
-              <span className="truncate">{locationAddress}</span>
-            </Badge>
-            <div className="grid grid-cols-2 gap-4">
-                <StatCard icon={ArrowDown} title="Check In" subtitle="Today" value={attendanceStats.checkIn} isLoading={isDataLoading} />
-                <StatCard icon={ArrowUp} title="Check Out" subtitle="Today" value={attendanceStats.checkOut} isFaded={attendanceStats.checkOut === '--:--'} isLoading={isDataLoading} />
-                <StatCard icon={ArrowUp} title="Absence" subtitle="This Month" value={`${attendanceStats.absenceDays} Days`} isLoading={isDataLoading}/>
-                <StatCard icon={ArrowUp} title="Attended" subtitle="This Month" value={`${attendanceStats.attendedDays} Days`} isLoading={isDataLoading}/>
-            </div>
+            <p className="text-sm text-muted-foreground text-right">{currentDate}</p>
+          </div>
+          <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200/50 py-1.5 px-3 max-w-full">
+            <MapPin className="h-4 w-4 mr-2" />
+            <span className="truncate">{locationAddress}</span>
+          </Badge>
+          <div className="grid grid-cols-2 gap-4">
+            <StatCard icon={ArrowDown} title="Check In" subtitle="Today" value={attendanceStats.checkIn} isLoading={isDataLoading} />
+            <StatCard icon={ArrowUp} title="Check Out" subtitle="Today" value={attendanceStats.checkOut} isFaded={attendanceStats.checkOut === '--:--'} isLoading={isDataLoading} />
+            <StatCard icon={ArrowUp} title="Absence" subtitle="This Month" value={`${attendanceStats.absenceDays} Days`} isLoading={isDataLoading} />
+            <StatCard icon={ArrowUp} title="Attended" subtitle="This Month" value={`${attendanceStats.attendedDays} Days`} isLoading={isDataLoading} />
+          </div>
         </div>
 
         {/* More Options Section */}
@@ -370,9 +371,12 @@ export default function ProfilePage() {
           <CardContent className="space-y-1">
             <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
             {isAdminOrLr && (
-              <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
+              <>
+                <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
+                <ProfileLink href="/admin/stock-reports" icon={BarChart3} label="Stock Reports" />
+              </>
             )}
-            
+
             {currentUser.role === 'LR' && (
               <>
                 <Separator className="my-2" />
@@ -404,10 +408,9 @@ export default function ProfilePage() {
 
           </CardContent>
         </Card>
-        
+
       </div>
     </div>
   );
 }
 
-    

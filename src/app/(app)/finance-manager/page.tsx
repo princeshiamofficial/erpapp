@@ -85,28 +85,28 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'send_money', label: 'Sent Money' },
 ];
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8" ];
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8"];
 
 const expenseCategories = [
-    { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
-    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb, colorClass: "text-yellow-600" },
-    { value: "Transportation", label: "Transportation", icon: Car, colorClass: "text-blue-600" },
-    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon, colorClass: "text-indigo-600" },
-    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils, colorClass: "text-orange-600" },
-    { value: "Marketing", label: "Marketing", icon: Megaphone, colorClass: "text-pink-600" },
-    { value: "Purchase", label: "Purchase", icon: ShoppingBag, colorClass: "text-sky-600" },
-    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal, colorClass: "text-teal-600" },
-    { value: "Withdraw", label: "Withdraw", icon: Banknote, colorClass: "text-rose-600" },
-    { value: "Official Expend", label: "Official Expend", icon: Briefcase, colorClass: "text-gray-600" },
-    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces, colorClass: "text-purple-600" },
+  { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
+  { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb, colorClass: "text-yellow-600" },
+  { value: "Transportation", label: "Transportation", icon: Car, colorClass: "text-blue-600" },
+  { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon, colorClass: "text-indigo-600" },
+  { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils, colorClass: "text-orange-600" },
+  { value: "Marketing", label: "Marketing", icon: Megaphone, colorClass: "text-pink-600" },
+  { value: "Purchase", label: "Purchase", icon: ShoppingBag, colorClass: "text-sky-600" },
+  { value: "Sent Money", label: "Sent Money", icon: SendHorizonal, colorClass: "text-teal-600" },
+  { value: "Withdraw", label: "Withdraw", icon: Banknote, colorClass: "text-rose-600" },
+  { value: "Official Expend", label: "Official Expend", icon: Briefcase, colorClass: "text-gray-600" },
+  { value: "Miscellaneous", label: "Miscellaneous", icon: Braces, colorClass: "text-purple-600" },
 ];
 
 const getCategoryDetails = (category: string) => {
-    const matchedCategory = expenseCategories.find(c => c.value === category);
-    return {
-        icon: matchedCategory?.icon || TrendingDown,
-        colorClass: matchedCategory?.colorClass || "text-red-600"
-    };
+  const matchedCategory = expenseCategories.find(c => c.value === category);
+  return {
+    icon: matchedCategory?.icon || TrendingDown,
+    colorClass: matchedCategory?.colorClass || "text-red-600"
+  };
 };
 
 
@@ -117,8 +117,8 @@ export default function FinanceManagerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [allUsersForFilter, setAllUsersForFilter] = useState<User[]>([]); 
-  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); 
+  const [allUsersForFilter, setAllUsersForFilter] = useState<User[]>([]);
+  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
   const [isUserFilterPopoverOpen, setIsUserFilterPopoverOpen] = useState(false);
 
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
@@ -126,7 +126,7 @@ export default function FinanceManagerPage() {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>('all');
 
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
-  
+
   useEffect(() => {
     setSelectedDateRange({ from: subDays(new Date(), 29), to: new Date() });
   }, []);
@@ -141,7 +141,7 @@ export default function FinanceManagerPage() {
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [isEditDialogVisible, setIsEditDialogVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
 
@@ -166,23 +166,23 @@ export default function FinanceManagerPage() {
 
       const results = await Promise.all(dataPromises);
       fetchedTransactions = results[0] as Transaction[];
-      
+
       if (currentUser.role === 'SYSTEM_ADMIN') {
         fetchedUsers = results[1] as User[];
         const newUserMap = new Map(fetchedUsers.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
-        
+
         const perms = settings.expenseLoggingPermissions || { mode: 'none' };
         const permittedUsers = fetchedUsers.filter(u => {
-            if (u.id === currentUser.id) return true; 
-            if (u.role === 'SYSTEM_ADMIN') return true; 
-            switch (perms.mode) {
-                case 'all': return true;
-                case 'specificRoles': return perms.allowedRoles?.includes(u.role);
-                case 'specificUsers': return perms.allowedUserIds?.includes(u.id);
-                case 'none': return false;
-                default: return false;
-            }
+          if (u.id === currentUser.id) return true;
+          if (u.role === 'SYSTEM_ADMIN') return true;
+          switch (perms.mode) {
+            case 'all': return true;
+            case 'specificRoles': return perms.allowedRoles?.includes(u.role);
+            case 'specificUsers': return perms.allowedUserIds?.includes(u.id);
+            case 'none': return false;
+            default: return false;
+          }
         });
         setAllUsersForFilter(permittedUsers);
         setAllUsers(fetchedUsers);
@@ -191,7 +191,7 @@ export default function FinanceManagerPage() {
         setAllUsersForFilter([]);
         setAllUsers([]);
       }
-      
+
       setTransactions(fetchedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
       console.error("Failed to fetch financial data, users, or settings:", error);
@@ -265,19 +265,19 @@ export default function FinanceManagerPage() {
     setIsEditDialogVisible(false);
     setTransactionToEdit(null);
     fetchFinancialData();
-    toast({title: "Transaction Updated", description: "The transaction has been successfully updated."})
+    toast({ title: "Transaction Updated", description: "The transaction has been successfully updated." })
   };
 
 
   const filteredTransactions = useMemo(() => {
     let results = transactions;
-    
+
     // For System Admin, default to global view unless a specific user is filtered.
     // For other roles, it's always their personal view.
     if (currentUser?.role === 'SYSTEM_ADMIN') {
-        if (selectedUserIdFilter !== 'all') {
-            results = results.filter(t => t.userId === selectedUserIdFilter);
-        }
+      if (selectedUserIdFilter !== 'all') {
+        results = results.filter(t => t.userId === selectedUserIdFilter);
+      }
     } else if (currentUser) {
       results = results.filter(t => t.userId === currentUser.id);
     }
@@ -309,7 +309,7 @@ export default function FinanceManagerPage() {
         return true;
       });
     }
-  
+
     if (transactionSearchTerm.trim()) {
       const lowerSearchTerm = transactionSearchTerm.toLowerCase();
       results = results.filter(t => {
@@ -334,7 +334,7 @@ export default function FinanceManagerPage() {
     let expensesSum = 0;
     const categoryTotals: Record<string, number> = {};
 
-    filteredTransactions.forEach(t => { 
+    filteredTransactions.forEach(t => {
       if (t.type === 'income') {
         income += t.amount;
       } else if (t.type === 'expense' || t.type === 'purchase') {
@@ -348,13 +348,13 @@ export default function FinanceManagerPage() {
       .map(([name, value]) => ({ name, value, fill: 'var(--color-expenses)' })) // All expenses are one color initially
       .sort((a, b) => b.value - a.value);
 
-    return { 
-      totalIncome: income, 
-      totalExpenses: expensesSum, 
+    return {
+      totalIncome: income,
+      totalExpenses: expensesSum,
       availableBalance: income - expensesSum,
       expenseChartData: chartData,
     };
-  }, [filteredTransactions]); 
+  }, [filteredTransactions]);
 
   const expenseChartConfig = useMemo(() => {
     const config: ChartConfig = {};
@@ -399,7 +399,7 @@ export default function FinanceManagerPage() {
         hint: "wallet coins"
       },
     ].filter(card => {
-      if (currentUser?.role === 'SYSTEM_ADMIN') return true; 
+      if (currentUser?.role === 'SYSTEM_ADMIN') return true;
       if (card.title.toLowerCase().includes("expense") && !canUserAddExpense) return false;
       return true;
     });
@@ -407,7 +407,7 @@ export default function FinanceManagerPage() {
 
   const handleDateRangeChange = (
     range: DateRange | undefined,
-    label: string, 
+    label: string,
     predefined: PredefinedRange | "custom" | null
   ) => {
     setSelectedDateRange(range);
@@ -417,7 +417,7 @@ export default function FinanceManagerPage() {
   if (!currentUser) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
-         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
@@ -428,12 +428,12 @@ export default function FinanceManagerPage() {
     if (selectedUserIdFilter === 'all') return 'All Users';
     return allUsersForFilter.find(u => u.id === selectedUserIdFilter)?.name || 'Select User';
   }, [selectedUserIdFilter, allUsersForFilter]);
-  
+
   const getAmountColor = (t: Transaction) => {
     if (t.type === 'income') return "text-green-600";
     if (t.type === 'expense') {
-        if(t.category.startsWith('Sent Money')) return "text-blue-600";
-        return "text-red-600";
+      if (t.category.startsWith('Sent Money')) return "text-blue-600";
+      return "text-red-600";
     }
     return "text-sky-600";
   }
@@ -450,39 +450,39 @@ export default function FinanceManagerPage() {
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center flex-wrap">
         {currentUser.role === 'SYSTEM_ADMIN' && (
-           <Popover open={isUserFilterPopoverOpen} onOpenChange={setIsUserFilterPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto order-2 sm:order-none flex-shrink-0 h-10">
-                  <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{selectedUserNameForFilter}</span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] max-h-80 overflow-y-auto p-0">
-                 <Command>
-                    <CommandInput
-                      placeholder="Search user..."
-                      value={userSearchQuery}
-                      onValueChange={setUserSearchQuery}
-                    />
-                    <CommandList>
-                      <CommandEmpty>No user found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem onSelect={() => {setSelectedUserIdFilter('all'); setIsUserFilterPopoverOpen(false);}}>
-                          <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")}/>
-                          All Users
-                        </CommandItem>
-                        {allUsersForFilter.map((user) => (
-                           <CommandItem key={user.id} onSelect={() => {setSelectedUserIdFilter(user.id); setIsUserFilterPopoverOpen(false);}}>
-                             <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")}/>
-                             {user.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-              </PopoverContent>
-            </Popover>
+          <Popover open={isUserFilterPopoverOpen} onOpenChange={setIsUserFilterPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto order-2 sm:order-none flex-shrink-0 h-10">
+                <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span className="truncate">{selectedUserNameForFilter}</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] max-h-80 overflow-y-auto p-0">
+              <Command>
+                <CommandInput
+                  placeholder="Search user..."
+                  value={userSearchQuery}
+                  onValueChange={setUserSearchQuery}
+                />
+                <CommandList>
+                  <CommandEmpty>No user found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem onSelect={() => { setSelectedUserIdFilter('all'); setIsUserFilterPopoverOpen(false); }}>
+                      <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")} />
+                      All Users
+                    </CommandItem>
+                    {allUsersForFilter.map((user) => (
+                      <CommandItem key={user.id} onSelect={() => { setSelectedUserIdFilter(user.id); setIsUserFilterPopoverOpen(false); }}>
+                        <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")} />
+                        {user.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         )}
         <div className="w-full sm:w-auto grow sm:grow-0 order-3 sm:order-none sm:min-w-[200px] md:min-w-[240px]">
           <Label htmlFor="transaction-type-filter" className="sr-only">Filter by type</Label>
@@ -502,25 +502,25 @@ export default function FinanceManagerPage() {
             </SelectContent>
           </Select>
         </div>
-         <div className="w-full sm:w-auto grow sm:grow-0 order-4 sm:order-none">
-            {selectedDateRange ? (
-              <DateRangePicker 
-                  initialRange={selectedDateRange} 
-                  onDateRangeChange={handleDateRangeChange} 
-              />
-            ) : (
-              <Skeleton className="h-10 w-full sm:w-[260px]"/>
-            )}
+        <div className="w-full sm:w-auto grow sm:grow-0 order-4 sm:order-none">
+          {selectedDateRange ? (
+            <DateRangePicker
+              initialRange={selectedDateRange}
+              onDateRangeChange={handleDateRangeChange}
+            />
+          ) : (
+            <Skeleton className="h-10 w-full sm:w-[260px]" />
+          )}
         </div>
         <div className="relative w-full sm:w-auto grow sm:flex-1 order-5 sm:order-none sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
             type="search"
             placeholder="Search transactions..."
             value={transactionSearchTerm}
             onChange={(e) => setTransactionSearchTerm(e.target.value)}
             className="pl-10 bg-background/50 h-10"
-            />
+          />
         </div>
       </div>
 
@@ -552,37 +552,37 @@ export default function FinanceManagerPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="shadow-xl border bg-card rounded-lg lg:col-span-2">
-        <CardHeader className="border-b p-5">
+          <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
-                  <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                    {currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter === 'all' ? "Latest transactions from all users." : 
-                     currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter !== 'all' ? `Latest transactions for selected user.` : 
-                     "Your latest income, expense and purchase entries."}
-                    {transactionTypeFilter !== 'all' && ` (Filtered by: ${displayableTransactionTypeFilters.find(f=>f.value === transactionTypeFilter)?.label})`}
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
-                  {currentUser.role === 'SYSTEM_ADMIN' && (
-                    <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addIncome">
-                      <Button size="sm" variant="outline">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add Income
-                      </Button>
-                    </AddTransactionDialog>
-                  )}
-                  {canUserAddExpense && (
-                     <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
-                        <Button size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Entry
-                        </Button>
-                     </AddTransactionDialog>
-                  )}
-                </div>
+              <div>
+                <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                  {currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter === 'all' ? "Latest transactions from all users." :
+                    currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter !== 'all' ? `Latest transactions for selected user.` :
+                      "Your latest income, expense and purchase entries."}
+                  {transactionTypeFilter !== 'all' && ` (Filtered by: ${displayableTransactionTypeFilters.find(f => f.value === transactionTypeFilter)?.label})`}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
+                {currentUser.role === 'SYSTEM_ADMIN' && (
+                  <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addIncome">
+                    <Button size="sm" variant="outline">
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Income
+                    </Button>
+                  </AddTransactionDialog>
+                )}
+                {canUserAddExpense && (
+                  <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
+                    <Button size="sm">
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Entry
+                    </Button>
+                  </AddTransactionDialog>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-             <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+            <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
               <Table>
                 <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
                   <TableRow>
@@ -595,27 +595,27 @@ export default function FinanceManagerPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {isLoadingContent ? (
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={`skel-${i}`}>
-                      <TableCell colSpan={currentUser.role === 'SYSTEM_ADMIN' ? 6 : 5} className="p-0">
-                        <Skeleton className="h-16 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : filteredTransactions.length > 0 ? (
-                  filteredTransactions.map(t => {
-                    const user = currentUser.role === 'SYSTEM_ADMIN' ? allUsers.find(u => u.id === t.userId) : null;
-                    const { icon: IconComponent, colorClass } = getCategoryDetails(t.category);
-                    return (
-                      <TableRow key={t.id} className="hover:bg-muted/30">
-                        <TableCell className="pl-6">
-                           <motion.div 
+                  {isLoadingContent ? (
+                    [...Array(5)].map((_, i) => (
+                      <TableRow key={`skel-${i}`}>
+                        <TableCell colSpan={currentUser.role === 'SYSTEM_ADMIN' ? 6 : 5} className="p-0">
+                          <Skeleton className="h-16 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredTransactions.length > 0 ? (
+                    filteredTransactions.map(t => {
+                      const user = currentUser.role === 'SYSTEM_ADMIN' ? allUsers.find(u => u.id === t.userId) : null;
+                      const { icon: IconComponent, colorClass } = getCategoryDetails(t.category);
+                      return (
+                        <TableRow key={t.id} className="hover:bg-muted/30">
+                          <TableCell className="pl-6">
+                            <motion.div
                               className="flex items-center space-x-3"
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ duration: 0.3 }}
-                           >
+                            >
                               <motion.div
                                 whileHover={{ scale: 1.1, rotate: -5 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -624,42 +624,42 @@ export default function FinanceManagerPage() {
                                   colorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20')
                                 )}
                               >
-                                  <IconComponent className={cn("h-5 w-5", colorClass)} />
+                                <IconComponent className={cn("h-5 w-5", colorClass)} />
                               </motion.div>
                               <div className="min-w-0">
                                 <p className="font-semibold truncate" title={t.category}>{t.category}</p>
                                 <p className="text-xs text-muted-foreground truncate" title={t.description || undefined}>{t.description || 'No description'}</p>
                               </div>
-                           </motion.div>
-                        </TableCell>
-                         {currentUser.role === 'SYSTEM_ADMIN' && (
-                          <TableCell>
-                            {user ? (
-                               <div className="flex items-center gap-2">
+                            </motion.div>
+                          </TableCell>
+                          {currentUser.role === 'SYSTEM_ADMIN' && (
+                            <TableCell>
+                              {user ? (
+                                <div className="flex items-center gap-2">
                                   <Avatar className="h-7 w-7 border">
                                     <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
                                     <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                                   </Avatar>
                                   <span className="text-xs text-muted-foreground">{user.name}</span>
-                               </div>
-                            ): ( <span className="text-xs text-muted-foreground italic">Unknown User</span> )}
-                          </TableCell>
-                        )}
-                        <TableCell className="text-xs text-muted-foreground">{format(parseISO(t.date), "d MMM, yyyy")}</TableCell>
-                         <TableCell>
-                          {t.documentUrl ? (
-                            <Button asChild variant="outline" size="icon" className="h-8 w-8">
-                               <NextLink href={t.documentUrl} target="_blank" rel="noopener noreferrer" title="View Document">
-                                  <Paperclip className="h-4 w-4"/>
-                               </NextLink>
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground/60">-</span>
+                                </div>
+                              ) : (<span className="text-xs text-muted-foreground italic">Unknown User</span>)}
+                            </TableCell>
                           )}
-                        </TableCell>
-                        <TableCell className={cn("text-right font-semibold", getAmountColor(t))}>{t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}</TableCell>
-                        <TableCell className="pr-6 text-right">
-                           <DropdownMenu>
+                          <TableCell className="text-xs text-muted-foreground">{format(parseISO(t.date), "d MMM, yyyy")}</TableCell>
+                          <TableCell>
+                            {t.documentUrl ? (
+                              <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                                <NextLink href={t.documentUrl} target="_blank" rel="noopener noreferrer" title="View Document">
+                                  <Paperclip className="h-4 w-4" />
+                                </NextLink>
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/60">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className={cn("text-right font-semibold", getAmountColor(t))}>{t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}</TableCell>
+                          <TableCell className="pr-6 text-right">
+                            <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
                                   <MoreVertical className="h-4 w-4" />
@@ -674,103 +674,103 @@ export default function FinanceManagerPage() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                     <TableCell colSpan={currentUser.role === 'SYSTEM_ADMIN' ? 6 : 5} className="h-48 text-center text-muted-foreground">
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={currentUser.role === 'SYSTEM_ADMIN' ? 6 : 5} className="h-48 text-center text-muted-foreground">
                         <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                         <p className="text-lg font-medium">No transactions found.</p>
                         <p className="text-sm">Try adjusting your filters.</p>
                       </TableCell>
-                  </TableRow>
-                )}
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
-             </div>
+            </div>
           </CardContent>
         </Card>
 
         <div className="space-y-6">
-            <Card className="shadow-xl border bg-card rounded-lg">
-                <CardHeader>
-                <CardTitle className="text-card-foreground text-xl flex items-center">
-                    <PieChart className="mr-2 h-5 w-5 text-primary"/>
-                    Expense Breakdown
-                </CardTitle>
-                <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                    Spending by category for the selected period.
-                </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center min-h-60">
-                {isLoadingContent ? (
-                    <Skeleton className="h-48 w-48 rounded-full" />
-                ) : expenseChartData.length > 0 ? (
-                    <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
-                      <RechartsPieChart>
-                          <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent hideLabel />}
-                          />
-                          <Pie
-                              data={expenseChartData}
-                              dataKey="value"
-                              nameKey="name"
-                              innerRadius={60}
-                              strokeWidth={5}
-                              label={({ cx, cy, ...props }) => {
-                                  if (isNaN(cx) || isNaN(cy)) {
-                                      return null;
-                                  }
-                                  return (
-                                      <text
-                                          x={cx}
-                                          y={cy}
-                                          textAnchor="middle"
-                                          dominantBaseline="central"
-                                          className="fill-foreground text-center"
-                                      >
-                                          <tspan
-                                              x={cx}
-                                              y={cy - 12}
-                                              className="text-2xl font-bold"
-                                          >
-                                              {formatCurrency(totalExpenses).replace('BDT', '৳')}
-                                          </tspan>
-                                          <tspan
-                                              x={cx}
-                                              y={cy + 12}
-                                              className="text-xs text-muted-foreground"
-                                          >
-                                              Total Expenses
-                                          </tspan>
-                                      </text>
-                                  )
-                              }}
+          <Card className="shadow-xl border bg-card rounded-lg">
+            <CardHeader>
+              <CardTitle className="text-card-foreground text-xl flex items-center">
+                <PieChart className="mr-2 h-5 w-5 text-primary" />
+                Expense Breakdown
+              </CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                Spending by category for the selected period.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center min-h-60">
+              {isLoadingContent ? (
+                <Skeleton className="h-48 w-48 rounded-full" />
+              ) : expenseChartData.length > 0 ? (
+                <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
+                  <RechartsPieChart>
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent hideLabel />}
+                    />
+                    <Pie
+                      data={expenseChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      strokeWidth={5}
+                      label={({ cx, cy, ...props }) => {
+                        if (isNaN(cx) || isNaN(cy)) {
+                          return null;
+                        }
+                        return (
+                          <text
+                            x={cx}
+                            y={cy}
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            className="fill-foreground text-center"
                           >
-                          {expenseChartData.map((entry, index) => (
-                              <Cell
-                              key={`cell-${index}`}
-                              fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color || COLORS[index % COLORS.length]}
-                              className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                              />
-                          ))}
-                          </Pie>
-                      </RechartsPieChart>
-                       <ChartLegend
-                          content={<ChartLegendContent nameKey="name" />}
-                          className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
-                      />
-                    </ChartContainer>
-                ) : (
-                    <div className="text-center text-muted-foreground">
-                    <p>No expense data to display.</p>
-                    </div>
-                )}
-                </CardContent>
-            </Card>
+                            <tspan
+                              x={cx}
+                              y={cy - 12}
+                              className="text-2xl font-bold"
+                            >
+                              {formatCurrency(totalExpenses).replace('BDT', '৳')}
+                            </tspan>
+                            <tspan
+                              x={cx}
+                              y={cy + 12}
+                              className="text-xs text-muted-foreground"
+                            >
+                              Total Expenses
+                            </tspan>
+                          </text>
+                        )
+                      }}
+                    >
+                      {expenseChartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color || COLORS[index % COLORS.length]}
+                          className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        />
+                      ))}
+                    </Pie>
+                    <ChartLegend
+                      content={<ChartLegendContent nameKey="name" />}
+                      className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
+                    />
+                  </RechartsPieChart>
+                </ChartContainer>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  <p>No expense data to display.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -812,12 +812,11 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
-    
-
-    
-
-    
 
 
 
-    
+
+
+
+
+

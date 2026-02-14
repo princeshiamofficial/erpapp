@@ -4,19 +4,67 @@
 import type { ServiceModelItem } from '@/types';
 import { query } from './mysql';
 import { v4 as uuidv4 } from 'uuid';
+import { getOrders } from './order-service';
 
 const TABLE_NAME = 'stock';
 
 export const getStockItems = async (): Promise<ServiceModelItem[]> => {
   try {
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ORDER BY id ASC`);
-    return rows.map(row => {
+    const [rows, allOrders, sellEntriesRows] = await Promise.all([
+      query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ORDER BY id ASC`),
+      getOrders(),
+      query<any[]>(`SELECT data_json FROM sell_entries`)
+    ]);
+
+    const items = rows.map(row => {
       const data = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
       return {
         id: row.id,
         ...data
       } as ServiceModelItem;
-    }).sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    // Calculate sold counts from orders
+    const soldCounts = new Map<string, number>();
+    allOrders.forEach(order => {
+      order.orderItems.forEach(item => {
+        soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
+      });
+    });
+
+    // Create a map of product ID to product Name for lookup
+    const productIdToName = new Map<string, string>();
+    items.forEach(item => {
+      productIdToName.set(item.id, item.name);
+    });
+
+    // Add approved sell entries to sold counts
+    sellEntriesRows.forEach(row => {
+      const data = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      if (data.status === 'Approved') {
+        if (data.items && Array.isArray(data.items)) {
+          // Handle new multi-item entries
+          data.items.forEach((item: any) => {
+            const prodName = productIdToName.get(item.productId) || item.productName; // Fallback to recorded name
+            if (prodName) {
+              soldCounts.set(prodName, (soldCounts.get(prodName) || 0) + (item.quantity || 0));
+            }
+          });
+        } else {
+          // Legacy single-item entries
+          const prodName = data.productName;
+          if (prodName) {
+            soldCounts.set(prodName, (soldCounts.get(prodName) || 0) + (data.quantity || 0));
+          }
+        }
+      }
+    });
+
+    // Add totalSold to each item and sort by name
+    return items.map(item => ({
+      ...item,
+      totalSold: soldCounts.get(item.name) || 0
+    })).sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error("Error fetching stock items from MySQL:", error);
     return [];
@@ -99,6 +147,25 @@ export const deleteStockItem = async (id: string): Promise<boolean> => {
   } catch (error) {
     console.error("Error deleting stock item from MySQL:", error);
     if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+export const updateStockQuantity = async (id: string, change: number): Promise<boolean> => {
+  try {
+    const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+    if (rows.length === 0) return false;
+
+    const data = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const currentStock = data.stockCount || 0;
+    const newStock = currentStock + change;
+
+    const updatedData = { ...data, stockCount: newStock };
+
+    await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ?`, [JSON.stringify(updatedData), id]);
+    return true;
+  } catch (error) {
+    console.error("Error updating stock quantity:", error);
     return false;
   }
 };

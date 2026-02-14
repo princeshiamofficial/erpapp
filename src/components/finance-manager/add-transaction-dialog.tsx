@@ -37,17 +37,17 @@ interface AddTransactionDialogProps {
 }
 
 export const expenseCategories = [
-    { value: "Office Rent", label: "Office Rent", icon: Home },
-    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
-    { value: "Transportation", label: "Transportation", icon: Car },
-    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
-    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
-    { value: "Marketing", label: "Marketing", icon: Megaphone },
-    { value: "Purchase", label: "Purchase", icon: ShoppingBag },
-    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
-    { value: "Withdraw", label: "Withdraw", icon: Banknote },
-    { value: "Official Expend", label: "Official Expend", icon: Briefcase },
-    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
+  { value: "Office Rent", label: "Office Rent", icon: Home },
+  { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
+  { value: "Transportation", label: "Transportation", icon: Car },
+  { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
+  { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
+  { value: "Marketing", label: "Marketing", icon: Megaphone },
+  { value: "Purchase", label: "Purchase", icon: ShoppingBag },
+  { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
+  { value: "Withdraw", label: "Withdraw", icon: Banknote },
+  { value: "Official Expend", label: "Official Expend", icon: Briefcase },
+  { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
 ];
 
 export function AddTransactionDialog({
@@ -103,7 +103,7 @@ export function AddTransactionDialog({
     } else { // addExpenseOrPurchase
       defaultType = 'expense';
     }
-    
+
     setType(defaultType);
     setAmount('');
     setDescription('');
@@ -147,7 +147,7 @@ export function AddTransactionDialog({
   useEffect(() => {
     // Ensure the selected type is valid for the current mode
     if (!availableTransactionTypes.some(t => t.value === type)) {
-      setType(availableTransactionTypes[0]?.value || 'expense');
+      setType((availableTransactionTypes[0]?.value as TransactionType) || 'expense');
     }
   }, [availableTransactionTypes, type]);
 
@@ -157,7 +157,7 @@ export function AddTransactionDialog({
     }
     return (type === 'expense' || type === 'purchase') && dialogMode !== 'sendMoney' && dialogMode !== 'addIncome';
   }, [type, dialogMode, currentUser]);
-  
+
   const processFile = useCallback((file: File | null) => {
     if (file) {
       if (file.size > 50 * 1024 * 1024) { // 50MB limit
@@ -178,7 +178,7 @@ export function AddTransactionDialog({
     const file = event.target.files?.[0];
     processFile(file || null);
   };
-  
+
   const handleRemoveSelectedFile = () => {
     setSelectedDocumentFile(null);
     if (documentFileRef.current) documentFileRef.current.value = "";
@@ -197,7 +197,7 @@ export function AddTransactionDialog({
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDraggingOver(true); 
+    setIsDraggingOver(true);
   };
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -208,11 +208,11 @@ export function AddTransactionDialog({
       e.dataTransfer.clearData();
     }
   };
-  
+
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
-      if (!isOpen || !isDocumentRequired) return; 
-      
+      if (!isOpen || !isDocumentRequired) return;
+
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
@@ -221,9 +221,9 @@ export function AddTransactionDialog({
             if (file) {
               const processed = processFile(file);
               if (processed) {
-                toast({title: "File Pasted", description: "Image from clipboard has been attached."});
+                toast({ title: "File Pasted", description: "Image from clipboard has been attached." });
               }
-              event.preventDefault(); 
+              event.preventDefault();
               return;
             }
           }
@@ -255,15 +255,15 @@ export function AddTransactionDialog({
     }
 
     let uploadedDocumentUrl: string | null = null;
-    
+
     // Upload if a file is selected, regardless of whether it's required.
     // If it's required but no file is selected, the canSubmit check will already prevent this handler from being called.
-    if (selectedDocumentFile) { 
+    if (selectedDocumentFile) {
       setIsUploadingDocument(true);
       const formData = new FormData();
       formData.append('file', selectedDocumentFile);
       try {
-        const response = await fetch('https://erp.colorhutbd.xyz/file/upload.php', {
+        const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
@@ -333,8 +333,8 @@ export function AddTransactionDialog({
 
   const availableUsers = useMemo(() => {
     return allUsersForDropdown.filter(u => {
-        if (u.id === currentUser.id) return false; // Can't send to self
-        return true; // The parent component now handles all filtering logic
+      if (u.id === currentUser.id) return false; // Can't send to self
+      return true; // The parent component now handles all filtering logic
     });
   }, [allUsersForDropdown, currentUser.id]);
 
@@ -391,10 +391,10 @@ export function AddTransactionDialog({
               </div>
             )}
             {(dialogMode === 'addIncome' || dialogMode === 'sendMoney') && (
-                 <div className="space-y-1">
-                    <Label>Type</Label>
-                    <Input value={type === 'income' ? 'Income' : 'Expense (Sent Money)'} readOnly disabled className="bg-muted/50"/>
-                 </div>
+              <div className="space-y-1">
+                <Label>Type</Label>
+                <Input value={type === 'income' ? 'Income' : 'Expense (Sent Money)'} readOnly disabled className="bg-muted/50" />
+              </div>
             )}
             <div className="space-y-1">
               <Label htmlFor="transaction-amount">Amount (BDT) *</Label>
@@ -406,25 +406,25 @@ export function AddTransactionDialog({
                 <Label htmlFor="transaction-category">Category *</Label>
                 <Select value={category} onValueChange={setCategory} required>
                   <SelectTrigger id="transaction-category">
-                      <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                      {expenseCategories.map(cat => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                              <div className="flex items-center gap-2">
-                                  <cat.icon className="h-4 w-4 text-muted-foreground" />
-                                  <span>{cat.label}</span>
-                              </div>
-                          </SelectItem>
-                      ))}
+                    {expenseCategories.map(cat => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        <div className="flex items-center gap-2">
+                          <cat.icon className="h-4 w-4 text-muted-foreground" />
+                          <span>{cat.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             ) : (
-                 <div className="space-y-1">
-                    <Label htmlFor="transaction-category-disabled">Category *</Label>
-                    <Input id="transaction-category-disabled" value={category} disabled readOnly />
-                </div>
+              <div className="space-y-1">
+                <Label htmlFor="transaction-category-disabled">Category *</Label>
+                <Input id="transaction-category-disabled" value={category} disabled readOnly />
+              </div>
             )}
 
             {dialogMode === 'sendMoney' && (
@@ -445,7 +445,7 @@ export function AddTransactionDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command filter={() => 1}> 
+                    <Command filter={() => 1}>
                       <CommandInput
                         placeholder="Search user..."
                         value={userSearchQuery}
@@ -514,7 +514,7 @@ export function AddTransactionDialog({
             {(type === 'expense' || type === 'purchase') && dialogMode !== 'addIncome' && (
               <div className="space-y-1">
                 <Label htmlFor="transaction-document">Document Attachment {isDocumentRequired ? "*" : "(Optional)"}</Label>
-                <div 
+                <div
                   ref={dropZoneRef}
                   className={cn(
                     "mt-1 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors",
@@ -527,17 +527,17 @@ export function AddTransactionDialog({
                   onDrop={handleDrop}
                   onClick={() => documentFileRef.current?.click()}
                 >
-                  <UploadCloud className={cn("h-8 w-8 mb-2", selectedDocumentFile ? "text-green-600" : "text-muted-foreground", isDraggingOver ? "text-primary": "")} />
+                  <UploadCloud className={cn("h-8 w-8 mb-2", selectedDocumentFile ? "text-green-600" : "text-muted-foreground", isDraggingOver ? "text-primary" : "")} />
                   <p className="text-sm text-muted-foreground">
                     {isDraggingOver ? "Drop file here" : selectedDocumentFile ? "File selected:" : "Drag & drop or click to upload"}
                   </p>
                   {selectedDocumentFile && (
-                     <div className="mt-1 text-xs text-foreground font-medium flex items-center gap-1.5">
-                        <Paperclip className="h-3.5 w-3.5 text-green-600"/>
-                        <span>{selectedDocumentFile.name} ({(selectedDocumentFile.size / 1024).toFixed(1)} KB)</span>
-                        <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveSelectedFile();}} title="Clear selection" className="text-muted-foreground hover:text-destructive h-6 w-6">
-                            <XCircle className="h-4 w-4"/>
-                        </Button>
+                    <div className="mt-1 text-xs text-foreground font-medium flex items-center gap-1.5">
+                      <Paperclip className="h-3.5 w-3.5 text-green-600" />
+                      <span>{selectedDocumentFile.name} ({(selectedDocumentFile.size / 1024).toFixed(1)} KB)</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveSelectedFile(); }} title="Clear selection" className="text-muted-foreground hover:text-destructive h-6 w-6">
+                        <XCircle className="h-4 w-4" />
+                      </Button>
                     </div>
                   )}
                   {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Images Only)</p>}
@@ -549,7 +549,7 @@ export function AddTransactionDialog({
                   ref={documentFileRef}
                   onChange={handleFileChange}
                   className="hidden"
-                  accept="image/*" 
+                  accept="image/*"
                 />
               </div>
             )}
@@ -558,9 +558,9 @@ export function AddTransactionDialog({
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting || isUploadingDocument}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit || isUploadingDocument}>
-              {isUploadingDocument ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : 
-               isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 
-               (dialogMode === 'sendMoney' ? "Record Payment" : "Add Transaction")}
+              {isUploadingDocument ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> :
+                isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> :
+                  (dialogMode === 'sendMoney' ? "Record Payment" : "Add Transaction")}
             </Button>
           </DialogFooter>
         </form>
@@ -568,4 +568,4 @@ export function AddTransactionDialog({
     </Dialog>
   );
 }
-    
+

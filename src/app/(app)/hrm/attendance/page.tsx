@@ -92,7 +92,7 @@ export default function AttendancePage() {
     const [attendanceDateFilter, setAttendanceDateFilter] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [currentPage, setCurrentPage] = useState(1);
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
-    const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
+    const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string, type?: 'In' | 'Out' } | null>(null);
     const [selectedWeekends, setSelectedWeekends] = useState<string[]>([]);
     const [isAttendanceTypeDialogOpen, setIsAttendanceTypeDialogOpen] = useState(false);
 
@@ -821,7 +821,8 @@ export default function AttendancePage() {
                                                                         lat: (entry as any).checkInLocation.lat,
                                                                         lng: (entry as any).checkInLocation.lng,
                                                                         employeeName: entry.employeeName,
-                                                                        employeeAvatar: user?.avatarUrl || undefined
+                                                                        employeeAvatar: user?.avatarUrl || undefined,
+                                                                        type: 'In'
                                                                     });
                                                                 }
                                                             }}
@@ -840,7 +841,8 @@ export default function AttendancePage() {
                                                                         lat: (entry as any).checkOutLocation.lat,
                                                                         lng: (entry as any).checkOutLocation.lng,
                                                                         employeeName: entry.employeeName,
-                                                                        employeeAvatar: user?.avatarUrl || undefined
+                                                                        employeeAvatar: user?.avatarUrl || undefined,
+                                                                        type: 'Out'
                                                                     });
                                                                 }
                                                             }}
@@ -1341,6 +1343,7 @@ export default function AttendancePage() {
                 isOpen={!!viewingLocation}
                 onOpenChange={() => setViewingLocation(null)}
                 location={viewingLocation}
+                title={viewingLocation ? `Check ${viewingLocation.type} Location for ${viewingLocation.employeeName}` : ''}
             />
             <AttendanceTypeDialog
                 isOpen={isAttendanceTypeDialogOpen}

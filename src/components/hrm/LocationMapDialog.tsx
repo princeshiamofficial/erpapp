@@ -15,16 +15,17 @@ import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility
 import "leaflet-defaulticon-compatibility";
 
 interface LocationInfo {
-    lat: number;
-    lng: number;
-    employeeName: string;
-    employeeAvatar?: string;
+  lat: number;
+  lng: number;
+  employeeName: string;
+  employeeAvatar?: string;
 }
 
 interface LocationMapDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   location: LocationInfo | null;
+  title?: string;
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -36,20 +37,20 @@ const getInitials = (name: string | undefined): string => {
 
 // A helper component that will update the map's view and size
 function MapUpdater({ center, zoom }: { center: L.LatLngExpression; zoom: number; }) {
-    const map = useMap();
-    useEffect(() => {
-        // Use a short timeout to ensure the dialog animation is complete
-        // and the map container has its final size.
-        setTimeout(() => {
-            map.invalidateSize();
-            map.setView(center, zoom);
-        }, 100);
-    }, [center, zoom, map]);
+  const map = useMap();
+  useEffect(() => {
+    // Use a short timeout to ensure the dialog animation is complete
+    // and the map container has its final size.
+    setTimeout(() => {
+      map.invalidateSize();
+      map.setView(center, zoom);
+    }, 100);
+  }, [center, zoom, map]);
 
-    return null;
+  return null;
 }
 
-export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
+export function LocationMapDialog({ isOpen, onOpenChange, location, title }: LocationMapDialogProps) {
   if (!isOpen || !location) {
     return null;
   }
@@ -58,38 +59,38 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl p-0">
         <DialogHeader className="p-4 border-b">
-          <DialogTitle>Attendance Location for {location.employeeName}</DialogTitle>
+          <DialogTitle>{title || `Attendance Location for ${location.employeeName}`}</DialogTitle>
         </DialogHeader>
         <div style={{ height: '50vh', width: '100%' }}>
-            <MapContainer
-                center={[location.lat, location.lng]}
-                zoom={15}
-                scrollWheelZoom={false}
-                style={{ height: '100%', width: '100%' }}
-                className="rounded-b-lg"
-            >
-                <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={[location.lat, location.lng]}>
-                  <Tooltip
-                    permanent
-                    direction="top"
-                    offset={[0, -20]}
-                    className="leaflet-tooltip-permanent"
-                  >
-                     <div className="flex items-center gap-2 p-1 bg-background rounded-full shadow-md border">
-                        <Avatar className="h-8 w-8">
-                            <AvatarImage src={location.employeeAvatar} alt={location.employeeName} />
-                            <AvatarFallback>{getInitials(location.employeeName)}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-semibold pr-2">{location.employeeName}</span>
-                     </div>
-                  </Tooltip>
-                </Marker>
-                <MapUpdater center={[location.lat, location.lng]} zoom={15} />
-            </MapContainer>
+          <MapContainer
+            center={[location.lat, location.lng]}
+            zoom={15}
+            scrollWheelZoom={false}
+            attributionControl={false}
+            style={{ height: '100%', width: '100%' }}
+            className="rounded-b-lg"
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={[location.lat, location.lng]}>
+              <Tooltip
+                permanent
+                direction="top"
+                offset={[0, -20]}
+                className="leaflet-tooltip-permanent"
+              >
+                <div className="flex items-center gap-2 p-1 bg-background rounded-full shadow-md border">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={location.employeeAvatar} alt={location.employeeName} />
+                    <AvatarFallback>{getInitials(location.employeeName)}</AvatarFallback>
+                  </Avatar>
+                  <span className="font-semibold pr-2">{location.employeeName}</span>
+                </div>
+              </Tooltip>
+            </Marker>
+            <MapUpdater center={[location.lat, location.lng]} zoom={15} />
+          </MapContainer>
         </div>
       </DialogContent>
     </Dialog>

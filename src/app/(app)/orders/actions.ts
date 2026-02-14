@@ -29,7 +29,7 @@ interface CreateOrderDialogFormData {
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
   }>;
-  advancePaymentAmount?: string | null;
+  advancePaymentAmount?: number | null;
   advancePaymentMethod?: string | null;
   advancePaymentDocumentUrl?: string | null;
   newAdvancePaymentNotes?: string | null;
@@ -107,11 +107,9 @@ export async function createOrderAction(
     }
 
     let parsedAdvancePaymentAmount: number | null = null;
-    const advancePaymentAmountStr = String(data.advancePaymentAmount ?? '');
-    if (advancePaymentAmountStr.trim() !== '') {
-      const numAdvancePayment = Number(advancePaymentAmountStr);
-      if (isNaN(numAdvancePayment) || numAdvancePayment < 0) return { error: "Advance Payment Amount must be a non-negative number." };
-      parsedAdvancePaymentAmount = numAdvancePayment;
+    if (data.advancePaymentAmount !== undefined && data.advancePaymentAmount !== null) {
+      if (data.advancePaymentAmount < 0) return { error: "Advance Payment Amount must be a non-negative number." };
+      parsedAdvancePaymentAmount = data.advancePaymentAmount;
     }
 
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
@@ -602,7 +600,7 @@ export async function deleteOrderAction(
       revalidatePath("/(app)/deliveries/monthly");
       revalidatePath("/(app)/deliveries/weekly");
       revalidatePath("/(app)/projects");
-      revalidatePath("/(app)/admin/stock-management");
+
       revalidatePath("/(app)/admin/model-management");
       revalidatePath("/(app)/crm/sow");
       revalidatePath("/(app)/admin/payment-history");

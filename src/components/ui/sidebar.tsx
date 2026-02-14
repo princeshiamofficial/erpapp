@@ -4,7 +4,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { Menu } from "lucide-react" 
+import { Menu } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -67,7 +67,7 @@ const SidebarProvider = React.forwardRef<
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
   const [defaultOpen, setDefaultOpen] = React.useState(true); // Default to true initially
-  
+
   // Logic to read from localStorage now happens inside useEffect
   React.useEffect(() => {
     // This code now runs only on the client
@@ -76,9 +76,9 @@ const SidebarProvider = React.forwardRef<
       setDefaultOpen(storedState === 'true');
     }
   }, []); // Empty dependency array ensures it runs once on mount
-  
+
   const [_open, _setOpen] = React.useState(defaultOpen);
-  
+
   // Update state if defaultOpen changes (after reading from localStorage)
   React.useEffect(() => {
     _setOpen(defaultOpen);
@@ -124,7 +124,7 @@ const SidebarProvider = React.forwardRef<
       state,
       open,
       setOpen,
-      isMobile,
+      isMobile: isMobile ?? false,
       openMobile,
       setOpenMobile,
       toggleSidebar,
@@ -605,7 +605,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className
       )}
       {...props}
@@ -701,8 +701,9 @@ const SidebarMenuSubButton = React.forwardRef<
     asChild?: boolean
     size?: "sm" | "md"
     isActive?: boolean
+    disabled?: boolean
   }
->(({ asChild = false, size = "md", isActive, className, ...props }, ref) => {
+>(({ asChild = false, size = "md", isActive, disabled, className, ...props }, ref) => {
   const Comp = asChild ? Slot : "a"
 
   return (
@@ -711,6 +712,8 @@ const SidebarMenuSubButton = React.forwardRef<
       data-sidebar="menu-sub-button"
       data-size={size}
       data-active={isActive}
+      aria-disabled={disabled}
+      data-disabled={disabled}
       className={cn(
         "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
         "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",

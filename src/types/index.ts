@@ -680,11 +680,25 @@ export interface DailyRoutine {
   updatedAt: string; // ISO string
 }
 
-export interface SoldHistoryEntry {
-  id: string;
-  orderId: string;
+
+export interface SellEntryItem {
+  productId: string;
   productName: string;
   quantity: number;
-  totalPrice: number;
-  saleDate: string; // ISO Date string
+}
+
+export interface SellEntry {
+  id: string;
+  entryId: string; // Display ID like SE-001
+  items?: SellEntryItem[]; // Array of items
+  productId?: string; // Legacy
+  productName?: string; // Legacy
+  quantity?: number; // Legacy or Total Quantity?
+  status: 'Pending' | 'Approved' | 'Rejected';
+  recordedByUserId: string;
+  recordedByUserName: string;
+  approvedByUserId?: string | null;
+  approvedByUserName?: string | null;
+  createdAt: string; // ISO string
+  approvedAt?: string | null; // ISO string
 }

@@ -37,7 +37,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     setPreviewUrl(null);
     setIsUploading(false);
   };
-  
+
   useEffect(() => {
     if (isOpen) {
       resetState();
@@ -60,28 +60,28 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     }
     return false;
   }, [toast]);
-  
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     processFile(event.target.files?.[0] || null);
   };
-  
+
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       // Only handle paste when this specific dialog is open and on the upload step
-      if (!isOpen || step !== 'upload') return; 
-      
+      if (!isOpen || step !== 'upload') return;
+
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
           if (items[i].type.indexOf("image") !== -1) {
             const file = items[i].getAsFile();
             if (file) {
-               const processed = processFile(file);
-               if (processed) {
-                 toast({title: "Image Pasted", description: "Image from clipboard has been attached as proof."});
-               }
-               event.preventDefault(); 
-               return;
+              const processed = processFile(file);
+              if (processed) {
+                toast({ title: "Image Pasted", description: "Image from clipboard has been attached as proof." });
+              }
+              event.preventDefault();
+              return;
             }
           }
         }
@@ -94,7 +94,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     };
   }, [isOpen, step, processFile, toast]);
 
-  
+
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -105,17 +105,17 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
 
   const handleUploadAndConfirm = async () => {
     if (!selectedFile) {
-        onConfirm("File uploaded: Yes (No proof provided).");
-        onOpenChange(false);
-        return;
+      onConfirm("File uploaded: Yes (No proof provided).");
+      onOpenChange(false);
+      return;
     }
-    
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', selectedFile);
 
     try {
-      const response = await fetch('https://colorhutbd.xyz/model-image/index.php', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -145,12 +145,12 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     setSelectedFile(null);
     setPreviewUrl(null);
     if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      fileInputRef.current.value = "";
     }
   };
-  
+
   const handleNoClick = () => {
-      onOpenChange(false);
+    onOpenChange(false);
   };
 
   return (
@@ -161,11 +161,11 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
             <AlertCircle className="h-6 w-6 text-primary" />
             File Upload Confirmation
           </DialogTitle>
-           <DialogDescription>
+          <DialogDescription>
             Confirm if the design file has been uploaded to the server for production.
           </DialogDescription>
         </DialogHeader>
-        
+
         {step === 'initial' && (
           <>
             <p className="py-4 text-center text-sm">Has the necessary file for this project been uploaded?</p>
@@ -178,7 +178,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
 
         {step === 'upload' && (
           <div className="py-4 space-y-4">
-             <div 
+            <div
               className={cn(
                 "mt-1 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors",
                 previewUrl ? "border-green-500 bg-green-500/5" : "border-border"
@@ -188,13 +188,20 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
               onClick={() => fileInputRef.current?.click()}
             >
               {previewUrl ? (
-                 <div className="text-center relative group/preview">
-                    <NextImage src={previewUrl} alt="Preview" width={100} height={100} className="rounded-md object-cover max-h-24 w-auto mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">{selectedFile?.name}</p>
-                    <button type="button" onClick={handleRemovePreview} className="absolute -top-2 -right-2 h-6 w-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity">
-                        <XCircle className="h-4 w-4" />
-                    </button>
-                 </div>
+                <div className="text-center relative group/preview">
+                  <NextImage
+                    src={previewUrl}
+                    alt="Preview"
+                    width={100}
+                    height={100}
+                    unoptimized={true}
+                    className="rounded-md object-cover max-h-24 w-auto mx-auto mb-2"
+                  />
+                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">{selectedFile?.name}</p>
+                  <button type="button" onClick={handleRemovePreview} className="absolute -top-2 -right-2 h-6 w-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity">
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                </div>
               ) : (
                 <>
                   <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
@@ -211,14 +218,14 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
               className="hidden"
               accept="image/*"
             />
-            
-             <DialogFooter className="pt-4 border-t">
+
+            <DialogFooter className="pt-4 border-t">
               <Button variant="outline" onClick={() => setStep('initial')} disabled={isUploading}>Back</Button>
               <Button onClick={handleUploadAndConfirm} disabled={isUploading}>
                 {isUploading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</>
                 ) : (
-                   "Submit"
+                  "Submit"
                 )}
               </Button>
             </DialogFooter>

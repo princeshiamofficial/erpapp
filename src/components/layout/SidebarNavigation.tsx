@@ -5,12 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, useSidebar, SidebarMenuButton } from "@/components/ui/sidebar";
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
+import {
+  LayoutDashboard,
+  Package,
+  Users,
   Link2,
-  Settings2, 
+  Settings2,
   FileText,
   Award,
   BarChart3,
@@ -21,13 +21,13 @@ import {
   Briefcase,
   MessageCircle,
   Landmark,
-  Shield, 
+  Shield,
   ChevronDown,
   Map,
   ShoppingCart,
   FolderHeart,
   DatabaseZap,
-  MapPin, 
+  MapPin,
   ClipboardList,
   Gift,
   Store,
@@ -58,11 +58,11 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"] },
   { href: "/my-daily-routine", label: "MY Daily Routine", icon: ClipboardList, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"] },
-  { 
+  {
     isHeader: true,
-    label: "CRM", 
-    icon: Shield, 
-    roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"], 
+    label: "CRM",
+    icon: Shield,
+    roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"],
     href: "",
     subItems: [
       { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
@@ -75,11 +75,11 @@ const navItems: NavItem[] = [
   { href: "/tracking-links", label: "Track Orders", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/quotation", label: "Quotations", icon: ClipboardList, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/gifts", label: "Gifts", icon: Gift, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
-  { 
+  {
     isHeader: true,
-    label: "HRM", 
-    icon: Shrink, 
-    roles: ["SYSTEM_ADMIN", "ADMIN"], 
+    label: "HRM",
+    icon: Shrink,
+    roles: ["SYSTEM_ADMIN", "ADMIN"],
     href: "",
     subItems: [
       { href: "/payroll", label: "Payroll", icon: Landmark, roles: ["SYSTEM_ADMIN", "ADMIN"] },
@@ -94,12 +94,12 @@ const navItems: NavItem[] = [
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/leaderboard", label: "Leaderboard", icon: Award, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/report", label: "Report", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"] },
-  { href: "/projects", label: "Projects", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR", "CO"] }, 
-  { 
+  { href: "/projects", label: "Projects", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR", "CO"] },
+  {
     isHeader: true,
-    label: "Administration", 
-    icon: Settings2, 
-    roles: ["SYSTEM_ADMIN", "ADMIN"], 
+    label: "Administration",
+    icon: Settings2,
+    roles: ["SYSTEM_ADMIN", "ADMIN"],
     href: "",
     subItems: [
       { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
@@ -108,7 +108,7 @@ const navItems: NavItem[] = [
       { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
-      { href: "/admin/stock-management", label: "Stock Management", icon: Archive, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/admin/stock-reports", label: "Stock Reports", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/admin/payment-history", label: "Payment History", icon: Wallet, roles: ["SYSTEM_ADMIN"] },
     ]
   },
@@ -133,7 +133,7 @@ export function SidebarNavigation() {
 
   useEffect(() => {
     navItems.forEach(item => {
-      if (item.isHeader && item.subItems?.some(sub => sub.href && pathname.startsWith(sub.href))) {
+      if (item.isHeader && item.subItems?.some(sub => sub.href && pathname?.startsWith(sub.href))) {
         setOpenMenus(prev => ({ ...prev, [item.label]: true }));
       }
     });
@@ -161,12 +161,12 @@ export function SidebarNavigation() {
   if (!currentUser) return null;
 
   const userRole = currentUser.role;
-  
+
   const isSidebarExpanded = isMobile ? openMobile : sidebarState === 'expanded';
 
   const renderNavItems = (items: NavItem[]) => {
     return items.map((item) => {
-      
+
       let shouldShowItem = item.roles.includes(userRole);
 
       // Special check for Finance Manager
@@ -180,20 +180,20 @@ export function SidebarNavigation() {
           shouldShowItem = false;
         }
       }
-      
+
       // If it's a header, check if any sub-item should be shown
       if (item.isHeader && item.subItems) {
         shouldShowItem = item.subItems.some(sub => {
-            const roleMatch = sub.roles.includes(userRole);
-            if (!roleMatch) return false;
-            
-            if (sub.href === "/finance-manager" && !canUserLogExpense) return false;
-            
-            if (sub.href === "/leaderboard" && globalSettings?.isLeaderboardRestrictedToAdmin) {
-                return (userRole === 'ADMIN' || userRole === 'SYSTEM_ADMIN');
-            }
-            
-            return true;
+          const roleMatch = sub.roles.includes(userRole);
+          if (!roleMatch) return false;
+
+          if (sub.href === "/finance-manager" && !canUserLogExpense) return false;
+
+          if (sub.href === "/leaderboard" && globalSettings?.isLeaderboardRestrictedToAdmin) {
+            return (userRole === 'ADMIN' || userRole === 'SYSTEM_ADMIN');
+          }
+
+          return true;
         });
       }
 
@@ -201,7 +201,7 @@ export function SidebarNavigation() {
 
       if (item.subItems && item.subItems.length > 0) {
         const isMenuOpen = openMenus[item.label] || false;
-        
+
         return (
           <React.Fragment key={item.label}>
             <SidebarMenuItem>
@@ -238,31 +238,31 @@ export function SidebarNavigation() {
                       if (!subItem.roles.includes(userRole) || (subItem.href === "/finance-manager" && !canUserLogExpense)) {
                         return null;
                       }
-                      
+
                       if (subItem.href === "/leaderboard" && globalSettings?.isLeaderboardRestrictedToAdmin) {
                         if (userRole !== 'ADMIN' && userRole !== 'SYSTEM_ADMIN') {
                           return null;
                         }
                       }
 
-                      const isSubActive = subItem.href && (pathname === subItem.href || pathname.startsWith(subItem.href));
-                      
-                      const linkProps = subItem.external 
-                        ? { target: "_blank", rel: "noopener noreferrer" } 
+                      const isSubActive = !!(pathname && subItem.href && (pathname === subItem.href || pathname.startsWith(subItem.href)));
+
+                      const linkProps = subItem.external
+                        ? { target: "_blank", rel: "noopener noreferrer" }
                         : {};
 
                       return (
                         <SidebarMenuSubItem key={subItem.href}>
-                           <SidebarMenuSubButton
-                              asChild
-                              isActive={isSubActive}
-                              disabled={subItem.disabled}
-                            >
-                                <Link href={subItem.href} className="flex items-center w-full" {...linkProps}>
-                                  <subItem.icon className="mr-3 h-4 w-4 shrink-0" />
-                                  <span className="truncate text-sm">{subItem.label}</span>
-                                </Link>
-                            </SidebarMenuSubButton>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isSubActive}
+                            disabled={subItem.disabled}
+                          >
+                            <Link href={subItem.href} className="flex items-center w-full" {...linkProps}>
+                              <subItem.icon className="mr-3 h-4 w-4 shrink-0" />
+                              <span className="truncate text-sm">{subItem.label}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       );
                     })}
@@ -274,36 +274,36 @@ export function SidebarNavigation() {
         );
       }
 
-      const isActive = item.href && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
-      
+      const isActive = !!(pathname && item.href && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))));
+
       return (
         <SidebarMenuItem key={`${item.href}-${item.label}`}>
-            <SidebarMenuButton
-              asChild
-              isActive={isActive}
-              tooltip={{ 
-                  children: item.label, 
-                  side: 'right', 
-                  align: 'center', 
-                  className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md" 
-              }}
-              disabled={item.disabled}
-              aria-disabled={item.disabled}
-              className={
-                cn(
-                  "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
-                  isActive && "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
-                  item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
-                )
-              }
-            >
-              <Link href={item.href} className="flex items-center w-full">
-                <item.icon className="mr-3 h-5 w-5 shrink-0" />
-                <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
-                  {item.label}
-                </span>
-              </Link>
-            </SidebarMenuButton>
+          <SidebarMenuButton
+            asChild
+            isActive={isActive}
+            tooltip={{
+              children: item.label,
+              side: 'right',
+              align: 'center',
+              className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md"
+            }}
+            disabled={item.disabled}
+            aria-disabled={item.disabled}
+            className={
+              cn(
+                "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
+                isActive && "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
+                item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
+              )
+            }
+          >
+            <Link href={item.href} className="flex items-center w-full">
+              <item.icon className="mr-3 h-5 w-5 shrink-0" />
+              <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
+                {item.label}
+              </span>
+            </Link>
+          </SidebarMenuButton>
         </SidebarMenuItem>
       );
     });
