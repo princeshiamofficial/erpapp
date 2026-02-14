@@ -23,7 +23,7 @@ interface EditAttendanceDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onAttendanceSaved: () => void;
-  attendance: any | null; 
+  attendance: any | null;
 }
 
 export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, attendance }: EditAttendanceDialogProps) {
@@ -38,12 +38,12 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
       // Default to On Time if it was a placeholder
       const initialStatus = (attendance.status === 'Absent' || attendance.status === 'Weekend') ? 'On Time' : attendance.status;
       setStatus(initialStatus as AttendanceStatus);
-      
+
       if (attendance.checkInTime) {
         try {
-            setCheckInTime(format(parseISO(attendance.checkInTime), 'HH:mm'));
+          setCheckInTime(format(parseISO(attendance.checkInTime), 'HH:mm'));
         } catch (e) {
-            setCheckInTime('09:00');
+          setCheckInTime('09:00');
         }
       } else {
         setCheckInTime('09:00');
@@ -51,9 +51,9 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
 
       if (attendance.checkOutTime) {
         try {
-            setCheckOutTime(format(parseISO(attendance.checkOutTime), 'HH:mm'));
+          setCheckOutTime(format(parseISO(attendance.checkOutTime), 'HH:mm'));
         } catch (e) {
-            setCheckOutTime('');
+          setCheckOutTime('');
         }
       } else {
         setCheckOutTime('');
@@ -66,14 +66,14 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
     if (!attendance) return;
 
     setIsSubmitting(true);
-    
+
     const attDate = attendance.date instanceof Date ? attendance.date : parseISO(attendance.date);
-    
+
     const createIso = (timeStr: string) => {
-        if (!timeStr) return null;
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const dateWithTime = set(attDate, { hours, minutes, seconds: 0, milliseconds: 0 });
-        return dateWithTime.toISOString();
+      if (!timeStr) return null;
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const dateWithTime = set(attDate, { hours, minutes, seconds: 0, milliseconds: 0 });
+      return dateWithTime.toISOString();
     };
 
     const finalCheckIn = createIso(checkInTime);
@@ -81,38 +81,39 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
 
     let hoursWorked = null;
     if (finalCheckIn && finalCheckOut) {
-        const diffMs = new Date(finalCheckOut).getTime() - new Date(finalCheckIn).getTime();
-        if (diffMs > 0) {
-            const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            hoursWorked = `${String(diffHrs).padStart(2, '0')}:${String(diffMins).padStart(2, '0')}`;
-        }
+      const diffMs = new Date(finalCheckOut).getTime() - new Date(finalCheckIn).getTime();
+      if (diffMs > 0) {
+        const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        hoursWorked = `${String(diffHrs).padStart(2, '0')}:${String(diffMins).padStart(2, '0')}`;
+      }
     }
 
     const payload = {
-        checkInTime: finalCheckIn!,
-        checkOutTime: finalCheckOut,
-        status: status,
-        hoursWorked: hoursWorked,
-        location: attendance.location || 'Manual Entry',
-        checkInLocation: attendance.checkInLocation,
-        checkOutLocation: attendance.checkOutLocation,
+      date: format(attDate, 'yyyy-MM-dd'),
+      checkInTime: finalCheckIn!,
+      checkOutTime: finalCheckOut,
+      status: status,
+      hoursWorked: hoursWorked,
+      location: attendance.location || 'Manual Entry',
+      checkInLocation: attendance.checkInLocation,
+      checkOutLocation: attendance.checkOutLocation,
     };
 
     const targetUser = {
-        id: attendance.employeeId,
-        name: attendance.employeeName,
+      id: attendance.employeeId,
+      name: attendance.employeeName,
     } as User;
 
     const result = await saveAttendanceAction(targetUser, payload);
     setIsSubmitting(false);
 
     if (result.success) {
-        toast({ title: "Success", description: "Attendance record has been saved." });
-        onAttendanceSaved();
-        onOpenChange(false);
+      toast({ title: "Success", description: "Attendance record has been saved." });
+      onAttendanceSaved();
+      onOpenChange(false);
     } else {
-        toast({ title: "Error", description: result.error || "Failed to save attendance.", variant: "destructive" });
+      toast({ title: "Error", description: result.error || "Failed to save attendance.", variant: "destructive" });
     }
   };
 
@@ -131,24 +132,24 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
           <div className="space-y-1">
             <Label htmlFor="att-status">Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as AttendanceStatus)}>
-                <SelectTrigger id="att-status">
-                    <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="On Time">On Time</SelectItem>
-                    <SelectItem value="Late">Late</SelectItem>
-                    <SelectItem value="Absent">Absent</SelectItem>
-                </SelectContent>
+              <SelectTrigger id="att-status">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="On Time">On Time</SelectItem>
+                <SelectItem value="Late">Late</SelectItem>
+                <SelectItem value="Absent">Absent</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-                <Label htmlFor="att-checkin">Check-In Time</Label>
-                <Input id="att-checkin" type="time" value={checkInTime} onChange={e => setCheckInTime(e.target.value)} required />
+              <Label htmlFor="att-checkin">Check-In Time</Label>
+              <Input id="att-checkin" type="time" value={checkInTime} onChange={e => setCheckInTime(e.target.value)} required />
             </div>
             <div className="space-y-1">
-                <Label htmlFor="att-checkout">Check-Out Time</Label>
-                <Input id="att-checkout" type="time" value={checkOutTime} onChange={e => setCheckOutTime(e.target.value)} />
+              <Label htmlFor="att-checkout">Check-Out Time</Label>
+              <Input id="att-checkout" type="time" value={checkOutTime} onChange={e => setCheckOutTime(e.target.value)} />
             </div>
           </div>
           <DialogFooter className="pt-4 border-t">

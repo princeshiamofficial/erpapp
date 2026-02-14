@@ -9,6 +9,16 @@ import { format, isToday, parseISO } from 'date-fns';
 const ATTENDANCE_TABLE = 'attendance_records';
 const MARK_TABLE = 'attendance_marks';
 
+const safeParse = (str: any) => {
+  if (typeof str !== 'string') return str;
+  if (!str || str === 'null') return null;
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return null;
+  }
+};
+
 export const getAttendanceForMonth = async (date: Date): Promise<AttendanceRecord[]> => {
   const monthStart = format(date, 'yyyy-MM-01');
   const nextMonth = new Date(date);
@@ -21,21 +31,32 @@ export const getAttendanceForMonth = async (date: Date): Promise<AttendanceRecor
       [monthStart, monthEnd]
     );
 
-    return results.map(row => ({
-      id: row.id,
-      employeeId: row.employee_id,
-      employeeName: row.employee_name,
-      date: row.date.toISOString().split('T')[0],
-      checkInTime: row.check_in_time.toISOString(),
-      checkOutTime: row.check_out_time ? row.check_out_time.toISOString() : null,
-      status: row.status,
-      hoursWorked: row.hours_worked,
-      lateReason: row.late_reason,
-      earlyOutReason: row.early_out_reason,
-      location: row.location,
-      checkInLocation: row.check_in_location,
-      checkOutLocation: row.check_out_location,
-    } as AttendanceRecord));
+    return results.map(row => {
+      const dbDate = new Date(row.date);
+      const dateStr = format(dbDate, 'yyyy-MM-dd');
+
+      // Use "-1 date logic" for records until 2026-02-12 (legacy behavior due to UTC shift)
+      // For the rest, use the actual date (new behavior)
+      const displayDate = dateStr <= '2026-02-12'
+        ? row.date.toISOString().split('T')[0]
+        : dateStr;
+
+      return {
+        id: row.id,
+        employeeId: row.employee_id,
+        employeeName: row.employee_name,
+        date: displayDate,
+        checkInTime: row.check_in_time.toISOString(),
+        checkOutTime: row.check_out_time ? row.check_out_time.toISOString() : null,
+        status: row.status,
+        hoursWorked: row.hours_worked,
+        lateReason: row.late_reason,
+        earlyOutReason: row.early_out_reason,
+        location: row.location,
+        checkInLocation: safeParse(row.check_in_location),
+        checkOutLocation: safeParse(row.check_out_location),
+      } as AttendanceRecord;
+    });
   } catch (error) {
     console.error(`Error fetching attendance from MySQL:`, error);
     return [];
@@ -43,8 +64,7 @@ export const getAttendanceForMonth = async (date: Date): Promise<AttendanceRecor
 };
 
 export const addOrUpdateAttendanceRecord = async (recordData: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord | null> => {
-  const checkInDate = new Date(recordData.checkInTime);
-  const documentId = `${recordData.employeeId}_${format(checkInDate, 'yyyy-MM-dd')}`;
+  const documentId = `${recordData.employeeId}_${recordData.date}`;
 
   try {
     const checkInTime = format(parseISO(recordData.checkInTime), 'yyyy-MM-dd HH:mm:ss');
@@ -80,7 +100,7 @@ export const addOrUpdateAttendanceRecord = async (recordData: Omit<AttendanceRec
   }
 };
 
-export const getAttendanceMark = async (userId: string): Promise<{ status: 'Checked In' | 'Checked Out', lastCheckInTime: string | null, lastCheckOutTime: string | null, attendanceStatus: AttendanceStatus, checkInLocation?: { lat: number; lng: number; } } | null> => {
+export const getAttendanceMark = async (userId: string): Promise<{ status: 'Checked In' | 'Checked Out', lastCheckInTime: string | null, lastCheckOutTime: string | null, attendanceStatus: AttendanceStatus, date: string, checkInLocation?: { lat: number; lng: number; } } | null> => {
   if (!userId) return null;
   try {
     const results = await query<any[]>(`SELECT * FROM ${MARK_TABLE} WHERE user_id = ?`, [userId]);
@@ -93,7 +113,8 @@ export const getAttendanceMark = async (userId: string): Promise<{ status: 'Chec
           lastCheckInTime: row.last_check_in_time ? row.last_check_in_time.toISOString() : null,
           lastCheckOutTime: row.last_check_out_time ? row.last_check_out_time.toISOString() : null,
           attendanceStatus: row.attendance_status,
-          checkInLocation: row.check_in_location,
+          date: format(new Date(row.date), 'yyyy-MM-dd'),
+          checkInLocation: safeParse(row.check_in_location),
         };
       }
     }
@@ -109,7 +130,7 @@ export const setAttendanceMark = async (userId: string, data: any): Promise<bool
   try {
     const checkInTime = data.lastCheckInTime ? format(parseISO(data.lastCheckInTime), 'yyyy-MM-dd HH:mm:ss') : null;
     const checkOutTime = data.lastCheckOutTime ? format(parseISO(data.lastCheckOutTime), 'yyyy-MM-dd HH:mm:ss') : null;
-    const date = format(new Date(), 'yyyy-MM-dd');
+    const date = data.date || format(new Date(), 'yyyy-MM-dd');
 
     await query(
       `INSERT INTO ${MARK_TABLE} (user_id, status, last_check_in_time, last_check_out_time, attendance_status, check_in_location, date) 
@@ -169,6 +190,7 @@ export const saveAttendanceAction = async (
 
     // Save current day mark
     const markData = {
+      date: fullRecordData.date,
       status: recordData.checkOutTime ? 'Checked Out' : 'Checked In',
       lastCheckInTime: recordData.checkInTime,
       lastCheckOutTime: recordData.checkOutTime || null,

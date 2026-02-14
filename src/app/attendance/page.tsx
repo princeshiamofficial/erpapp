@@ -14,10 +14,11 @@ import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-service';
-import { getOfficeTimes, type OfficeTime } from '@/lib/office-time-service';
+import { getOfficeTimes } from '@/lib/office-time-service';
 import { saveAttendanceAction } from '@/app/(app)/hrm/attendance/actions';
 import { getAttendanceMark } from '@/lib/attendance-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
+import type { OfficeTime } from '@/types';
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -29,78 +30,78 @@ const getInitials = (name: string | undefined): string => {
 const ATTENDANCE_STORAGE_KEY = 'colorHutAttendanceMark';
 
 const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean, disabledReason: string }) => {
-    const [unlocked, setUnlocked] = useState(false);
-    const x = useMotionValue(0);
-    const sliderRef = React.useRef<HTMLDivElement>(null);
-    const [sliderWidth, setSliderWidth] = useState(0);
-    const handleSize = 64; 
+  const [unlocked, setUnlocked] = useState(false);
+  const x = useMotionValue(0);
+  const sliderRef = React.useRef<HTMLDivElement>(null);
+  const [sliderWidth, setSliderWidth] = useState(0);
+  const handleSize = 64;
 
-    const textOpacity = useTransform(x, [0, sliderWidth / 3], [1, 0]);
+  const textOpacity = useTransform(x, [0, sliderWidth / 3], [1, 0]);
 
-    useEffect(() => {
-        const updateSliderWidth = () => {
-             if (sliderRef.current) {
-                setSliderWidth(sliderRef.current.offsetWidth);
-            }
-        }
-        updateSliderWidth();
-        window.addEventListener('resize', updateSliderWidth);
-        return () => window.removeEventListener('resize', updateSliderWidth);
-    }, [sliderRef]);
+  useEffect(() => {
+    const updateSliderWidth = () => {
+      if (sliderRef.current) {
+        setSliderWidth(sliderRef.current.offsetWidth);
+      }
+    }
+    updateSliderWidth();
+    window.addEventListener('resize', updateSliderWidth);
+    return () => window.removeEventListener('resize', updateSliderWidth);
+  }, [sliderRef]);
 
-    const handleDragEnd = (event: any, info: any) => {
-        if (disabled) {
-            x.set(0);
-            return;
-        }
-        if (info.offset.x > sliderWidth - handleSize - 20) {
-            setUnlocked(true);
-            onConfirm();
-            setTimeout(() => {
-              x.set(0);
-              setUnlocked(false);
-            }, 1000);
-        } else {
-            x.set(0);
-        }
-    };
-    
-    const isCheckIn = status === 'Checked Out';
-    const text = isCheckIn ? "Slide to Check In" : "Slide to Check Out";
-    const bgColor = isCheckIn ? (disabled ? "bg-gray-400" : "bg-green-600") : (disabled ? "bg-gray-400" : "bg-red-600");
-    const handleColor = isCheckIn ? (disabled ? "bg-gray-500" : "bg-green-700") : (disabled ? "bg-gray-500" : "bg-red-700");
+  const handleDragEnd = (event: any, info: any) => {
+    if (disabled) {
+      x.set(0);
+      return;
+    }
+    if (info.offset.x > sliderWidth - handleSize - 20) {
+      setUnlocked(true);
+      onConfirm();
+      setTimeout(() => {
+        x.set(0);
+        setUnlocked(false);
+      }, 1000);
+    } else {
+      x.set(0);
+    }
+  };
 
-    return (
-        <div 
-          ref={sliderRef}
-          className={cn(
-            "relative w-full h-20 rounded-full text-white font-semibold text-lg flex items-center justify-center overflow-hidden transition-colors", 
-            bgColor
-          )}
-        >
-            <motion.div
-                className={cn("absolute left-1 top-1 h-16 w-16 rounded-full flex items-center justify-center z-10", handleColor, disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing")}
-                style={{ x }}
-                drag="x"
-                dragConstraints={{ left: 0, right: sliderWidth > handleSize ? sliderWidth - handleSize - 8 : 0 }}
-                onDragEnd={handleDragEnd}
-                dragElastic={0.05}
-                whileTap={{ scale: disabled ? 1 : 1.1 }}
-            >
-                <Fingerprint className="h-8 w-8" />
-            </motion.div>
-            <AnimatePresence>
-              {!unlocked && (
-                <motion.span
-                    style={{ opacity: textOpacity }}
-                    className="select-none pointer-events-none text-center px-20"
-                >
-                    {disabled ? disabledReason : text}
-                </motion.span>
-              )}
-            </AnimatePresence>
-        </div>
-    );
+  const isCheckIn = status === 'Checked Out';
+  const text = isCheckIn ? "Slide to Check In" : "Slide to Check Out";
+  const bgColor = isCheckIn ? (disabled ? "bg-gray-400" : "bg-green-600") : (disabled ? "bg-gray-400" : "bg-red-600");
+  const handleColor = isCheckIn ? (disabled ? "bg-gray-500" : "bg-green-700") : (disabled ? "bg-gray-500" : "bg-red-700");
+
+  return (
+    <div
+      ref={sliderRef}
+      className={cn(
+        "relative w-full h-20 rounded-full text-white font-semibold text-lg flex items-center justify-center overflow-hidden transition-colors",
+        bgColor
+      )}
+    >
+      <motion.div
+        className={cn("absolute left-1 top-1 h-16 w-16 rounded-full flex items-center justify-center z-10", handleColor, disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing")}
+        style={{ x }}
+        drag="x"
+        dragConstraints={{ left: 0, right: sliderWidth > handleSize ? sliderWidth - handleSize - 8 : 0 }}
+        onDragEnd={handleDragEnd}
+        dragElastic={0.05}
+        whileTap={{ scale: disabled ? 1 : 1.1 }}
+      >
+        <Fingerprint className="h-8 w-8" />
+      </motion.div>
+      <AnimatePresence>
+        {!unlocked && (
+          <motion.span
+            style={{ opacity: textOpacity }}
+            className="select-none pointer-events-none text-center px-20"
+          >
+            {disabled ? disabledReason : text}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 
@@ -121,7 +122,7 @@ export default function CheckInOutPage() {
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
   const [attendanceStatus, setAttendanceStatus] = useState<'On Time' | 'Late' | 'Absent'>('On Time');
-  
+
   useEffect(() => {
     if (!isAuthLoading && !currentUser) {
       router.replace('/attendance/login');
@@ -136,35 +137,35 @@ export default function CheckInOutPage() {
 
   const canPerformAction = useMemo(() => {
     if (isTodayWeekend) {
-        return false;
+      return false;
     }
     if (checkOutTime && isToday(checkOutTime)) {
-        return false;
+      return false;
     }
     const isLocationOkForCheckIn = locationStatus === 'Inside Office Location';
     const isLocationPermissionGranted = !locationStatus.includes('denied') && !locationStatus.includes('unavailable') && !locationStatus.includes('timed out');
-    
+
     if (status === 'Checked Out') {
-        return isLocationOkForCheckIn;
+      return isLocationOkForCheckIn;
     }
     if (status === 'Checked In') {
-        return isLocationPermissionGranted;
+      return isLocationPermissionGranted;
     }
     return false;
   }, [status, locationStatus, checkOutTime, isTodayWeekend]);
 
   const disabledReason = useMemo(() => {
     if (isTodayWeekend) {
-        return 'Today is a weekend';
+      return 'Today is a weekend';
     }
     if (checkOutTime && isToday(checkOutTime)) {
-        return 'Attendance complete for today';
+      return 'Attendance complete for today';
     }
     if (status === 'Checked Out' && locationStatus !== 'Inside Office Location') {
-        return 'Must be inside office to check in';
+      return 'Must be inside office to check in';
     }
     if (status === 'Checked In' && !(!locationStatus.includes('denied') && !locationStatus.includes('unavailable') && !locationStatus.includes('timed out'))) {
-        return 'Location permission required';
+      return 'Location permission required';
     }
     if (status === 'Checked Out') return 'Check-in unavailable';
     if (status === 'Checked In') return 'Check-out unavailable';
@@ -185,12 +186,12 @@ export default function CheckInOutPage() {
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // in metres
   }
 
@@ -199,51 +200,51 @@ export default function CheckInOutPage() {
 
     const storedMark = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
     if (storedMark) {
-        try {
-            const mark = JSON.parse(storedMark);
-            if (mark.userId === currentUser?.id && isToday(parseISO(mark.date))) {
-                setStatus(mark.status);
-                if (mark.checkInTime) setCheckInTime(parseISO(mark.checkInTime));
-                if (mark.checkInLocation) setCheckInLocation(mark.checkInLocation); // Load check-in location
-                if (mark.checkOutTime) setCheckOutTime(parseISO(mark.checkOutTime));
-                if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
-            } else {
-                localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
-            }
-        } catch (e) {
-            console.error("Failed to parse attendance mark from localStorage", e);
-            localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
+      try {
+        const mark = JSON.parse(storedMark);
+        if (mark.userId === currentUser?.id && isToday(parseISO(mark.date))) {
+          setStatus(mark.status);
+          if (mark.checkInTime) setCheckInTime(parseISO(mark.checkInTime));
+          if (mark.checkInLocation) setCheckInLocation(mark.checkInLocation); // Load check-in location
+          if (mark.checkOutTime) setCheckOutTime(parseISO(mark.checkOutTime));
+          if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
+        } else {
+          localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
         }
+      } catch (e) {
+        console.error("Failed to parse attendance mark from localStorage", e);
+        localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
+      }
     }
-    
+
     const fetchInitialData = async () => {
       try {
         if (currentUser) {
-            const mark = await getAttendanceMark(currentUser.id);
-            if (mark) {
-                if (isToday(parseISO(mark.date))) {
-                    setStatus(mark.status);
-                    if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
-                    // Assuming checkInLocation is now part of the mark from the DB
-                    if (mark.checkInLocation) setCheckInLocation(mark.checkInLocation);
-                    if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
-                    if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
-                    saveStateToLocalStorage({
-                      status: mark.status,
-                      checkInTime: mark.lastCheckInTime,
-                      checkInLocation: mark.checkInLocation,
-                      checkOutTime: mark.lastCheckOutTime,
-                      attendanceStatus: mark.attendanceStatus,
-                    });
-                }
+          const mark = await getAttendanceMark(currentUser.id);
+          if (mark) {
+            if (isToday(parseISO(mark.date))) {
+              setStatus(mark.status);
+              if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
+              // Assuming checkInLocation is now part of the mark from the DB
+              if (mark.checkInLocation) setCheckInLocation(mark.checkInLocation);
+              if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
+              if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
+              saveStateToLocalStorage({
+                status: mark.status,
+                checkInTime: mark.lastCheckInTime,
+                checkInLocation: mark.checkInLocation,
+                checkOutTime: mark.lastCheckOutTime,
+                attendanceStatus: mark.attendanceStatus,
+              });
             }
+          }
         }
 
         const [locations, times, weekendSettings] = await Promise.all([getOfficeLocations(), getOfficeTimes(), getWeekendSettings()]);
         setOfficeLocations(locations);
         setOfficeTimes(times);
         setWeekendDays(weekendSettings.days);
-        
+
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -276,7 +277,7 @@ export default function CheckInOutPage() {
       }
     };
     if (currentUser) {
-        fetchInitialData();
+      fetchInitialData();
     }
   }, [currentUser]);
 
@@ -284,111 +285,113 @@ export default function CheckInOutPage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-  
-   const handleCheckIn = async () => {
+
+  const handleCheckIn = async () => {
     if (!canPerformAction) {
-        toast({ title: "Check-in Failed", description: disabledReason, variant: "destructive" });
-        return;
+      toast({ title: "Check-in Failed", description: disabledReason, variant: "destructive" });
+      return;
     }
     if (status === 'Checked In' || !currentUser) return;
 
     const now = new Date();
-    
+
     let isLate = false;
     let checkInMessage = 'You checked in on time.';
-    
+
     const userRole = currentUser.role;
-    const applicableOfficeTime = officeTimes.find(time => 
+    const applicableOfficeTime = officeTimes.find(time =>
       (Array.isArray(time.applicableRoles) && time.applicableRoles.includes(userRole)) || time.applicableRoles === 'all'
     );
 
     if (applicableOfficeTime) {
-        const [hours, minutes] = applicableOfficeTime.startTime.split(':').map(Number);
-        const officeStartTime = new Date(now);
-        officeStartTime.setHours(hours, minutes, 0, 0);
-        
-        const gracePeriodMinutes = applicableOfficeTime.graceTime || 0;
-        const graceEndTime = new Date(officeStartTime.getTime() + gracePeriodMinutes * 60000);
+      const [hours, minutes] = applicableOfficeTime.startTime.split(':').map(Number);
+      const officeStartTime = new Date(now);
+      officeStartTime.setHours(hours, minutes, 0, 0);
 
-        if (now > graceEndTime) {
-            isLate = true;
-            checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`;
-        }
+      const gracePeriodMinutes = applicableOfficeTime.graceTime || 0;
+      const graceEndTime = new Date(officeStartTime.getTime() + gracePeriodMinutes * 60000);
+
+      if (now > graceEndTime) {
+        isLate = true;
+        checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`;
+      }
     }
-    
+
     const newAttendanceStatus = isLate ? 'Late' as const : 'On Time' as const;
     setAttendanceStatus(newAttendanceStatus);
     setCheckInLocation(currentLocation || undefined);
 
     const recordData = {
+      date: format(now, 'yyyy-MM-dd'),
       checkInTime: now.toISOString(),
       status: newAttendanceStatus,
       location: locationStatus,
-      checkInLocation: currentLocation,
+      checkInLocation: currentLocation || undefined,
     };
     const result = await saveAttendanceAction(currentUser, recordData);
     if (result.success) {
-        setStatus('Checked In');
-        setCheckInTime(now);
-        setCheckOutTime(null);
-        saveStateToLocalStorage({
-          status: 'Checked In',
-          checkInTime: now.toISOString(),
-          checkInLocation: currentLocation,
-          checkOutTime: null,
-          attendanceStatus: newAttendanceStatus,
-        });
-        toast({
-          title: isLate ? "Checked In (Late)" : "Checked In Successfully",
-          description: checkInMessage,
-          variant: isLate ? "destructive" : "default",
-        });
+      setStatus('Checked In');
+      setCheckInTime(now);
+      setCheckOutTime(null);
+      saveStateToLocalStorage({
+        status: 'Checked In',
+        checkInTime: now.toISOString(),
+        checkInLocation: currentLocation,
+        checkOutTime: null,
+        attendanceStatus: newAttendanceStatus,
+      });
+      toast({
+        title: isLate ? "Checked In (Late)" : "Checked In Successfully",
+        description: checkInMessage,
+        variant: isLate ? "destructive" : "default",
+      });
     } else {
-        toast({ title: "Check-in Failed", description: result.error, variant: "destructive" });
+      toast({ title: "Check-in Failed", description: result.error, variant: "destructive" });
     }
   };
 
   const handleCheckOut = async () => {
     if (!canPerformAction) {
-        toast({ title: "Check-out Failed", description: disabledReason, variant: "destructive" });
-        return;
+      toast({ title: "Check-out Failed", description: disabledReason, variant: "destructive" });
+      return;
     }
     if (status === 'Checked Out' || !checkInTime || !currentUser) return;
     const now = new Date();
-    
+
     const workedSeconds = differenceInSeconds(now, checkInTime);
     const hours = Math.floor(workedSeconds / 3600);
     const minutes = Math.floor((workedSeconds % 3600) / 60);
     const hoursWorked = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
     const recordData = {
+      date: format(checkInTime, 'yyyy-MM-dd'),
       checkInTime: checkInTime.toISOString(),
-      status: attendanceStatus, 
+      status: attendanceStatus,
       checkInLocation: checkInLocation,
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
-      checkOutLocation: currentLocation,
+      checkOutLocation: currentLocation || undefined,
     };
     const result = await saveAttendanceAction(currentUser, recordData);
-    if(result.success) {
-        setStatus('Checked Out');
-        setCheckOutTime(now);
-        saveStateToLocalStorage({
-          status: 'Checked Out',
-          checkInTime: checkInTime.toISOString(),
-          checkInLocation: checkInLocation,
-          checkOutTime: now.toISOString(),
-          attendanceStatus: attendanceStatus,
-        });
-        toast({
-          title: "Checked Out Successfully",
-          description: `You checked out at ${format(now, 'h:mm:ss a')}. Total hours: ${hoursWorked}.`,
-        });
+    if (result.success) {
+      setStatus('Checked Out');
+      setCheckOutTime(now);
+      saveStateToLocalStorage({
+        status: 'Checked Out',
+        checkInTime: checkInTime.toISOString(),
+        checkInLocation: checkInLocation,
+        checkOutTime: now.toISOString(),
+        attendanceStatus: attendanceStatus,
+      });
+      toast({
+        title: "Checked Out Successfully",
+        description: `You checked out at ${format(now, 'h:mm:ss a')}. Total hours: ${hoursWorked}.`,
+      });
     } else {
-        toast({ title: "Check-out Failed", description: result.error, variant: "destructive" });
+      toast({ title: "Check-out Failed", description: result.error, variant: "destructive" });
     }
   };
-  
+
   const handleActionConfirm = () => {
     if (status === 'Checked Out') {
       handleCheckIn();
@@ -405,13 +408,13 @@ export default function CheckInOutPage() {
       return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     }
     if (checkInTime && status === 'Checked In') {
-        const hours = differenceInHours(new Date(), checkInTime);
-        const minutes = differenceInMinutes(new Date(), checkInTime) % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      const hours = differenceInHours(new Date(), checkInTime);
+      const minutes = differenceInMinutes(new Date(), checkInTime) % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     }
     return '00:00';
   };
-  
+
   const getGreeting = useCallback(() => {
     if (!isClient) return 'Loading...';
     const hour = currentTime.getHours();
@@ -419,10 +422,10 @@ export default function CheckInOutPage() {
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
   }, [currentTime, isClient]);
-  
+
   const name = currentUser?.name.split(' ')[0] || 'User';
   const ActionIcon = status === 'Checked Out' ? Lock : Power;
-  
+
   const isActionDisabled = !canPerformAction;
 
   if (isAuthLoading || !currentUser) {
@@ -479,7 +482,7 @@ export default function CheckInOutPage() {
               !isActionDisabled && "hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),_inset_-2px_-2px_4px_rgba(0,0,0,0.15),_4px_4px_8px_rgba(0,0,0,0.1)]",
               status === 'Checked Out' ? 'bg-white hover:bg-gray-50 text-gray-700' : 'bg-red-500 hover:bg-red-600 text-white'
             )}
-            onClick={() => { if(!isActionDisabled) setIsSheetOpen(true) }}
+            onClick={() => { if (!isActionDisabled) setIsSheetOpen(true) }}
             disabled={isActionDisabled}
           >
             <ActionIcon className="h-20 w-20 mb-2" />
@@ -508,14 +511,14 @@ export default function CheckInOutPage() {
         </div>
         <div>
           <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-             <ArrowUp className="h-3 w-3" /> Check-out
+            <ArrowUp className="h-3 w-3" /> Check-out
           </div>
           <p className="font-bold text-lg text-red-600">
             {checkOutTime ? format(checkOutTime, 'h:mm a') : '--:--'}
           </p>
         </div>
       </div>
-      
+
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent side="bottom" className="w-full max-w-lg mx-auto rounded-t-2xl">
           <SheetHeader>
