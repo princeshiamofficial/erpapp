@@ -297,8 +297,8 @@ export default function StockReportsPage() {
                 </TabsList>
 
                 <TabsContent value="products" className="space-y-4">
-                    <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-                        <CardHeader className="border-b bg-muted/30 p-5">
+                    <Card className="shadow-none border-none bg-transparent rounded-lg overflow-hidden">
+                        <CardHeader className="border-b bg-transparent p-5">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                 <div>
                                     <CardTitle className="text-xl flex items-center gap-2">
@@ -331,7 +331,7 @@ export default function StockReportsPage() {
                         </CardHeader>
                         <CardContent className="p-0 border-none bg-transparent">
                             {/* Mobile View: Modern Cards */}
-                            <div className="md:hidden px-0 py-4 space-y-4 bg-muted/20">
+                            <div className="md:hidden px-0 py-4 space-y-4 bg-transparent">
                                 {isLoading ? (
                                     [...Array(3)].map((_, i) => (
                                         <div key={i} className="bg-card rounded-2xl p-5 shadow-sm border space-y-4">
@@ -528,18 +528,9 @@ export default function StockReportsPage() {
 
                 {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
                     <TabsContent value="history" className="space-y-4">
-                        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-                            <CardHeader className="border-b bg-muted/30 p-5">
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                    <div>
-                                        <CardTitle className="text-xl flex items-center gap-2">
-                                            <History className="h-5 w-5 text-primary" />
-                                            Stock History - Sell Entries
-                                        </CardTitle>
-                                        <CardDescription>
-                                            Track and manage all business sales entries with approval workflow.
-                                        </CardDescription>
-                                    </div>
+                        <Card className="shadow-none border-none bg-transparent rounded-lg overflow-hidden">
+                            <CardHeader className="border-b bg-transparent p-5">
+                                <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
                                     <Button onClick={openAddSellEntryDialog} className="shrink-0 gap-2 h-10">
                                         <PlusCircle className="h-4 w-4" />
                                         <span>Add Sell Entry</span>
@@ -548,7 +539,7 @@ export default function StockReportsPage() {
                             </CardHeader>
                             <CardContent className="p-0">
                                 {/* Mobile View: Cards */}
-                                <div className="md:hidden p-4 space-y-4 bg-muted/20">
+                                <div className="md:hidden px-0 py-4 space-y-4 bg-transparent">
                                     {isLoading ? (
                                         [...Array(3)].map((_, i) => (
                                             <div key={i} className="bg-card rounded-2xl p-5 shadow-sm border space-y-4">
