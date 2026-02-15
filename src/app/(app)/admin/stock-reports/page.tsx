@@ -298,8 +298,8 @@ export default function StockReportsPage() {
 
                 <TabsContent value="products" className="space-y-4">
                     <Card className="shadow-none border-none bg-transparent rounded-lg overflow-hidden">
-                        <CardHeader className="border-b bg-transparent p-5">
-                            <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+                        <CardHeader className="bg-transparent p-0 pb-4">
+                            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 bg-muted/40 p-2 rounded-xl border border-border/50">
                                 <div className="flex items-center gap-3 w-full sm:w-auto">
                                     <div className="relative flex-1 sm:w-64 sm:flex-none">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -520,8 +520,8 @@ export default function StockReportsPage() {
                 {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
                     <TabsContent value="history" className="space-y-4">
                         <Card className="shadow-none border-none bg-transparent rounded-lg overflow-hidden">
-                            <CardHeader className="border-b bg-transparent p-5">
-                                <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
+                            <CardHeader className="bg-transparent p-0 pb-4">
+                                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 bg-muted/40 p-2 rounded-xl border border-border/50">
                                     <Button onClick={openAddSellEntryDialog} className="shrink-0 gap-2 h-10">
                                         <PlusCircle className="h-4 w-4" />
                                         <span>Add Sell Entry</span>
@@ -1192,6 +1192,6 @@ export default function StockReportsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </div >
     );
 }
