@@ -281,7 +281,7 @@ export default function StockReportsPage() {
     }
 
     return (
-        <div className="px-1.5 py-2 sm:p-6 lg:p-8 pt-2 sm:pt-2 lg:pt-2">
+        <div className="px-0 py-2 sm:p-6 lg:p-8 pt-2 sm:pt-2 lg:pt-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="products" className="flex items-center gap-2">
@@ -331,7 +331,7 @@ export default function StockReportsPage() {
                         </CardHeader>
                         <CardContent className="p-0 border-none bg-transparent">
                             {/* Mobile View: Modern Cards */}
-                            <div className="md:hidden px-1.5 py-4 space-y-4 bg-muted/20">
+                            <div className="md:hidden px-0 py-4 space-y-4 bg-muted/20">
                                 {isLoading ? (
                                     [...Array(3)].map((_, i) => (
                                         <div key={i} className="bg-card rounded-2xl p-5 shadow-sm border space-y-4">
