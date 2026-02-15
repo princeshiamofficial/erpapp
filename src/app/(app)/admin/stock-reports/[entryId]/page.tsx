@@ -221,6 +221,7 @@ export default function SellEntryInvoicePage() {
                                                     alt={item.productName || 'Product'}
                                                     width={50}
                                                     height={50}
+                                                    unoptimized={true}
                                                     className="rounded-md object-cover h-14 w-14"
                                                 />
                                             ) : (
@@ -274,6 +275,7 @@ export default function SellEntryInvoicePage() {
                                                                 alt={item.productName || 'Product'}
                                                                 width={40}
                                                                 height={40}
+                                                                unoptimized={true}
                                                                 className="rounded-md object-cover"
                                                             />
                                                         ) : (

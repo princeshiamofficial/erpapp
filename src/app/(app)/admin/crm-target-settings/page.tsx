@@ -634,7 +634,7 @@ export default function CrmTargetSettingsPage() {
                       width={200}
                       height={120}
                       className="object-cover rounded"
-                      unoptimized={leaderboardBgUrl.startsWith('/') || (leaderboardBgUrl.startsWith('http') && (typeof window !== 'undefined' ? !leaderboardBgUrl.includes(window.location.host) : true))}
+                      unoptimized={true}
                       onError={(e) => { e.currentTarget.src = DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER; e.currentTarget.alt = 'Error loading image. Default shown.' }}
                     />
                   </div>

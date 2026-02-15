@@ -153,7 +153,7 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
                     alt="Uploaded image"
                     width={250}
                     height={250}
-                    unoptimized={msg.imageUrl.startsWith('http') && (typeof window !== 'undefined' ? !msg.imageUrl.includes(window.location.host) : true)}
+                    unoptimized={true}
                     className="object-cover w-full h-full"
                   />
                 </div>

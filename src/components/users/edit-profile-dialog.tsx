@@ -200,7 +200,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
                     alt="Avatar preview"
                     width={80}
                     height={80}
-                    unoptimized={previewUrl.startsWith('http') && (typeof window !== 'undefined' ? !previewUrl.includes(window.location.host) : true)}
+                    unoptimized={true}
                     className="rounded-full object-cover border border-muted"
                     data-ai-hint="user avatar"
                   />

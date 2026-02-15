@@ -334,7 +334,7 @@ export default function ModelManagementPage() {
                           height={48}
                           className="rounded-md object-cover bg-muted"
                           data-ai-hint="product photo"
-                          unoptimized={item.imageUrl ? (item.imageUrl.startsWith('http') && !item.imageUrl.includes('colorhutbd.xyz') && (typeof window !== 'undefined' ? !item.imageUrl.includes(window.location.host) : true)) : false}
+                          unoptimized={true}
                         />
                       </TableCell>
                       <TableCell>
@@ -463,7 +463,7 @@ export default function ModelManagementPage() {
                     width={80}
                     height={80}
                     className="rounded-md object-cover border bg-muted"
-                    unoptimized={imagePreviewUrl ? (imagePreviewUrl.startsWith('http') && !imagePreviewUrl.includes('colorhutbd.xyz') && (typeof window !== 'undefined' ? !imagePreviewUrl.includes(window.location.host) : true)) : false}
+                    unoptimized={true}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
                       (e.target as HTMLImageElement).alt = 'Error loading image';

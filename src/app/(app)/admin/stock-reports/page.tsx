@@ -381,7 +381,7 @@ export default function StockReportsPage() {
                                                                     alt={item.name}
                                                                     fill
                                                                     className="object-cover"
-                                                                    unoptimized={item.imageUrl.startsWith('http') && (typeof window !== 'undefined' ? !item.imageUrl.includes(window.location.host) : true)}
+                                                                    unoptimized={true}
                                                                 />
                                                             ) : (
                                                                 <ImageIcon className="h-6 w-6 text-muted-foreground/30 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -480,7 +480,7 @@ export default function StockReportsPage() {
                                                                     alt={item.name}
                                                                     fill
                                                                     className="object-cover"
-                                                                    unoptimized={item.imageUrl.startsWith('http') && (typeof window !== 'undefined' ? !item.imageUrl.includes(window.location.host) : true)}
+                                                                    unoptimized={true}
                                                                 />
                                                             ) : (
                                                                 <ImageIcon className="h-5 w-5 text-muted-foreground" />
