@@ -288,7 +288,7 @@ export default function StockReportsPage() {
                         <Package className="h-4 w-4" />
                         Products
                     </TabsTrigger>
-                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
                         <TabsTrigger value="history" className="flex items-center gap-2">
                             <History className="h-4 w-4" />
                             Stock History
@@ -526,7 +526,7 @@ export default function StockReportsPage() {
                     </Card>
                 </TabsContent>
 
-                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
                     <TabsContent value="history" className="space-y-4">
                         <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
                             <CardHeader className="border-b bg-muted/30 p-5">
