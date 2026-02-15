@@ -299,16 +299,7 @@ export default function StockReportsPage() {
                 <TabsContent value="products" className="space-y-4">
                     <Card className="shadow-none border-none bg-transparent rounded-lg overflow-hidden">
                         <CardHeader className="border-b bg-transparent p-5">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div>
-                                    <CardTitle className="text-xl flex items-center gap-2">
-                                        <Package className="h-5 w-5 text-primary" />
-                                        Products Inventory
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Current stock levels and performance details for all products.
-                                    </CardDescription>
-                                </div>
+                            <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-4">
                                 <div className="flex items-center gap-3 w-full sm:w-auto">
                                     <div className="relative flex-1 sm:w-64 sm:flex-none">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
