@@ -120,6 +120,7 @@ export default function AttendancePage() {
 
     const [attendanceMonth, setAttendanceMonth] = useState(String(new Date().getMonth()));
     const [attendanceYear, setAttendanceYear] = useState(String(new Date().getFullYear()));
+    const [leaveYear, setLeaveYear] = useState(String(new Date().getFullYear()));
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
     const [attendanceToEdit, setAttendanceToEdit] = useState<any | null>(null);
@@ -891,6 +892,16 @@ export default function AttendancePage() {
                                 className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
                             />
                         </div>
+                        <Select value={leaveYear} onValueChange={setLeaveYear}>
+                            <SelectTrigger className="w-[120px] bg-gray-50 border-gray-200 rounded-full h-10">
+                                <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableYears.map(year => (
+                                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </CardHeader>
@@ -928,28 +939,36 @@ export default function AttendancePage() {
                             ) : paginatedEmployees.length > 0 ? (
                                 paginatedEmployees.map((employee, index) => {
                                     const user = allUsers.find(u => u.id === (employee as Employee).userId);
-                                    const now = new Date();
+                                    const selectedYearNum = parseInt(leaveYear);
+                                    const currentYearNow = new Date().getFullYear();
+
+                                    // If selected year is current year, use 'now', otherwise use end of December of selected year
+                                    const targetDate = selectedYearNum === currentYearNow
+                                        ? new Date()
+                                        : new Date(selectedYearNum, 11, 31);
+
                                     const joiningDate = new Date(employee.joiningDate);
+                                    const joiningYear = getYear(joiningDate);
+                                    const joiningMonth = getMonth(joiningDate);
+                                    const targetMonth = getMonth(targetDate);
 
-                                    let totalLeaveAccrued = 0;
-                                    if (isAfter(now, joiningDate)) {
-                                        const joiningMonth = getMonth(joiningDate);
-                                        const currentMonth = getMonth(now);
-                                        const joiningYear = getYear(joiningDate);
-                                        const currentYear = getYear(now);
-
-                                        if (currentYear > joiningYear) {
-                                            totalLeaveAccrued += (12 - (joiningMonth + 1));
-                                            totalLeaveAccrued += (currentYear - joiningYear - 1) * 12;
-                                            totalLeaveAccrued += currentMonth + 1;
+                                    let yearlyAccrued = 0;
+                                    if (selectedYearNum >= joiningYear && selectedYearNum <= currentYearNow) {
+                                        if (selectedYearNum > joiningYear) {
+                                            yearlyAccrued = targetMonth + 1;
                                         } else {
-                                            // Same year - ensure we don't get negative values
-                                            totalLeaveAccrued += Math.max(0, currentMonth - joiningMonth);
+                                            yearlyAccrued = Math.max(0, targetMonth - joiningMonth);
                                         }
                                     }
 
-                                    const leaveTaken = (employee.leaveHistory || []).reduce((sum, leave) => sum + leave.days, 0);
-                                    const availableLeave = Math.max(0, totalLeaveAccrued - leaveTaken);
+                                    const leaveHistory = employee.leaveHistory || [];
+
+                                    // Filter for leaves taken specifically in the selected year
+                                    const leaveTakenInYear = leaveHistory
+                                        .filter(leave => getYear(new Date(leave.date)) === selectedYearNum)
+                                        .reduce((sum, leave) => sum + leave.days, 0);
+
+                                    const yearlyAvailable = yearlyAccrued - leaveTakenInYear;
 
                                     return (
                                         <TableRow key={employee.id}>
@@ -966,9 +985,9 @@ export default function AttendancePage() {
                                             </TableCell>
                                             <TableCell>{(employee as Employee).designation}</TableCell>
                                             <TableCell>{format(new Date(employee.joiningDate), 'dd MMM, yyyy')}</TableCell>
-                                            <TableCell className="font-semibold text-blue-600">{totalLeaveAccrued}</TableCell>
-                                            <TableCell className="font-semibold text-red-600">{leaveTaken}</TableCell>
-                                            <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
+                                            <TableCell className="font-semibold text-blue-600">{yearlyAccrued}</TableCell>
+                                            <TableCell className="font-semibold text-red-600">{leaveTakenInYear}</TableCell>
+                                            <TableCell className={cn("font-semibold", yearlyAvailable < 0 ? "text-red-600" : "text-green-600")}>{yearlyAvailable}</TableCell>
                                             <TableCell className="text-center">
                                                 <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee as Employee)}>Manage</Button>
                                             </TableCell>
