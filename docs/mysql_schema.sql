@@ -159,7 +159,7 @@ CREATE TABLE attendance_records (
     check_in_time TIMESTAMP,
     check_out_time TIMESTAMP,
     hours_worked VARCHAR(20),
-    location_name VARCHAR(255),
+    location VARCHAR(255),
     check_in_lat DECIMAL(10, 8),
     check_in_lng DECIMAL(11, 8),
     FOREIGN KEY (employee_id) REFERENCES users(id)

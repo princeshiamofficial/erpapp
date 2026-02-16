@@ -42,17 +42,17 @@ export async function updateOfficeTimeAction(
 }
 
 export async function deleteOfficeTimeAction(officeTimeId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-        const success = await deleteOfficeTime(officeTimeId);
-        if (success) {
-            revalidatePath("/(app)/hrm/attendance");
-            return { success: true };
-        }
-        return { success: false, error: "Failed to delete office time from database." };
-    } catch (error) {
-        console.error("Error in deleteOfficeTimeAction:", error);
-        return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  try {
+    const success = await deleteOfficeTime(officeTimeId);
+    if (success) {
+      revalidatePath("/(app)/hrm/attendance");
+      return { success: true };
     }
+    return { success: false, error: "Failed to delete office time from database." };
+  } catch (error) {
+    console.error("Error in deleteOfficeTimeAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
 }
 
 // Renaming the function from the old attendance/actions.ts to avoid conflict
@@ -60,21 +60,24 @@ export async function saveAttendanceAction(
   currentUser: User,
   recordData: Partial<Omit<AttendanceRecord, 'id' | 'employeeId' | 'employeeName'>> & { checkInTime: string }
 ): Promise<{ success: boolean; error?: string }> {
-    // This function now calls the central service function
-    return saveAttendanceServiceAction(currentUser, recordData);
+  const result = await saveAttendanceServiceAction(currentUser, recordData);
+  if (result.success) {
+    revalidatePath("/(app)/hrm/attendance");
+  }
+  return result;
 }
 
 // New action to save weekend settings
 export async function saveWeekendSettingsAction(days: string[]): Promise<{ success: boolean; error?: string }> {
-    try {
-        const success = await saveWeekendSettings(days);
-        if (success) {
-            revalidatePath("/(app)/hrm/attendance");
-            return { success: true };
-        }
-        return { success: false, error: "Failed to save weekend settings to the database." };
-    } catch (error) {
-        console.error("Error in saveWeekendSettingsAction:", error);
-        return { success: false, error: "An unexpected error occurred while saving weekend settings." };
+  try {
+    const success = await saveWeekendSettings(days);
+    if (success) {
+      revalidatePath("/(app)/hrm/attendance");
+      return { success: true };
     }
+    return { success: false, error: "Failed to save weekend settings to the database." };
+  } catch (error) {
+    console.error("Error in saveWeekendSettingsAction:", error);
+    return { success: false, error: "An unexpected error occurred while saving weekend settings." };
+  }
 }
