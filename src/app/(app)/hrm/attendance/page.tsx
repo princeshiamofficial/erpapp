@@ -180,6 +180,11 @@ export default function AttendancePage() {
     const filteredEmployees = useMemo(() => {
         let results = employees.filter(employee => {
             if (employee.status !== 'Active') return false;
+
+            // Filter out banned users
+            const user = allUsers.find(u => u.id === employee.userId);
+            if (user?.isBanned) return false;
+
             try {
                 const currentYear = new Date().getFullYear();
                 const joiningYear = getYear(new Date(employee.joiningDate));
@@ -198,7 +203,7 @@ export default function AttendancePage() {
             );
         }
         return results;
-    }, [employees, searchTerm]);
+    }, [employees, searchTerm, allUsers]);
 
     const individualAttendanceHistoryData = useMemo(() => {
         if (!selectedUserId || selectedUserId === 'all') {
