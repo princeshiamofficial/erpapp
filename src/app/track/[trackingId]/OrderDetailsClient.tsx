@@ -465,18 +465,20 @@ export function OrderDetailsClient({
     } return acc;
   }, 0);
 
-  const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
-  const effectiveDiscount = order.specialClientDiscount || 0;
+  const orderSubtotal = Array.isArray(order.orderItems)
+    ? order.orderItems.reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0)
+    : 0;
+  const effectiveDiscount = Number(order.specialClientDiscount) || 0;
   const netPayable = orderSubtotal - effectiveDiscount;
 
   const allAdvancePaymentRecords = useMemo(() => {
     const records: AdvancePaymentRecord[] = [];
     if (order.advancePayments && order.advancePayments.length > 0) {
-      records.push(...order.advancePayments);
-    } else if (order.advancePayment && order.advancePayment > 0) {
+      records.push(...order.advancePayments.map(r => ({ ...r, amount: Number(r.amount) })));
+    } else if (order.advancePayment && Number(order.advancePayment) > 0) {
       records.push({
         id: 'legacy-advance',
-        amount: order.advancePayment,
+        amount: Number(order.advancePayment),
         date: order.createdAt,
         paymentMethod: order.paymentMethod || "Unknown",
         notes: "Initial advance payment (legacy).",
@@ -487,8 +489,8 @@ export function OrderDetailsClient({
     return records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [order]);
 
-  const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
-  const shippingCharge = order.shippingCharge || 0;
+  const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
+  const shippingCharge = Number(order.shippingCharge) || 0;
   const grandTotal = netPayable + shippingCharge;
   const amountDue = grandTotal - totalAdvancePaid;
 

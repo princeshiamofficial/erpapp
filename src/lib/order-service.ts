@@ -116,11 +116,11 @@ export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue
 
     if (onlyWithDue) {
       return orders.filter(order => {
-        const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-        const effectiveDiscount = order.specialClientDiscount || 0;
+        const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+        const effectiveDiscount = Number(order.specialClientDiscount) || 0;
         const netPayable = orderSubtotal - effectiveDiscount;
-        const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
-        const shippingCharge = order.shippingCharge || 0;
+        const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
+        const shippingCharge = Number(order.shippingCharge) || 0;
         const dueAmount = netPayable + shippingCharge - totalAdvancePaid;
         return dueAmount > 0.01;
       });
@@ -399,11 +399,11 @@ export async function autoSettleOrderIfDelivered(
 
     const isAlreadyDelivered = order.currentStatus === DELIVERED_STATUS_ID;
 
-    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-    const effectiveDiscount = order.specialClientDiscount || 0;
+    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+    const effectiveDiscount = Number(order.specialClientDiscount) || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
-    const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
-    const shippingCharge = order.shippingCharge || 0;
+    const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
+    const shippingCharge = Number(order.shippingCharge) || 0;
     const dueAmount = netPayable + shippingCharge - totalAdvancePaid;
 
     const updates: Partial<TrackingLink> = {};

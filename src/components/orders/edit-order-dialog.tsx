@@ -201,7 +201,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const currentNetPayable = Math.max(0, currentItemsTotal - discountNum);
     setNetPayable(currentNetPayable);
 
-    const currentTotalExistingAdvance = existingAdvancePayments.reduce((sum, record) => sum + record.amount, 0);
+    const currentTotalExistingAdvance = existingAdvancePayments.reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
     setTotalExistingAdvancePaid(currentTotalExistingAdvance);
 
     const newAdvanceNum = parseFloat(newAdvanceAmount) || 0;

@@ -48,10 +48,10 @@ export async function updateProjectStatusAction(
     if (newStatus === 'Logistics' && settings.isPaymentValidationEnabled && actingUser.role !== 'ADMIN' && actingUser.role !== 'SYSTEM_ADMIN') {
       const orderForValidation = await getOrderById(project.id);
       if (orderForValidation) {
-        const orderSubtotal = (orderForValidation.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-        const effectiveDiscount = orderForValidation.specialClientDiscount || 0;
+        const orderSubtotal = (orderForValidation.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+        const effectiveDiscount = Number(orderForValidation.specialClientDiscount) || 0;
         const netPayable = orderSubtotal - effectiveDiscount;
-        const totalAdvancePaid = (orderForValidation.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+        const totalAdvancePaid = (orderForValidation.advancePayments || []).reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
         const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
         if (paymentPercentage < 45) {
           // The toast part of this has been removed as it can't be triggered from a server action directly.
@@ -163,10 +163,10 @@ export async function transferToCourierAction(
       return { success: false, error: `Order with ID ${project.id} not found.` };
     }
 
-    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-    const effectiveDiscount = order.specialClientDiscount || 0;
+    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+    const effectiveDiscount = Number(order.specialClientDiscount) || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
-    const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+    const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
     const dueAmount = Math.max(0, netPayable - totalAdvancePaid);
 
     const numericShippingCharge = Number(shippingCharge) || 0;
