@@ -63,6 +63,48 @@ export const getAttendanceForMonth = async (date: Date): Promise<AttendanceRecor
   }
 };
 
+export const getAttendanceForDateRange = async (startDate: Date, endDate: Date): Promise<AttendanceRecord[]> => {
+  const start = format(startDate, 'yyyy-MM-dd');
+  const end = format(endDate, 'yyyy-MM-dd');
+
+  try {
+    const results = await query<any[]>(
+      `SELECT * FROM ${ATTENDANCE_TABLE} WHERE date >= ? AND date <= ? ORDER BY check_in_time DESC`,
+      [start, end]
+    );
+
+    return results.map(row => {
+      const dbDate = new Date(row.date);
+      const dateStr = format(dbDate, 'yyyy-MM-dd');
+
+      // Use "-1 date logic" for records until 2026-02-12 (legacy behavior due to UTC shift)
+      // For the rest, use the actual date (new behavior)
+      const displayDate = dateStr <= '2026-02-12'
+        ? row.date.toISOString().split('T')[0]
+        : dateStr;
+
+      return {
+        id: row.id,
+        employeeId: row.employee_id,
+        employeeName: row.employee_name,
+        date: displayDate,
+        checkInTime: row.check_in_time.toISOString(),
+        checkOutTime: row.check_out_time ? row.check_out_time.toISOString() : null,
+        status: row.status,
+        hoursWorked: row.hours_worked,
+        lateReason: row.late_reason,
+        earlyOutReason: row.early_out_reason,
+        location: row.location,
+        checkInLocation: safeParse(row.check_in_location),
+        checkOutLocation: safeParse(row.check_out_location),
+      } as AttendanceRecord;
+    });
+  } catch (error) {
+    console.error(`Error fetching attendance from MySQL:`, error);
+    return [];
+  }
+};
+
 export const addOrUpdateAttendanceRecord = async (recordData: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord | null> => {
   const documentId = `${recordData.employeeId}_${recordData.date}`;
 

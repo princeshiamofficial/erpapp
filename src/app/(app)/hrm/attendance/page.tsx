@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
-import { getAttendanceForMonth } from '@/lib/attendance-service';
+import { getAttendanceForMonth, getAttendanceForDateRange } from '@/lib/attendance-service';
 import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, isSameDay } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
@@ -131,32 +131,28 @@ export default function AttendancePage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
+            // Calculate date range: 2 years back from today
+            const today = new Date();
+            const twoYearsAgo = new Date(today);
+            twoYearsAgo.setFullYear(today.getFullYear() - 2);
+
             const [
                 fetchedEmployees,
                 fetchedOfficeTimes,
-                attendanceMonth1,
-                attendanceMonth2,
-                attendanceMonth3,
+                attendanceRecords,
                 fetchedUsers,
                 fetchedWeekendSettings,
                 fetchedRoles
             ] = await Promise.all([
                 getEmployees(),
                 getOfficeTimes(),
-                getAttendanceForMonth(new Date()),
-                getAttendanceForMonth(subDays(new Date(), 30)),
-                getAttendanceForMonth(subDays(new Date(), 60)),
+                getAttendanceForDateRange(twoYearsAgo, today),
                 getUsers(),
                 getWeekendSettings(),
                 getRoles()
             ]);
 
-            const allAttendance = [
-                ...(attendanceMonth1 || []),
-                ...(attendanceMonth2 || []),
-                ...(attendanceMonth3 || [])
-            ];
-            const uniqueAttendance = Array.from(new Map(allAttendance.map(item => [item.id, item])).values());
+            const uniqueAttendance = Array.from(new Map(attendanceRecords.map(item => [item.id, item])).values());
 
             setEmployees(fetchedEmployees);
             setOfficeTimes(fetchedOfficeTimes);
@@ -205,8 +201,10 @@ export default function AttendancePage() {
 
     const individualAttendanceHistoryData = useMemo(() => {
         if (!selectedUserId || selectedUserId === 'all') {
+            // Filter out banned users from the attendance data
+            const nonBannedUserIds = new Set(allUsers.filter(u => !u.isBanned).map(u => u.id));
             return attendanceData
-                .filter(entry => entry.date === attendanceDateFilter)
+                .filter(entry => entry.date === attendanceDateFilter && nonBannedUserIds.has(entry.employeeId))
                 .map(entry => ({
                     ...entry,
                     date: parseISO(entry.date)
@@ -438,17 +436,25 @@ export default function AttendancePage() {
 
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
-        const activeEmployees = employees.filter(e => e.status === 'Active');
+        // Filter for active employees and exclude banned users
+        const activeEmployees = employees.filter(e => {
+            if (e.status !== 'Active') return false;
+            const user = allUsers.find(u => u.id === e.userId);
+            return user && !user.isBanned;
+        });
 
         // Logic for counting global weekend days in the selected range
         let totalWeekendsInRange = 0;
         const numDaysForWeekendCount = differenceInDays(endDate, startDate) + 1;
         for (let i = 0; i < numDaysForWeekendCount; i++) {
-            const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
             if (weekendDayIndexes.includes(currentDate.getDay())) {
                 totalWeekendsInRange++;
             }
         }
+
+
 
         const baseReport = activeEmployees.map(employee => {
             if (!employee.userId) return null;
@@ -937,12 +943,13 @@ export default function AttendancePage() {
                                             totalLeaveAccrued += (currentYear - joiningYear - 1) * 12;
                                             totalLeaveAccrued += currentMonth + 1;
                                         } else {
-                                            totalLeaveAccrued += currentMonth - (joiningMonth + 1);
+                                            // Same year - ensure we don't get negative values
+                                            totalLeaveAccrued += Math.max(0, currentMonth - joiningMonth);
                                         }
                                     }
 
                                     const leaveTaken = (employee.leaveHistory || []).reduce((sum, leave) => sum + leave.days, 0);
-                                    const availableLeave = totalLeaveAccrued - leaveTaken;
+                                    const availableLeave = Math.max(0, totalLeaveAccrued - leaveTaken);
 
                                     return (
                                         <TableRow key={employee.id}>
@@ -1235,7 +1242,7 @@ export default function AttendancePage() {
                                 <TableHead className="text-white">Employee Name</TableHead>
                                 <TableHead className="text-white">Designation</TableHead>
                                 <TableHead className="text-white">Present</TableHead>
-                                <TableHead className="text-white">Total Friday</TableHead>
+                                <TableHead className="text-white">Weekend</TableHead>
                                 <TableHead className="text-white">Total Present</TableHead>
                                 <TableHead className="text-white">Total Absent</TableHead>
                                 <TableHead className="text-white">Ontime CheckIn</TableHead>
