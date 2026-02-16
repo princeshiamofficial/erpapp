@@ -51,6 +51,11 @@ export async function sendTelegramMessage(message: string): Promise<boolean> {
   }
 }
 
+export const initializeFCM = async (): Promise<string | null> => {
+  console.log("[NotificationUtils] initializeFCM placeholder called");
+  return null;
+};
+
 export const requestNotificationPermission = async (): Promise<NotificationPermission | null> => {
   console.log("[NotificationUtils] requestNotificationPermission called");
   if (typeof window === 'undefined' || !('Notification' in window)) {

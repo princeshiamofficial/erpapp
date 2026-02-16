@@ -96,6 +96,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
   const [existingAdvancePayments, setExistingAdvancePayments] = useState<AdvancePaymentRecord[]>([]);
   const [totalExistingAdvancePaid, setTotalExistingAdvancePaid] = useState(0);
+  const [shippingCharge, setShippingCharge] = useState<string>('0');
 
   const [selectedPaymentProof, setSelectedPaymentProof] = useState<File | null>(null);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
@@ -146,6 +147,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setSpecialClientDiscount(order.specialClientDiscount?.toString() || '');
       setOrderNotes(order.orderNotes || '');
       setOrderItems(order.orderItems.map(item => ({ ...item, quantity: item.quantity.toString() })));
+      setShippingCharge(order.shippingCharge?.toString() || '0');
 
       const currentAdvancePayments = order.advancePayments || [];
       if (currentAdvancePayments.length === 0 && order.advancePayment && order.advancePayment > 0) {
@@ -205,10 +207,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setTotalExistingAdvancePaid(currentTotalExistingAdvance);
 
     const newAdvanceNum = parseFloat(newAdvanceAmount) || 0;
-    const grandTotal = currentNetPayable; // No shipping charge
+    const shippingChargeNum = parseFloat(shippingCharge) || 0;
+    const grandTotal = currentNetPayable + shippingChargeNum;
 
     setAmountDue(Math.max(0, grandTotal - currentTotalExistingAdvance - newAdvanceNum));
-  }, [orderItems, specialClientDiscount, newAdvanceAmount, existingAdvancePayments]);
+  }, [orderItems, specialClientDiscount, newAdvanceAmount, existingAdvancePayments, shippingCharge]);
 
   useEffect(() => {
     if (editingPaymentId && amountInputRef.current) {
@@ -340,7 +343,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const canSubmit = useMemo(() => {
     if (!currentUser || !currentUser.role) return false;
     const totalAdvanceAfterNew = totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0);
-    const grandTotal = netPayable;
+    const shippingChargeNum = parseFloat(shippingCharge) || 0;
+    const grandTotal = netPayable + shippingChargeNum;
     const isAdvPaymentValid = totalAdvanceAfterNew <= grandTotal || grandTotal === 0;
     const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0;
 
@@ -399,6 +403,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       phoneNumber: phoneNumber.trim(),
       createdAt: createdAt!.toISOString(),
       specialClientDiscountString: specialClientDiscount.trim() || null,
+      shippingCharge: parseFloat(shippingCharge) || 0,
       orderNotes: orderNotes.trim() || null,
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
       advancePayments: [...existingAdvancePayments],
@@ -527,6 +532,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               <Separator className="my-4" />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1"><Label htmlFor="edit-specialClientDiscount">Special Client Discount</Label><div className="relative"><Input id="edit-specialClientDiscount" type="text" value={specialClientDiscount} onChange={(e) => handleDiscountChangeEdit(e.target.value)} placeholder="e.g., 100 or 10%" disabled={isSubmitting} className="pl-7" /><Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /></div></div>
+                <div className="space-y-1"><Label htmlFor="edit-shippingCharge">Shipping Charge</Label><Input id="edit-shippingCharge" type="number" value={shippingCharge} onChange={(e) => setShippingCharge(e.target.value)} placeholder="0" disabled={isSubmitting} /></div>
               </div>
 
               {existingAdvancePayments.length > 0 && (
@@ -612,7 +618,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <h4 className="text-md font-semibold text-foreground mb-2">Order Summary</h4>
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Order Items Total:</span><span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span></div>
                 {(calculatedDiscountAmount || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Discount:</span><span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span></div>)}
-                <div className="flex justify-between text-sm font-semibold"><span className="text-foreground">Net Payable:</span><span className="text-foreground">{formatCurrencyBdt(netPayable)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Net Payable:</span><span className="font-semibold text-foreground">{formatCurrencyBdt(netPayable)}</span></div>
+                {(parseFloat(shippingCharge) || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Shipping Charge:</span><span className="font-medium text-foreground">+ {formatCurrencyBdt(parseFloat(shippingCharge))}</span></div>)}
                 {(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0)) > 0 && (<div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border"><span className="text-muted-foreground">Total Advance Paid:</span><span className="font-medium text-green-600">- {formatCurrencyBdt(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0))}</span></div>)}
                 <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border"><span className="text-primary">Amount Due:</span><span className="text-primary">{formatCurrencyBdt(amountDue)}</span></div>
               </div>
