@@ -11,7 +11,7 @@ import { Printer, Search, Package, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { TrackingLink, CustomStatus, AdvancePaymentRecord, User } from '@/types';
-import { getOrders } from '@/lib/order-service';
+import { getOrdersPaginated } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
 import { getUsers } from '@/lib/user-service';
@@ -21,6 +21,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { Checkbox } from "@/components/ui/checkbox";
 import { InvoiceDetailsClient } from '../invoice/[orderId]/InvoiceDetailsClient';
 import { cn } from '@/lib/utils';
+import { useInView } from 'react-intersection-observer';
+
 
 const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -39,32 +41,81 @@ export default function InvoiceListPage() {
   const [ordersToPrint, setOrdersToPrint] = useState<TrackingLink[] | null>(null);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
-  const fetchInvoiceData = useCallback(async () => {
+  // Pagination states
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const LIMIT = 20;
+
+  const { ref, inView } = useInView({
+    threshold: 0,
+    triggerOnce: false,
+  });
+
+
+  const fetchInvoiceData = useCallback(async (isInitial = true, currentSearch = searchTerm) => {
     if (!currentUser) {
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
+
+    if (isInitial) {
+      setIsLoading(true);
+      setPage(0);
+    } else {
+      setIsLoadingMore(true);
+    }
+
     try {
-      const [fetchedOrders, fetchedStatuses, fetchedUsers] = await Promise.all([
-        getOrders(),
-        getStatuses(),
-        getUsers(),
-      ]);
-      setAllOrders(fetchedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      setAllStatuses(fetchedStatuses);
-      setAllUsers(fetchedUsers);
+      const offset = isInitial ? 0 : (page + 1) * LIMIT;
+
+      // Fetch statuses and users only once
+      const promises: any[] = [
+        getOrdersPaginated(LIMIT, offset, currentSearch),
+      ];
+
+      if (allStatuses.length === 0) promises.push(getStatuses());
+      if (allUsers.length === 0) promises.push(getUsers());
+
+      const [orderResult, fetchedStatuses, fetchedUsers] = await Promise.all(promises);
+
+      if (isInitial) {
+        setAllOrders(orderResult.orders);
+        setPage(0);
+      } else {
+        setAllOrders(prev => [...prev, ...orderResult.orders]);
+        setPage(prev => prev + 1);
+      }
+
+      setTotalCount(orderResult.total);
+      setHasMore(allOrders.length + orderResult.orders.length < orderResult.total);
+
+      if (fetchedStatuses) setAllStatuses(fetchedStatuses);
+      if (fetchedUsers) setAllUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch orders or statuses:", error);
       toast({ title: "Error", description: "Could not load invoice data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  }, [currentUser, toast]);
+  }, [currentUser, toast, page, allStatuses.length, allUsers.length, searchTerm, LIMIT]);
 
   useEffect(() => {
-    fetchInvoiceData();
-  }, [fetchInvoiceData]);
+    // Debounce search
+    const timer = setTimeout(() => {
+      fetchInvoiceData(true, searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, currentUser]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoading && !isLoadingMore) {
+      fetchInvoiceData(false);
+    }
+  }, [inView, hasMore, isLoading, isLoadingMore, fetchInvoiceData]);
+
 
   const handlePrintInvoices = async (orderIds: string[]) => {
     if (orderIds.length === 0) return;
@@ -108,16 +159,8 @@ export default function InvoiceListPage() {
     }
   }, [ordersToPrint]);
 
-  const filteredOrders = useMemo(() => {
-    if (!searchTerm) return allOrders;
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return allOrders.filter(order =>
-      order.id.toLowerCase().includes(lowerSearchTerm) ||
-      (order.companyName && order.companyName.toLowerCase().includes(lowerSearchTerm)) ||
-      (order.phoneNumber && order.phoneNumber.toLowerCase().includes(lowerSearchTerm)) ||
-      order.crmUserName.toLowerCase().includes(lowerSearchTerm)
-    );
-  }, [allOrders, searchTerm]);
+  const filteredOrders = allOrders;
+
 
   useEffect(() => {
     setSelectedRowIds(new Set());
@@ -309,7 +352,25 @@ export default function InvoiceListPage() {
                 </TableBody>
               </Table>
             </div>
+            {hasMore && (
+              <div ref={ref} className="py-8 flex justify-center border-t">
+                {isLoadingMore ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Loading more invoices...</span>
+                  </div>
+                ) : (
+                  <div className="h-1" />
+                )}
+              </div>
+            )}
+            {!hasMore && allOrders.length > 0 && (
+              <div className="py-6 text-center text-muted-foreground text-sm border-t bg-muted/20">
+                Showing all {allOrders.length} invoices.
+              </div>
+            )}
           </CardContent>
+
         </Card>
       </div>
 

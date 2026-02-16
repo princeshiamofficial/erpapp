@@ -53,6 +53,33 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   }
 };
 
+export const getOrdersPaginated = async (limit: number, offset: number, searchTerm: string = ''): Promise<{ orders: TrackingLink[], total: number }> => {
+  try {
+    let whereClause = '';
+    const params: any[] = [];
+    if (searchTerm) {
+      whereClause = `WHERE id LIKE ? OR company_name LIKE ? OR phone_number LIKE ? OR crm_user_name LIKE ?`;
+      const searchParam = `%${searchTerm}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam);
+    }
+
+    const countResults = await query<any[]>(`SELECT COUNT(*) as total FROM ${ORDERS_TABLE} ${whereClause}`, params);
+    const total = countResults[0].total;
+
+    const queryStr = `SELECT * FROM ${ORDERS_TABLE} ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    const results = await query<any[]>(queryStr, [...params, limit, offset]);
+
+    return {
+      orders: results.map(mapRowToOrder),
+      total
+    };
+  } catch (error) {
+    console.error("Error fetching paginated orders from MySQL:", error);
+    return { orders: [], total: 0 };
+  }
+};
+
+
 
 export const getOrderById = async (id: string): Promise<TrackingLink | undefined> => {
   if (!id) return undefined;
