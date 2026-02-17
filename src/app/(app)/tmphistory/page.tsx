@@ -57,7 +57,7 @@ function TeamPerformanceReportContent({ team, dateFrom, dateTo }: { team: UserRo
                 return false;
             }
         });
-        
+
         if (team !== 'all') {
             filteredTasks = filteredTasks.filter(task => task.role === team);
         }
@@ -84,8 +84,8 @@ function TeamPerformanceReportContent({ team, dateFrom, dateTo }: { team: UserRo
 
         const pivotedData = Array.from(tasksByDate.entries())
             .map(([date, userTasks]) => ({ date, ...userTasks }))
-            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
         const userTotals = teamUsers.map(user => {
             const totalTasks = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
             const totalLikelihood = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.likelihood || 0), 0);
@@ -111,7 +111,7 @@ function TeamPerformanceReportContent({ team, dateFrom, dateTo }: { team: UserRo
             return () => clearTimeout(timer);
         }
     }, [isLoading, teamReportData]);
-    
+
     if (isLoading) {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -120,11 +120,11 @@ function TeamPerformanceReportContent({ team, dateFrom, dateTo }: { team: UserRo
             </div>
         );
     }
-    
+
     if (!teamReportData) {
-         return <div className="p-8 text-center text-destructive">Could not generate report. Required data is missing.</div>;
+        return <div className="p-8 text-center text-destructive">Could not generate report. Required data is missing.</div>;
     }
-    
+
     const { users, data, totals } = teamReportData;
 
     return (
@@ -169,10 +169,10 @@ function TeamPerformanceReportContent({ team, dateFrom, dateTo }: { team: UserRo
                                 {users.map(user => (
                                     <React.Fragment key={user.id}>
                                         <TableCell className="text-center py-1">
-                                            {(row[user.id] as { tasks: number })?.tasks || 0}
+                                            {((row as any)[user.id] as { tasks: number })?.tasks || 0}
                                         </TableCell>
                                         <TableCell className="text-center border-r py-1">
-                                            {(row[user.id] as { likelihood: number })?.likelihood || 0}
+                                            {((row as any)[user.id] as { likelihood: number })?.likelihood || 0}
                                         </TableCell>
                                     </React.Fragment>
                                 ))}
@@ -262,9 +262,9 @@ function TeamPerformanceReportContent({ team, dateFrom, dateTo }: { team: UserRo
 
 export default function TeamPerformanceReportPage() {
     const searchParams = useSearchParams();
-    const team = searchParams.get('team') as UserRole | 'all' | null;
-    const dateFrom = searchParams.get('from');
-    const dateTo = searchParams.get('to');
+    const team = (searchParams?.get('team') ?? null) as UserRole | 'all' | null;
+    const dateFrom = searchParams?.get('from') ?? null;
+    const dateTo = searchParams?.get('to') ?? null;
 
     return <TeamPerformanceReportContent team={team} dateFrom={dateFrom} dateTo={dateTo} />
 }

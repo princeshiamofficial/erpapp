@@ -91,8 +91,8 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
           months[monthIndex].crmSales[order.crmUserId].sales += orderTotal;
           months[monthIndex].crmSales[order.crmUserId].orders += 1;
         }
-      } catch(e) {
-          // Ignore invalid date formats
+      } catch (e) {
+        // Ignore invalid date formats
       }
     });
 
@@ -104,43 +104,43 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
       case 'line':
         return (
           <RechartsLineChart data={monthlySalesData}>
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
+            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
             <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
-            <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}}/>
+            <Line yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+            <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
           </RechartsLineChart>
         );
       case 'area':
-         return (
-            <RechartsAreaChart data={monthlySalesData}>
-                 <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                    </linearGradient>
-                     <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.7}/>
-                        <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
-                    </linearGradient>
-                </defs>
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-                <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
-                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" fill="url(#colorSales)" />
-                <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" fill="url(#colorOrders)" />
-            </RechartsAreaChart>
+        return (
+          <RechartsAreaChart data={monthlySalesData}>
+            <defs>
+              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.7} />
+                <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
+            <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
+            <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
+            <Legend />
+            <Area yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" fill="url(#colorSales)" />
+            <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" fill="url(#colorOrders)" />
+          </RechartsAreaChart>
         );
       case 'bar':
       default:
         return (
           <RechartsBarChart data={monthlySalesData}>
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
+            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
             <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
             <Legend />
@@ -156,33 +156,33 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
       <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl rounded-lg">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-              <div>
-                  <CardTitle>Sales Performance Analysis</CardTitle>
-                  <CardDescription>Monthly revenue trends and forecasting for {selectedYear}</CardDescription>
+            <div>
+              <CardTitle>Sales Performance Analysis</CardTitle>
+              <CardDescription>Monthly revenue trends and forecasting for {selectedYear}</CardDescription>
+            </div>
+            <div className="flex items-center gap-2 mt-2 sm:mt-0">
+              <div className="flex items-center bg-muted p-1 rounded-lg">
+                <Button variant="ghost" size="sm" className={cn(chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4" /></Button>
               </div>
-              <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                  <div className="flex items-center bg-muted p-1 rounded-lg">
-                      <Button variant="ghost" size="sm" className={cn(chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
-                      <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
-                      <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
-                  </div>
-                   <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Select Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableYears.map(year => (
-                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-              </div>
+              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                {renderChart()}
+            <ResponsiveContainer width="100%" height="100%">
+              {renderChart()}
             </ResponsiveContainer>
           </div>
         </CardContent>
@@ -193,64 +193,64 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
 }
 
 const ChartTooltipContentCustom = ({ active, payload, label, userMap }: any) => {
-    if (active && payload && payload.length) {
-        const salesPayload = payload.find(p => p.dataKey === 'sales');
-        const ordersPayload = payload.find(p => p.dataKey === 'orders');
-        const crmSalesData = salesPayload?.payload?.crmSales;
-        
-        const crmBreakdown = crmSalesData ? Object.entries(crmSalesData)
-            .map(([crmId, data]: [string, any]) => ({
-              crmId,
-              sales: data.sales as number,
-              orders: data.orders as number,
-              user: userMap.get(crmId),
-            }))
-            .filter(item => item.user)
-            .sort((a, b) => b.sales - a.sales) : [];
+  if (active && payload && payload.length) {
+    const salesPayload = payload.find((p: any) => p.dataKey === 'sales');
+    const ordersPayload = payload.find((p: any) => p.dataKey === 'orders');
+    const crmSalesData = salesPayload?.payload?.crmSales;
 
-        return (
-            <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
-                <div className="grid grid-cols-1 gap-1.5">
-                    <p className="font-semibold text-foreground">{label}</p>
-                    {salesPayload && (
-                        <div className="flex items-center gap-2">
-                            <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: salesPayload.color}}></div>
-                            <span className="text-sm text-muted-foreground">Total Sales:</span>
-                            <span className="text-sm font-medium ml-auto">{formatCurrencyBdt(salesPayload.value as number)}</span>
-                        </div>
-                    )}
-                    {ordersPayload && (
-                        <div className="flex items-center gap-2">
-                            <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: ordersPayload.color}}></div>
-                            <span className="text-sm text-muted-foreground">Total Orders:</span>
-                            <span className="text-sm font-medium ml-auto">{ordersPayload.value}</span>
-                        </div>
-                    )}
-                    
-                    {crmBreakdown.length > 0 && (
-                        <>
-                            <div className="border-t border-dashed my-1"></div>
-                            <p className="font-semibold text-xs text-muted-foreground mt-1">Top Contributors:</p>
-                            <ScrollArea className="max-h-28 pr-2">
-                              <div className="space-y-1.5">
-                                {crmBreakdown.map(({ crmId, sales, orders, user }) => (
-                                    <div key={crmId} className="flex items-center gap-2 text-xs">
-                                        <Avatar className="h-5 w-5 border">
-                                            <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name} />
-                                            <AvatarFallback className="text-[9px]">{getInitials(user?.name)}</AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-muted-foreground truncate flex-1">{user?.name}</span>
-                                        <span className="font-medium text-right">{orders} orders</span>
-                                        <span className="font-medium text-right">{formatCurrencyBdt(sales)}</span>
-                                    </div>
-                                ))}
-                              </div>
-                            </ScrollArea>
-                        </>
-                    )}
-                </div>
+    const crmBreakdown = crmSalesData ? Object.entries(crmSalesData)
+      .map(([crmId, data]: [string, any]) => ({
+        crmId,
+        sales: data.sales as number,
+        orders: data.orders as number,
+        user: userMap.get(crmId),
+      }))
+      .filter(item => item.user)
+      .sort((a, b) => b.sales - a.sales) : [];
+
+    return (
+      <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
+        <div className="grid grid-cols-1 gap-1.5">
+          <p className="font-semibold text-foreground">{label}</p>
+          {salesPayload && (
+            <div className="flex items-center gap-2">
+              <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: salesPayload.color }}></div>
+              <span className="text-sm text-muted-foreground">Total Sales:</span>
+              <span className="text-sm font-medium ml-auto">{formatCurrencyBdt(salesPayload.value as number)}</span>
             </div>
-        )
-    }
-    return null;
+          )}
+          {ordersPayload && (
+            <div className="flex items-center gap-2">
+              <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ordersPayload.color }}></div>
+              <span className="text-sm text-muted-foreground">Total Orders:</span>
+              <span className="text-sm font-medium ml-auto">{ordersPayload.value}</span>
+            </div>
+          )}
+
+          {crmBreakdown.length > 0 && (
+            <>
+              <div className="border-t border-dashed my-1"></div>
+              <p className="font-semibold text-xs text-muted-foreground mt-1">Top Contributors:</p>
+              <ScrollArea className="max-h-28 pr-2">
+                <div className="space-y-1.5">
+                  {crmBreakdown.map(({ crmId, sales, orders, user }) => (
+                    <div key={crmId} className="flex items-center gap-2 text-xs">
+                      <Avatar className="h-5 w-5 border">
+                        <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name} />
+                        <AvatarFallback className="text-[9px]">{getInitials(user?.name)}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-muted-foreground truncate flex-1">{user?.name}</span>
+                      <span className="font-medium text-right">{orders} orders</span>
+                      <span className="font-medium text-right">{formatCurrencyBdt(sales)}</span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+  return null;
 }

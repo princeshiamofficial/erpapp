@@ -26,7 +26,7 @@ import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, isAfter, getDaysInMonth } from 'date-fns';
-import { deleteEmployeeAction } from './actions';
+import { deleteEmployeeAction } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import {
@@ -70,7 +70,7 @@ export default function PayrollPage() {
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -93,7 +93,7 @@ export default function PayrollPage() {
   }, [toast]);
 
   useEffect(() => {
-     if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
       fetchData();
     } else if (currentUser) {
       router.replace('/dashboard');
@@ -132,9 +132,9 @@ export default function PayrollPage() {
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return filteredEmployees.slice(startIndex, endIndex);
   }, [filteredEmployees, currentPage]);
-  
+
   useEffect(() => {
-      setCurrentPage(1);
+    setCurrentPage(1);
   }, [searchTerm, selectedDate, activeTab]);
 
   const handleDelete = async () => {
@@ -154,8 +154,8 @@ export default function PayrollPage() {
 
   const renderPagination = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
-    
+    const maxPagesToShow = 5;
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
@@ -164,7 +164,7 @@ export default function PayrollPage() {
 
       if (currentPage < 3) endPage = maxPagesToShow;
       else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-      
+
       if (startPage > 1) {
         pageNumbers.push(1);
         if (startPage > 2) pageNumbers.push('...');
@@ -176,40 +176,40 @@ export default function PayrollPage() {
       }
     }
     return pageNumbers.map((page, index) => (
-        <PaginationItem key={index}>
+      <PaginationItem key={index}>
         {page === '...' ? <PaginationEllipsis />
-        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+          : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
             {page}
           </PaginationLink>
         }
-        </PaginationItem>
+      </PaginationItem>
     ));
   };
-  
+
   const usersNotYetEmployees = useMemo(() => {
     const employeeUserIds = new Set(employees.map(e => e.userId));
     return allUsers.filter(u => !employeeUserIds.has(u.id));
   }, [employees, allUsers]);
-  
+
   const totalPayableAmount = useMemo(() => {
-      const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-      return paginatedEmployees.reduce((total, employee) => {
-          const payslip = employee.payslips?.[monthYearId];
-          if (payslip) {
-              return total + payslip.payableAmount;
-          }
-          // Default calculation if no payslip data
-          const daysInMonth = getDaysInMonth(selectedDate);
-          const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
-          const presentDays = 30; // Default
-          const incentive = 0; // Default
-          const fine = 0; // Default
-          const lateDays = 0; // Default
-          const providentFund = (employee.salary || 0) * 0.07;
-          const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-          const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
-          return total + payable;
-      }, 0);
+    const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+    return paginatedEmployees.reduce((total, employee) => {
+      const payslip = employee.payslips?.[monthYearId];
+      if (payslip) {
+        return total + payslip.payableAmount;
+      }
+      // Default calculation if no payslip data
+      const daysInMonth = getDaysInMonth(selectedDate);
+      const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+      const presentDays = 30; // Default
+      const incentive = 0; // Default
+      const fine = 0; // Default
+      const lateDays = 0; // Default
+      const providentFund = (employee.salary || 0) * 0.07;
+      const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
+      const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
+      return total + payable;
+    }, 0);
   }, [paginatedEmployees, selectedDate]);
 
   const handleMonthChange = (monthIndex: string) => {
@@ -225,17 +225,17 @@ export default function PayrollPage() {
   };
 
   const availableYears = useMemo(() => {
-      const currentYear = new Date().getFullYear();
-      const years = [];
-      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
-          years.push(i);
-      }
-      return years.reverse();
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+      years.push(i);
+    }
+    return years.reverse();
   }, []);
 
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
-      value: i.toString(),
-      label: format(new Date(0, i), 'MMMM'),
+    value: i.toString(),
+    label: format(new Date(0, i), 'MMMM'),
   })), []);
 
   const employeeListContent = (
@@ -246,10 +246,10 @@ export default function PayrollPage() {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Employee List" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+              <Input placeholder="Employee List" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" />
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-            <AddEmployeeDialog 
+            <AddEmployeeDialog
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
             >
@@ -292,7 +292,7 @@ export default function PayrollPage() {
                 <span>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</span>
                 <span><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
                 <span className="flex justify-center items-center">
-                   <DropdownMenu>
+                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <span className="sr-only">Open menu</span>
@@ -318,17 +318,17 @@ export default function PayrollPage() {
               </div>
             ))
           ) : (
-             <div className="text-center py-16 text-gray-500">No employees found.</div>
+            <div className="text-center py-16 text-gray-500">No employees found.</div>
           )}
         </div>
         {totalPages > 1 && (
-            <div className="mt-6 flex justify-center">
-                 <Pagination><PaginationContent>
-                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                    {renderPagination()}
-                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                </PaginationContent></Pagination>
-            </div>
+          <div className="mt-6 flex justify-center">
+            <Pagination><PaginationContent>
+              <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+              {renderPagination()}
+              <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+            </PaginationContent></Pagination>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -342,7 +342,7 @@ export default function PayrollPage() {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" />
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
           </div>
@@ -350,49 +350,49 @@ export default function PayrollPage() {
       </CardHeader>
       <CardContent className="p-6 pt-0">
         <div className="space-y-3">
-            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
-                <span>Employee</span>
-                <span>Designation</span>
-                <span className="text-center">Completed Orders</span>
-                <span className="text-center">Efficiency Score</span>
-                <span className="text-center">Revenue Generated</span>
-                <span className="text-center">Rating</span>
-            </div>
-            {isLoading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
-                        <Skeleton className="h-4 w-16 mx-auto" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                    </div>
-                ))
-            ) : paginatedEmployees.length > 0 ? (
-                paginatedEmployees.map((employee) => (
-                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
-                        <div className="flex items-center gap-3">
-                            {/* Avatar placeholder */}
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
-                            <span className="font-medium text-gray-800">{employee.name}</span>
-                        </div>
-                        <span>{employee.designation}</span>
-                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
-                        <div className="flex items-center gap-2">
-                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
-                           <span className="text-xs font-semibold">85%</span>
-                        </div>
-                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
-                        <div className="flex justify-center items-center gap-1 text-yellow-500">
-                          <Star className="h-4 w-4 fill-current"/>
-                          <span className="font-bold text-sm">4.8</span>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <div className="text-center py-16 text-gray-500">No performance data available.</div>
-            )}
+          <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+            <span>Employee</span>
+            <span>Designation</span>
+            <span className="text-center">Completed Orders</span>
+            <span className="text-center">Efficiency Score</span>
+            <span className="text-center">Revenue Generated</span>
+            <span className="text-center">Rating</span>
+          </div>
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-12 mx-auto" />
+                <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
+                <Skeleton className="h-4 w-16 mx-auto" />
+                <Skeleton className="h-4 w-12 mx-auto" />
+              </div>
+            ))
+          ) : paginatedEmployees.length > 0 ? (
+            paginatedEmployees.map((employee) => (
+              <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+                <div className="flex items-center gap-3">
+                  {/* Avatar placeholder */}
+                  <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                  <span className="font-medium text-gray-800">{employee.name}</span>
+                </div>
+                <span>{employee.designation}</span>
+                <span className="text-center font-medium">120</span> {/* Placeholder Data */}
+                <div className="flex items-center gap-2">
+                  <Progress value={85} className="h-2" indicatorClassName="bg-green-500" />
+                  <span className="text-xs font-semibold">85%</span>
+                </div>
+                <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
+                <div className="flex justify-center items-center gap-1 text-yellow-500">
+                  <Star className="h-4 w-4 fill-current" />
+                  <span className="font-bold text-sm">4.8</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-16 text-gray-500">No performance data available.</div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -403,29 +403,29 @@ export default function PayrollPage() {
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
-           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" />
             </div>
             <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
               <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
-                  <SelectValue placeholder="Select Month" />
+                <SelectValue placeholder="Select Month" />
               </SelectTrigger>
               <SelectContent>
-                  {months.map(month => (
-                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                  ))}
+                {months.map(month => (
+                  <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
-             <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+            <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
               <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
-                  <SelectValue placeholder="Select Year" />
+                <SelectValue placeholder="Select Year" />
               </SelectTrigger>
               <SelectContent>
-                  {availableYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                  ))}
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -468,11 +468,11 @@ export default function PayrollPage() {
                 paginatedEmployees.map((employee) => {
                   const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                   const payslip = employee.payslips?.[monthYearId];
-                  
+
                   const daysInMonth = getDaysInMonth(selectedDate);
                   const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
                   const providentFund = (employee.salary || 0) * 0.07;
-                  
+
                   const presentDays = payslip?.presentDays ?? 30;
                   const lateDays = payslip?.lateDays ?? 0;
                   const incentive = payslip?.incentive ?? 0;
@@ -485,22 +485,22 @@ export default function PayrollPage() {
 
                   return (
                     <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>{presentDays}</TableCell>
-                        <TableCell>{absentDays}</TableCell>
-                        <TableCell>{lateDays}</TableCell>
-                        <TableCell>{formatCurrency(providentFund)}</TableCell>
-                        <TableCell>{formatCurrency(fine)}</TableCell>
-                        <TableCell>{formatCurrency(incentive)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
-                        <TableCell>
-                          <Badge className={cn(paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{paymentStatus}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(employee)}>
-                            Edit payslip
-                          </Button>
-                        </TableCell>
+                      <TableCell className="font-medium">{employee.name}</TableCell>
+                      <TableCell>{presentDays}</TableCell>
+                      <TableCell>{absentDays}</TableCell>
+                      <TableCell>{lateDays}</TableCell>
+                      <TableCell>{formatCurrency(providentFund)}</TableCell>
+                      <TableCell>{formatCurrency(fine)}</TableCell>
+                      <TableCell>{formatCurrency(incentive)}</TableCell>
+                      <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
+                      <TableCell>
+                        <Badge className={cn(paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{paymentStatus}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(employee)}>
+                          Edit payslip
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -513,26 +513,26 @@ export default function PayrollPage() {
               )}
             </TableBody>
             <TableFooter>
-                <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
-                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
-                </TableRow>
+              <TableRow>
+                <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
+                <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
+              </TableRow>
             </TableFooter>
           </Table>
         </div>
-         {totalPages > 1 && (
-            <div className="mt-6 flex justify-center">
-                 <Pagination><PaginationContent>
-                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                    {renderPagination()}
-                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                </PaginationContent></Pagination>
-            </div>
+        {totalPages > 1 && (
+          <div className="mt-6 flex justify-center">
+            <Pagination><PaginationContent>
+              <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+              {renderPagination()}
+              <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+            </PaginationContent></Pagination>
+          </div>
         )}
       </CardContent>
     </Card>
   );
-  
+
   const attendeesReportContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
@@ -610,9 +610,9 @@ export default function PayrollPage() {
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
     return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <p>Access Denied. You must be an Administrator to view this page.</p>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Access Denied. You must be an Administrator to view this page.</p>
+      </div>
     );
   }
 
@@ -626,7 +626,7 @@ export default function PayrollPage() {
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
         </TabsList>
         <div className="mt-6">
-            {renderActiveTab()}
+          {renderActiveTab()}
         </div>
       </Tabs>
       {employeeToEdit && <EditEmployeeDialog isOpen={!!employeeToEdit} onOpenChange={(open) => !open && setEmployeeToEdit(null)} employee={employeeToEdit} onEmployeeUpdated={fetchData} />}

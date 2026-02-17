@@ -42,28 +42,14 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       Summarize the key details. If multiple items are found, list them briefly.
       If no information is found, inform the user.
       Do not make up information. If a tool does not provide an answer, say you cannot find the information.`;
-      
+
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
     tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool, modelSearchTool],
+    config: {
+      maxSteps: 5,
+    },
   });
-
-  const toolRequests = llmResponse.toolRequests;
-  if (toolRequests && toolRequests.length > 0) {
-    const toolRequest = toolRequests[0]; // Handle the first tool request
-    const toolResult = await toolRequest.run();
-    
-    const secondResponse = await ai.generate({
-        prompt: input.query,
-        tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool, modelSearchTool],
-        history: [
-            llmResponse.request,
-            llmResponse.response,
-            toolResult
-        ]
-    });
-    return secondResponse.text ?? "I was unable to process the information from the tool.";
-  }
 
   return llmResponse.text ?? "I'm sorry, I couldn't generate a response.";
 }

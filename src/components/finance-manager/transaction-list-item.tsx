@@ -4,7 +4,7 @@
 import React from 'react';
 import type { Transaction, User } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download, Paperclip, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces } from 'lucide-react';
+import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download, Paperclip, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces, Banknote, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -23,31 +23,31 @@ const formatCurrency = (value: number): string => {
 };
 
 const expenseCategories = [
-    { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
-    { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb, colorClass: "text-yellow-600" },
-    { value: "Transportation", label: "Transportation", icon: Car, colorClass: "text-blue-600" },
-    { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon, colorClass: "text-indigo-600" },
-    { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils, colorClass: "text-orange-600" },
-    { value: "Marketing", label: "Marketing", icon: Megaphone, colorClass: "text-pink-600" },
-    { value: "Purchase", label: "Purchase", icon: ShoppingBag, colorClass: "text-sky-600" },
-    { value: "Sent Money", label: "Sent Money", icon: SendHorizonal, colorClass: "text-teal-600" },
-    { value: "Withdraw", label: "Withdraw", icon: Banknote, colorClass: "text-rose-600" },
-    { value: "Official Expend", label: "Official Expend", icon: Briefcase, colorClass: "text-gray-600" },
-    { value: "Miscellaneous", label: "Miscellaneous", icon: Braces, colorClass: "text-purple-600" },
+  { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
+  { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb, colorClass: "text-yellow-600" },
+  { value: "Transportation", label: "Transportation", icon: Car, colorClass: "text-blue-600" },
+  { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon, colorClass: "text-indigo-600" },
+  { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils, colorClass: "text-orange-600" },
+  { value: "Marketing", label: "Marketing", icon: Megaphone, colorClass: "text-pink-600" },
+  { value: "Purchase", label: "Purchase", icon: ShoppingBag, colorClass: "text-sky-600" },
+  { value: "Sent Money", label: "Sent Money", icon: SendHorizonal, colorClass: "text-teal-600" },
+  { value: "Withdraw", label: "Withdraw", icon: Banknote, colorClass: "text-rose-600" },
+  { value: "Official Expend", label: "Official Expend", icon: Briefcase, colorClass: "text-gray-600" },
+  { value: "Miscellaneous", label: "Miscellaneous", icon: Braces, colorClass: "text-purple-600" },
 ];
 
 const getCategoryDetails = (category: string) => {
-    const matchedCategory = expenseCategories.find(c => c.value === category);
-    return {
-        icon: matchedCategory?.icon || TrendingDown,
-        colorClass: matchedCategory?.colorClass || "text-red-600"
-    };
+  const matchedCategory = expenseCategories.find(c => c.value === category);
+  return {
+    icon: matchedCategory?.icon || TrendingDown,
+    colorClass: matchedCategory?.colorClass || "text-red-600"
+  };
 };
 
 
 export function TransactionListItem({ transaction, currentUser, onDelete, onEdit, userName }: TransactionListItemProps) {
   const isIncome = transaction.type === 'income';
-  
+
   let finalCanModify = false;
   if (currentUser?.role === 'SYSTEM_ADMIN') {
     finalCanModify = true;
@@ -62,7 +62,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   let iconColorClass;
   let amountPrefix = '';
   let amountColorClass = '';
-  
+
   const categoryDetails = getCategoryDetails(transaction.category);
 
   if (isIncome) {
@@ -77,11 +77,11 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     amountColorClass = "text-green-600";
   } else { // Expense or Purchase
     if (transaction.category === 'Purchase') {
-        IconComponent = ShoppingBag;
+      IconComponent = ShoppingBag;
     } else if (transaction.category.startsWith('Sent Money')) {
-        IconComponent = SendHorizonal;
+      IconComponent = SendHorizonal;
     } else {
-        IconComponent = categoryDetails.icon;
+      IconComponent = categoryDetails.icon;
     }
     amountPrefix = '-';
     amountColorClass = categoryDetails.colorClass;
@@ -93,14 +93,14 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
       <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
         <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            whileHover={{ scale: 1.1, rotate: -5 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-            className={cn(
-              "p-2 rounded-full",
-              iconColorClass
-            )}
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileHover={{ scale: 1.1, rotate: -5 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+          className={cn(
+            "p-2 rounded-full",
+            iconColorClass
+          )}
         >
           <IconComponent className={cn("h-5 w-5 sm:h-6 sm:w-6", amountColorClass)} />
         </motion.div>

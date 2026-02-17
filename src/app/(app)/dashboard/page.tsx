@@ -1465,20 +1465,20 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     const likelihoodPayload = payload.find((p: any) => p.dataKey === 'totalLikelihood');
     const userData = donePayload?.payload?.userData || {};
 
-    let userBreakdown: { user: UserType, done: number, likelihood: number }[] = [];
+    let userBreakdown: { user: User, done: number, likelihood: number }[] = [];
 
     if (currentUser) {
       if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') {
         userBreakdown = Object.entries(userData)
           .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
           .filter(item => item.user && (item.done >= 0 || item.likelihood >= 0))
-          .sort((a, b) => b.done - a.done) as { user: UserType, done: number, likelihood: number }[];
+          .sort((a, b) => b.done - a.done) as { user: User, done: number, likelihood: number }[];
       } else {
         userBreakdown = Object.entries(userData)
           .filter(([userId, data]: [string, any]) => data.role === currentUser.role && (data.done >= 0 || data.likelihood >= 0))
           .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
           .filter(item => item.user)
-          .sort((a, b) => b.done - a.done) as { user: UserType, done: number, likelihood: number }[];
+          .sort((a, b) => b.done - a.done) as { user: User, done: number, likelihood: number }[];
       }
     }
 

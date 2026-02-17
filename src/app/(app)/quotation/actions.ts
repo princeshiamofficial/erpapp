@@ -21,12 +21,12 @@ interface CreateQuotationDialogFormData {
   orderItems: Array<{
     id: string;
     model: string;
-    quantity: string;
+    quantity: number;
     lamination: string;
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
   }>;
-  advancePaymentAmount?: string | null;
+  advancePaymentAmount?: number | null;
   advancePaymentMethod?: string | null;
   specialClientDiscount?: number | null;
   customPaymentMethodText?: string;
@@ -69,7 +69,7 @@ export async function createQuotationAction(
     const processedOrderItems: OrderItem[] = [];
     for (const item of data.orderItems) {
       if (!item.model?.trim()) return { error: `Model is required for all quotation items.` };
-      const quantity = parseInt(item.quantity, 10);
+      const quantity = item.quantity;
       if (isNaN(quantity) || quantity < 0) return { error: `Invalid quantity for model "${item.model}". Quantity must be a non-negative number.` };
 
       const lamination = item.lamination?.trim() || 'N/A';
@@ -97,9 +97,8 @@ export async function createQuotationAction(
     }
 
     let parsedAdvancePaymentAmount: number | null = null;
-    const advancePaymentAmountStr = String(data.advancePaymentAmount ?? '');
-    if (advancePaymentAmountStr.trim() !== '') {
-      const numAdvancePayment = Number(advancePaymentAmountStr);
+    if (data.advancePaymentAmount !== null && data.advancePaymentAmount !== undefined) {
+      const numAdvancePayment = Number(data.advancePaymentAmount);
       if (isNaN(numAdvancePayment) || numAdvancePayment < 0) return { error: "Advance Payment Amount must be a non-negative number." };
       parsedAdvancePaymentAmount = numAdvancePayment;
     }

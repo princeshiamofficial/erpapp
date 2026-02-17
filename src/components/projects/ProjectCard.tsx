@@ -1,8 +1,8 @@
 "use client";
 
-import type { Project, CustomStatus, User } from '@/types'; 
+import type { Project, CustomStatus, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import NextLink from 'next/link';
@@ -11,7 +11,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -38,9 +38,9 @@ const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface ProjectCardProps {
   project: Project;
-  isOverlay?: boolean; 
-  currentUser: User | null; 
-  allStatuses: CustomStatus[]; 
+  isOverlay?: boolean;
+  currentUser: User | null;
+  allStatuses: CustomStatus[];
   allUsers: User[];
   onOpenAssignDrDialog: (project: Project) => void;
   onViewLead: (project: Project) => void;
@@ -67,11 +67,11 @@ function formatDurationPrecise(totalSeconds: number): string {
     parts.push(`${minutes}m`);
     if (seconds > 0) parts.push(`${seconds}s`);
   } else if (seconds > 0) {
-     return "<1s";
+    return "<1s";
   }
-  
+
   if (parts.length === 0) {
-     return "Due";
+    return "Due";
   }
 
   return parts.join(' ');
@@ -89,10 +89,10 @@ const calculateProgressInfo = (
   project: Project,
   now: Date
 ): ProgressInfo => {
-  
-  const { status, createdAt, updatedAt, endDate, 
-          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, cancelAt, deliveredAt
-        } = project;
+
+  const { status, createdAt, updatedAt, endDate,
+    crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, cancelAt, deliveredAt
+  } = project;
 
   let effectiveStartDateIso: string | undefined;
 
@@ -108,16 +108,16 @@ const calculateProgressInfo = (
   if (!effectiveStartDateIso) {
     effectiveStartDateIso = updatedAt || createdAt;
   }
-  
+
   if (!effectiveStartDateIso) {
     return { showProgressBar: true, percentage: 0, displayText: "Start date missing", isOverdue: false, progressColorClass: "bg-muted" };
   }
 
   const effectiveStartDate = parseISO(effectiveStartDateIso);
-  let effectiveTargetDate = endDate ? parseISO(endDate) : now; 
+  let effectiveTargetDate = endDate ? parseISO(endDate) : now;
   let slaStageName: string | null = null;
   let showProgressBar = true;
-  let progressColorClass = 'progress-indicator-gradient'; 
+  let progressColorClass = 'progress-indicator-gradient';
 
   if (status === 'Cancel' || status === 'Delivered') {
     showProgressBar = false;
@@ -138,7 +138,7 @@ const calculateProgressInfo = (
       slaStageName = " (24H SLA)";
       break;
     case 'On Hold':
-      effectiveTargetDate = addDays(effectiveStartDate, 15); 
+      effectiveTargetDate = addDays(effectiveStartDate, 15);
       slaStageName = " (Max 15 Days)";
       break;
     case 'Logistics':
@@ -151,8 +151,8 @@ const calculateProgressInfo = (
       break;
     default:
       if (!endDate) {
-          showProgressBar = false;
-          return { showProgressBar, percentage:0, displayText: "No target date", isOverdue: false, progressColorClass:"" };
+        showProgressBar = false;
+        return { showProgressBar, percentage: 0, displayText: "No target date", isOverdue: false, progressColorClass: "" };
       }
       effectiveTargetDate = parseISO(endDate);
       break;
@@ -169,7 +169,7 @@ const calculateProgressInfo = (
     progressColorClass = 'bg-destructive';
     currentPercentage = 100;
   } else if (
-    isBefore(now, effectiveStartDate) && status !== 'Cancel' && status !== 'On Hold' 
+    isBefore(now, effectiveStartDate) && status !== 'On Hold'
   ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
     currentDisplayText = `Starts in ${timeUntilStart}`;
@@ -191,7 +191,7 @@ const calculateProgressInfo = (
   if (slaStageName && !currentIsOverdue) {
     currentDisplayText += slaStageName;
   } else if (currentIsOverdue && slaStageName) {
-     currentDisplayText += slaStageName;
+    currentDisplayText += slaStageName;
   }
 
   return {
@@ -212,9 +212,9 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
     data: { project },
-    disabled: isOverlay || !isMounted, 
+    disabled: isOverlay || !isMounted,
   });
-  
+
   const crmUser = allUsers.find(u => u.id === project.assigneeId);
   const drUser = project.designerRepresentativeId ? allUsers.find(u => u.id === project.designerRepresentativeId) : null;
 
@@ -228,35 +228,35 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
   };
-  
-  const [progressInfo, setProgressInfo] = useState<ProgressInfo>(() => 
+
+  const [progressInfo, setProgressInfo] = useState<ProgressInfo>(() =>
     calculateProgressInfo(project, new Date())
   );
 
   useEffect(() => {
     const updateInfo = () => {
-        setProgressInfo(calculateProgressInfo(project, new Date()));
+      setProgressInfo(calculateProgressInfo(project, new Date()));
     };
-    updateInfo(); 
-    const intervalId = setInterval(updateInfo, 5000); 
-    return () => clearInterval(intervalId); 
+    updateInfo();
+    const intervalId = setInterval(updateInfo, 5000);
+    return () => clearInterval(intervalId);
   }, [project]);
-  
-  const truncatedProjectName = project.name.length > 35 
-    ? `${project.name.substring(0, 35)}...` 
+
+  const truncatedProjectName = project.name.length > 35
+    ? `${project.name.substring(0, 35)}...`
     : project.name;
 
-  const canAssignDrPermission = 
-    (currentUser?.role === 'SYSTEM_ADMIN' || 
-    currentUser?.role === 'ADMIN' || 
-    currentUser?.role === 'CRM' ||
-    (currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader));
+  const canAssignDrPermission =
+    (currentUser?.role === 'SYSTEM_ADMIN' ||
+      currentUser?.role === 'ADMIN' ||
+      currentUser?.role === 'CRM' ||
+      (currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader));
 
   const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design' || project.status === 'CO Clearance');
 
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
-  
+
   const dndAttributes = isMounted ? listeners : {};
   const dndProps = isMounted ? { ...attributes, ...listeners } : {};
 
@@ -269,8 +269,8 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
         scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1),
         opacity: !isOverlay && isDragging ? 0.4 : 1,
         boxShadow: isOverlay
-          ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2), 0px 5px 10px -6px rgba(0, 0, 0, 0.2)" 
-          : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)", 
+          ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2), 0px 5px 10px -6px rgba(0, 0, 0, 0.2)"
+          : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
         rotate: isOverlay ? 2 : 0,
       }}
       transition={{ duration: 0.15, ease: "easeInOut" }}
@@ -282,27 +282,27 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     >
       <Card
         className={cn(
-          "bg-card w-full shadow-none", 
-           isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing")
+          "bg-card w-full shadow-none",
+          isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing")
         )}
       >
         <CardContent className="p-3 space-y-2.5">
           <div className="flex justify-between items-start">
             <span className="text-sm font-semibold text-foreground truncate">{project.projectIdDisplay}</span>
             {!isOverlay && (
-                 <NextLink
-                    href={`/track/${project.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), "h-6 w-6")}
-                    onClick={(e) => e.stopPropagation()}
-                    title="View Invoice / Order Details"
-                  >
-                    <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </NextLink>
+              <NextLink
+                href={`/track/${project.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), "h-6 w-6")}
+                onClick={(e) => e.stopPropagation()}
+                title="View Invoice / Order Details"
+              >
+                <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
+              </NextLink>
             )}
           </div>
-          
+
           <div className="min-w-0">
             <p className="text-xs font-medium text-muted-foreground" title={project.name}>{truncatedProjectName}</p>
           </div>
@@ -315,25 +315,25 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             title="View Public Tracking Page"
           >
             <div className={cn(
-                "inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/30"
+              "inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/30"
             )}>
               <CalendarDays className="mr-1.5 h-3 w-3" />
               Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
             </div>
           </NextLink>
-          
+
           {progressInfo.showProgressBar && (
-              <div className="pt-1">
+            <div className="pt-1">
               <div className="flex items-center space-x-2 mb-1">
-                  <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
+                <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
               </div>
-              <Progress 
-                  value={progressInfo.percentage} 
-                  className="h-2.5 rounded-full bg-secondary shadow-inner" 
-                  indicatorClassName={progressInfo.progressColorClass}
+              <Progress
+                value={progressInfo.percentage}
+                className="h-2.5 rounded-full bg-secondary shadow-inner"
+                indicatorClassName={progressInfo.progressColorClass}
               />
-              </div>
+            </div>
           )}
 
           <div className="flex items-center justify-start mt-2">
@@ -347,10 +347,10 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                     )}
                     onClick={
                       crmInfoClickable
-                        ? (e) => { 
-                            e.stopPropagation();
-                            onOpenAssignDrDialog(project);
-                          }
+                        ? (e) => {
+                          e.stopPropagation();
+                          onOpenAssignDrDialog(project);
+                        }
                         : undefined
                     }
                   >
@@ -369,31 +369,31 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 
             {project.designerRepresentativeName && (
               <>
-                <div className="w-px h-5 bg-border mx-1.5"></div> 
+                <div className="w-px h-5 bg-border mx-1.5"></div>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                       <div
-                          className={cn(
-                            "hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
-                            drInfoClickable && "cursor-pointer"
-                          )}
-                          onClick={
-                            drInfoClickable
-                              ? (e) => {
-                                  e.stopPropagation();
-                                  onOpenAssignDrDialog(project);
-                                }
-                              : undefined
-                          }
-                       >
+                      <div
+                        className={cn(
+                          "hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
+                          drInfoClickable && "cursor-pointer"
+                        )}
+                        onClick={
+                          drInfoClickable
+                            ? (e) => {
+                              e.stopPropagation();
+                              onOpenAssignDrDialog(project);
+                            }
+                            : undefined
+                        }
+                      >
                         <Avatar className="h-7 w-7 text-xs border border-blue-400 bg-muted">
                           <AvatarImage src={drUser?.avatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
                           <AvatarFallback className="text-blue-500 font-semibold">
                             {getInitials(project.designerRepresentativeName)}
                           </AvatarFallback>
                         </Avatar>
-                       </div>
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
                       <p>DR: {project.designerRepresentativeName}</p>

@@ -7,7 +7,7 @@ import { FeedbackClient } from './FeedbackClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface FeedbackPageProps {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }
 
 function FeedbackPageSkeleton() {
@@ -33,7 +33,7 @@ function FeedbackPageSkeleton() {
 }
 
 export default async function FeedbackPage({ params }: FeedbackPageProps) {
-  const orderId = params.orderId;
+  const { orderId } = await params;
 
   if (!orderId) {
     notFound();

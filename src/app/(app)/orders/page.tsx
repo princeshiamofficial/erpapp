@@ -404,7 +404,7 @@ export default function OrdersPage() {
               </Button>
             </Link>
           )}
-          {(currentUser.role === 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
+          {(currentUser.role === 'ADMIN') && (
             <Link href="/admin/model-management" passHref>
               <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
                 <Layers className="mr-2 h-4 w-4" /> Configure Models

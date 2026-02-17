@@ -19,7 +19,7 @@ function TrackingPageSkeleton() {
         <div className="bg-card p-6 sm:p-8 border-b border-border/40">
           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6">
             <div className="h-16 w-16 sm:h-20 sm:w-20 bg-primary/10 rounded-lg border border-primary/20 flex items-center justify-center mb-4 sm:mb-0 flex-shrink-0">
-                <Package className="h-8 w-8 sm:h-10 sm:w-10 text-primary opacity-50" />
+              <Package className="h-8 w-8 sm:h-10 sm:w-10 text-primary opacity-50" />
             </div>
             <div>
               <Skeleton className="h-8 w-72 mb-2 sm:h-10" />
@@ -41,11 +41,11 @@ function TrackingPageSkeleton() {
 
 
 interface PublicTrackingPageProps {
-  params: { trackingId: string };
+  params: Promise<{ trackingId: string }>;
 }
 
 export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
-  const trackingId = params.trackingId;
+  const { trackingId } = await params;
 
   // View count increment has been removed to prevent quota exhaustion.
   // if (trackingId) {
@@ -62,8 +62,8 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
   if (!orderDataResult) {
     notFound();
   }
-  
-  const cookieStore = cookies();
+
+  const cookieStore = await cookies();
   const userCookie = cookieStore.get('colorhut-user');
   let currentUser: User | null = null;
   if (userCookie) {
@@ -73,7 +73,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
       console.error("Failed to parse user cookie", e);
     }
   }
-  
+
   const plainOrderData = JSON.parse(JSON.stringify(orderDataResult));
   const plainAllStatuses = JSON.parse(JSON.stringify(allStatusesResult));
   const plainGlobalSettings = JSON.parse(JSON.stringify(globalSettingsResult));
@@ -85,12 +85,12 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
       <Suspense fallback={<TrackingPageSkeleton />}>
         <OrderDetailsLoader
-            order={plainOrderData}
-            allStatuses={plainAllStatuses}
-            allUsersForMentions={plainAllUsers}
-            areCommentsVisible={areCommentsVisible}
-            rolesAllowedToViewFinancials={plainGlobalSettings.rolesAllowedToViewFinancials ?? []}
-            currentUser={currentUser}
+          order={plainOrderData}
+          allStatuses={plainAllStatuses}
+          allUsersForMentions={plainAllUsers}
+          areCommentsVisible={areCommentsVisible}
+          rolesAllowedToViewFinancials={plainGlobalSettings.rolesAllowedToViewFinancials ?? []}
+          currentUser={currentUser}
         />
       </Suspense>
 

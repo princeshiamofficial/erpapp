@@ -41,7 +41,7 @@ import { ViewLeadDialog } from './ViewLeadDialog';
 import {
   PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall,
   Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check,
-  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X, Activity, BarChart3
+  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X, Activity, BarChart3, LucideIcon
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
@@ -59,7 +59,7 @@ const TransferLeadDialog = dynamic(() => import('@/components/pipeline/TransferL
 const TransferLeadsDialog = dynamic(() => import('@/components/pipeline/TransferLeadsDialog').then(mod => mod.TransferLeadsDialog));
 
 
-const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; headerBgClass: string }> = [
+const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon: LucideIcon; headerBgClass: string }> = [
   { title: 'POP', category: 'POP', icon: UserIcon, headerBgClass: 'bg-sky-600' },
   { title: 'POG', category: 'POG', icon: Users, headerBgClass: 'bg-blue-600' },
   { title: 'OC', category: 'OC', icon: BaggageClaim, headerBgClass: 'bg-purple-600' },

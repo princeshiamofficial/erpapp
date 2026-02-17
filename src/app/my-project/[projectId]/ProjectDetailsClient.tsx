@@ -5,10 +5,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DndContext } from '@dnd-kit/core';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import type { Project, CustomStatus, User, GlobalSettings, ProjectStatusType } from '@/types';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, type LucideIcon } from 'lucide-react';
 import Image from 'next/image';
 
-const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; }> = [
+const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: LucideIcon; headerBgClass: string; }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: Briefcase, headerBgClass: 'bg-sky-600' },
   { title: 'CO Clearance', status: 'CO Clearance', icon: Briefcase, headerBgClass: 'bg-teal-600' },
   { title: 'On Design', status: 'On Design', icon: Briefcase, headerBgClass: 'bg-purple-600' },
@@ -36,7 +36,7 @@ export function ProjectDetailsClient({
   allStatuses,
 }: ProjectDetailsClientProps) {
   const [project, setProject] = useState(initialProject);
-  
+
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
       'CR Clearance': [], 'CO Clearance': [], 'On Design': [],
@@ -47,7 +47,7 @@ export function ProjectDetailsClient({
     }
     return grouped;
   }, [project]);
-  
+
   const { businessName } = useMemo(() => {
     const nameParts = (project?.name || '').split(' • ');
     if (nameParts.length > 1) {
@@ -63,12 +63,12 @@ export function ProjectDetailsClient({
         {isReadOnly && (
           <div className="flex items-center justify-center gap-2 p-2 rounded-md bg-black text-white">
             <Image
-                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-                alt="Color Hut Logo"
-                width={160}
-                height={40}
-                priority
-                className="object-contain"
+              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+              alt="Color Hut Logo"
+              width={160}
+              height={40}
+              priority
+              className="object-contain"
             />
           </div>
         )}
@@ -83,7 +83,7 @@ export function ProjectDetailsClient({
                 projects={projectsByStatus[col.status] || []}
                 headerBgClass={col.headerBgClass}
                 isLoading={false} currentUser={currentUser} allStatuses={allStatuses} allUsers={allUsers}
-                onOpenAssignDrDialog={() => {}} // No-op for read-only
+                onOpenAssignDrDialog={() => { }} // No-op for read-only
               />
             ))}
           </div>

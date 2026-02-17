@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useMap, useMapEvents } from 'react-leaflet';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -49,8 +50,6 @@ const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapCo
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
-const useMap = dynamic(() => import('react-leaflet').then(mod => mod.useMap), { ssr: false });
-const useMapEvents = dynamic(() => import('react-leaflet').then(mod => mod.useMapEvents), { ssr: false });
 
 
 function MapUpdater({ center, zoom }: { center: LatLngExpression; zoom: number; }) {

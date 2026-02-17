@@ -9,16 +9,16 @@ import { PlusCircle, Edit, Trash2, Palette, AlertTriangle, Eye, EyeOff, RefreshC
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { CustomStatus, UserRole } from "@/types";
-import { getStatuses } from '@/lib/status-service'; 
-import { addStatusAction, updateStatusAction, deleteStatusAction } from './actions'; 
+import { getStatuses } from '@/lib/status-service';
+import { addStatusAction, updateStatusAction, deleteStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
@@ -43,7 +43,7 @@ export default function AdminStatusesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [newStatusName, setNewStatusName] = useState('');
-  const [newStatusColor, setNewStatusColor] = useState('#0EA5E9'); 
+  const [newStatusColor, setNewStatusColor] = useState('#0EA5E9');
   const [newStatusIsVisible, setNewStatusIsVisible] = useState(true);
   const [newStatusAllowedRoles, setNewStatusAllowedRoles] = useState<UserRole[]>([]);
 
@@ -88,7 +88,7 @@ export default function AdminStatusesPage() {
       setNewStatusColor('#0EA5E9');
       setNewStatusIsVisible(true);
       setNewStatusAllowedRoles([]);
-      await fetchStatuses(); 
+      await fetchStatuses();
     } else {
       toast({ title: "Error", description: result.error || "Could not add status.", variant: "destructive" });
     }
@@ -99,7 +99,7 @@ export default function AdminStatusesPage() {
     setEditingStatus(status);
     setNewStatusName(status.name);
     setNewStatusColor(status.color);
-    setNewStatusIsVisible(status.isVisible !== false); 
+    setNewStatusIsVisible(status.isVisible !== false);
     setNewStatusAllowedRoles(status.allowedRoles || []);
     setIsEditDialogOpen(true);
   };
@@ -107,8 +107,8 @@ export default function AdminStatusesPage() {
   const handleEditStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
-        toast({ title: "Authentication Error", description: "User not authenticated.", variant: "destructive" });
-        return;
+      toast({ title: "Authentication Error", description: "User not authenticated.", variant: "destructive" });
+      return;
     }
     if (!editingStatus || !newStatusName.trim() || !newStatusColor.trim()) {
       toast({ title: "Validation Error", description: "Status name and color are required.", variant: "destructive" });
@@ -120,17 +120,17 @@ export default function AdminStatusesPage() {
       toast({ title: "Success", description: `Status "${editingStatus.name}" updated.` });
       setIsEditDialogOpen(false);
       setEditingStatus(null);
-      await fetchStatuses(); 
+      await fetchStatuses();
     } else {
       toast({ title: "Error updating status", description: result.error || "Could not update status.", variant: "destructive" });
     }
     setIsSubmitting(false);
   };
-  
+
   const openDeleteDialog = (status: CustomStatus) => {
     if (status.isSystemStatus) {
-        toast({ title: "Action Denied", description: "System statuses cannot be deleted.", variant: "destructive"});
-        return;
+      toast({ title: "Action Denied", description: "System statuses cannot be deleted.", variant: "destructive" });
+      return;
     }
     setStatusToDelete(status);
     setIsDeleteDialogOpen(true);
@@ -144,7 +144,7 @@ export default function AdminStatusesPage() {
       toast({ title: "Success", description: `Status "${statusToDelete.name}" deleted.` });
       setIsDeleteDialogOpen(false);
       setStatusToDelete(null);
-      await fetchStatuses(); 
+      await fetchStatuses();
     } else {
       toast({ title: "Error", description: result.error || "Could not delete status.", variant: "destructive" });
     }
@@ -170,7 +170,7 @@ export default function AdminStatusesPage() {
       </div>
     );
   }
-  
+
   const StatusColorPreview = ({ color }: { color: string }) => (
     <div className="w-6 h-6 rounded-md border border-border" style={{ backgroundColor: color }} />
   );
@@ -182,30 +182,30 @@ export default function AdminStatusesPage() {
     const disabledForNonSysAdminOnSystemStatus = isSystemStatusBeingEdited && currentUser?.role !== 'SYSTEM_ADMIN';
 
     return (
-        <div className="space-y-3">
+      <div className="space-y-3">
         <Label>Restrict Assignment To Roles:</Label>
         <div className="grid grid-cols-2 gap-3">
-            {AVAILABLE_ROLES_FOR_STATUS_ASSIGNMENT.map(role => (
+          {AVAILABLE_ROLES_FOR_STATUS_ASSIGNMENT.map(role => (
             <div key={role} className="flex items-center space-x-2 p-2 border rounded-md hover:bg-muted/50">
-                <Checkbox
+              <Checkbox
                 id={`${isEditingDialog ? 'edit' : 'add'}-role-${role}`}
                 checked={currentSelectedRoles.includes(role)}
                 onCheckedChange={(checked) => handleAllowedRoleChange(role, checked, isEditingDialog)}
                 disabled={isSubmitting || disabledForNonSysAdminOnSystemStatus}
-                />
-                <Label htmlFor={`${isEditingDialog ? 'edit' : 'add'}-role-${role}`} className="text-sm font-normal">
+              />
+              <Label htmlFor={`${isEditingDialog ? 'edit' : 'add'}-role-${role}`} className="text-sm font-normal">
                 {role.replace(/_/g, ' ')}
-                </Label>
+              </Label>
             </div>
-            ))}
+          ))}
         </div>
         {disabledForNonSysAdminOnSystemStatus && (
-             <p className="text-xs text-muted-foreground mt-1">Assignment permissions for system statuses can only be changed by a System Administrator.</p>
+          <p className="text-xs text-muted-foreground mt-1">Assignment permissions for system statuses can only be changed by a System Administrator.</p>
         )}
         <p className="text-xs text-muted-foreground">
-            If no roles are selected, any user with permission to change statuses can assign this status. System Admins always have permission.
+          If no roles are selected, any user with permission to change statuses can assign this status. System Admins always have permission.
         </p>
-        </div>
+      </div>
     );
   };
 
@@ -264,32 +264,32 @@ export default function AdminStatusesPage() {
                   <div className="flex items-center gap-3 flex-grow">
                     <StatusColorPreview color={status.color} />
                     <div>
-                        <span className="font-medium text-foreground">{status.name}</span>
-                        {status.isSystemStatus && (
+                      <span className="font-medium text-foreground">{status.name}</span>
+                      {status.isSystemStatus && (
                         <span className="ml-2 text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm border border-border">System</span>
-                        )}
-                         {status.isVisible !== false ? (
-                            <Eye className="h-4 w-4 text-green-500 ml-2 inline-block" title="Visible in dropdowns"/>
-                        ) : (
-                            <EyeOff className="h-4 w-4 text-muted-foreground ml-2 inline-block" title="Hidden in dropdowns" />
-                        )}
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                            <Users className="h-3.5 w-3.5" />
-                            Allowed: {status.allowedRoles && status.allowedRoles.length > 0 ? status.allowedRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'All Permitted'}
-                        </div>
+                      )}
+                      {status.isVisible !== false ? (
+                        <span title="Visible in dropdowns"><Eye className="h-4 w-4 text-green-500 ml-2 inline-block" /></span>
+                      ) : (
+                        <span title="Hidden in dropdowns"><EyeOff className="h-4 w-4 text-muted-foreground ml-2 inline-block" /></span>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5" />
+                        Allowed: {status.allowedRoles && status.allowedRoles.length > 0 ? status.allowedRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'All Permitted'}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     <Button variant="outline" size="icon" onClick={() => openEditDialog(status)} title="Edit Status" className="h-9 w-9">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => openDeleteDialog(status)} 
-                        title="Delete Status" 
-                        className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                        disabled={status.isSystemStatus}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openDeleteDialog(status)}
+                      title="Delete Status"
+                      className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                      disabled={status.isSystemStatus}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -318,7 +318,7 @@ export default function AdminStatusesPage() {
               <Input id="newStatusColor" type="color" value={newStatusColor} onChange={(e) => setNewStatusColor(e.target.value)} className="w-20 h-10 p-1" required disabled={isSubmitting} />
               <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: newStatusColor }} />
             </div>
-             <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">
               <Switch id="newStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
               <Label htmlFor="newStatusIsVisible">Visible in dropdowns</Label>
             </div>
@@ -343,15 +343,15 @@ export default function AdminStatusesPage() {
             <form onSubmit={handleEditStatus} className="space-y-4 py-2">
               <div>
                 <Label htmlFor="editStatusName">Status Name</Label>
-                <Input 
-                    id="editStatusName" 
-                    value={newStatusName} 
-                    onChange={(e) => setNewStatusName(e.target.value)} 
-                    required 
-                    disabled={isSubmitting || (editingStatus.isSystemStatus && currentUser.role !== 'SYSTEM_ADMIN')}
+                <Input
+                  id="editStatusName"
+                  value={newStatusName}
+                  onChange={(e) => setNewStatusName(e.target.value)}
+                  required
+                  disabled={isSubmitting || (editingStatus.isSystemStatus && currentUser.role !== 'SYSTEM_ADMIN')}
                 />
-                 {editingStatus.isSystemStatus && currentUser.role !== 'SYSTEM_ADMIN' && 
-                    <p className="text-xs text-muted-foreground mt-1">System status names can only be changed by a System Administrator.</p>}
+                {editingStatus.isSystemStatus && currentUser.role !== 'SYSTEM_ADMIN' &&
+                  <p className="text-xs text-muted-foreground mt-1">System status names can only be changed by a System Administrator.</p>}
               </div>
               <div className="flex items-center gap-4">
                 <Label htmlFor="editStatusColor">Status Color</Label>
@@ -359,10 +359,10 @@ export default function AdminStatusesPage() {
                 <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: newStatusColor }} />
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="editStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting}/>
+                <Switch id="editStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
                 <Label htmlFor="editStatusIsVisible">Visible in dropdowns</Label>
               </div>
-               <Separator />
+              <Separator />
               {renderAllowedRolesCheckboxes(true)}
               <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -372,7 +372,7 @@ export default function AdminStatusesPage() {
           </DialogContent>
         </Dialog>
       )}
-      
+
       {statusToDelete && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
@@ -382,7 +382,7 @@ export default function AdminStatusesPage() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the status
-                "<span className="font-semibold">{statusToDelete.name}</span>". 
+                "<span className="font-semibold">{statusToDelete.name}</span>".
                 Ensure no orders are currently using this status before proceeding.
               </AlertDialogDescription>
             </AlertDialogHeader>

@@ -4,7 +4,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Crown, ArrowUp, ArrowDown } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { User, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -52,14 +52,14 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
       )}
     >
       <div className={cn(
-          "absolute -top-3 left-1/2 -translate-x-1/2 flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full text-[hsl(var(--leaderboard-rank-badge-text))] font-bold text-sm sm:text-base border-2 border-white shadow-md",
-          rankColors[rank as keyof typeof rankColors] || "bg-gray-400"
+        "absolute -top-3 left-1/2 -translate-x-1/2 flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full text-[hsl(var(--leaderboard-rank-badge-text))] font-bold text-sm sm:text-base border-2 border-white shadow-md",
+        rankColors[rank as keyof typeof rankColors] || "bg-gray-400"
       )}>
         {rank}
       </div>
       <Avatar className={cn(
-          "border-4 border-white shadow-xl overflow-hidden",
-          isCenter ? "h-20 w-20 sm:h-24 sm:w-24 mt-3" : "h-16 w-16 sm:h-20 sm:w-20 mt-3"
+        "border-4 border-white shadow-xl overflow-hidden",
+        isCenter ? "h-20 w-20 sm:h-24 sm:w-24 mt-3" : "h-16 w-16 sm:h-20 sm:w-20 mt-3"
       )}>
         <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="leaderboard user avatar" />
         <AvatarFallback className="bg-gray-700 text-white text-2xl sm:text-3xl">{getInitials(user.userName)}</AvatarFallback>
@@ -145,7 +145,7 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
           </div>
         </div>
       )}
-      
+
       {/* List Section */}
       {performanceData.length > 0 && ( // Changed to check performanceData for the whole list container
         <div className="bg-[hsl(var(--leaderboard-list-bg))] rounded-t-[30px] sm:rounded-t-[40px] shadow-2xl pt-4 pb-8 min-h-[300px] mt-[-50px] sm:mt-[-60px]">
@@ -159,10 +159,10 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
             ))}
           </AnimatePresence>
           {rest.length === 0 && topThree.length > 0 && (
-             <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">Only podium members this period.</p>
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">Only podium members this period.</p>
           )}
-           {performanceData.length === 0 && (
-             <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">No one on the leaderboard yet for {timePeriodLabel}.</p>
+          {performanceData.length === 0 && (
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">No one on the leaderboard yet for {timePeriodLabel}.</p>
           )}
         </div>
       )}

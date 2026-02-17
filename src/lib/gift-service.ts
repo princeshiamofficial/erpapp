@@ -31,7 +31,7 @@ export const getGiftById = async (id: string): Promise<Gift | null> => {
   return null;
 };
 
-export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'createdAt' | 'updatedAt' | 'giftItemName'>, currentUser: User): Promise<Gift | null> => {
+export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'createdAt' | 'updatedAt' | 'giftItemName' | 'givenByUserId' | 'givenByUserName'> & { giftItemNames: string[] }, currentUser: User): Promise<Gift | null> => {
   try {
     const allGifts = await getGifts();
     const giftPrefix = `GFT-`;

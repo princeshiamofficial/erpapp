@@ -18,15 +18,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend as RechartsLegend } from 'recharts';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
 } from "@/components/ui/chart";
 
 
 const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
-const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | 'absent' } }) => {
+const CalendarDay = ({ day, data }: { day: number | null; data?: { status?: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | 'absent' } }) => {
     if (!day) {
         return <div className="w-10 h-10"></div>;
     }
@@ -47,7 +47,7 @@ const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leav
             container: "bg-transparent text-foreground",
             icon: <Check className={cn(iconClasses, "text-yellow-500")} />
         },
-         absent: {
+        absent: {
             container: "border-2 border-dashed border-red-400 bg-red-50 text-red-500",
             icon: <AlertTriangle className={cn(iconClasses, "text-red-500")} />
         },
@@ -68,7 +68,7 @@ const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leav
             icon: null
         }
     };
-    
+
     const styleKey = data?.status || 'default';
     const style = styles[styleKey as keyof typeof styles] || styles.default;
 
@@ -81,36 +81,36 @@ const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leav
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, payload, index, isMobile }: any) => {
-  const labelRadiusMultiplier = isMobile ? 1.4 : 1.25;
-  const lineLength1 = isMobile ? 10 : 15;
-  const lineLength2 = isMobile ? 12 : 22;
+    const labelRadiusMultiplier = isMobile ? 1.4 : 1.25;
+    const lineLength1 = isMobile ? 10 : 15;
+    const lineLength2 = isMobile ? 12 : 22;
 
-  const radius = innerRadius + (outerRadius - innerRadius) * labelRadiusMultiplier;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  const sin = Math.sin(-midAngle * RADIAN);
-  const cos = Math.cos(-midAngle * RADIAN);
-  const sx = cx + (outerRadius + (isMobile ? 3 : 5)) * cos;
-  const sy = cy + (outerRadius + (isMobile ? 3 : 5)) * sin;
-  const mx = cx + (outerRadius + lineLength1) * cos;
-  const my = cy + (outerRadius + lineLength1) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * lineLength2;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
-  
-  let labelText = `${payload.name} ${payload.value} days`;
-  if (payload.name === 'Working Days') {
-    labelText = `${payload.value} Working Days`;
-  }
+    const radius = innerRadius + (outerRadius - innerRadius) * labelRadiusMultiplier;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const sin = Math.sin(-midAngle * RADIAN);
+    const cos = Math.cos(-midAngle * RADIAN);
+    const sx = cx + (outerRadius + (isMobile ? 3 : 5)) * cos;
+    const sy = cy + (outerRadius + (isMobile ? 3 : 5)) * sin;
+    const mx = cx + (outerRadius + lineLength1) * cos;
+    const my = cy + (outerRadius + lineLength1) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * lineLength2;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+
+    let labelText = `${payload.name} ${payload.value} days`;
+    if (payload.name === 'Working Days') {
+        labelText = `${payload.value} Working Days`;
+    }
 
 
-  return (
-    <g>
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#8884d8"} fill="none" />
-      <circle cx={ex} cy={ey} r={2} fill={"#8884d8"} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 12 : 16} fontWeight="bold">{labelText}</text>
-    </g>
-  );
+    return (
+        <g>
+            <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#8884d8"} fill="none" />
+            <circle cx={ex} cy={ey} r={2} fill={"#8884d8"} stroke="none" />
+            <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 12 : 16} fontWeight="bold">{labelText}</text>
+        </g>
+    );
 };
 
 
@@ -138,20 +138,20 @@ export default function AttendanceHistoryPage() {
     }, []);
 
     const fetchAttendanceData = useCallback(async (month: Date) => {
-      if (!currentUser) return;
-      setIsLoadingData(true);
-      try {
-        const [records, weekendSettings] = await Promise.all([
-          getAttendanceForMonth(month),
-          getWeekendSettings(),
-        ]);
-        setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
-        setWeekendDays(weekendSettings.days || []);
-      } catch (error) {
-        console.error("Failed to fetch attendance:", error);
-      } finally {
-        setIsLoadingData(false);
-      }
+        if (!currentUser) return;
+        setIsLoadingData(true);
+        try {
+            const [records, weekendSettings] = await Promise.all([
+                getAttendanceForMonth(month),
+                getWeekendSettings(),
+            ]);
+            setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
+            setWeekendDays(weekendSettings.days || []);
+        } catch (error) {
+            console.error("Failed to fetch attendance:", error);
+        } finally {
+            setIsLoadingData(false);
+        }
     }, [currentUser]);
 
     useEffect(() => {
@@ -162,11 +162,11 @@ export default function AttendanceHistoryPage() {
 
     const sortedRecords = useMemo(() => {
         // Filter records for the current month being viewed
-        const recordsForMonth = monthlyRecords.filter(record => 
+        const recordsForMonth = monthlyRecords.filter(record =>
             isSameMonth(parseISO(record.date), currentMonth)
         );
         return recordsForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      }, [monthlyRecords, currentMonth]);
+    }, [monthlyRecords, currentMonth]);
 
     const { calendarGrid, absenceDates } = useMemo(() => {
         const start = startOfMonth(currentMonth);
@@ -191,7 +191,7 @@ export default function AttendanceHistoryPage() {
                 absences.push(dateKey);
             }
         }
-        
+
         // Build calendar grid
         for (let i = 0; i < startingDayOfWeek; i++) {
             grid.push({ day: null });
@@ -204,13 +204,13 @@ export default function AttendanceHistoryPage() {
             let status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | 'absent' | undefined;
 
             if (isToday(date)) status = 'today';
-            
+
             if (record) {
                 status = record.status === 'Late' ? 'late' : 'present';
             } else if (absences.includes(dateKey)) {
                 status = 'absent';
             }
-            
+
             if (selectedDay && isSameDay(date, selectedDay)) {
                 status = 'selected';
             }
@@ -223,10 +223,10 @@ export default function AttendanceHistoryPage() {
         }
         return { calendarGrid: grid, absenceDates: absences };
     }, [currentMonth, sortedRecords, selectedDay, weekendDays]);
-    
+
     const chartData = useMemo(() => {
         if (!isClient) return [];
-        
+
         const onTime = sortedRecords.filter(r => r.status === 'On Time').length;
         const late = sortedRecords.filter(r => r.status === 'Late').length;
         const absenceDaysCount = absenceDates.length;
@@ -234,14 +234,14 @@ export default function AttendanceHistoryPage() {
         const totalDaysInMonth = getDaysInMonth(currentMonth);
         let workingDaysInMonth = 0;
         const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
-        
+
         for (let i = 1; i <= totalDaysInMonth; i++) {
             const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
-            if (!weekendDayIndexes.includes(dayOfWeek)) { 
+            if (!weekendDayIndexes.includes(dayOfWeek)) {
                 workingDaysInMonth++;
             }
         }
-        
+
         const attended = onTime + late;
         let remainingWorkingDays = 0;
 
@@ -249,15 +249,15 @@ export default function AttendanceHistoryPage() {
             let workingDaysSoFar = 0;
             const todayDate = new Date().getDate();
             for (let i = 1; i <= todayDate; i++) {
-                 const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
-                 if (!weekendDayIndexes.includes(dayOfWeek)) {
-                     workingDaysSoFar++;
-                 }
+                const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+                if (!weekendDayIndexes.includes(dayOfWeek)) {
+                    workingDaysSoFar++;
+                }
             }
             // Absence is already calculated, so remaining is total minus what has happened
             remainingWorkingDays = Math.max(0, workingDaysInMonth - workingDaysSoFar);
         } else {
-             remainingWorkingDays = Math.max(0, workingDaysInMonth - attended - absenceDaysCount);
+            remainingWorkingDays = Math.max(0, workingDaysInMonth - attended - absenceDaysCount);
         }
 
         const data = [];
@@ -290,11 +290,11 @@ export default function AttendanceHistoryPage() {
     return (
         <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
             <header className="relative h-20 w-full bg-gradient-to-br from-orange-500 to-black p-4 text-white text-center flex-col justify-center items-center rounded-b-xl hidden">
-                 <div className="absolute top-1/2 -translate-y-1/2 left-4">
+                <div className="absolute top-1/2 -translate-y-1/2 left-4">
                     <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
-                      <Link href="/attendance">
-                        <ArrowLeft className="h-5 w-5" />
-                      </Link>
+                        <Link href="/attendance">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Link>
                     </Button>
                 </div>
                 <h1 className="text-xl font-bold">Attendance History</h1>
@@ -311,96 +311,96 @@ export default function AttendanceHistoryPage() {
                             <ChevronRight className="h-5 w-5" />
                         </Button>
                     </div>
-                    
+
                     <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-muted-foreground mb-3">
-                      {WEEK_DAYS.map(day => <div key={day}>{day}</div>)}
+                        {WEEK_DAYS.map(day => <div key={day}>{day}</div>)}
                     </div>
                     <div className="grid grid-cols-7 gap-2">
                         {calendarGrid.map((dayInfo, index) => (
-                           <div key={index} onClick={() => dayInfo.date && setSelectedDay(dayInfo.date)}>
-                             <CalendarDay day={dayInfo.day} data={dayInfo.data} />
-                           </div>
+                            <div key={index} onClick={() => dayInfo.date && setSelectedDay(dayInfo.date)}>
+                                <CalendarDay day={dayInfo.day} data={dayInfo.data} />
+                            </div>
                         ))}
                     </div>
 
                     <div className="flex justify-between items-center mt-6 mb-4">
-                      <h3 className="font-semibold text-lg">Your Attendance</h3>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="text-primary"
-                        onMouseDown={handleLongPressStart}
-                        onMouseUp={handleLongPressEnd}
-                        onTouchStart={handleLongPressStart}
-                        onTouchEnd={handleLongPressEnd}
-                      >
-                        Show more
-                      </Button>
+                        <h3 className="font-semibold text-lg">Your Attendance</h3>
+                        <Button
+                            variant="link"
+                            size="sm"
+                            className="text-primary"
+                            onMouseDown={handleLongPressStart}
+                            onMouseUp={handleLongPressEnd}
+                            onTouchStart={handleLongPressStart}
+                            onTouchEnd={handleLongPressEnd}
+                        >
+                            Show more
+                        </Button>
                     </div>
-                    
+
                     {isAttendanceListVisible && (
                         <div className="space-y-3">
-                        {isLoadingData ? (
-                            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
-                        ) : sortedRecords.length > 0 ? (
-                        sortedRecords.map(record => {
-                            const isSelected = selectedDay && isSameDay(parseISO(record.date), selectedDay);
-                            const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'p') : '-';
-                            const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'p') : '-';
-                            const totalHours = record.hoursWorked || '-';
-                            
-                            return (
-                                <Card key={record.id} className={cn("transition-all", isSelected && "ring-2 ring-primary bg-primary/5")}>
-                                    <CardContent className="p-3 flex items-center gap-3">
-                                        <div className="text-center w-12 flex-shrink-0">
-                                            <p className="font-bold text-lg">{format(parseISO(record.date), 'dd')}</p>
-                                            <p className="text-xs text-muted-foreground">{format(parseISO(record.date), 'EEE')}</p>
-                                        </div>
-                                        <div className="border-l pl-3 flex-1 grid grid-cols-3 items-center text-center text-sm">
-                                            <div className="flex flex-col items-center justify-center">
-                                                <Badge className={cn(
-                                                    record.status === 'On Time' && 'bg-green-100 text-green-800',
-                                                    record.status === 'Late' && 'bg-yellow-100 text-yellow-800',
-                                                    record.status === 'Absent' && 'bg-red-100 text-red-800'
-                                                )}>{record.status}</Badge>
-                                            </div>
-                                            <div className="flex flex-col items-center justify-center">
-                                                <p className="font-semibold text-foreground">{checkInTime} - {checkOutTime}</p>
-                                                <p className="text-xs text-muted-foreground">Check-in/out</p>
-                                            </div>
-                                            <div className="flex flex-col items-center justify-center">
-                                                <p className="font-semibold text-foreground">{totalHours}h</p>
-                                                <p className="text-xs text-muted-foreground">Working Hours</p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })
-                        ) : (
-                        <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
-                        )}
+                            {isLoadingData ? (
+                                [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
+                            ) : sortedRecords.length > 0 ? (
+                                sortedRecords.map(record => {
+                                    const isSelected = selectedDay && isSameDay(parseISO(record.date), selectedDay);
+                                    const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'p') : '-';
+                                    const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'p') : '-';
+                                    const totalHours = record.hoursWorked || '-';
+
+                                    return (
+                                        <Card key={record.id} className={cn("transition-all", isSelected && "ring-2 ring-primary bg-primary/5")}>
+                                            <CardContent className="p-3 flex items-center gap-3">
+                                                <div className="text-center w-12 flex-shrink-0">
+                                                    <p className="font-bold text-lg">{format(parseISO(record.date), 'dd')}</p>
+                                                    <p className="text-xs text-muted-foreground">{format(parseISO(record.date), 'EEE')}</p>
+                                                </div>
+                                                <div className="border-l pl-3 flex-1 grid grid-cols-3 items-center text-center text-sm">
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <Badge className={cn(
+                                                            record.status === 'On Time' && 'bg-green-100 text-green-800',
+                                                            record.status === 'Late' && 'bg-yellow-100 text-yellow-800',
+                                                            record.status === 'Absent' && 'bg-red-100 text-red-800'
+                                                        )}>{record.status}</Badge>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <p className="font-semibold text-foreground">{checkInTime} - {checkOutTime}</p>
+                                                        <p className="text-xs text-muted-foreground">Check-in/out</p>
+                                                    </div>
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <p className="font-semibold text-foreground">{totalHours}h</p>
+                                                        <p className="text-xs text-muted-foreground">Working Hours</p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )
+                                })
+                            ) : (
+                                <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
+                            )}
                         </div>
                     )}
                     <div className={cn("w-full h-[380px] sm:h-[450px]")}>
                         <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                            data={chartData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={(props) => renderCustomizedLabel({...props, isMobile: isMobileView})}
-                            outerRadius={isMobileView ? 70 : 120}
-                            innerRadius={isMobileView ? 50 : 90}
-                            fill="#8884d8"
-                            dataKey="value"
-                            >
-                            {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                            </Pie>
-                        </PieChart>
+                            <PieChart>
+                                <Pie
+                                    data={chartData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={(props) => renderCustomizedLabel({ ...props, isMobile: isMobileView })}
+                                    outerRadius={isMobileView ? 70 : 120}
+                                    innerRadius={isMobileView ? 50 : 90}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                >
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                            </PieChart>
                         </ResponsiveContainer>
                     </div>
                 </div>

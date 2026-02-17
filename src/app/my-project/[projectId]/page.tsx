@@ -12,28 +12,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface ProjectDetailsPageProps {
-  params: { projectId: string };
+  params: Promise<{ projectId: string }>;
 }
 
 function PageSkeleton() {
-    return (
-        <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] p-4 space-y-4">
-            <Skeleton className="h-12 w-1/3 rounded-lg" />
-            <Skeleton className="h-10 w-full rounded-md" />
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                <Skeleton className="h-full w-full rounded-lg" />
-                <Skeleton className="h-full w-full rounded-lg" />
-                <Skeleton className="h-full w-full rounded-lg" />
-                <Skeleton className="h-full w-full rounded-lg hidden lg:block" />
-                <Skeleton className="h-full w-full rounded-lg hidden xl:block" />
-            </div>
-        </div>
-    );
+  return (
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] p-4 space-y-4">
+      <Skeleton className="h-12 w-1/3 rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-md" />
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <Skeleton className="h-full w-full rounded-lg" />
+        <Skeleton className="h-full w-full rounded-lg" />
+        <Skeleton className="h-full w-full rounded-lg" />
+        <Skeleton className="h-full w-full rounded-lg hidden lg:block" />
+        <Skeleton className="h-full w-full rounded-lg hidden xl:block" />
+      </div>
+    </div>
+  );
 }
 
 
 export default async function MyProjectDetailsPage({ params }: ProjectDetailsPageProps) {
-  const { projectId } = params;
+  const { projectId } = await params;
 
   if (!projectId) {
     notFound();
@@ -51,7 +51,7 @@ export default async function MyProjectDetailsPage({ params }: ProjectDetailsPag
   if (!projectData) {
     notFound();
   }
-  
+
   // For this public page, the user is always considered null and view is read-only.
   const currentUser: User | null = null;
   const isReadOnly = true;

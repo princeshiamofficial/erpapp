@@ -93,6 +93,7 @@ export interface Employee {
   nationalId?: string; // New Field for National ID
   accountNo?: string;  // New Field for Bank Account Number
   providentFundStatus?: 'Active' | 'Inactive';
+  incentive?: number;
 }
 
 export interface Vendor {

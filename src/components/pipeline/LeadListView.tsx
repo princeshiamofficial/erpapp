@@ -6,10 +6,10 @@ import type { Lead, User, LeadCategory } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSub,
     DropdownMenuSubTrigger,
@@ -24,34 +24,34 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface LeadListViewProps {
-  leads: Lead[];
-  isLoading: boolean;
-  currentUser: User | null;
-  onViewLead: (lead: Lead) => void;
-  onDeleteLead: (lead: Lead) => void;
-  onTransferLead: (lead: Lead) => void;
-  onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void; 
-  allUsers: User[];
-  isSelectionMode?: boolean;
-  selectedLeadIds?: Set<string>;
-  onSelectionChange?: (leadId: string, isSelected: boolean) => void;
-  onSelectAll?: (isSelected: boolean) => void;
+    leads: Lead[];
+    isLoading: boolean;
+    currentUser: User | null;
+    onViewLead: (lead: Lead) => void;
+    onDeleteLead: (lead: Lead) => void;
+    onTransferLead: (lead: Lead) => void;
+    onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void;
+    allUsers: User[];
+    isSelectionMode?: boolean;
+    selectedLeadIds?: Set<string>;
+    onSelectionChange?: (leadId: string, isSelected: boolean) => void;
+    onSelectAll?: (isSelected: boolean) => void;
 }
 
-const formatDateSafe = (dateString?: string) => {
-  if (!dateString) return null; // Return null for blank output
-  try {
-    return format(parseISO(dateString), 'd MMM, yyyy');
-  } catch (e) {
-    return 'Invalid Date';
-  }
+const formatDateSafe = (dateString?: string | null) => {
+    if (!dateString) return null; // Return null for blank output
+    try {
+        return format(parseISO(dateString), 'd MMM, yyyy');
+    } catch (e) {
+        return 'Invalid Date';
+    }
 };
 
 const getInitials = (name: string | undefined) => {
-  if (!name) return '??';
-  const names = name.split(' ');
-  if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
 const getStatusBadgeClass = (status: string) => {
@@ -66,183 +66,183 @@ const getStatusBadgeClass = (status: string) => {
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
-export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => {}, onSelectAll = () => {} }: LeadListViewProps) {
-  const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
-  const canDelete = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
-  const canTransfer = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
-  
-  const isAllSelected = leads.length > 0 && selectedLeadIds.size === leads.length;
-  const isSomeSelected = selectedLeadIds.size > 0 && selectedLeadIds.size < leads.length;
+export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => { }, onSelectAll = () => { } }: LeadListViewProps) {
+    const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
+    const canDelete = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
+    const canTransfer = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
 
-  const duplicatePhoneNumbers = useMemo(() => {
-    const phoneCounts = new Map<string, number>();
-    leads.forEach(lead => {
-      if (lead.phone) {
-        phoneCounts.set(lead.phone, (phoneCounts.get(lead.phone) || 0) + 1);
-      }
-    });
+    const isAllSelected = leads.length > 0 && selectedLeadIds.size === leads.length;
+    const isSomeSelected = selectedLeadIds.size > 0 && selectedLeadIds.size < leads.length;
 
-    const duplicates = new Set<string>();
-    for (const [phone, count] of phoneCounts.entries()) {
-      if (count > 1) {
-        duplicates.add(phone);
-      }
-    }
-    return duplicates;
-  }, [leads]);
+    const duplicatePhoneNumbers = useMemo(() => {
+        const phoneCounts = new Map<string, number>();
+        leads.forEach(lead => {
+            if (lead.phone) {
+                phoneCounts.set(lead.phone, (phoneCounts.get(lead.phone) || 0) + 1);
+            }
+        });
+
+        const duplicates = new Set<string>();
+        for (const [phone, count] of phoneCounts.entries()) {
+            if (count > 1) {
+                duplicates.add(phone);
+            }
+        }
+        return duplicates;
+    }, [leads]);
 
 
-  return (
-    <div className="mt-4 border rounded-lg overflow-hidden bg-card">
-        <div className="overflow-x-auto">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        {isSelectionMode && (
-                            <TableHead className="w-12 pl-4">
-                               <Checkbox
-                                  checked={isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false)}
-                                  onCheckedChange={(checked) => onSelectAll(checked === true)}
-                                  aria-label="Select all leads on this page"
-                                />
-                            </TableHead>
-                        )}
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Business</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Assigned CRM</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Schedule</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {isLoading ? (
-                        [...Array(12)].map((_, i) => (
-                            <TableRow key={`skel-${i}`}>
-                                {isSelectionMode && <TableCell className="pl-4"><Skeleton className="h-5 w-5"/></TableCell>}
-                                <TableCell><div className="flex items-center gap-2"><Skeleton className="h-5 w-24" /></div></TableCell>
-                                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                                <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                                <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
-                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
-                            </TableRow>
-                        ))
-                    ) : leads.length > 0 ? (
-                        leads.map(lead => {
-                            const crmUser = allUsers.find(u => u.id === lead.crmId);
-                            const scheduleDate = lead.schedule ? parseISO(lead.schedule) : null;
-                            const isPast = scheduleDate ? isBefore(scheduleDate, startOfDay(new Date())) && !isToday(scheduleDate) : false;
-                            const isDuplicatePhone = lead.phone && duplicatePhoneNumbers.has(lead.phone);
-                            const wasUpdatedToday = lead.updatedAt ? isToday(parseISO(lead.updatedAt)) : false;
-                            
-                            return (
-                                <TableRow 
-                                  key={lead.id} 
-                                  className={cn(
-                                    "hover:bg-muted/50",
-                                    isDuplicatePhone && "bg-red-100/50 dark:bg-red-900/20",
-                                    wasUpdatedToday && !isDuplicatePhone && "bg-green-100/50 dark:bg-green-900/20"
-                                  )}
-                                  data-state={selectedLeadIds.has(lead.id) ? "selected" : ""}
-                                >
-                                    {isSelectionMode && (
-                                        <TableCell className="pl-4">
-                                            <Checkbox
-                                                checked={selectedLeadIds.has(lead.id)}
-                                                onCheckedChange={(checked) => onSelectionChange(lead.id, checked === true)}
-                                                aria-label={`Select lead ${lead.contactName}`}
-                                            />
-                                        </TableCell>
-                                    )}
-                                    <TableCell className="font-medium text-foreground">{lead.contactName}</TableCell>
-                                    <TableCell>{lead.businessName}</TableCell>
-                                    <TableCell>{lead.phone}</TableCell>
-                                    <TableCell>{lead.source}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">{lead.category}</Badge>
-                                    </TableCell>
-                                    <TableCell className="whitespace-nowrap">
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-8 w-8 text-xs">
-                                                <AvatarImage src={crmUser?.avatarUrl || undefined} alt={lead.crmName} />
-                                                <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
-                                            </Avatar>
-                                            <span>{lead.crmName}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{formatDateSafe(lead.date)}</TableCell>
-                                    <TableCell>
-                                        {scheduleDate ? (
-                                            <Badge variant="outline" className={cn(
-                                                isPast 
-                                                ? 'border-red-300 text-red-800 bg-red-50' 
-                                                : 'border-green-300 text-green-800 bg-green-50'
-                                            )}>
-                                                {formatDateSafe(lead.schedule)}
-                                            </Badge>
-                                        ) : (
-                                            null
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => onViewLead(lead)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4"/> View</DropdownMenuItem>
-                                                
-                                                {canEdit(lead) && (
-                                                    <DropdownMenuSub>
-                                                        <DropdownMenuSubTrigger className="cursor-pointer">
-                                                            <FolderEdit className="mr-2 h-4 w-4" /> Change Category
-                                                        </DropdownMenuSubTrigger>
-                                                        <DropdownMenuPortal>
-                                                            <DropdownMenuSubContent>
-                                                                {LEAD_CATEGORIES.map(category => (
-                                                                    <DropdownMenuItem 
-                                                                        key={category}
-                                                                        disabled={lead.category === category}
-                                                                        onSelect={() => onUpdateLeadCategory(lead, category)}
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        {category}
-                                                                    </DropdownMenuItem>
-                                                                ))}
-                                                            </DropdownMenuSubContent>
-                                                        </DropdownMenuPortal>
-                                                    </DropdownMenuSub>
-                                                )}
-                                                
-                                                {canDelete(lead) && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })
-                    ) : (
+    return (
+        <div className="mt-4 border rounded-lg overflow-hidden bg-card">
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
                         <TableRow>
-                            <TableCell colSpan={isSelectionMode ? 10 : 9} className="h-48 text-center text-muted-foreground">
-                                <div className="flex flex-col items-center gap-2">
-                                    <Briefcase className="h-10 w-10 opacity-50" />
-                                    <span>No leads found.</span>
-                                </div>
-                            </TableCell>
+                            {isSelectionMode && (
+                                <TableHead className="w-12 pl-4">
+                                    <Checkbox
+                                        checked={isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false)}
+                                        onCheckedChange={(checked) => onSelectAll(checked === true)}
+                                        aria-label="Select all leads on this page"
+                                    />
+                                </TableHead>
+                            )}
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Business</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Source</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Assigned CRM</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Schedule</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                    )}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            [...Array(12)].map((_, i) => (
+                                <TableRow key={`skel-${i}`}>
+                                    {isSelectionMode && <TableCell className="pl-4"><Skeleton className="h-5 w-5" /></TableCell>}
+                                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-5 w-24" /></div></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
+                                </TableRow>
+                            ))
+                        ) : leads.length > 0 ? (
+                            leads.map(lead => {
+                                const crmUser = allUsers.find(u => u.id === lead.crmId);
+                                const scheduleDate = lead.schedule ? parseISO(lead.schedule) : null;
+                                const isPast = scheduleDate ? isBefore(scheduleDate, startOfDay(new Date())) && !isToday(scheduleDate) : false;
+                                const isDuplicatePhone = lead.phone && duplicatePhoneNumbers.has(lead.phone);
+                                const wasUpdatedToday = lead.updatedAt ? isToday(parseISO(lead.updatedAt)) : false;
+
+                                return (
+                                    <TableRow
+                                        key={lead.id}
+                                        className={cn(
+                                            "hover:bg-muted/50",
+                                            isDuplicatePhone && "bg-red-100/50 dark:bg-red-900/20",
+                                            wasUpdatedToday && !isDuplicatePhone && "bg-green-100/50 dark:bg-green-900/20"
+                                        )}
+                                        data-state={selectedLeadIds.has(lead.id) ? "selected" : ""}
+                                    >
+                                        {isSelectionMode && (
+                                            <TableCell className="pl-4">
+                                                <Checkbox
+                                                    checked={selectedLeadIds.has(lead.id)}
+                                                    onCheckedChange={(checked) => onSelectionChange(lead.id, checked === true)}
+                                                    aria-label={`Select lead ${lead.contactName}`}
+                                                />
+                                            </TableCell>
+                                        )}
+                                        <TableCell className="font-medium text-foreground">{lead.contactName}</TableCell>
+                                        <TableCell>{lead.businessName}</TableCell>
+                                        <TableCell>{lead.phone}</TableCell>
+                                        <TableCell>{lead.source}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary">{lead.category}</Badge>
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap">
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-8 w-8 text-xs">
+                                                    <AvatarImage src={crmUser?.avatarUrl || undefined} alt={lead.crmName} />
+                                                    <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
+                                                </Avatar>
+                                                <span>{lead.crmName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{formatDateSafe(lead.date)}</TableCell>
+                                        <TableCell>
+                                            {scheduleDate ? (
+                                                <Badge variant="outline" className={cn(
+                                                    isPast
+                                                        ? 'border-red-300 text-red-800 bg-red-50'
+                                                        : 'border-green-300 text-green-800 bg-green-50'
+                                                )}>
+                                                    {formatDateSafe(lead.schedule)}
+                                                </Badge>
+                                            ) : (
+                                                null
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => onViewLead(lead)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View</DropdownMenuItem>
+
+                                                    {canEdit(lead) && (
+                                                        <DropdownMenuSub>
+                                                            <DropdownMenuSubTrigger className="cursor-pointer">
+                                                                <FolderEdit className="mr-2 h-4 w-4" /> Change Category
+                                                            </DropdownMenuSubTrigger>
+                                                            <DropdownMenuPortal>
+                                                                <DropdownMenuSubContent>
+                                                                    {LEAD_CATEGORIES.map(category => (
+                                                                        <DropdownMenuItem
+                                                                            key={category}
+                                                                            disabled={lead.category === category}
+                                                                            onSelect={() => onUpdateLeadCategory(lead, category)}
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            {category}
+                                                                        </DropdownMenuItem>
+                                                                    ))}
+                                                                </DropdownMenuSubContent>
+                                                            </DropdownMenuPortal>
+                                                        </DropdownMenuSub>
+                                                    )}
+
+                                                    {canDelete(lead) && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={isSelectionMode ? 10 : 9} className="h-48 text-center text-muted-foreground">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Briefcase className="h-10 w-10 opacity-50" />
+                                        <span>No leads found.</span>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
-    </div>
-  );
+    );
 }

@@ -33,7 +33,8 @@ import {
   startOfDay, // Added
   endOfDay,   // Added
 } from "date-fns";
-import type { DateRange } from "react-day-picker";
+import type { DateRange as RDPDateRange } from "react-day-picker";
+export type DateRange = RDPDateRange;
 import { cn } from "@/lib/utils";
 
 export type PredefinedRange =
@@ -104,8 +105,10 @@ export function DateRangePicker({
       if (initialRange) {
         for (const range of PREDEFINED_RANGES_CONFIG) {
           const dates = getDateRangeForPredefined(range.value);
-          if (dates && initialRange.from && initialRange.to && isSameDay(dates.from, initialRange.from) && isSameDay(dates.to, initialRange.to)) {
-            return range.value;
+          if (dates.from && dates.to && initialRange.from && initialRange.to) {
+            if (isSameDay(dates.from, initialRange.from) && isSameDay(dates.to, initialRange.to)) {
+              return range.value;
+            }
           }
         }
         return "custom";
@@ -164,16 +167,16 @@ export function DateRangePicker({
       setSelectedPredefined("custom"); // Update internal state for label
     }
   };
-  
+
   const handleApplyCustomRange = () => {
-    setIsCustomPopoverOpen(false); 
+    setIsCustomPopoverOpen(false);
     let finalRange = selectedRange;
-    if (selectedRange?.from && !selectedRange?.to) { 
+    if (selectedRange?.from && !selectedRange?.to) {
       finalRange = { from: selectedRange.from, to: selectedRange.from };
       setSelectedRange(finalRange);
     }
     const currentCustomDisplayLabel = getDisplayLabel(finalRange, "custom");
-    onDateRangeChange(finalRange, currentCustomDisplayLabel, "custom"); 
+    onDateRangeChange(finalRange, currentCustomDisplayLabel, "custom");
   };
 
 
@@ -206,11 +209,11 @@ export function DateRangePicker({
           <PopoverTrigger asChild>
             <DropdownMenuItem
               onSelect={(e) => {
-                e.preventDefault(); 
+                e.preventDefault();
                 setSelectedPredefined("custom");
                 setIsCustomPopoverOpen(true);
               }}
-               className={selectedPredefined === "custom" ? "bg-accent text-accent-foreground" : ""}
+              className={selectedPredefined === "custom" ? "bg-accent text-accent-foreground" : ""}
             >
               Custom Range
             </DropdownMenuItem>
@@ -224,14 +227,14 @@ export function DateRangePicker({
               onSelect={handleCustomDateSelectInCalendar}
               numberOfMonths={2}
             />
-             <div className="p-3 border-t border-border flex justify-end">
-                <Button
-                  size="sm"
-                  onClick={handleApplyCustomRange}
-                >
-                  Apply
-                </Button>
-              </div>
+            <div className="p-3 border-t border-border flex justify-end">
+              <Button
+                size="sm"
+                onClick={handleApplyCustomRange}
+              >
+                Apply
+              </Button>
+            </div>
           </PopoverContent>
         </Popover>
       </DropdownMenuContent>

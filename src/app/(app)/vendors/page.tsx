@@ -45,6 +45,16 @@ import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
@@ -73,17 +83,17 @@ const formatCurrency = (value?: number | null): string => {
 };
 
 const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    try {
-        const date = parseISO(dateString);
-        if (isNaN(date.getTime())) {
-            throw new Error('Invalid date');
-        }
-        return format(date, 'd MMM, yyyy');
-    } catch (e) {
-        console.error("Invalid date string for formatting:", dateString, e);
-        return "Invalid Date";
+  if (!dateString) return "N/A";
+  try {
+    const date = parseISO(dateString);
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date');
     }
+    return format(date, 'd MMM, yyyy');
+  } catch (e) {
+    console.error("Invalid date string for formatting:", dateString, e);
+    return "Invalid Date";
+  }
 };
 
 
@@ -101,9 +111,9 @@ export default function VendorsPage() {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const [isAddEditProductDialogOpen, setIsAddEditProductDialogOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<any | null>(null); 
+  const [productToEdit, setProductToEdit] = useState<any | null>(null);
   const [productToDelete, setProductToDelete] = useState<VendorProduct | null>(null);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
 
@@ -117,7 +127,7 @@ export default function VendorsPage() {
   const [categoryToEdit, setCategoryToEdit] = useState<any | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<VendorCategory | null>(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
-  
+
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [categories, setCategories] = useState<VendorCategory[]>([]);
   const [bills, setBills] = useState<VendorBill[]>([]);
@@ -141,14 +151,14 @@ export default function VendorsPage() {
         getVendorProducts(),
         getVendorBills(),
         getPaymentMethods(),
-        getBillReports(), 
+        getBillReports(),
       ]);
       setAllUsers(fetchedUsers);
       setCategories(fetchedCategories);
       setProducts(fetchedProducts);
       setBills(fetchedBills);
       setPaymentMethods(fetchedPaymentMethods);
-      setBillReports(fetchedBillReports); 
+      setBillReports(fetchedBillReports);
     } catch (error) {
       console.error("Failed to fetch vendor page data:", error);
       toast({ title: "Error", description: "Could not load required data.", variant: "destructive" });
@@ -175,7 +185,7 @@ export default function VendorsPage() {
       (vendor.companyName && vendor.companyName.toLowerCase().includes(lowerSearchTerm))
     );
   }, [allUsers, searchTerm]);
-  
+
   const filteredProducts = useMemo(() => {
     if (!productSearchTerm) return products;
     const lowerSearchTerm = productSearchTerm.toLowerCase();
@@ -189,36 +199,36 @@ export default function VendorsPage() {
     if (!searchTerm) return bills;
     const lowerSearchTerm = searchTerm.toLowerCase();
     return bills.filter(bill =>
-        bill.vendorName.toLowerCase().includes(lowerSearchTerm) ||
-        (bill.billId && bill.billId.toLowerCase().includes(lowerSearchTerm))
+      bill.vendorName.toLowerCase().includes(lowerSearchTerm) ||
+      (bill.billId && bill.billId.toLowerCase().includes(lowerSearchTerm))
     );
   }, [bills, searchTerm]);
-  
+
   const billReportsByVendor = useMemo(() => {
     let reportsToFilter = billReports;
     if (searchTerm) {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        reportsToFilter = billReports.filter(report =>
-            report.vendorName.toLowerCase().includes(lowerSearchTerm) ||
-            report.invoiceId.toLowerCase().includes(lowerSearchTerm)
-        );
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      reportsToFilter = billReports.filter(report =>
+        report.vendorName.toLowerCase().includes(lowerSearchTerm) ||
+        report.invoiceId.toLowerCase().includes(lowerSearchTerm)
+      );
     }
-  
+
     const grouped = reportsToFilter.reduce((acc, report) => {
-        const vendorId = report.vendorId;
-        if (!acc[vendorId]) {
-            acc[vendorId] = [];
-        }
-        acc[vendorId].push(report);
-        return acc;
+      const vendorId = report.vendorId;
+      if (!acc[vendorId]) {
+        acc[vendorId] = [];
+      }
+      acc[vendorId].push(report);
+      return acc;
     }, {} as Record<string, BillReport[]>);
-  
+
     return Object.entries(grouped)
-        .sort(([vendorIdA], [vendorIdB]) => {
-            const vendorA = allUsers.find(u => u.id === vendorIdA);
-            const vendorB = allUsers.find(u => u.id === vendorIdB);
-            return (vendorA?.name || '').localeCompare(vendorB?.name || '');
-        });
+      .sort(([vendorIdA], [vendorIdB]) => {
+        const vendorA = allUsers.find(u => u.id === vendorIdA);
+        const vendorB = allUsers.find(u => u.id === vendorIdB);
+        return (vendorA?.name || '').localeCompare(vendorB?.name || '');
+      });
   }, [billReports, searchTerm, allUsers]);
 
   useEffect(() => {
@@ -244,9 +254,9 @@ export default function VendorsPage() {
       toast({ title: "Error", description: result.error || "Could not delete the vendor.", variant: "destructive" });
     }
   };
-  
+
   const handleProductSaved = () => {
-    toast({ title: "Success", description: "Product has been saved."});
+    toast({ title: "Success", description: "Product has been saved." });
     setIsAddEditProductDialogOpen(false);
     setProductToEdit(null);
     fetchData();
@@ -256,7 +266,7 @@ export default function VendorsPage() {
     setProductToEdit(null);
     setIsAddEditProductDialogOpen(true);
   };
-  
+
   const handleOpenEditProductDialog = (product: any) => {
     setProductToEdit(product);
     setIsAddEditProductDialogOpen(true);
@@ -282,7 +292,7 @@ export default function VendorsPage() {
     setBillToEdit(null);
     fetchData();
   };
-  
+
   const handleBillPaymentSaved = () => {
     setIsAddEditBillPaymentDialogOpen(false);
     setReportToEdit(null);
@@ -293,7 +303,7 @@ export default function VendorsPage() {
     setReportToEdit(null);
     setIsAddEditBillReportDialogOpen(true);
   };
-  
+
   const handleOpenAddPaymentDialog = () => {
     setReportToEdit(null);
     setIsAddEditBillPaymentDialogOpen(true);
@@ -304,19 +314,19 @@ export default function VendorsPage() {
     setBillToEdit(bill);
     setIsAddEditBillDialogOpen(true);
   };
-  
+
   const handleConfirmDeleteBill = async () => {
-      if (!billToDelete) return;
-      setIsDeletingBill(true);
-      const result = await deleteVendorBill(billToDelete.id);
-      setIsDeletingBill(false);
-      setBillToDelete(null);
-      if (result) {
-        toast({ title: "Bill Deleted" });
-        fetchData();
-      } else {
-        toast({ title: "Error", description: "Failed to delete bill.", variant: "destructive" });
-      }
+    if (!billToDelete) return;
+    setIsDeletingBill(true);
+    const result = await deleteVendorBill(billToDelete.id);
+    setIsDeletingBill(false);
+    setBillToDelete(null);
+    if (result) {
+      toast({ title: "Bill Deleted" });
+      fetchData();
+    } else {
+      toast({ title: "Error", description: "Failed to delete bill.", variant: "destructive" });
+    }
   };
 
   const handleOpenEditReportDialog = (report: BillReport) => {
@@ -356,7 +366,7 @@ export default function VendorsPage() {
     setCategoryToEdit(category);
     setIsAddEditCategoryDialogOpen(true);
   };
-  
+
   const handleConfirmDeleteCategory = async () => {
     if (!categoryToDelete) return;
     setIsDeletingCategory(true);
@@ -370,16 +380,16 @@ export default function VendorsPage() {
       toast({ title: "Error", description: "Failed to delete category.", variant: "destructive" });
     }
   };
-  
+
   const getStatusBadgeClass = (status: VendorBillStatus) => {
     switch (status) {
-        case 'Paid': return 'bg-green-100 text-green-800 border-green-200';
-        case 'Unpaid': return 'bg-red-100 text-red-800 border-red-200';
-        case 'Partially Paid': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Paid': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Unpaid': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Partially Paid': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-  
+
   const totalPages = useMemo(() => {
     if (activeTab === 'vendor_list') return Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
     if (activeTab === 'products') return Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
@@ -400,8 +410,8 @@ export default function VendorsPage() {
 
   const renderPagination = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
-    
+    const maxPagesToShow = 5;
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
@@ -410,7 +420,7 @@ export default function VendorsPage() {
 
       if (currentPage < 3) endPage = maxPagesToShow;
       else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-      
+
       if (startPage > 1) {
         pageNumbers.push(1);
         if (startPage > 2) pageNumbers.push('...');
@@ -422,16 +432,16 @@ export default function VendorsPage() {
       }
     }
     return pageNumbers.map((page, index) => (
-        <PaginationItem key={index}>
+      <PaginationItem key={index}>
         {page === '...' ? <PaginationEllipsis />
-        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+          : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
             {page}
           </PaginationLink>
         }
-        </PaginationItem>
+      </PaginationItem>
     ));
   };
-  
+
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
     return <div className="p-8 text-center">Access Denied.</div>
   }
@@ -442,20 +452,20 @@ export default function VendorsPage() {
         return (
           <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
             <CardHeader className="p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <CardTitle className="text-xl font-bold text-gray-800">Vendors List</CardTitle>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-grow sm:flex-grow-0">
+                  <div className="relative flex-grow sm:flex-grow-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                    </div>
+                    <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" />
+                  </div>
                 </div>
-            </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
-            <div className="overflow-x-auto">
+              <div className="overflow-x-auto">
                 <Table>
-                <TableHeader>
+                  <TableHeader>
                     <TableRow>
                       <TableHead className="pl-6">Vendor Name</TableHead>
                       <TableHead>Business Name</TableHead>
@@ -464,53 +474,53 @@ export default function VendorsPage() {
                       <TableHead>Category</TableHead>
                       <TableHead className="pr-6 text-right">Actions</TableHead>
                     </TableRow>
-                </TableHeader>
-                <TableBody>
+                  </TableHeader>
+                  <TableBody>
                     {isLoading ? (
-                    [...Array(5)].map((_, i) => (
+                      [...Array(5)].map((_, i) => (
                         <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-                    ))
+                      ))
                     ) : paginatedData.length > 0 ? (
-                    (paginatedData as User[]).map(vendor => (
+                      (paginatedData as User[]).map(vendor => (
                         <TableRow key={vendor.id} className="hover:bg-muted/50">
-                        <TableCell className="pl-6 font-medium">
+                          <TableCell className="pl-6 font-medium">
                             <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9 border"><AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/><AvatarFallback>{getInitials(vendor.name)}</AvatarFallback></Avatar>
-                            <span>{vendor.name}</span>
+                              <Avatar className="h-9 w-9 border"><AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name} /><AvatarFallback>{getInitials(vendor.name)}</AvatarFallback></Avatar>
+                              <span>{vendor.name}</span>
                             </div>
-                        </TableCell>
-                        <TableCell>{vendor.companyName || 'N/A'}</TableCell>
-                        <TableCell>{vendor.phone || 'N/A'}</TableCell>
-                        <TableCell>{vendor.address || 'N/A'}</TableCell>
-                        <TableCell>
-                          {vendor.category ? <Badge variant="secondary">{vendor.category}</Badge> : 'N/A'}
-                        </TableCell>
-                        <TableCell className="pr-6 text-right">
+                          </TableCell>
+                          <TableCell>{vendor.companyName || 'N/A'}</TableCell>
+                          <TableCell>{vendor.phone || 'N/A'}</TableCell>
+                          <TableCell>{vendor.address || 'N/A'}</TableCell>
+                          <TableCell>
+                            {vendor.category ? <Badge variant="secondary">{vendor.category}</Badge> : 'N/A'}
+                          </TableCell>
+                          <TableCell className="pr-6 text-right">
                             <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
                                 <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
-                            </DropdownMenuContent>
+                              </DropdownMenuContent>
                             </DropdownMenu>
-                        </TableCell>
+                          </TableCell>
                         </TableRow>
-                    ))
+                      ))
                     ) : (
-                    <TableRow><TableCell colSpan={6} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
                     )}
-                </TableBody>
+                  </TableBody>
                 </Table>
-            </div>
+              </div>
             </CardContent>
-             {totalPages > 1 && (
-                <CardFooter className="py-4 border-t">
-                    <Pagination><PaginationContent>
-                        <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                        {renderPagination()}
-                        <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                    </PaginationContent></Pagination>
-                </CardFooter>
+            {totalPages > 1 && (
+              <CardFooter className="py-4 border-t">
+                <Pagination><PaginationContent>
+                  <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+                  {renderPagination()}
+                  <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+                </PaginationContent></Pagination>
+              </CardFooter>
             )}
           </Card>
         );
@@ -518,61 +528,61 @@ export default function VendorsPage() {
         return (
           <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
             <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
-                    <CardDescription>Manage vendor products here.</CardDescription>
+              <div>
+                <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
+                <CardDescription>Manage vendor products here.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" />
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-grow sm:flex-grow-0">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                    </div>
-                    <Button 
-                        className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                        onClick={handleOpenAddProductDialog}
-                    >
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
-                    </Button>
-                </div>
+                <Button
+                  className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={handleOpenAddProductDialog}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-48 w-full" /> : 
-              filteredProducts.length > 0 ? (
+              {isLoading ? <Skeleton className="h-48 w-full" /> :
+                filteredProducts.length > 0 ? (
                   <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Product Name</TableHead>
-                              <TableHead>Category</TableHead>
-                              <TableHead>Unit Price</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {filteredProducts.map(product => (
-                              <TableRow key={product.id}>
-                                  <TableCell className="font-medium">{product.name}</TableCell>
-                                  <TableCell>{product.category}</TableCell>
-                                  <TableCell>{formatCurrency(product.price)}</TableCell>
-                                  <TableCell className="text-right">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                          <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </TableCell>
-                              </TableRow>
-                          ))}
-                      </TableBody>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Unit Price</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProducts.map(product => (
+                        <TableRow key={product.id}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>{product.category}</TableCell>
+                          <TableCell>{formatCurrency(product.price)}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
                   </Table>
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
                     <Package className="h-10 w-10 mb-2" />
                     <p className="font-semibold">No Products Yet</p>
                     <p className="text-sm">Click "Add New Product" to get started.</p>
-                </div>
-              )}
+                  </div>
+                )}
             </CardContent>
           </Card>
         );
@@ -624,248 +634,249 @@ export default function VendorsPage() {
             </CardContent>
           </Card>
         );
-        case 'vendor_bills':
-          return (
-            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-gray-800">Vendor Bills</CardTitle>
-                        <CardDescription>Manage bills and payments for vendors.</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <div className="relative flex-grow sm:flex-grow-0">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input placeholder="Search bills..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                      </div>
-                      <Button 
-                        className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                        onClick={() => setIsAddEditBillDialogOpen(true)}
-                      >
-                          <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
-                      </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? <Skeleton className="h-64 w-full" /> : paginatedData.length > 0 ? (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Bill ID</TableHead>
-                                    <TableHead>Bill Date</TableHead>
-                                    <TableHead>Vendor</TableHead>
-                                    <TableHead>Total</TableHead>
-                                    <TableHead>Due</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {(paginatedData as VendorBill[]).map(bill => {
-                                   const vendor = allUsers.find(u => u.id === bill.vendorId);
-                                   return (
-                                    <TableRow key={bill.id}>
-                                        <TableCell className="font-mono">{bill.billId}</TableCell>
-                                        <TableCell>{formatDate(bill.billDate)}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Avatar className="h-9 w-9 border"><AvatarImage src={vendor?.avatarUrl || undefined} alt={bill.vendorName}/><AvatarFallback>{getInitials(bill.vendorName)}</AvatarFallback></Avatar>
-                                                <div>
-                                                    <div className="font-medium">{vendor?.companyName}</div>
-                                                    <div className="text-xs text-muted-foreground">{vendor?.name}</div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{formatCurrency(bill.total)}</TableCell>
-                                        <TableCell className="text-destructive font-medium">{formatCurrency(bill.dueAmount)}</TableCell>
-                                        <TableCell><Badge className={getStatusBadgeClass(bill.status)}>{bill.status}</Badge></TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onSelect={() => handleOpenEditBillDialog(bill)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                                    <DropdownMenuItem asChild><Link href={`/bill/${bill.id}`} target="_blank"><Eye className="mr-2 h-4 w-4" />View Bill</Link></DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => setBillToDelete(bill)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                )})}
-                            </TableBody>
-                        </Table>
-                    ) : (
-                        <div className="text-center text-gray-500 py-16">
-                          <Receipt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                          <p className="font-semibold">No Bills Found</p>
-                          <p className="text-sm">Create a new bill to see it here.</p>
-                        </div>
-                    )}
-                </CardContent>
-                {totalPages > 1 && (
-                    <CardFooter className="py-4 border-t">
-                        <Pagination><PaginationContent>
-                            <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                            {renderPagination()}
-                            <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                        </PaginationContent></Pagination>
-                    </CardFooter>
-                )}
-              </Card>
-        );
-        case 'bill_reports':
-            const reportsByVendor = paginatedData as [string, BillReport[]][];
-            return (
-              <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                  <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                      <div>
-                          <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
-                          <CardDescription>View and analyze billing reports.</CardDescription>
-                      </div>
-                       <div className="flex items-center gap-2">
-                            <Button className="h-10 rounded-full" onClick={handleOpenAddBillDialog}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
-                            </Button>
-                            <Button className="h-10 rounded-full" onClick={handleOpenAddPaymentDialog}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Payment
-                            </Button>
-                       </div>
-                  </CardHeader>
-                  <CardContent>
-                      {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByVendor.length > 0 ? (
-                        <Accordion type="single" collapsible className="w-full space-y-3">
-                          {reportsByVendor.map(([vendorId, reports], index) => {
-                            const vendor = allUsers.find(u => u.id === vendorId);
-                            const totalAmount = reports.reduce((sum, r) => sum + r.amount, 0);
-                            const totalPayment = reports.reduce((sum, r) => sum + r.payment, 0);
-                            const totalDue = totalAmount - totalPayment;
-
-                            return (
-                              <div key={vendorId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
-                              <AccordionItem value={`vendor-${index}`} className="border-b-0">
-                                  <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
-                                  <div className="flex items-center gap-4 flex-1">
-                                      {vendor && (
-                                        <Avatar className="h-9 w-9 border"><AvatarImage src={vendor.avatarUrl || undefined} /><AvatarFallback>{getInitials(vendor.name)}</AvatarFallback></Avatar>
-                                      )}
-                                      <div className="flex-1">
-                                          <p className="text-sm font-medium">{vendor?.name || 'Unknown Vendor'}</p>
-                                          <p className="text-xs text-muted-foreground">{reports.length} transaction(s)</p>
-                                      </div>
-                                  </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                                      <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-                                          <div>
-                                              <p className="text-xs text-muted-foreground">Total Billed</p>
-                                              <p className="font-semibold">{formatCurrency(totalAmount)}</p>
-                                          </div>
-                                           <div>
-                                              <p className="text-xs text-muted-foreground">Total Paid</p>
-                                              <p className="font-semibold text-green-600">{formatCurrency(totalPayment)}</p>
-                                          </div>
-                                           <div>
-                                              <p className="text-xs text-muted-foreground">Status</p>
-                                              <div className="font-semibold">
-                                                  {totalDue <= 0 ? 
-                                                      <Badge variant="outline" className="text-green-600 border-green-600">Paid</Badge> : 
-                                                      <Badge variant="destructive">Due</Badge>
-                                                  }
-                                              </div>
-                                          </div>
-                                          <div>
-                                              {totalDue > 0 ? (
-                                                  <>
-                                                      <p className="text-xs text-muted-foreground">Balance Due</p>
-                                                      <p className="font-semibold text-destructive">{formatCurrency(totalDue)}</p>
-                                                  </>
-                                              ) : (
-                                                  <>
-                                                      <p className="text-xs text-muted-foreground">Advanced</p>
-                                                      <p className="font-semibold text-blue-600">{formatCurrency(Math.abs(totalDue))}</p>
-                                                  </>
-                                              )}
-                                          </div>
-                                      </div>
-                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 mt-4">
-                                        <div className="space-y-2">
-                                          <h4 className="font-semibold text-sm border-b pb-1">Billing</h4>
-                                          <Table>
-                                              <TableHeader>
-                                                  <TableRow>
-                                                      <TableHead>Date</TableHead>
-                                                      <TableHead>Invoice ID</TableHead>
-                                                      <TableHead className="text-right">Amount</TableHead>
-                                                      <TableHead className="text-right">Action</TableHead>
-                                                  </TableRow>
-                                              </TableHeader>
-                                              <TableBody>
-                                                  {reports.filter(r => r.amount > 0).map(report => (
-                                                      <TableRow key={`${report.id}-billing`}>
-                                                          <TableCell>{formatDate(report.date)}</TableCell>
-                                                          <TableCell>{report.invoiceId}</TableCell>
-                                                          <TableCell className="text-right">{formatCurrency(report.amount)}</TableCell>
-                                                           <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                              <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                                              </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                          </TableCell>
-                                                      </TableRow>
-                                                  ))}
-                                              </TableBody>
-                                          </Table>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                           <h4 className="font-semibold text-sm border-b pb-1">Payment</h4>
-                                           <Table>
-                                              <TableHeader>
-                                                  <TableRow>
-                                                      <TableHead>Date</TableHead>
-                                                      <TableHead>Method</TableHead>
-                                                      <TableHead className="text-right">Payment</TableHead>
-                                                      <TableHead className="text-right">Action</TableHead>
-                                                  </TableRow>
-                                              </TableHeader>
-                                              <TableBody>
-                                                 {reports.filter(r => r.payment > 0).map(report => (
-                                                      <TableRow key={`${report.id}-payment`}>
-                                                          <TableCell>{formatDate(report.date)}</TableCell>
-                                                          <TableCell>{report.method}</TableCell>
-                                                          <TableCell className="text-right">{formatCurrency(report.payment)}</TableCell>
-                                                          <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                              <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                                              </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                          </TableCell>
-                                                      </TableRow>
-                                                  ))}
-                                              </TableBody>
-                                           </Table>
-                                        </div>
-                                      </div>
-                                  </AccordionContent>
-                              </AccordionItem>
+      case 'vendor_bills':
+        return (
+          <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle className="text-xl font-bold text-gray-800">Vendor Bills</CardTitle>
+                <CardDescription>Manage bills and payments for vendors.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Search bills..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" />
+                </div>
+                <Button
+                  className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={() => setIsAddEditBillDialogOpen(true)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-64 w-full" /> : paginatedData.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Bill ID</TableHead>
+                      <TableHead>Bill Date</TableHead>
+                      <TableHead>Vendor</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Due</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(paginatedData as VendorBill[]).map(bill => {
+                      const vendor = allUsers.find(u => u.id === bill.vendorId);
+                      return (
+                        <TableRow key={bill.id}>
+                          <TableCell className="font-mono">{bill.billId}</TableCell>
+                          <TableCell>{formatDate(bill.billDate)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-9 w-9 border"><AvatarImage src={vendor?.avatarUrl || undefined} alt={bill.vendorName} /><AvatarFallback>{getInitials(bill.vendorName)}</AvatarFallback></Avatar>
+                              <div>
+                                <div className="font-medium">{vendor?.companyName}</div>
+                                <div className="text-xs text-muted-foreground">{vendor?.name}</div>
                               </div>
-                            )
-                          })}
-                        </Accordion>
-                      ) : (
-                        <div className="text-center text-gray-500 py-16">
-                            <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                            <p className="font-semibold">No Bill Reports Found</p>
-                            <p className="text-sm">Create a new bill report to see it here.</p>
-                        </div>
-                      )}
-                  </CardContent>
-              </Card>
-            );
+                            </div>
+                          </TableCell>
+                          <TableCell>{formatCurrency(bill.total)}</TableCell>
+                          <TableCell className="text-destructive font-medium">{formatCurrency(bill.dueAmount)}</TableCell>
+                          <TableCell><Badge className={getStatusBadgeClass(bill.status)}>{bill.status}</Badge></TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleOpenEditBillDialog(bill)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href={`/bill/${bill.id}`} target="_blank"><Eye className="mr-2 h-4 w-4" />View Bill</Link></DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setBillToDelete(bill)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center text-gray-500 py-16">
+                  <Receipt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                  <p className="font-semibold">No Bills Found</p>
+                  <p className="text-sm">Create a new bill to see it here.</p>
+                </div>
+              )}
+            </CardContent>
+            {totalPages > 1 && (
+              <CardFooter className="py-4 border-t">
+                <Pagination><PaginationContent>
+                  <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+                  {renderPagination()}
+                  <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} /></PaginationItem>
+                </PaginationContent></Pagination>
+              </CardFooter>
+            )}
+          </Card>
+        );
+      case 'bill_reports':
+        const reportsByVendor = paginatedData as [string, BillReport[]][];
+        return (
+          <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+              <div>
+                <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
+                <CardDescription>View and analyze billing reports.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button className="h-10 rounded-full" onClick={handleOpenAddBillDialog}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
+                </Button>
+                <Button className="h-10 rounded-full" onClick={handleOpenAddPaymentDialog}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Payment
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByVendor.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full space-y-3">
+                  {reportsByVendor.map(([vendorId, reports], index) => {
+                    const vendor = allUsers.find(u => u.id === vendorId);
+                    const totalAmount = reports.reduce((sum, r) => sum + r.amount, 0);
+                    const totalPayment = reports.reduce((sum, r) => sum + r.payment, 0);
+                    const totalDue = totalAmount - totalPayment;
+
+                    return (
+                      <div key={vendorId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                        <AccordionItem value={`vendor-${index}`} className="border-b-0">
+                          <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
+                            <div className="flex items-center gap-4 flex-1">
+                              {vendor && (
+                                <Avatar className="h-9 w-9 border"><AvatarImage src={vendor.avatarUrl || undefined} /><AvatarFallback>{getInitials(vendor.name)}</AvatarFallback></Avatar>
+                              )}
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">{vendor?.name || 'Unknown Vendor'}</p>
+                                <p className="text-xs text-muted-foreground">{reports.length} transaction(s)</p>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
+                            <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Total Billed</p>
+                                <p className="font-semibold">{formatCurrency(totalAmount)}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Total Paid</p>
+                                <p className="font-semibold text-green-600">{formatCurrency(totalPayment)}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Status</p>
+                                <div className="font-semibold">
+                                  {totalDue <= 0 ?
+                                    <Badge variant="outline" className="text-green-600 border-green-600">Paid</Badge> :
+                                    <Badge variant="destructive">Due</Badge>
+                                  }
+                                </div>
+                              </div>
+                              <div>
+                                {totalDue > 0 ? (
+                                  <>
+                                    <p className="text-xs text-muted-foreground">Balance Due</p>
+                                    <p className="font-semibold text-destructive">{formatCurrency(totalDue)}</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-xs text-muted-foreground">Advanced</p>
+                                    <p className="font-semibold text-blue-600">{formatCurrency(Math.abs(totalDue))}</p>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 mt-4">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-sm border-b pb-1">Billing</h4>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Date</TableHead>
+                                      <TableHead>Invoice ID</TableHead>
+                                      <TableHead className="text-right">Amount</TableHead>
+                                      <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {reports.filter(r => r.amount > 0).map(report => (
+                                      <TableRow key={`${report.id}-billing`}>
+                                        <TableCell>{formatDate(report.date)}</TableCell>
+                                        <TableCell>{report.invoiceId}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(report.amount)}</TableCell>
+                                        <TableCell className="text-right">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                              <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-sm border-b pb-1">Payment</h4>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Date</TableHead>
+                                      <TableHead>Method</TableHead>
+                                      <TableHead className="text-right">Payment</TableHead>
+                                      <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {reports.filter(r => r.payment > 0).map(report => (
+                                      <TableRow key={`${report.id}-payment`}>
+                                        <TableCell>{formatDate(report.date)}</TableCell>
+                                        <TableCell>{report.method}</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(report.payment)}</TableCell>
+                                        <TableCell className="text-right">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                              <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </div>
+                    )
+                  })}
+                </Accordion>
+              ) : (
+                <div className="text-center text-gray-500 py-16">
+                  <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                  <p className="font-semibold">No Bill Reports Found</p>
+                  <p className="text-sm">Create a new bill report to see it here.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
       default:
         return null;
     }
@@ -874,7 +885,7 @@ export default function VendorsPage() {
   return (
     <>
       <div className="space-y-6">
-         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
             <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
             <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
@@ -882,19 +893,19 @@ export default function VendorsPage() {
             <TabsTrigger value="vendor_bills" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor Bills</TabsTrigger>
             <TabsTrigger value="bill_reports" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Bill Reports</TabsTrigger>
           </TabsList>
-            <div className="mt-6">
-                {renderActiveTabContent()}
-            </div>
+          <div className="mt-6">
+            {renderActiveTabContent()}
+          </div>
         </Tabs>
       </div>
 
       {userToEdit && (
         <EditUserInfoDialog
-            user={userToEdit}
-            onUserInfoUpdated={handleUserSaved}
-            isOpen={!!userToEdit}
-            onOpenChange={() => setUserToEdit(null)}
-            availableCategories={categories}
+          user={userToEdit}
+          onUserInfoUpdated={handleUserSaved}
+          isOpen={!!userToEdit}
+          onOpenChange={() => setUserToEdit(null)}
+          availableCategories={categories}
         />
       )}
 
@@ -907,7 +918,7 @@ export default function VendorsPage() {
           isDeleting={isDeleting}
         />
       )}
-      
+
       {categoryToDelete && (
         <DeleteCategoryDialog
           isOpen={!!categoryToDelete}
@@ -936,45 +947,45 @@ export default function VendorsPage() {
         currentUser={currentUser}
         categories={categories}
       />
-      
+
       <AddEditCategoryDialog
         isOpen={isAddEditCategoryDialogOpen}
         onOpenChange={setIsAddEditCategoryDialogOpen}
         onCategorySaved={handleCategorySaved}
         category={categoryToEdit}
       />
-      
+
       <AddEditBillDialog
-          isOpen={isAddEditBillDialogOpen}
-          onOpenChange={(open) => {
-              setIsAddEditBillDialogOpen(open);
-              if (!open) setBillToEdit(null);
-          }}
-          onBillSaved={handleBillSaved}
-          bill={billToEdit}
-          currentUser={currentUser}
-          vendors={filteredVendors}
-          products={products}
+        isOpen={isAddEditBillDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddEditBillDialogOpen(open);
+          if (!open) setBillToEdit(null);
+        }}
+        onBillSaved={handleBillSaved}
+        bill={billToEdit}
+        currentUser={currentUser}
+        vendors={filteredVendors}
+        products={products}
       />
 
       <AddEditBillPaymentDialog
-          isOpen={isAddEditBillPaymentDialogOpen}
-          onOpenChange={setIsAddEditBillPaymentDialogOpen}
-          onSave={handleBillPaymentSaved}
-          vendors={filteredVendors}
-          paymentMethods={paymentMethods}
-          reportToEdit={reportToEdit}
+        isOpen={isAddEditBillPaymentDialogOpen}
+        onOpenChange={setIsAddEditBillPaymentDialogOpen}
+        onSave={handleBillPaymentSaved}
+        vendors={filteredVendors}
+        paymentMethods={paymentMethods}
+        reportToEdit={reportToEdit}
       />
 
-       <AddEditBillReportDialog
-          isOpen={isAddEditBillReportDialogOpen}
-          onOpenChange={setIsAddEditBillReportDialogOpen}
-          onSave={handleBillPaymentSaved}
-          vendors={filteredVendors}
-          reportToEdit={reportToEdit}
+      <AddEditBillReportDialog
+        isOpen={isAddEditBillReportDialogOpen}
+        onOpenChange={setIsAddEditBillReportDialogOpen}
+        onSave={handleBillPaymentSaved}
+        vendors={filteredVendors}
+        reportToEdit={reportToEdit}
       />
-      
-       {billToDelete && (
+
+      {billToDelete && (
         <AlertDialog open={!!billToDelete} onOpenChange={() => setBillToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -986,7 +997,7 @@ export default function VendorsPage() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setBillToDelete(null)} disabled={isDeletingBill}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmDeleteBill} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingBill}>
-                {isDeletingBill ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Deleting...</> : "Delete Bill"}
+                {isDeletingBill ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete Bill"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -994,13 +1005,13 @@ export default function VendorsPage() {
       )}
 
       {reportToDelete && (
-          <DeleteBillReportDialog
-              isOpen={!!reportToDelete}
-              onOpenChange={() => setReportToDelete(null)}
-              onConfirmDelete={handleConfirmDeleteReport}
-              report={reportToDelete}
-              isDeleting={isDeletingReport}
-          />
+        <DeleteBillReportDialog
+          isOpen={!!reportToDelete}
+          onOpenChange={() => setReportToDelete(null)}
+          onConfirmDelete={handleConfirmDeleteReport}
+          report={reportToDelete}
+          isDeleting={isDeletingReport}
+        />
       )}
     </>
   );
