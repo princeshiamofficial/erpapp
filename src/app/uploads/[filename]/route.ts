@@ -13,11 +13,11 @@ export async function GET(
     try {
         // Read the file from the storage directory
         const fileBuffer = await fs.readFile(filePath);
-        
+
         // Basic MIME type detection based on extension
         const ext = path.extname(filename).toLowerCase();
         let contentType = "application/octet-stream";
-        
+
         switch (ext) {
             case ".jpg":
             case ".jpeg":
@@ -43,7 +43,7 @@ export async function GET(
                 break;
         }
 
-        return new NextResponse(fileBuffer, {
+        return new NextResponse(fileBuffer as any, {
             headers: {
                 "Content-Type": contentType,
                 "Cache-Control": "public, max-age=31536000, immutable",
