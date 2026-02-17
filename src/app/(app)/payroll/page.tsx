@@ -700,10 +700,104 @@ export default function PayrollPage() {
 
   const employeesWalletContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardContent className="h-64 flex items-center justify-center text-center text-muted-foreground">
-        <Wallet className="h-12 w-12 mb-4 opacity-50" />
-        <p className="text-lg font-semibold">Employees Wallet</p>
-        <p className="text-sm">This feature is coming soon!</p>
+      <CardHeader className="p-6 pb-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" />
+              Employees Wallet
+            </CardTitle>
+            <CardDescription className="text-sm text-gray-500">Monitor employee earnings, advances, and net balances.</CardDescription>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search employee..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full sm:w-[250px] focus-visible:ring-primary/20"
+              />
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
+                <TableHead className="w-[60px] pl-6 py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider">#</TableHead>
+                <TableHead className="py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider">Employee</TableHead>
+                <TableHead className="py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider">Employee ID</TableHead>
+                <TableHead className="pr-6 py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider text-right">Account No</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index} className="border-b border-gray-50">
+                    <TableCell className="pl-6 py-4"><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-9 w-9 rounded-full" />
+                        <div className="space-y-1">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4"><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="pr-6 py-4"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : salarySheetCalculatedData.length > 0 ? (
+                salarySheetCalculatedData.map((data, index) => {
+                  const user = allUsers.find(u => u.id === data.userId);
+
+                  return (
+                    <TableRow key={data.id} className="group hover:bg-gray-50/80 transition-all border-b border-gray-50">
+                      <TableCell className="pl-6 py-4 text-xs font-medium text-gray-400">
+                        {String(index + 1).padStart(2, '0')}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border border-gray-100 shadow-sm transition-transform group-hover:scale-105">
+                            <AvatarImage src={user?.avatarUrl || undefined} alt={data.name} />
+                            <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">{getInitials(data.name)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-900 leading-tight">{data.name}</span>
+                            <span className="text-xs text-gray-400 font-medium">{data.designation}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <span className="text-sm font-medium text-gray-600">
+                          {data.employeeId || 'N/A'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="pr-6 py-4 text-right">
+                        <span className="text-sm font-mono font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-lg">
+                          {data.accountNo || 'Not Set'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-64 text-center">
+                    <div className="flex flex-col items-center justify-center opacity-40">
+                      <Wallet className="h-12 w-12 mb-2 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-500">No wallet data found</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

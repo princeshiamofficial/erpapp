@@ -10,10 +10,11 @@ const ENTRIES_TABLE = 'daily_routine_entries';
 export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${HEADERS_TABLE} WHERE user_id = ?`, [userId]);
-    return rows.map(row => ({
-      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
-    } as DailyRoutine)).sort((a, b) => {
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${HEADERS_TABLE} WHERE user_id = ?`, [userId]);
+    return rows.map(row => {
+      const parsed = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return { ...parsed, id: row.id } as DailyRoutine;
+    }).sort((a, b) => {
       const timeA = a.time?.split(' ')[0] || '';
       const timeB = b.time?.split(' ')[0] || '';
       return timeA.localeCompare(timeB);
@@ -77,10 +78,11 @@ export const deleteRoutineHeader = async (id: string, userId: string): Promise<b
 export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${ENTRIES_TABLE} WHERE user_id = ?`, [userId]);
-    return rows.map(row => ({
-      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
-    } as DailyRoutine));
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${ENTRIES_TABLE} WHERE user_id = ?`, [userId]);
+    return rows.map(row => {
+      const parsed = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return { ...parsed, id: row.id } as DailyRoutine;
+    });
   } catch (error) {
     console.error(`Error fetching routine entries for user ${userId} from MySQL:`, error);
     return [];
@@ -90,9 +92,10 @@ export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]
 export const getRoutineById = async (routineId: string, userId: string): Promise<DailyRoutine | null> => {
   if (!routineId || !userId) return null;
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${ENTRIES_TABLE} WHERE id = ? AND user_id = ?`, [routineId, userId]);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${ENTRIES_TABLE} WHERE id = ? AND user_id = ?`, [routineId, userId]);
     if (rows.length > 0) {
-      return { ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as DailyRoutine;
+      const parsed = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+      return { ...parsed, id: rows[0].id } as DailyRoutine;
     }
     return null;
   } catch (error) {
@@ -102,7 +105,10 @@ export const getRoutineById = async (routineId: string, userId: string): Promise
 };
 
 export const toggleRoutineTask = async (userId: string, date: string, taskId: string): Promise<DailyRoutine | null> => {
-  if (!userId || !date || !taskId) return null;
+  if (!userId || !date || !taskId) {
+    console.error('toggleRoutineTask: Missing parameters', { userId, date, taskId });
+    return null;
+  }
   try {
     let existingDoc = await getRoutineById(date, userId);
     let updatedTasks: Record<string, string>;
@@ -116,6 +122,7 @@ export const toggleRoutineTask = async (userId: string, date: string, taskId: st
         updatedAt: new Date().toISOString(),
       } as DailyRoutine;
 
+      console.log(`toggleRoutineTask: Inserting new routine for user ${userId} on date ${date}`);
       await query(`INSERT INTO ${ENTRIES_TABLE} (id, user_id, data_json) VALUES (?, ?, ?)`,
         [date, userId, JSON.stringify(newRoutine)]);
       return newRoutine;
@@ -134,7 +141,8 @@ export const toggleRoutineTask = async (userId: string, date: string, taskId: st
       };
 
       const finalData = { ...existingDoc, ...updates };
-      await query(`UPDATE ${ENTRIES_TABLE} SET data_json = ? WHERE id = ? AND user_id = ?`,
+      console.log(`toggleRoutineTask: Updating routine for user ${userId} on date ${date}`);
+      const result = await query<any>(`UPDATE ${ENTRIES_TABLE} SET data_json = ? WHERE id = ? AND user_id = ?`,
         [JSON.stringify(finalData), date, userId]);
 
       return finalData as DailyRoutine;

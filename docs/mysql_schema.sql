@@ -220,3 +220,18 @@ CREATE TABLE global_settings (
     settings_json JSON NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+-- 8. Daily Routine
+CREATE TABLE daily_routine_headers (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255),
+    data_json LONGTEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE daily_routine_entries (
+    id VARCHAR(255),
+    user_id VARCHAR(255),
+    data_json LONGTEXT,
+    PRIMARY KEY (id, user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
