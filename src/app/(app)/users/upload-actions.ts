@@ -22,14 +22,14 @@ export async function uploadOptimizedAvatarAction(formData: FormData): Promise<{
 
         // 3. Create a unique filename
         const filename = `${uuidv4()}.jpg`;
-        const uploadDir = path.join(process.cwd(), "public", "uploads");
+        const uploadDir = path.join(process.cwd(), "storage", "uploads");
 
         // Ensure directory exists (just in case)
         await fs.mkdir(uploadDir, { recursive: true });
 
         const filePath = path.join(uploadDir, filename);
 
-        // 4. Save to public/uploads
+        // 4. Save to storage/uploads
         await fs.writeFile(filePath, optimizedBuffer);
 
         // 5. Return the local URL

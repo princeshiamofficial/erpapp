@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
         const originalName = file.name;
         const extension = path.extname(originalName);
         const filename = `${uuidv4()}${extension}`;
-        const uploadDir = path.join(process.cwd(), "public", "uploads");
+        const uploadDir = path.join(process.cwd(), "storage", "uploads");
 
         // Ensure directory exists
         await fs.mkdir(uploadDir, { recursive: true });
