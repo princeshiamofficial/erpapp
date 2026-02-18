@@ -163,26 +163,34 @@ interface SummaryCardProps {
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading, currentUser }) => {
   if (isLoading) {
     return (
-      <Card className="bg-card p-4 shadow-md rounded-lg">
-        <div className="flex items-center space-x-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-7 w-32" />
+      <Card className="bg-card p-4 shadow-sm sm:shadow-md rounded-2xl sm:rounded-lg border-none sm:border min-h-[100px] flex flex-col justify-center">
+        <div className="flex sm:flex-row flex-col items-center sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-center sm:text-left">
+          <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-full" />
+          <div className="space-y-1.5 flex-1 w-full">
+            <Skeleton className="h-3 w-16 sm:h-4 sm:w-24 mx-auto sm:mx-0" />
+            <Skeleton className="h-5 w-24 sm:h-7 sm:w-32 mx-auto sm:mx-0" />
           </div>
         </div>
       </Card>
     );
   }
   return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4 rounded-lg">
-      <div className="flex items-center space-x-4">
-        <div className={`p-3 rounded-full ${circleBgClass}`}>
-          <Icon className={`h-6 w-6 ${iconColorClass}`} />
+    <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg active:scale-95 sm:active:scale-100 bg-card p-2.5 sm:p-4 rounded-2xl sm:rounded-lg border-none sm:border shadow-sm sm:shadow-md">
+      {/* Premium background highlight for mobile */}
+      <div className={cn("absolute inset-0 opacity-[0.03] sm:hidden bg-gradient-to-br transition-opacity group-active:opacity-[0.06]", circleBgClass)} />
+
+      <div className="flex sm:flex-row flex-col items-center sm:items-center space-y-2.5 sm:space-y-0 sm:space-x-4 text-center sm:text-left relative z-10">
+        <div className={cn(
+          "p-2.5 sm:p-3 rounded-xl sm:rounded-full transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm sm:shadow-none",
+          circleBgClass
+        )}>
+          <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6", iconColorClass)} />
         </div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold text-foreground font-mono">
+        <div className="flex-1 min-w-0 w-full">
+          <p className="text-[10px] sm:text-sm font-bold sm:font-medium uppercase sm:capitalize tracking-widest sm:tracking-normal text-muted-foreground/80 sm:text-muted-foreground truncate px-1">
+            {title}
+          </p>
+          <p className="text-[15px] sm:text-2xl font-bold text-foreground font-mono mt-0.5 sm:mt-0 px-1 leading-tight">
             {currentUser?.role === 'SYSTEM_ADMIN' ? (
               <spoiler-span>{value}</spoiler-span>
             ) : (
@@ -191,6 +199,14 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
           </p>
         </div>
       </div>
+
+      {/* Decorative element for mobile - subtle large icon */}
+      <div className="absolute -right-4 -bottom-4 opacity-[0.04] sm:hidden pointer-events-none transform rotate-12 scale-110">
+        <Icon className={cn("h-20 w-20", iconColorClass)} />
+      </div>
+
+      {/* Subtle border glow for mobile dark mode */}
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent sm:hidden" />
     </Card>
   );
 };
@@ -1022,8 +1038,8 @@ function DashboardContent() {
 
   return (
     <>
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden print:p-0">
-        <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl print:hidden">
+      <div className="space-y-6 px-1.5 py-4 sm:p-6 lg:p-8 custom-scrollbar-hidden print:p-0">
+        <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-5 sm:p-8 rounded-2xl sm:rounded-xl shadow-xl print:hidden">
           <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
             Welcome {currentUser?.name.split(' ')[0] || 'User'}
             <Hand className="ml-2 h-8 w-8 transform rotate-[20deg] text-yellow-300" />
@@ -1035,11 +1051,11 @@ function DashboardContent() {
 
         {!isDesignerRepOrLrOrCo && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
-              <Card className="shadow-sm bg-card rounded-lg">
-                <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Users className="h-5 w-5 mr-2 text-primary/80" />
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 print:hidden">
+              <Card className="shadow-sm bg-card rounded-xl sm:rounded-lg">
+                <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:justify-between space-y-2 sm:space-y-0 text-center sm:text-left">
+                  <div className="flex items-center text-[10px] sm:text-sm text-muted-foreground font-semibold sm:font-normal uppercase sm:capitalize tracking-wider sm:tracking-normal">
+                    <Users className="h-3.5 w-3.5 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-primary/80" />
                     <span>Select CR</span>
                   </div>
                   {canSelectCR ? (
@@ -1061,17 +1077,17 @@ function DashboardContent() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
+                    <Button variant="outline" size="sm" className="text-[10px] sm:text-xs h-8 sm:h-10 w-full sm:w-auto" disabled>
                       Your Data
                     </Button>
                   )}
                 </CardContent>
               </Card>
-              <Card className="shadow-sm bg-card rounded-lg">
-                <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
-                    <span>Filter by Date</span>
+              <Card className="shadow-sm bg-card rounded-xl sm:rounded-lg">
+                <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:justify-between space-y-2 sm:space-y-0 text-center sm:text-left">
+                  <div className="flex items-center text-[10px] sm:text-sm text-muted-foreground font-semibold sm:font-normal uppercase sm:capitalize tracking-wider sm:tracking-normal">
+                    <CalendarDays className="h-3.5 w-3.5 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-primary/80" />
+                    <span>Filter</span>
                   </div>
                   {selectedDateRange ? (
                     <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
@@ -1083,7 +1099,7 @@ function DashboardContent() {
             </div>
 
             {currentUser?.role !== 'ADMIN' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 print:hidden">
                 {summaryCardData.map((card) => (
                   <SummaryCard
                     key={card.title}
@@ -1101,15 +1117,20 @@ function DashboardContent() {
 
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
-              <Card className="shadow-xl bg-card lg:col-span-3 rounded-lg">
-                <CardHeader className="border-b">
-                  <CardTitle className="flex items-center text-xl text-foreground">
-                    <BarChartBig className="mr-2 h-6 w-6 text-primary" />
+              <Card className="shadow-xl bg-card lg:col-span-3 rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
+                <CardHeader className="border-b bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
+                  <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                    <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
+                      <BarChartBig className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="hidden sm:inline-flex items-center">
+                      <BarChartBig className="mr-2 h-6 w-6 text-primary" />
+                    </span>
                     Sales ({currentDateRangeLabel})
-                    {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
+                    {currentUser?.role === 'CRM' && <span className="ml-2 text-xs sm:text-sm font-normal text-muted-foreground">(Your Sales)</span>}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
+                <CardContent className="h-[280px] sm:h-[350px] p-1.5 sm:p-4 mt-2">
                   {isLoadingContent ? (
                     <div className="flex items-center justify-center h-full">
                       <Skeleton className="h-full w-full" />
@@ -1184,14 +1205,19 @@ function DashboardContent() {
               </Card>
 
               <div className="lg:col-span-2 grid grid-cols-1 gap-6">
-                <Card className="shadow-xl bg-card rounded-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-xl text-foreground">
-                      <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
+                <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
+                  <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                      <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
+                        <PieChartIcon className="h-5 w-5 text-primary" />
+                      </div>
+                      <span className="hidden sm:inline-flex items-center">
+                        <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
+                      </span>
                       Traffic Sources
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[250px] p-4">
+                  <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
                     {isLoadingContent ? (
                       <div className="flex items-center justify-center h-full">
                         <Skeleton className="h-40 w-40 rounded-full" />
@@ -1218,14 +1244,19 @@ function DashboardContent() {
                   </CardContent>
                 </Card>
                 {canSeeAdminCharts && (
-                  <Card className="shadow-xl bg-card rounded-lg">
-                    <CardHeader>
-                      <CardTitle className="flex items-center text-xl text-foreground">
-                        <Landmark className="mr-2 h-6 w-6 text-primary" />
-                        Payment Analysis
+                  <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
+                    <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
+                      <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                        <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
+                          <Landmark className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="hidden sm:inline-flex items-center">
+                          <Landmark className="mr-2 h-6 w-6 text-primary" />
+                        </span>
+                        Payments
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[250px] p-4">
+                    <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
                       {isLoadingContent ? (
                         <Skeleton className="h-[200px] w-full" />
                       ) : paymentMethodData.length > 0 ? (
@@ -1310,68 +1341,100 @@ function DashboardContent() {
 
         <div className="grid grid-cols-1 gap-6 mt-6 print:hidden lg:grid-cols-2">
           {!isDesignerRepOrLrOrCo && (
-            <Card className="shadow-xl bg-card rounded-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center text-xl text-foreground">
-                  <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-                  Recent Feedback
-                </CardTitle>
-                <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+            <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
+              {/* Premium background highlight for mobile */}
+              <div className="absolute inset-0 opacity-[0.02] sm:hidden bg-gradient-to-br from-primary via-transparent to-primary pointer-events-none" />
+
+              <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-6 relative z-10">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                      <span className="hidden sm:inline"><MessageSquare className="mr-2 h-6 w-6 text-primary" /></span>
+                      Recent Feedback
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm line-clamp-1 sm:line-clamp-none">Latest client feedback from tracking pages.</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-2 sm:pt-6 relative z-10">
                 {isLoadingContent ? (
                   <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
                   </div>
                 ) : recentFeedback.length > 0 ? (
-                  <ScrollArea className="h-[400px] pr-3">
-                    <div className="space-y-4">
-                      {recentFeedback.map(feedback => {
+                  <ScrollArea className="h-[400px] pr-3 -mr-3 sm:mr-0 sm:pr-3">
+                    <div className="space-y-0 sm:space-y-4">
+                      {recentFeedback.map((feedback, index) => {
                         const crmUser = userMap.get(feedback.crmUserId || '');
                         return (
-                          <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30" onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}>
+                          <div
+                            key={feedback.id}
+                            className={cn(
+                              "py-5 sm:p-4 transition-colors",
+                              "sm:border sm:rounded-lg sm:bg-secondary/30",
+                              "border-none bg-transparent rounded-none",
+                              index !== recentFeedback.length - 1 && "border-b border-border/40 sm:border-none"
+                            )}
+                            onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}
+                          >
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                <Avatar className="h-10 w-10 sm:h-10 sm:w-10 border-2 border-primary/10">
                                   <AvatarImage src={crmUser?.avatarUrl || undefined} alt={crmUser?.name} />
-                                  <AvatarFallback>{getInitials(crmUser?.name)}</AvatarFallback>
+                                  <AvatarFallback className="bg-primary/5 text-primary text-xs">{getInitials(crmUser?.name)}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-semibold text-foreground">{feedback.companyName}</p>
-                                  <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                                  <p className="font-bold sm:font-semibold text-foreground text-sm sm:text-base leading-tight">
+                                    {feedback.companyName}
+                                  </p>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Order ID: {feedback.orderId}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1.5 text-amber-500">
+                              <div className="flex items-center gap-0.5 text-amber-500 scale-90 sm:scale-100 origin-right">
                                 {[...Array(5)].map((_, i) => (
                                   <Star
                                     key={i}
-                                    className={cn("h-4 w-4", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground")}
+                                    className={cn("h-3.5 w-3.5", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground/30")}
                                   />
                                 ))}
                               </div>
                             </div>
-                            <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
-                              {renderFeedbackText(feedback.text)}
-                            </p>
-                            <p className="text-xs text-right text-muted-foreground mt-2">
-                              - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
-                            </p>
+                            <div className="mt-3 relative">
+                              <p className="text-sm text-foreground/80 sm:text-foreground/90 italic border-l-2 border-primary/40 pl-4 py-0.5 leading-relaxed">
+                                {renderFeedbackText(feedback.text)}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-end gap-2 mt-3">
+                              <p className="text-[10px] text-muted-foreground/70 uppercase tracking-tighter">
+                                {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
+                              </p>
+                            </div>
                           </div>
                         );
                       })}
                     </div>
                   </ScrollArea>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
-                    <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
-                    <p className="font-medium">No feedback has been submitted yet.</p>
+                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground/50">
+                    <div className="p-4 bg-muted/20 rounded-full mb-4">
+                      <MessageSquare className="h-10 w-10 opacity-20" />
+                    </div>
+                    <p className="font-medium text-sm">No feedback yet.</p>
                   </div>
                 )}
               </CardContent>
+
+              {/* Decorative background icon for mobile */}
+              <div className="absolute -right-8 -bottom-8 opacity-[0.03] sm:hidden pointer-events-none transform rotate-12 scale-150">
+                <MessageSquare className="h-32 w-32 text-primary" />
+              </div>
             </Card>
           )}
           {canSeeSystemAdminCharts && (
-            <Card className="shadow-xl bg-card rounded-lg min-h-[480px]">
+            <Card className="shadow-xl bg-card rounded-lg min-h-[480px] hidden sm:block">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl text-foreground">
                   <LineChartIcon className="mr-2 h-6 w-6 text-primary" />
@@ -1390,15 +1453,25 @@ function DashboardContent() {
         {!isDesignerRepOrLrOrCo && (
           <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
 
-            <Card className="shadow-xl bg-card rounded-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center text-xl text-foreground">
-                  <Briefcase className="mr-2 h-6 w-6 text-primary" />
-                  Project Overview
-                </CardTitle>
-                <CardDescription>Project distribution by status for the selected period.</CardDescription>
+            <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
+              {/* Premium background highlight for mobile */}
+              <div className="absolute inset-0 opacity-[0.02] sm:hidden bg-gradient-to-br from-primary via-transparent to-primary pointer-events-none" />
+
+              <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-6 relative z-10">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                      <span className="hidden sm:inline"><Briefcase className="mr-2 h-6 w-6 text-primary" /></span>
+                      Project Overview
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm line-clamp-1 sm:line-clamp-none">Project distribution by status for the selected period.</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-2 sm:pt-6 relative z-10">
                 <StatusTimeline
                   counts={projectCounts}
                   config={visibleProjectStatusDisplayConfig}
@@ -1406,18 +1479,32 @@ function DashboardContent() {
                   title="Project Status"
                 />
               </CardContent>
+              {/* Decorative background icon for mobile */}
+              <div className="absolute -right-8 -bottom-8 opacity-[0.03] sm:hidden pointer-events-none transform rotate-12 scale-150">
+                <Briefcase className="h-32 w-32 text-primary" />
+              </div>
             </Card>
 
             {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
-              <Card className="shadow-xl bg-card rounded-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-xl text-foreground">
-                    <Users className="mr-2 h-6 w-6 text-primary" />
-                    Pipeline Overview
-                  </CardTitle>
-                  <CardDescription>Lead distribution by category for the selected period.</CardDescription>
+              <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
+                {/* Premium background highlight for mobile */}
+                <div className="absolute inset-0 opacity-[0.02] sm:hidden bg-gradient-to-br from-primary via-transparent to-primary pointer-events-none" />
+
+                <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-6 relative z-10">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                        <span className="hidden sm:inline"><Users className="mr-2 h-6 w-6 text-primary" /></span>
+                        Pipeline Overview
+                      </CardTitle>
+                      <CardDescription className="text-xs sm:text-sm line-clamp-1 sm:line-clamp-none">Lead distribution by category for the selected period.</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-2 sm:pt-6 relative z-10">
                   <StatusTimeline
                     counts={leadCategoryCounts}
                     config={ALL_LEAD_CATEGORIES_CONFIG}
@@ -1425,6 +1512,10 @@ function DashboardContent() {
                     title="Lead Category"
                   />
                 </CardContent>
+                {/* Decorative background icon for mobile */}
+                <div className="absolute -right-8 -bottom-8 opacity-[0.03] sm:hidden pointer-events-none transform rotate-12 scale-150">
+                  <Users className="h-32 w-32 text-primary" />
+                </div>
               </Card>
             )}
           </div>

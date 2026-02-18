@@ -507,38 +507,125 @@ export function TeamPerformanceGraph({
 
 
   const renderChart = () => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
+    const chartData = monthlyTargetData;
+
     switch (chartType) {
       case 'line':
         return (
-          <RechartsLineChart data={monthlyTargetData}>
+          <RechartsAreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorDone" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.1} />
+                <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorLikelihood" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--chart-5))" stopOpacity={0.1} />
+                <stop offset="95%" stopColor="hsl(var(--chart-5))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <Tooltip
-              cursor={{ strokeDasharray: '3 3', fill: 'hsl(var(--muted))' }}
+              cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
               content={({ active, payload, label }) => <DoneTargetTooltipContent active={active} payload={payload} label={label} userMap={userMap} currentUser={currentUser} />}
             />
-            <Legend />
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <Line type="monotone" dataKey="totalDone" name="Tasks Done" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-            <Line type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+            <Legend verticalAlign="bottom" height={36} content={(props) => (
+              <div className="flex justify-center gap-4 mt-4 select-none">
+                {props.payload?.map((entry: any, index: number) => (
+                  <div key={`item-${index}`} className="flex items-center gap-1.5 cursor-default group">
+                    <div className="h-2 w-2 rounded-full transition-transform group-hover:scale-125" style={{ backgroundColor: entry.color }}></div>
+                    <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 tracking-wide uppercase">{entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            )} />
+            <XAxis
+              dataKey="name"
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              dy={10}
+              interval={isMobile ? (chartData.length > 7 ? 2 : 0) : 0}
+            />
+            <YAxis
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => value === 0 ? '' : value}
+            />
+            <Area
+              type="monotone"
+              dataKey="totalDone"
+              name="Tasks Done"
+              stroke="hsl(var(--chart-2))"
+              strokeWidth={3}
+              fillOpacity={1}
+              fill="url(#colorDone)"
+              animationDuration={1500}
+            />
+            <Area
+              type="monotone"
+              dataKey="totalTarget"
+              name="Target"
+              stroke="hsl(var(--chart-4))"
+              strokeWidth={2}
+              strokeDasharray="6 6"
+              fill="transparent"
+              animationDuration={1500}
+            />
             {showLikelihoodChart && (
-              <Line type="monotone" dataKey="totalLikelihood" name="Assets" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              <Area
+                type="monotone"
+                dataKey="totalLikelihood"
+                name="Assets"
+                stroke="hsl(var(--chart-5))"
+                strokeWidth={3}
+                fillOpacity={1}
+                fill="url(#colorLikelihood)"
+                animationDuration={1500}
+              />
             )}
-          </RechartsLineChart>
+          </RechartsAreaChart>
         );
       default:
         return (
-          <RechartsBarChart data={monthlyTargetData}>
+          <RechartsBarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <Tooltip
-              cursor={{ fill: 'hsl(var(--muted))' }}
+              cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
               content={({ active, payload, label }) => <DoneTargetTooltipContent active={active} payload={payload} label={label} userMap={userMap} currentUser={currentUser} />}
             />
-            <Legend />
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <Bar dataKey="totalDone" name="Tasks Done" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="totalTarget" name="Target" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+            <Legend verticalAlign="bottom" height={36} content={(props) => (
+              <div className="flex justify-center gap-4 mt-4 select-none">
+                {props.payload?.map((entry: any, index: number) => (
+                  <div key={`item-${index}`} className="flex items-center gap-1.5 cursor-default group">
+                    <div className="h-2 w-2 rounded-full transition-transform group-hover:scale-125" style={{ backgroundColor: entry.color }}></div>
+                    <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground/80 tracking-wide uppercase">{entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            )} />
+            <XAxis
+              dataKey="name"
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              dy={10}
+              interval={isMobile ? (chartData.length > 7 ? 2 : 0) : 0}
+            />
+            <YAxis
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => value === 0 ? '' : value}
+            />
+            <Bar dataKey="totalDone" name="Tasks Done" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} animationDuration={1500} />
+            <Bar dataKey="totalTarget" name="Target" fill="hsl(var(--chart-4))" radius={[6, 6, 0, 0]} animationDuration={1500} opacity={0.8} />
             {showLikelihoodChart && (
-              <Bar dataKey="totalLikelihood" name="Assets" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="totalLikelihood" name="Assets" fill="hsl(var(--chart-5))" radius={[6, 6, 0, 0]} animationDuration={1500} />
             )}
           </RechartsBarChart>
         );
@@ -552,60 +639,137 @@ export function TeamPerformanceGraph({
 
   return (
     <>
-      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl print-container rounded-lg">
-        <CardHeader className="print-hide">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary" />{performanceTitle}</CardTitle>
-              <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
+      <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden">
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-6 print-hide bg-muted/5 sm:bg-transparent">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
+                <Target className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                  <span className="hidden sm:inline"><Target className="h-5 w-5 text-primary" /></span>
+                  {performanceTitle}
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm line-clamp-1 sm:line-clamp-none">Daily completion against targets.</CardDescription>
+              </div>
             </div>
-            <div className="flex items-baseline gap-2 text-right">
-              <div className="text-center rounded-lg shadow-inner bg-background p-3">
-                <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" />Done</span>
-                <p className="text-2xl font-bold text-foreground tabular-nums">
+
+            {/* Minimal Stat Blocks for Mobile */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto sm:flex sm:items-center">
+              <div className="flex flex-col items-center sm:items-center justify-center p-2.5 sm:p-3 bg-green-50/50 dark:bg-green-500/10 rounded-2xl sm:rounded-lg border border-green-100/50 dark:border-green-500/20 sm:bg-background sm:shadow-inner">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+                  <span className="text-[10px] sm:text-xs font-bold text-green-600/80 dark:text-green-400/80 uppercase tracking-widest">Done</span>
+                </div>
+                <p className="text-sm sm:text-2xl font-bold text-foreground tabular-nums leading-none">
                   {totals.totalDone.toLocaleString()}
                 </p>
               </div>
-              <div className="text-center rounded-lg shadow-inner bg-background p-3">
-                <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5"><Target className="h-4 w-4 text-yellow-500" />Target</span>
-                <p className="text-2xl font-bold text-foreground tabular-nums">
+
+              <div className="flex flex-col items-center justify-center p-2.5 sm:p-3 bg-amber-50/50 dark:bg-amber-500/10 rounded-2xl sm:rounded-lg border border-amber-100/50 dark:border-amber-500/20 sm:bg-background sm:shadow-inner">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Target className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500" />
+                  <span className="text-[10px] sm:text-xs font-bold text-amber-600/80 dark:text-amber-400/80 uppercase tracking-widest">Goal</span>
+                </div>
+                <p className="text-sm sm:text-2xl font-bold text-foreground tabular-nums leading-none">
                   {totalPerformanceTarget.toLocaleString()}
                 </p>
               </div>
+
               {showLikelihoodChart && (
-                <div className="text-center rounded-lg shadow-inner bg-background p-3">
-                  <span className="text-sm font-semibold text-muted-foreground flex items-center justify-center gap-1.5">
-                    <TrendingUp className="h-4 w-4 text-purple-500" />Assets
-                  </span>
-                  <p className="text-2xl font-bold text-foreground tabular-nums">
+                <div className="flex flex-col items-center justify-center p-2.5 sm:p-3 bg-purple-50/50 dark:bg-purple-500/10 rounded-2xl sm:rounded-lg border border-purple-100/50 dark:border-purple-500/20 sm:bg-background sm:shadow-inner">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
+                    <span className="text-[10px] sm:text-xs font-bold text-purple-600/80 dark:text-purple-400/80 uppercase tracking-widest">Assets</span>
+                  </div>
+                  <p className="text-sm sm:text-2xl font-bold text-foreground tabular-nums leading-none">
                     {totals.totalLikelihood.toLocaleString()}
                   </p>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
-              {isInputVisible && (
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {canSubmitFirstLikelihood && (
-                    <div className="relative">
-                      <Label htmlFor="likelihood-customers-input" className="sr-only">Assets</Label>
-                      <Input
-                        id="likelihood-customers-input"
-                        type="number"
-                        placeholder="Assets..."
-                        value={likelihoodCustomers}
-                        onChange={(e) => setLikelihoodCustomers(e.target.value)}
-                        className="h-10 w-full sm:w-40"
-                        min="0"
-                      />
-                    </div>
-                  )}
-                  {canSubmitSecondEntry && (
-                    <>
-                      <div className="relative">
-                        <Label htmlFor="likelihood-customers-input-2" className="sr-only">Assets</Label>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+              <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center order-2 sm:order-1">
+                {isInputVisible && (
+                  <div className="contents">
+                    {hasCompletedDailySubmissions &&
+                      <Button asChild className="h-10 w-full sm:w-auto">
+                        <Link href="/workflow">
+                          Open Desk
+                        </Link>
+                      </Button>
+                    }
+                  </div>
+                )}
+                {isAdminView && (
+                  <Button asChild className="h-10 w-full sm:w-auto">
+                    <Link href="/workflow">
+                      Open Desk
+                    </Link>
+                  </Button>
+                )}
+                {isAdminView && onTeamChange && (
+                  <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
+                    <SelectTrigger className="w-full sm:w-[150px] h-10">
+                      <SelectValue placeholder="Select Team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Teams</SelectItem>
+                      <SelectItem value="CRM">CRM</SelectItem>
+                      <SelectItem value="DESIGNER_REPRESENTATIVE">Designer Reps</SelectItem>
+                      <SelectItem value="LR">Logistics (LR)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center order-3 sm:order-2">
+                {isAdminView && onSpecificUserChange && (
+                  <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[180px] justify-between h-10 px-3">
+                        <span className="truncate text-xs sm:text-sm">{selectedSpecificUserName}</span>
+                        <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search user..." />
+                        <CommandList>
+                          <CommandEmpty>No user found.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange('all'); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
+                              <Check className={cn("mr-2 h-4 w-4", specificUserId === 'all' ? "opacity-100" : "opacity-0")} />
+                              All Users
+                            </CommandItem>
+                            {specificUserOptions.map(user => (
+                              <CommandItem key={user.id} onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange(user.id); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
+                                <Check className={cn("mr-2 h-4 w-4", specificUserId === user.id ? "opacity-100" : "opacity-0")} />
+                                {user.name} ({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                {selectedDateRange && <DateRangePicker
+                  initialRange={selectedDateRange}
+                  onDateRangeChange={handleDateChange}
+                  className="w-full sm:w-auto h-10"
+                />}
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end order-1 sm:order-3">
+                {isInputVisible && (
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {canSubmitFirstLikelihood && (
+                      <div className="relative flex-1 sm:flex-none">
+                        <Label htmlFor="likelihood-customers-input" className="sr-only">Assets</Label>
                         <Input
-                          id="likelihood-customers-input-2"
+                          id="likelihood-customers-input"
                           type="number"
                           placeholder="Assets..."
                           value={likelihoodCustomers}
@@ -614,8 +778,35 @@ export function TeamPerformanceGraph({
                           min="0"
                         />
                       </div>
+                    )}
+                    {canSubmitSecondEntry && (
+                      <>
+                        <div className="relative flex-1 sm:flex-none">
+                          <Label htmlFor="likelihood-customers-input-2" className="sr-only">Assets</Label>
+                          <Input
+                            id="likelihood-customers-input-2"
+                            type="number"
+                            placeholder="Assets..."
+                            value={likelihoodCustomers}
+                            onChange={(e) => setLikelihoodCustomers(e.target.value)}
+                            className="h-10 w-full sm:w-40"
+                            min="0"
+                          />
+                        </div>
+                        <Input
+                          id="tasks-done-input"
+                          type="number"
+                          placeholder={`${inputLabel}...`}
+                          value={tasksDone}
+                          onChange={(e) => setTasksDone(e.target.value)}
+                          className="h-10 w-full sm:w-32"
+                          min="0"
+                        />
+                      </>
+                    )}
+                    {canSubmitTasks && (
                       <Input
-                        id="tasks-done-input"
+                        id="tasks-done-input-single"
                         type="number"
                         placeholder={`${inputLabel}...`}
                         value={tasksDone}
@@ -623,109 +814,22 @@ export function TeamPerformanceGraph({
                         className="h-10 w-full sm:w-32"
                         min="0"
                       />
-                    </>
-                  )}
-                  {canSubmitTasks && (
-                    <Input
-                      id="tasks-done-input-single"
-                      type="number"
-                      placeholder={`${inputLabel}...`}
-                      value={tasksDone}
-                      onChange={(e) => setTasksDone(e.target.value)}
-                      className="h-10 w-full sm:w-32"
-                      min="0"
-                    />
-                  )}
+                    )}
 
-                  {(canSubmitFirstLikelihood || canSubmitSecondEntry || canSubmitTasks) && (
-                    <Button onClick={handleDoneClick} disabled={isSubmitting || (canSubmitFirstLikelihood && likelihoodCustomers.trim() === '') || (canSubmitSecondEntry && (likelihoodCustomers.trim() === '' || tasksDone.trim() === '')) || (canSubmitTasks && tasksDone.trim() === '')} className="h-10">
-                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
-                    </Button>
-                  )}
-
-                  {hasCompletedDailySubmissions &&
-                    <Button asChild className="h-10 w-full sm:w-auto">
-                      <Link href="/workflow">
-                        Open Desk
-                      </Link>
-                    </Button>
-                  }
-                </div>
-              )}
-              {isAdminView && (
-                <Button asChild className="h-10 w-full sm:w-auto">
-                  <Link href="/workflow">
-                    Open Desk
-                  </Link>
-                </Button>
-              )}
-              {isAdminView && onTeamChange && (
-                <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
-                  <SelectTrigger className="w-full sm:w-[150px] h-10">
-                    <SelectValue placeholder="Select Team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    <SelectItem value="CRM">CRM</SelectItem>
-                    <SelectItem value="DESIGNER_REPRESENTATIVE">Designer Reps</SelectItem>
-                    <SelectItem value="LR">Logistics (LR)</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              {isAdminView && onSpecificUserChange && (
-                <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[180px] justify-between h-10">
-                      <span className="truncate">{selectedSpecificUserName}</span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search user..." />
-                      <CommandList>
-                        <CommandEmpty>No user found.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange('all'); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
-                            <Check className={cn("mr-2 h-4 w-4", specificUserId === 'all' ? "opacity-100" : "opacity-0")} />
-                            All Users
-                          </CommandItem>
-                          {specificUserOptions.map(user => (
-                            <CommandItem key={user.id} onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange(user.id); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
-                              <Check className={cn("mr-2 h-4 w-4", specificUserId === user.id ? "opacity-100" : "opacity-0")} />
-                              {user.name} ({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              )}
-              {selectedDateRange && <DateRangePicker
-                initialRange={selectedDateRange}
-                onDateRangeChange={handleDateChange}
-                className="w-full sm:w-auto h-10"
-              />}
-              {isAdminView && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handlePrint}
-                    className="h-10 w-10 print-hide"
-                    title="Print Report"
-                    disabled={specificUserId === 'all' && selectedTeam === 'all'}
-                  >
-                    <Printer className="h-5 w-5" />
-                  </Button>
-                </>
-              )}
+                    {(canSubmitFirstLikelihood || canSubmitSecondEntry || canSubmitTasks) && (
+                      <Button onClick={handleDoneClick} disabled={isSubmitting || (canSubmitFirstLikelihood && likelihoodCustomers.trim() === '') || (canSubmitSecondEntry && (likelihoodCustomers.trim() === '' || tasksDone.trim() === '')) || (canSubmitTasks && tasksDone.trim() === '')} className="h-10">
+                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {isAdminView && null}
+              </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="print-hide">
-          <div className="h-[400px] w-full">
+        <CardContent className="p-2 sm:p-6 print-hide">
+          <div className="h-[280px] sm:h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               {renderChart()}
             </ResponsiveContainer>

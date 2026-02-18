@@ -100,52 +100,77 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
   }, [allOrders, selectedYear]);
 
   const renderChart = () => {
-    switch (chartType) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    const currentChartType = isMobile && chartType === 'bar' ? 'area' : chartType;
+
+    const commonProps = {
+      data: monthlySalesData,
+      margin: { top: 10, right: 10, left: -20, bottom: 0 },
+    };
+
+    const xAxis = <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} dy={10} interval={isMobile ? 1 : 0} />;
+    const yAxisLeft = <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => value === 0 ? '' : `${Number(value) / 1000}k`} />;
+    const yAxisRight = <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => value === 0 ? '' : value} />;
+    const tooltip = <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }} />;
+    const legend = (
+      <Legend verticalAlign="bottom" height={36} content={(props) => (
+        <div className="flex justify-center gap-6 mt-6 select-none">
+          {props.payload?.map((entry: any, index: number) => (
+            <div key={`item-${index}`} className="flex items-center gap-2 group cursor-default">
+              <div className="h-2 w-2 rounded-full transition-transform group-hover:scale-125" style={{ backgroundColor: entry.color }}></div>
+              <span className="text-[10px] sm:text-xs font-bold text-muted-foreground/80 tracking-widest uppercase">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      )} />
+    );
+
+    switch (currentChartType) {
       case 'line':
         return (
-          <RechartsLineChart data={monthlySalesData}>
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
-            <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
-            <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-            <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+          <RechartsLineChart {...commonProps}>
+            {xAxis}
+            {yAxisLeft}
+            {yAxisRight}
+            {tooltip}
+            {legend}
+            <Line yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={1500} />
+            <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={1500} />
           </RechartsLineChart>
         );
       case 'area':
         return (
-          <RechartsAreaChart data={monthlySalesData}>
+          <RechartsAreaChart {...commonProps}>
             <defs>
-              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+              <linearGradient id="colorSalesPerformance" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
                 <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
               </linearGradient>
-              <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.7} />
+              <linearGradient id="colorOrdersPerformance" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.15} />
                 <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
-            <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
-            <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend />
-            <Area yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" fill="url(#colorSales)" />
-            <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" fill="url(#colorOrders)" />
+            {xAxis}
+            {yAxisLeft}
+            {yAxisRight}
+            {tooltip}
+            {legend}
+            <Area yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={3} fill="url(#colorSalesPerformance)" animationDuration={1500} />
+            <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={3} fill="url(#colorOrdersPerformance)" animationDuration={1500} />
           </RechartsAreaChart>
         );
       case 'bar':
       default:
         return (
-          <RechartsBarChart data={monthlySalesData}>
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`} />
-            <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={12} tickLine={false} axisLine={false} />
-            <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Legend />
-            <Bar yAxisId="left" dataKey="sales" name="Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            <Bar yAxisId="right" dataKey="orders" name="Orders" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+          <RechartsBarChart {...commonProps}>
+            {xAxis}
+            {yAxisLeft}
+            {yAxisRight}
+            {tooltip}
+            {legend}
+            <Bar yAxisId="left" dataKey="sales" name="Sales" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} animationDuration={1500} />
+            <Bar yAxisId="right" dataKey="orders" name="Orders" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} animationDuration={1500} />
           </RechartsBarChart>
         );
     }
@@ -153,22 +178,42 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
 
   return (
     <>
-      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl rounded-lg">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <div>
-              <CardTitle>Sales Performance Analysis</CardTitle>
-              <CardDescription>Monthly revenue trends and forecasting for {selectedYear}</CardDescription>
+      <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
+        {/* Premium background highlight for mobile */}
+        <div className="absolute inset-0 opacity-[0.02] sm:hidden bg-gradient-to-br from-primary via-transparent to-chart-2 pointer-events-none" />
+
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-6 relative z-10">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                  <span className="hidden sm:inline"><TrendingUp className="h-5 w-5 text-primary" /></span>
+                  Sales Performance Analysis
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm line-clamp-1 sm:line-clamp-none">
+                  Monthly revenue trends for {selectedYear}
+                </CardDescription>
+              </div>
             </div>
-            <div className="flex items-center gap-2 mt-2 sm:mt-0">
-              <div className="flex items-center bg-muted p-1 rounded-lg">
-                <Button variant="ghost" size="sm" className={cn(chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4" /></Button>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto bg-muted/30 sm:bg-transparent p-1.5 sm:p-0 rounded-xl sm:rounded-none">
+              <div className="flex items-center bg-background sm:bg-muted p-1 rounded-lg shadow-sm sm:shadow-none flex-1 sm:flex-none justify-between sm:justify-start">
+                <Button variant="ghost" size="sm" className={cn("h-8 flex-1 sm:flex-none", chartType === 'bar' && "bg-muted sm:bg-background shadow-none sm:shadow-sm")} onClick={() => setChartType('bar')}>
+                  <BarChart className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className={cn("h-8 flex-1 sm:flex-none", chartType === 'line' && "bg-muted sm:bg-background shadow-none sm:shadow-sm")} onClick={() => setChartType('line')}>
+                  <LineChart className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className={cn("h-8 flex-1 sm:flex-none", chartType === 'area' && "bg-muted sm:bg-background shadow-none sm:shadow-sm")} onClick={() => setChartType('area')}>
+                  <AreaChart className="h-4 w-4" />
+                </Button>
               </div>
               <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="Select Year" />
+                <SelectTrigger className="w-[100px] sm:w-[120px] h-10 sm:h-9 bg-background sm:bg-transparent border-none sm:border shadow-sm sm:shadow-none rounded-lg text-xs sm:text-sm">
+                  <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableYears.map(year => (
@@ -179,13 +224,18 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="h-[350px] w-full">
+        <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0 relative z-10">
+          <div className="h-[280px] sm:h-[400px] w-full mt-4 sm:mt-0">
             <ResponsiveContainer width="100%" height="100%">
               {renderChart()}
             </ResponsiveContainer>
           </div>
         </CardContent>
+
+        {/* Decorative background element for mobile */}
+        <div className="absolute -right-6 -bottom-6 opacity-[0.03] sm:hidden pointer-events-none transform rotate-12 scale-150">
+          <TrendingUp className="h-32 w-32 text-primary" />
+        </div>
       </Card>
 
     </>

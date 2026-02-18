@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 // Generic Timeline Component
 interface StatusTimelineProps {
   counts: Record<string, number>;
-  config: { title: string; icon: React.ElementType; color: string; gradient: string; shadow: string; [key:string]: any }[];
+  config: { title: string; icon: React.ElementType; color: string; gradient: string; shadow: string;[key: string]: any }[];
   isLoading: boolean;
   title: string;
 }
@@ -51,47 +51,50 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, 
   }
 
   const progressPercentage = activeIndex > 0 ? (activeIndex / (config.length - 1)) * 100 : 0;
-  
+
   const getGradient = () => {
     if (activeIndex === 0) {
-        return config[0]?.gradient || 'hsl(var(--primary))';
+      return config[0]?.gradient || 'hsl(var(--primary))';
     }
     const colors = config.slice(0, activeIndex + 1).map(step => step.color);
     return `linear-gradient(to right, ${colors.join(', ')})`;
   };
 
   return (
-    <div className="w-full overflow-x-auto py-4 custom-scrollbar-hidden">
-      <div className="relative flex items-center justify-between min-w-max px-2">
+    <div className="w-full overflow-x-auto py-2 sm:py-4 custom-scrollbar-hidden select-none">
+      <div className="relative flex items-center justify-between min-w-max px-4">
         {/* The background line */}
-        <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full transform -translate-y-[calc(50%+1rem)]"></div>
+        <div className="absolute top-1/2 left-0 w-full h-1 bg-muted/40 dark:bg-muted/10 rounded-full transform -translate-y-[calc(50%+1.2rem)] sm:-translate-y-[calc(50%+1rem)]"></div>
 
         {/* The animated progress bar */}
-        <div className="absolute top-1/2 left-0 h-1 rounded-full transform -translate-y-[calc(50%+1rem)]" style={{ width: '100%' }}>
-            <motion.div
-                className="h-full rounded-full"
-                animate={{
-                    width: `${progressPercentage}%`,
-                    background: getGradient(),
-                    boxShadow: config[activeIndex]?.shadow || 'none',
-                }}
-                transition={{ duration: 0.5, ease: 'easeInOut' }}
-            />
+        <div className="absolute top-1/2 left-0 h-1 rounded-full transform -translate-y-[calc(50%+1.2rem)] sm:-translate-y-[calc(50%+1rem)]" style={{ width: '100%' }}>
+          <motion.div
+            className="h-full rounded-full"
+            animate={{
+              width: `${progressPercentage}%`,
+              background: getGradient(),
+              boxShadow: config[activeIndex]?.shadow || 'none',
+            }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+          />
         </div>
 
         {config.map((step, index) => {
           const isActive = index === activeIndex;
           const key = step.status || step.category;
           return (
-            <motion.div 
-              key={key} 
-              className="relative z-10 flex flex-col items-center flex-1 min-w-[90px]"
-              animate={{ scale: isActive ? 1.1 : 1 }}
+            <motion.div
+              key={key}
+              className="relative z-10 flex flex-col items-center flex-1 min-w-[70px] sm:min-w-[90px]"
+              animate={{ scale: isActive ? 1.05 : 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
             >
               {/* The colored circle */}
               <div
-                className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg border-4 transition-all"
+                className={cn(
+                  "rounded-full flex items-center justify-center text-white font-bold transition-all shadow-md",
+                  "h-12 w-12 sm:h-16 sm:w-16 border-2 sm:border-4 text-base sm:text-xl"
+                )}
                 style={{
                   backgroundColor: step.color,
                   borderColor: isActive ? step.color : 'hsl(var(--background))'
@@ -100,7 +103,10 @@ export const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, 
                 {counts[key as keyof typeof counts]}
               </div>
               {/* The label */}
-              <p className="mt-2 text-xs font-medium text-center text-muted-foreground transition-colors" style={{ color: isActive ? step.color : 'hsl(var(--muted-foreground))'}}>
+              <p
+                className="mt-2 text-[10px] sm:text-xs font-bold sm:font-medium text-center transition-colors uppercase tracking-tight sm:tracking-normal"
+                style={{ color: isActive ? step.color : 'hsl(var(--muted-foreground))' }}
+              >
                 {step.title}
               </p>
             </motion.div>

@@ -11,15 +11,11 @@ git pull origin restore
 echo "Installing dependencies..."
 npm install --legacy-peer-deps
 
-# 3. Apply Database Fixes
-echo "Applying database schema fixes..."
-node scripts/server-fix.js
-
-# 4. Build the application
+# 3. Build the application
 echo "Building the application..."
 npm run build
 
-# 5. Restart the server (assuming PM2 is used on CyberPanel)
+# 4. Restart the server (assuming PM2 is used on CyberPanel)
 # Replace 'erpapp' with your actual PM2 process name if different
 echo "Restarting application via PM2..."
 pm2 restart all || npm start
