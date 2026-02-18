@@ -1017,7 +1017,11 @@ function DashboardContent() {
   };
 
   const handleDeleteFeedback = async () => {
-    if (!feedbackToDelete) return;
+    if (!feedbackToDelete || !feedbackToDelete.id) {
+      toast({ title: "Error", description: "Invalid feedback ID.", variant: "destructive" });
+      setFeedbackToDelete(null);
+      return;
+    }
     setIsDeletingFeedback(true);
     const result = await deleteFeedbackAction(feedbackToDelete.id);
     if (result.success) {

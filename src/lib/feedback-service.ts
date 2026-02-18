@@ -9,10 +9,14 @@ const FEEDBACK_TABLE = 'feedback';
 
 export const getFeedback = async (): Promise<Feedback[]> => {
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${FEEDBACK_TABLE} ORDER BY id DESC`);
-    return rows.map(row => ({
-      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
-    } as Feedback));
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${FEEDBACK_TABLE} ORDER BY id DESC`);
+    return rows.map(row => {
+      const parsed = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return {
+        ...parsed,
+        id: parsed.id || row.id // Ensure ID is present from column if missing in JSON
+      } as Feedback;
+    });
   } catch (error) {
     console.error("Error fetching feedback from MySQL:", error);
     return [];
@@ -22,10 +26,14 @@ export const getFeedback = async (): Promise<Feedback[]> => {
 export const getFeedbackForOrder = async (orderId: string): Promise<Feedback[]> => {
   if (!orderId) return [];
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${FEEDBACK_TABLE} WHERE order_id = ?`, [orderId]);
-    return rows.map(row => ({
-      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
-    } as Feedback));
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${FEEDBACK_TABLE} WHERE order_id = ?`, [orderId]);
+    return rows.map(row => {
+      const parsed = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return {
+        ...parsed,
+        id: parsed.id || row.id // Ensure ID is present from column if missing in JSON
+      } as Feedback;
+    });
   } catch (error) {
     console.error(`Error fetching feedback for order ${orderId} from MySQL:`, error);
     return [];
