@@ -26,7 +26,10 @@ interface ClientLayoutProps {
 
 export function ClientLayout({ children, initialUser, initialGlobalSettings }: ClientLayoutProps) {
     const isMobile = useIsMobile();
+    const pathname = usePathname();
     const showBottomNav = isMobile;
+
+    const isInvoicePage = pathname?.includes('/admin/stock-reports/') && (pathname?.split('/').length ?? 0) > 3;
 
     return (
         <AppProviders initialUser={initialUser} initialGlobalSettings={initialGlobalSettings}>
@@ -70,7 +73,8 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
                     <AppHeader />
                     <main
                         className={cn(
-                            "flex-1 p-4 sm:p-6 lg:p-8 bg-background selection:bg-primary/20 selection:text-primary",
+                            "flex-1 bg-background selection:bg-primary/20 selection:text-primary",
+                            isInvoicePage ? "p-0" : "p-4 sm:p-6 lg:p-8",
                             showBottomNav && "pb-24" // Add more padding to avoid overlap
                         )}
                     >

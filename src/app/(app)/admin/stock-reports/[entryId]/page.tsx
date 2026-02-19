@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Download, FileText, Building, MapPin, Phone, User, CheckCircle, Clock, XCircle, Package } from 'lucide-react';
+import { ArrowLeft, FileText, Building, MapPin, Phone, User, CheckCircle, Clock, XCircle, Package } from 'lucide-react';
 import { getSellEntries } from '@/lib/sell-entry-service';
 import { getStockItems } from '@/lib/stock-service';
 import type { SellEntry, ServiceModelItem } from '@/types';
@@ -104,45 +104,14 @@ export default function SellEntryInvoicePage() {
 
     return (
         <div className="min-h-screen bg-muted/30">
-            {/* Navigation and Actions */}
-            <div className="container mx-auto px-4 pt-6 max-w-4xl print:hidden">
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-                    <Button
-                        variant="ghost"
-                        onClick={() => router.push('/admin/stock-reports')}
-                        className="w-full sm:w-auto hover:bg-background/80 transition-all font-semibold"
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Stock
-                    </Button>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <Button
-                            variant="outline"
-                            onClick={handlePrint}
-                            className="flex-1 sm:flex-none bg-background shadow-sm hover:shadow-md transition-all gap-2 h-10 px-4"
-                        >
-                            <Printer className="h-4 w-4" />
-                            Print
-                        </Button>
-                        <Button
-                            onClick={handleDownload}
-                            className="flex-1 sm:flex-none bg-primary shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all gap-2 h-10 px-4"
-                        >
-                            <Download className="h-4 w-4" />
-                            Download
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
             {/* Invoice Content */}
-            <div className="container mx-auto p-3 sm:p-6 max-w-4xl">
-                <div className="max-w-4xl mx-auto p-4 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl print:shadow-none print:border-none print:p-0">
+            <div className="flex justify-center items-start p-0">
+                <div className="w-[800px] min-h-[1100px] p-8 bg-white border border-border/20 shadow-2xl rounded-sm print:p-0 print:w-full print:min-h-0 print:shadow-none print:border-none">
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-4 print:pb-4">
                         <div>
                             <h2 className="text-3xl font-bold text-primary mb-2 flex items-center">
-                                <FileText className="h-8 w-8 mr-3" /> SELL ENTRY
+                                <FileText className="h-8 w-8 mr-3" /> LOGISTICS INVOICE
                             </h2>
                             <div className="mb-2">
                                 <NextImage
@@ -173,21 +142,21 @@ export default function SellEntryInvoicePage() {
 
                     {/* Entry Details Sections */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4">
-                        <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                        <div className="space-y-1">
                             <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
                                 <User className="h-4 w-4" /> Recorded:
                             </h4>
                             <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                                 {sellEntry.recordedByUserName}
                             </p>
-                            <p className="text-foreground/90 text-sm flex items-start gap-2">
-                                <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                            <div className="text-muted-foreground text-xs flex items-center gap-2">
+                                <Clock className="h-3.5 w-3.5" />
                                 {format(new Date(sellEntry.createdAt), 'MMM d, yyyy h:mm a')}
-                            </p>
+                            </div>
                         </div>
 
                         {sellEntry.approvedByUserName && (
-                            <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                            <div className="space-y-1">
                                 <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
                                     <CheckCircle className="h-4 w-4" /> Approved/Rejected:
                                 </h4>
@@ -195,10 +164,10 @@ export default function SellEntryInvoicePage() {
                                     {sellEntry.approvedByUserName}
                                 </p>
                                 {sellEntry.approvedAt && (
-                                    <p className="text-foreground/90 text-sm flex items-start gap-2">
-                                        <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                    <div className="text-muted-foreground text-xs flex items-center gap-2">
+                                        <Clock className="h-3.5 w-3.5" />
                                         {format(new Date(sellEntry.approvedAt), 'MMM d, yyyy h:mm a')}
-                                    </p>
+                                    </div>
                                 )}
                             </div>
                         )}
