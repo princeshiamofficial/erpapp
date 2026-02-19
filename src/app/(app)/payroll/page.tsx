@@ -18,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, Calendar, UserRoundX } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Check, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, Calendar, UserRoundX } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord, ProvidentFundRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -38,6 +38,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
+import { getProvidentFundRecords } from '@/lib/provident-fund-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -60,6 +61,7 @@ const DeleteEmployeeDialog = dynamic(() => import('@/components/payroll/DeleteEm
 const EditPayslipDialog = dynamic(() => import('@/components/payroll/EditPayslipDialog').then(mod => mod.EditPayslipDialog));
 const IncrementSalaryDialog = dynamic(() => import('@/components/payroll/IncrementSalaryDialog').then(mod => mod.IncrementSalaryDialog));
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
+const EditPFDialog = dynamic(() => import('@/components/payroll/EditPFDialog').then(mod => mod.EditPFDialog));
 
 
 const ITEMS_PER_PAGE = 50;
@@ -95,12 +97,14 @@ export default function PayrollPage() {
 
   const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
   const [historyToView, setHistoryToView] = useState<Employee | null>(null);
+  const [pfToEdit, setPfToEdit] = useState<Employee | null>(null);
 
 
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [salarySheetData, setSalarySheetData] = useState<Payslip[]>([]);
+  const [pfRecords, setPfRecords] = useState<ProvidentFundRecord[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
 
 
@@ -113,19 +117,22 @@ export default function PayrollPage() {
         fetchedUsers,
         fetchedAttendance,
         fetchedSalarySheet,
-        fetchedWeekendSettings
+        fetchedWeekendSettings,
+        fetchedPfRecords
       ] = await Promise.all([
         getEmployees(),
         getUsers(),
         getAttendanceForMonth(selectedDate),
         getSalarySheetForMonth(monthStr),
-        getWeekendSettings()
+        getWeekendSettings(),
+        getProvidentFundRecords()
       ]);
       setEmployees(fetchedEmployees);
       setAllUsers(fetchedUsers);
       setAttendanceData(fetchedAttendance);
       setSalarySheetData(fetchedSalarySheet);
       setWeekendDays(fetchedWeekendSettings.days);
+      setPfRecords(fetchedPfRecords);
     } catch (error) {
       console.error("Failed to fetch page data:", error);
       toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
@@ -244,17 +251,80 @@ export default function PayrollPage() {
 
   }, [employees, searchTerm, statusFilter, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
 
+  const walletCalculatedData = useMemo(() => {
+    const currentYear = selectedDate.getFullYear();
+
+    return employees.filter(emp => {
+      if (statusFilter !== 'all' && emp.status !== statusFilter) return false;
+      if (searchTerm) {
+        const lower = searchTerm.toLowerCase();
+        return emp.name.toLowerCase().includes(lower) || emp.employeeId.toLowerCase().includes(lower) || emp.nationalId?.includes(lower);
+      }
+      return true;
+    }).map(employee => {
+      const employeePfRecords = pfRecords.filter(r => r.employeeId === employee.employeeId);
+
+      // Calculate Previous Fund (only Unpaid records before current year)
+      const previousFund = employeePfRecords
+        .filter(r => {
+          const year = parseInt(r.month.substring(0, 4));
+          return year < currentYear && r.status !== 'Paid';
+        })
+        .reduce((sum, r) => sum + (r.amount || 0), 0);
+
+      // Monthly breakdown for current year
+      const monthlyFunds: Record<number, { amount: number, status: string }> = {};
+      for (let m = 0; m < 12; m++) {
+        const monthStr = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+        const record = employeePfRecords.find(r => r.month === monthStr);
+        monthlyFunds[m] = {
+          amount: record ? (record.amount || 0) : 0,
+          status: record?.status || 'Unpaid'
+        };
+      }
+
+      const currentYearUnpaid = Object.values(monthlyFunds)
+        .filter(item => item.status !== 'Paid')
+        .reduce((sum, item) => sum + item.amount, 0);
+      const totalFund = previousFund + currentYearUnpaid;
+
+      return {
+        ...employee,
+        previousFund,
+        monthlyFunds,
+        totalFund
+      };
+    });
+  }, [employees, pfRecords, selectedDate, searchTerm, statusFilter]);
+
   const totalPages = useMemo(() => {
-    if (activeTab !== 'employee_list') return 1;
-    return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
-  }, [filteredEmployees, activeTab]);
+    if (activeTab === 'employee_list') {
+      return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
+    }
+    if (activeTab === 'employees_wallet') {
+      return Math.ceil(walletCalculatedData.length / ITEMS_PER_PAGE);
+    }
+    return 1;
+  }, [filteredEmployees, activeTab, walletCalculatedData]);
+
+  const salaryStatusMap = useMemo(() => {
+    const map = new Map();
+    salarySheetCalculatedData.forEach(s => map.set(s.employeeId, s));
+    return map;
+  }, [salarySheetCalculatedData]);
 
   const paginatedEmployees = useMemo(() => {
-    if (activeTab !== 'employee_list') return salarySheetCalculatedData;
+    if (activeTab !== 'employee_list' && activeTab !== 'employees_wallet') return salarySheetCalculatedData;
+
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
+
+    if (activeTab === 'employees_wallet') {
+      return walletCalculatedData.slice(startIndex, endIndex);
+    }
+
     return filteredEmployees.slice(startIndex, endIndex);
-  }, [filteredEmployees, currentPage, activeTab, salarySheetCalculatedData]);
+  }, [filteredEmployees, currentPage, activeTab, salarySheetCalculatedData, walletCalculatedData]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -351,8 +421,23 @@ export default function PayrollPage() {
 
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
     value: i.toString(),
-    label: format(new Date(0, i), 'MMMM'),
+    label: format(new Date(0, i), 'MMM'),
   })), []);
+
+  const walletVisibleMonths = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const selectedYear = selectedDate.getFullYear();
+
+    if (selectedYear < currentYear) {
+      return months;
+    } else if (selectedYear === currentYear) {
+      return months.slice(0, currentMonth + 1);
+    } else {
+      return [];
+    }
+  }, [months, selectedDate]);
 
   const getInitials = (name: string): string => {
     if (!name) return '??';
@@ -709,85 +794,132 @@ export default function PayrollPage() {
             </CardTitle>
             <CardDescription className="text-sm text-gray-500">Monitor employee earnings, advances, and net balances.</CardDescription>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search employee..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full sm:w-[250px] focus-visible:ring-primary/20"
+                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full sm:w-[200px] focus-visible:ring-primary/20"
               />
             </div>
+            <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        {/* Desktop View - Preserved exactly as requested */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100">
-                <TableHead className="w-[60px] pl-6 py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider">#</TableHead>
-                <TableHead className="py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider">Employee</TableHead>
-                <TableHead className="py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider">Employee ID</TableHead>
-                <TableHead className="pr-6 py-4 font-semibold text-gray-600 uppercase text-[10px] tracking-wider text-right">Account No</TableHead>
+              <TableRow>
+                <TableHead className="w-[50px] pl-4 whitespace-nowrap">SL</TableHead>
+                <TableHead className="whitespace-nowrap">Employee ID</TableHead>
+                <TableHead className="min-w-[200px] whitespace-nowrap">Name of Employee</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Previous Fund</TableHead>
+                {walletVisibleMonths.map(m => (
+                  <TableHead key={m.value} className="text-right min-w-[80px] whitespace-nowrap">
+                    {m.label}
+                  </TableHead>
+                ))}
+                <TableHead className="text-right whitespace-nowrap">Total Fund</TableHead>
+                <TableHead className="pr-4 text-center whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index} className="border-b border-gray-50">
-                    <TableCell className="pl-6 py-4"><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell className="pl-4 py-4"><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell className="py-4"><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell className="py-4">
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-9 w-9 rounded-full" />
-                        <div className="space-y-1">
-                          <Skeleton className="h-4 w-24" />
-                          <Skeleton className="h-3 w-16" />
-                        </div>
+                        <Skeleton className="h-4 w-24" />
                       </div>
                     </TableCell>
-                    <TableCell className="py-4"><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell className="pr-6 py-4"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
+                    <TableCell className="py-4"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                    {walletVisibleMonths.map(m => <TableCell key={m.value} className="py-4"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>)}
+                    <TableCell className="py-4"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                    <TableCell className="pr-4 py-4 text-center">
+                      <Skeleton className="h-8 w-24 mx-auto rounded-md" />
+                    </TableCell>
                   </TableRow>
                 ))
-              ) : salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data, index) => {
+              ) : walletCalculatedData.length > 0 ? (
+                walletCalculatedData.map((data: any, index) => {
                   const user = allUsers.find(u => u.id === data.userId);
 
                   return (
                     <TableRow key={data.id} className="group hover:bg-gray-50/80 transition-all border-b border-gray-50">
-                      <TableCell className="pl-6 py-4 text-xs font-medium text-gray-400">
-                        {String(index + 1).padStart(2, '0')}
+                      <TableCell className="pl-4 py-4">
+                        {index + 1}
                       </TableCell>
                       <TableCell className="py-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border border-gray-100 shadow-sm transition-transform group-hover:scale-105">
+                        {data.nationalId || 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3 whitespace-nowrap">
+                          <Avatar className="h-8 w-8 border border-gray-100 shadow-sm transition-transform group-hover:scale-105">
                             <AvatarImage src={user?.avatarUrl || undefined} alt={data.name} />
-                            <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">{getInitials(data.name)}</AvatarFallback>
+                            <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-bold">{getInitials(data.name)}</AvatarFallback>
                           </Avatar>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-gray-900 leading-tight">{data.name}</span>
-                            <span className="text-xs text-gray-400 font-medium">{data.designation}</span>
-                          </div>
+                          <span className="font-medium text-gray-900 leading-tight">{data.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-4">
-                        <span className="text-sm font-medium text-gray-600">
-                          {data.employeeId || 'N/A'}
-                        </span>
+                      <TableCell className="py-4 text-right">
+                        {formatCurrency(data.previousFund).replace('BDT', '').trim()}
                       </TableCell>
-                      <TableCell className="pr-6 py-4 text-right">
-                        <span className="text-sm font-mono font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-lg">
-                          {data.accountNo || 'Not Set'}
-                        </span>
+                      {walletVisibleMonths.map(m => {
+                        const monthIdx = parseInt(m.value);
+                        const fund = data.monthlyFunds[monthIdx];
+                        return (
+                          <TableCell key={m.value} className="py-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {fund.status === 'Paid' && <Check className="h-3 w-3 text-green-500" />}
+                              <span>{fund.amount > 0 ? formatCurrency(fund.amount).replace('BDT', '').trim() : '-'}</span>
+                            </div>
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="py-4 text-right font-semibold text-primary">
+                        {formatCurrency(data.totalFund).replace('BDT', '').trim()}
+                      </TableCell>
+                      <TableCell className="pr-4 py-4 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-[10px] font-bold uppercase transition-all hover:bg-primary hover:text-white border-primary/20"
+                          onClick={() => {
+                            const salaryData = salaryStatusMap.get(data.employeeId);
+                            if (salaryData) {
+                              const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+                              const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
+                              setExistingPayslipData(payslipForDialog);
+                              setPfToEdit(salaryData);
+                            }
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit PF
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-64 text-center">
+                  <TableCell colSpan={walletVisibleMonths.length + 7} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center opacity-40">
                       <Wallet className="h-12 w-12 mb-2 text-gray-400" />
                       <p className="text-sm font-medium text-gray-500">No wallet data found</p>
@@ -797,6 +929,119 @@ export default function PayrollPage() {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile View - Modern & Minimal */}
+        <div className="md:hidden p-4 space-y-4 bg-gray-50/30">
+          {isLoading ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Skeleton className="h-14 rounded-xl" />
+                  <Skeleton className="h-14 rounded-xl" />
+                </div>
+              </div>
+            ))
+          ) : walletCalculatedData.length > 0 ? (
+            walletCalculatedData.map((data: any, index: number) => {
+              const user = allUsers.find(u => u.id === data.userId);
+              return (
+                <div key={data.id} className="relative overflow-hidden bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all active:scale-[0.98]">
+                  {/* Decorative element */}
+                  <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+
+                  <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-1 ring-gray-100">
+                          <AvatarImage src={user?.avatarUrl || undefined} alt={data.name} />
+                          <AvatarFallback className="bg-primary/5 text-primary font-bold">{getInitials(data.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -top-1 -left-1 bg-gray-900 text-[8px] text-white px-1.5 py-0.5 rounded-full font-bold">
+                          {String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 leading-tight">{data.name}</h3>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">ID: {data.nationalId || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-[9px] font-bold uppercase transition-all hover:bg-primary hover:text-white border-primary/20 bg-white"
+                          onClick={() => {
+                            const salaryData = salaryStatusMap.get(data.employeeId);
+                            if (salaryData) {
+                              const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+                              const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
+                              setExistingPayslipData(payslipForDialog);
+                              setPfToEdit(salaryData);
+                            }
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit PF
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-5 relative z-10">
+                    <div className="bg-gray-50/80 rounded-xl p-3 border border-gray-100/50">
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Previous Fund</p>
+                      <p className="text-xs font-semibold text-gray-700">{formatCurrency(data.previousFund).replace('BDT', '').trim()}</p>
+                    </div>
+                    <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
+                      <p className="text-[9px] font-bold text-primary/60 uppercase tracking-wider mb-1">Total Fund</p>
+                      <p className="text-sm font-bold text-primary">{formatCurrency(data.totalFund).replace('BDT', '').trim()}</p>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1 flex justify-between">
+                      <span>Yearly Contributions ({selectedDate.getFullYear()})</span>
+                      <span className="text-primary/40 text-[8px]">Scroll →</span>
+                    </p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar-hidden select-none">
+                      {walletVisibleMonths.map(m => {
+                        const monthIdx = parseInt(m.value);
+                        const fund = data.monthlyFunds[monthIdx];
+                        return (
+                          <div key={m.value} className={cn(
+                            "flex flex-col items-center min-w-[62px] p-2 rounded-xl border transition-colors",
+                            fund.status === 'Paid' ? "bg-white border-primary/20 shadow-sm ring-1 ring-primary/5" : "bg-gray-50/30 border-gray-100"
+                          )}>
+                            <span className={cn("text-[8px] font-bold uppercase mb-1 flex items-center gap-1", fund.status === 'Paid' ? "text-primary" : "text-gray-400")}>
+                              {fund.status === 'Paid' && <Check className="h-2 w-2" />}
+                              {m.label.substring(0, 3)}
+                            </span>
+                            <span className={cn("text-[10px] font-bold", fund.status === 'Paid' ? "text-gray-900" : "text-gray-300")}>
+                              {fund.amount > 0 ? formatCurrency(fund.amount).replace('BDT', '').trim() : '-'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-20 text-center">
+              <Wallet className="h-10 w-10 mx-auto text-gray-200 mb-2" />
+              <p className="text-sm font-medium text-gray-400">No balance records found</p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -851,6 +1096,20 @@ export default function PayrollPage() {
           }}
           selectedDate={selectedDate}
           existingPayslip={existingPayslipData}
+        />
+      )}
+      {pfToEdit && (
+        <EditPFDialog
+          isOpen={!!pfToEdit}
+          onOpenChange={(open) => !open && setPfToEdit(null)}
+          employee={pfToEdit}
+          onSave={() => {
+            fetchData();
+            setPfToEdit(null);
+          }}
+          selectedDate={selectedDate}
+          existingPayslip={existingPayslipData}
+          pfRecords={pfRecords}
         />
       )}
       {employeeToIncrement && (
