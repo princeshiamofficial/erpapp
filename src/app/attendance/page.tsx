@@ -3,10 +3,12 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin, Loader2 } from 'lucide-react';
+import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin, Loader2, Navigation } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds, parseISO, isToday } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
+import { useSocket } from '@/contexts/socket-context';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,6 +21,8 @@ import { saveAttendanceAction } from '@/app/(app)/hrm/attendance/actions';
 import { getAttendanceMark } from '@/lib/attendance-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import type { OfficeTime } from '@/types';
+
+
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -107,6 +111,7 @@ const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onCon
 
 export default function CheckInOutPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
+  const { socket, isConnected } = useSocket();
   const router = useRouter();
   const [status, setStatus] = useState<'Checked In' | 'Checked Out'>('Checked Out');
   const [checkInTime, setCheckInTime] = useState<Date | null>(null);
@@ -225,7 +230,6 @@ export default function CheckInOutPage() {
             if (isToday(parseISO(mark.date))) {
               setStatus(mark.status);
               if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
-              // Assuming checkInLocation is now part of the mark from the DB
               if (mark.checkInLocation) setCheckInLocation(mark.checkInLocation);
               if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
               if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
@@ -246,10 +250,23 @@ export default function CheckInOutPage() {
         setWeekendDays(weekendSettings.days);
 
         if ('geolocation' in navigator) {
-          navigator.geolocation.getCurrentPosition(
+          const watchId = navigator.geolocation.watchPosition(
             (position) => {
-              const { latitude, longitude } = position.coords;
-              setCurrentLocation({ lat: latitude, lng: longitude });
+              const { latitude, longitude, accuracy } = position.coords;
+              const newLocation = { lat: latitude, lng: longitude };
+              setCurrentLocation(newLocation);
+
+              // Emit location update via socket
+              if (socket && isConnected && currentUser) {
+                socket.emit("attendance-location-update", {
+                  userId: currentUser.id,
+                  userName: currentUser.name,
+                  location: newLocation,
+                  accuracy,
+                  timestamp: new Date().toISOString()
+                });
+              }
+
               let isInside = false;
               if (locations.length > 0) {
                 for (const office of locations) {
@@ -266,8 +283,14 @@ export default function CheckInOutPage() {
                 case error.TIMEOUT: setLocationStatus('Location request timed out.'); break;
                 default: setLocationStatus('An unknown error occurred.'); break;
               }
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
             }
           );
+          return () => navigator.geolocation.clearWatch(watchId);
         } else {
           setLocationStatus('Geolocation is not supported by this browser.');
         }
@@ -276,10 +299,15 @@ export default function CheckInOutPage() {
         console.error("Failed to fetch office data:", error);
       }
     };
+
+    let cleanup: (() => void) | undefined;
     if (currentUser) {
-      fetchInitialData();
+      fetchInitialData().then(fn => cleanup = fn);
     }
-  }, [currentUser]);
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [currentUser, socket, isConnected]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -466,6 +494,8 @@ export default function CheckInOutPage() {
             {locationStatus}
           </p>
         </div>
+
+
 
         <motion.div
           key={status}

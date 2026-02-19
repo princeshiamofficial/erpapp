@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, Download, Briefcase, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical, Edit, Trash2, ChevronsUpDown, Check, Download, Briefcase, CheckCircle, Clock, AlertTriangle, Radio } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
+import { useSocket } from '@/contexts/socket-context';
 import { useRouter } from 'next/navigation';
 import { getEmployees } from '@/lib/employee-service';
 import type { Employee, User, OfficeTime, AttendanceRecord, UserRole, UserRoleDefinition } from '@/types';
@@ -50,6 +51,10 @@ const AttendanceTypeDialog = dynamic(() => import('@/components/hrm/AttendanceTy
 const AddEditHolidayDialog = dynamic(() => import('@/components/hrm/AddEditHolidayDialog').then(mod => mod.AddEditHolidayDialog));
 const AddEditOfficeTimeDialog = dynamic(() => import('@/components/hrm/AddEditOfficeTimeDialog').then(mod => mod.AddEditOfficeTimeDialog));
 const EditAttendanceDialog = dynamic(() => import('@/components/hrm/EditAttendanceDialog').then(mod => mod.EditAttendanceDialog));
+const LiveMonitoringMap = dynamic(() => import('@/components/hrm/LiveMonitoringMap'), { ssr: false });
+
+const DEFAULT_MAP_CENTER: [number, number] = [23.8103, 90.4125];
+const DEFAULT_MAP_ZOOM = 12;
 
 
 const ITEMS_PER_PAGE = 25;
@@ -81,6 +86,7 @@ const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 
 export default function AttendancePage() {
     const { currentUser } = useAuth();
+    const { socket, isConnected } = useSocket();
     const router = useRouter();
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState("attendees_report");
@@ -99,6 +105,10 @@ export default function AttendancePage() {
     const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
     const [holidayToEdit, setHolidayToEdit] = useState(null);
     const [holidays, setHolidays] = useState([{ id: '1', title: 'National Mourning Day', date: '19 Nov 2006' }]);
+
+    // Live Location State
+    const [liveLocations, setLiveLocations] = useState<Record<string, any>>({});
+    const activeLiveUsersCount = useMemo(() => Object.keys(liveLocations).length, [liveLocations]);
 
     const [isOfficeTimeDialogOpen, setIsOfficeTimeDialogOpen] = useState(false);
     const [officeTimeToEdit, setOfficeTimeToEdit] = useState<OfficeTime | null>(null);
@@ -176,6 +186,42 @@ export default function AttendancePage() {
             router.replace('/dashboard');
         }
     }, [currentUser, router, fetchData]);
+
+    useEffect(() => {
+        if (socket && isConnected) {
+            socket.on("attendance-location-update", (data: any) => {
+                setLiveLocations(prev => ({
+                    ...prev,
+                    [data.userId]: {
+                        ...data,
+                        lastUpdate: new Date().getTime()
+                    }
+                }));
+            });
+        }
+        return () => {
+            if (socket) socket.off("attendance-location-update");
+        };
+    }, [socket, isConnected]);
+
+    // Cleanup stale live locations (older than 60 seconds)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date().getTime();
+            setLiveLocations(prev => {
+                const newState = { ...prev };
+                let modified = false;
+                Object.keys(newState).forEach(userId => {
+                    if (now - newState[userId].lastUpdate > 60000) {
+                        delete newState[userId];
+                        modified = true;
+                    }
+                });
+                return modified ? newState : prev;
+            });
+        }, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     const filteredEmployees = useMemo(() => {
         let results = employees.filter(employee => {
@@ -1321,6 +1367,42 @@ export default function AttendancePage() {
         </Card>
     );
 
+    const liveMonitoringContent = (
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                            <Radio className="mr-2 h-5 w-5 text-red-500 animate-pulse" /> Live Monitoring
+                        </CardTitle>
+                        <CardDescription>Real-time location of active employees currently on the attendance page.</CardDescription>
+                    </div>
+                    <Badge variant="outline" className="border-red-200 text-red-600 bg-red-50 font-semibold px-3 py-1">
+                        <span className="relative flex h-2 w-2 mr-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                        {activeLiveUsersCount} Active {activeLiveUsersCount === 1 ? 'Employee' : 'Employees'}
+                    </Badge>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+                <div className="h-[65vh] w-full relative border-t bg-gray-50 flex items-center justify-center">
+                    {activeLiveUsersCount > 0 ? (
+                        <LiveMonitoringMap liveLocations={liveLocations} />
+                    ) : (
+                        <div className="text-center p-8">
+                            <div className="bg-white p-6 rounded-full shadow-sm inline-block mb-4">
+                                <Radio className="h-12 w-12 text-gray-300" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-600">No active tracking</h3>
+                            <p className="text-gray-400 max-w-xs mx-auto">Employees currently on the attendance portal with location enabled will appear here.</p>
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
 
     const renderActiveTab = () => {
         switch (activeTab) {
@@ -1334,6 +1416,8 @@ export default function AttendancePage() {
                 return attendanceReportContent;
             case 'attendees_report':
                 return attendanceHistoryContent;
+            case 'live_monitoring':
+                return liveMonitoringContent;
             default:
                 return attendanceHistoryContent;
         }
@@ -1350,12 +1434,16 @@ export default function AttendancePage() {
     return (
         <div className="min-h-screen p-4 sm:p-6 lg:p-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="sticky top-20 z-30 bg-white p-1 rounded-full shadow-sm border border-gray-200">
-                    <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendance History</TabsTrigger>
-                    <TabsTrigger value="attendance_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendance Report</TabsTrigger>
-                    <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
-                    <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
-                    <TabsTrigger value="office_time" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Office Time</TabsTrigger>
+                <TabsList className="sticky top-20 z-30 bg-white p-1 rounded-full shadow-sm border border-gray-200 flex flex-nowrap overflow-x-auto overflow-y-hidden max-w-full no-scrollbar whitespace-nowrap">
+                    <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white whitespace-nowrap flex-shrink-0">Attendance History</TabsTrigger>
+                    <TabsTrigger value="live_monitoring" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white whitespace-nowrap flex-shrink-0 flex items-center">
+                        <div className="h-1.5 w-1.5 rounded-full bg-red-500 mr-2 animate-pulse" />
+                        Live Monitoring
+                    </TabsTrigger>
+                    <TabsTrigger value="attendance_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white whitespace-nowrap flex-shrink-0">Attendance Report</TabsTrigger>
+                    <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white whitespace-nowrap flex-shrink-0">Leave Management</TabsTrigger>
+                    <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white whitespace-nowrap flex-shrink-0">Settings</TabsTrigger>
+                    <TabsTrigger value="office_time" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white whitespace-nowrap flex-shrink-0">Office Time</TabsTrigger>
                 </TabsList>
                 <div className="mt-6">
                     {renderActiveTab()}
