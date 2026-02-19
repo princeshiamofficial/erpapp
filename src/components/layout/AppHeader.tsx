@@ -6,7 +6,7 @@ import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { UserNav } from "./UserNav";
 import Link from "next/link";
 import { Logo } from '@/components/layout/Logo';
-import { NotificationBell } from '@/components/layout/NotificationBell';
+
 import { Button } from "@/components/ui/button";
 import { RefreshCw, HelpCircle, BookText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -41,12 +41,12 @@ export function AppHeader() {
       if (statusUpdateCount > 0) {
         description = `Successfully updated ${statusUpdateCount} order(s) to 'Delivered' based on courier confirmation.`;
       }
-      
+
       toast({
         title: "Sync Complete",
         description,
       });
-      
+
     } else {
       toast({
         title: "Sync Failed",
@@ -64,22 +64,18 @@ export function AppHeader() {
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md md:hidden" />
-          <Link href="/dashboard" className={cn(
-            "items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2",
-             "hidden md:flex",
-            sidebarState === 'expanded' && "md:hidden"
-          )}>
-             <Image
-                src="https://colorhutbd.xyz/image/logo.png"
-                alt="Color Hut Logo"
-                width={160}
-                height={40}
-                priority
-                className="object-contain"
-              />
+          <Link href="/dashboard" className="flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2">
+            <Image
+              src="https://colorhutbd.xyz/image/logo.png"
+              alt="Color Hut Logo"
+              width={110}
+              height={30}
+              priority
+              className="object-contain w-auto h-6 sm:h-8 md:h-10"
+            />
           </Link>
         </div>
-        
+
         <div className="flex items-center space-x-1 sm:space-x-2">
           {currentUser?.role !== 'VENDOR' && (
             <>
@@ -105,7 +101,7 @@ export function AppHeader() {
               </CaseStudyDialog>
             </>
           )}
-          <NotificationBell />
+
           {showSyncButton && (
             <Button
               variant="ghost"
