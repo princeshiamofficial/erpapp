@@ -36,6 +36,7 @@ import {
   GlobeLock,
   Wallet,
   Archive,
+  Vote,
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -68,7 +69,7 @@ const navItems: NavItem[] = [
       { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/all-districts-data", label: "ADD", icon: Map, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/sow", label: "SOW", icon: FolderHeart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
-      { href: "https://colorhutbd.xyz/info", label: "AdEx", icon: MapPin, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"], external: true },
+      { href: "/vote", label: "Vote", icon: Vote, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
