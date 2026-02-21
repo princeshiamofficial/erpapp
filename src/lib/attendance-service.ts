@@ -106,12 +106,35 @@ export const getAttendanceForDateRange = async (startDate: Date, endDate: Date):
 };
 
 export const addOrUpdateAttendanceRecord = async (recordData: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord | null> => {
-  const documentId = `${recordData.employeeId}_${recordData.date}`;
+  let finalDate = recordData.date;
+  let finalCheckIn = recordData.checkInTime;
+  let finalCheckOut = recordData.checkOutTime;
+
+  // Legacy date correction: Records until 2026-02-12 were affected by a UTC shift.
+  // To ensure they are updated correctly and displayed properly, we shift them by +1 day during save
+  // if their intended display date is 2026-02-11 or earlier.
+  if (finalDate <= '2026-02-11') {
+    const d = parseISO(finalDate);
+    d.setDate(d.getDate() + 1);
+    finalDate = format(d, 'yyyy-MM-dd');
+
+    const dIn = parseISO(finalCheckIn);
+    dIn.setDate(dIn.getDate() + 1);
+    finalCheckIn = dIn.toISOString();
+
+    if (finalCheckOut) {
+      const dOut = parseISO(finalCheckOut);
+      dOut.setDate(dOut.getDate() + 1);
+      finalCheckOut = dOut.toISOString();
+    }
+  }
+
+  const documentId = `${recordData.employeeId}_${finalDate}`;
 
   try {
-    const checkInTime = format(parseISO(recordData.checkInTime), 'yyyy-MM-dd HH:mm:ss');
-    const checkOutTime = recordData.checkOutTime ? format(parseISO(recordData.checkOutTime), 'yyyy-MM-dd HH:mm:ss') : null;
-    const date = recordData.date; // already YYYY-MM-DD
+    const checkInTime = format(parseISO(finalCheckIn), 'yyyy-MM-dd HH:mm:ss');
+    const checkOutTime = finalCheckOut ? format(parseISO(finalCheckOut), 'yyyy-MM-dd HH:mm:ss') : null;
+    const date = finalDate; // already YYYY-MM-DD
 
     await query(
       `INSERT INTO ${ATTENDANCE_TABLE} (id, employee_id, employee_name, date, check_in_time, check_out_time, status, hours_worked, late_reason, early_out_reason, location, check_in_location, check_out_location) 
