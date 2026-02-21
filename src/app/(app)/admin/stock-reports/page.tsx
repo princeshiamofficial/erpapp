@@ -70,7 +70,7 @@ export default function StockReportsPage() {
                 getSellEntries()
             ]);
             setModels(items);
-            setSellEntries(entries);
+            setSellEntries(entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         } catch (error) {
             console.error('Error fetching data:', error);
             toast({ title: "Error", description: "Failed to load data.", variant: "destructive" });
@@ -281,7 +281,7 @@ export default function StockReportsPage() {
     }
 
     return (
-        <div className="px-0 py-2 sm:p-6 lg:p-8 pt-2 sm:pt-2 lg:pt-2">
+        <div className="px-0 py-2 sm:p-6 lg:p-8 pt-2 sm:pt-2 lg:pt-2 sm:bg-white/60 sm:backdrop-blur-md sm:rounded-3xl sm:border sm:border-border/40 sm:shadow-sm">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="products" className="flex items-center gap-2">
@@ -580,11 +580,7 @@ export default function StockReportsPage() {
                                                     <div className="flex justify-between items-center">
                                                         <span className="flex items-center gap-1.5"><History className="h-3.5 w-3.5" /> Date:</span>
                                                         <span className="font-medium text-foreground">
-                                                            {new Date(entry.createdAt).toLocaleDateString('en-US', {
-                                                                year: 'numeric',
-                                                                month: 'short',
-                                                                day: 'numeric'
-                                                            })}
+                                                            {format(new Date(entry.createdAt), 'MMM d, yyyy • h:mm a')}
                                                         </span>
                                                     </div>
                                                     {entry.approvedByUserName && (
@@ -687,11 +683,7 @@ export default function StockReportsPage() {
                                                             {entry.approvedByUserName || '-'}
                                                         </TableCell>
                                                         <TableCell className="text-sm text-muted-foreground">
-                                                            {new Date(entry.createdAt).toLocaleDateString('en-US', {
-                                                                year: 'numeric',
-                                                                month: 'short',
-                                                                day: 'numeric'
-                                                            })}
+                                                            {format(new Date(entry.createdAt), 'MMM d, yyyy • h:mm a')}
                                                         </TableCell>
                                                         <TableCell className="text-right pr-4">
                                                             <div className="flex items-center justify-end gap-1">
