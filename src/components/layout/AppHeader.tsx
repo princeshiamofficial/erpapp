@@ -23,7 +23,8 @@ export function AppHeader() {
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
   const { currentUser } = useAuth();
-  const { state: sidebarState } = useSidebar();
+  const { state: sidebarState, isMobile, openMobile } = useSidebar();
+  const isSidebarExpanded = isMobile ? openMobile : sidebarState === 'expanded';
 
   const handleSyncClick = async () => {
     setIsSyncing(true);
@@ -64,13 +65,20 @@ export function AppHeader() {
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md md:hidden" />
-          <Link href="/dashboard" className="flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2">
+          <Link
+            href="/dashboard"
+            className={cn(
+              "flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2",
+              isSidebarExpanded && "hidden"
+            )}
+          >
             <Image
               src="https://colorhutbd.xyz/image/logo.png"
               alt="Color Hut Logo"
-              width={110}
-              height={30}
+              width={200}
+              height={60}
               priority
+              unoptimized
               className="object-contain w-auto h-6 sm:h-8 md:h-10"
             />
           </Link>

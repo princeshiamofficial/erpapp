@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck, Eye, EyeOff } from 'lucide-react';
-import Image from 'next/image'; 
+import Image from 'next/image';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -43,14 +43,14 @@ export function LoginForm() {
     <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl transform hover:scale-[1.01] transition-transform duration-300">
       <CardHeader className="text-center pt-8 pb-4 bg-black rounded-t-xl">
         <div className="mx-auto mb-4">
-           <Image 
-            src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" 
-            alt="Color Hut Logo" 
-            width={253} 
-            height={64} 
-            priority 
+          <Image
+            src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+            alt="Color Hut Logo"
+            width={253}
+            height={64}
+            priority
             className="object-contain"
-           />
+          />
         </div>
         <CardDescription className="text-white text-md pt-1">Sign in to your workspace.</CardDescription>
       </CardHeader>
@@ -103,9 +103,9 @@ export function LoginForm() {
         </form>
       </CardContent>
       <CardFooter className="flex flex-col items-center text-sm text-muted-foreground pt-6 pb-8 px-8 bg-secondary/50 dark:bg-card-foreground/5 rounded-b-xl border-t border-border/30 dark:border-border/50">
-         <div className="text-xs flex items-center text-green-600 dark:text-green-500/90">
-            <ShieldCheck className="h-4 w-4 mr-1.5" />
-            <span>All connections are secure and encrypted.</span>
+        <div className="text-xs flex items-center text-green-600 dark:text-green-500/90">
+          <ShieldCheck className="h-4 w-4 mr-1.5" />
+          <span>All connections are secure and encrypted.</span>
         </div>
       </CardFooter>
     </Card>
