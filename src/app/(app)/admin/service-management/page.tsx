@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, ArrowRight, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from "@/types"; 
-import { getLaminations, getPaymentMethods, getGifts } from '@/lib/service-options-service'; 
+import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from "@/types";
+import { getLaminations, getPaymentMethods, getGifts } from '@/lib/service-options-service';
 import {
   addLaminationAction, updateLaminationAction, deleteLaminationAction,
   addPaymentMethodAction, updatePaymentMethodAction, deletePaymentMethodAction,
@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
-type ItemType = 'lamination' | 'paymentMethod' | 'gift'; 
+type ItemType = 'lamination' | 'paymentMethod' | 'gift';
 interface ItemToEdit {
   id: string;
   name: string;
@@ -41,7 +41,7 @@ export default function ServiceManagementPage() {
   const { toast } = useToast();
 
   const [laminations, setLaminations] = useState<ServiceLaminationItem[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]); 
+  const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [gifts, setGifts] = useState<ServiceGiftItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,13 +58,13 @@ export default function ServiceManagementPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedLaminations, fetchedPaymentMethods, fetchedGifts] = await Promise.all([ 
+      const [fetchedLaminations, fetchedPaymentMethods, fetchedGifts] = await Promise.all([
         getLaminations(),
         getPaymentMethods(),
         getGifts()
       ]);
       setLaminations(fetchedLaminations);
-      setPaymentMethods(fetchedPaymentMethods); 
+      setPaymentMethods(fetchedPaymentMethods);
       setGifts(fetchedGifts);
     } catch (error) {
       console.error("Error fetching service options:", error);
@@ -90,16 +90,16 @@ export default function ServiceManagementPage() {
   };
 
   const openEditDialog = (item: ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem, type: ItemType) => {
-    setEditingItem({ 
-      id: item.id, 
-      name: item.name, 
-      type 
+    setEditingItem({
+      id: item.id,
+      name: item.name,
+      type
     });
     setItemTypeToAdd(null);
     setItemName(item.name);
     setIsAddEditDialogOpen(true);
   };
-  
+
   const openDeleteDialog = (item: ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem, type: ItemType) => {
     setItemToDelete({ id: item.id, name: item.name, type });
     setIsDeleteDialogOpen(true);
@@ -115,7 +115,7 @@ export default function ServiceManagementPage() {
     let result;
     const currentType = editingItem?.type || itemTypeToAdd;
 
-    if (editingItem) { 
+    if (editingItem) {
       if (currentType === 'lamination') {
         result = await updateLaminationAction(editingItem.id, itemName.trim());
       } else if (currentType === 'paymentMethod') {
@@ -126,8 +126,8 @@ export default function ServiceManagementPage() {
       if (result?.success) {
         toast({ title: "Success", description: `${currentType} "${itemName.trim()}" updated.` });
       }
-    } else if (itemTypeToAdd) { 
-       if (currentType === 'lamination') {
+    } else if (itemTypeToAdd) {
+      if (currentType === 'lamination') {
         result = await addLaminationAction(itemName.trim());
       } else if (currentType === 'paymentMethod') {
         result = await addPaymentMethodAction(itemName.trim());
@@ -160,7 +160,7 @@ export default function ServiceManagementPage() {
     } else if (itemToDelete.type === 'paymentMethod') {
       result = await deletePaymentMethodAction(itemToDelete.id);
     } else if (itemToDelete.type === 'gift') {
-        result = await deleteGiftAction(itemToDelete.id);
+      result = await deleteGiftAction(itemToDelete.id);
     }
 
     if (result?.success) {
@@ -181,57 +181,58 @@ export default function ServiceManagementPage() {
       </div>
     );
   }
-  
+
   const renderItemList = (items: (ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem)[], type: ItemType, title: string, Icon: React.ElementType) => {
     return (
-    <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
-      <CardHeader className="border-b p-5">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
-          </div>
-          <Button size="sm" onClick={() => openAddDialog(type)} className="h-9 w-full sm:w-auto">
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
+        <CardHeader className="border-b p-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary" />{title}</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
+            </div>
+            <Button size="sm" onClick={() => openAddDialog(type)} className="h-9 w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> Add New
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0 max-h-[400px] overflow-y-auto">
-        {isLoading ? (
-          <div className="p-4 space-y-3">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
+            </Button>
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-6 text-center text-muted-foreground">
-            <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
-            No {title.toLowerCase()} found.
-          </div>
-        ) : (
-          <ul className="divide-y divide-border/50">
-            {items.map((item) => (
-              <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                <span className="font-medium text-foreground flex-1 whitespace-nowrap overflow-hidden text-ellipsis" title={item.name}>{item.name}</span>
-                <div className="flex items-center gap-2 ml-4">
-                  <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => openDeleteDialog(item, type)} 
-                    title={`Delete ${type}`} 
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  )};
+        </CardHeader>
+        <CardContent className="p-0 max-h-[400px] overflow-y-auto">
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
+            </div>
+          ) : items.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">
+              <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
+              No {title.toLowerCase()} found.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/50">
+              {items.map((item) => (
+                <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                  <span className="font-medium text-foreground flex-1 whitespace-nowrap overflow-hidden text-ellipsis" title={item.name}>{item.name}</span>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openDeleteDialog(item, type)}
+                      title={`Delete ${type}`}
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    )
+  };
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -241,20 +242,20 @@ export default function ServiceManagementPage() {
           <p className="page-description">Configure Lamination, Payment Methods, Gifts and other options available for orders. For more advanced settings, visit the new App Settings page.</p>
         </div>
         <div className="flex items-center gap-2">
-            <Link href="/admin/crm-target-settings" passHref>
-                <Button variant="outline">
-                    Go to App Settings <ArrowRight className="ml-2 h-4 w-4"/>
-                </Button>
-            </Link>
-            <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+          <Link href="/admin/crm-target-settings" passHref>
+            <Button variant="outline">
+              Go to App Settings <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
+          </Link>
+          <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
+            <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </div>
 
       <div className="flex flex-col space-y-6">
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
-        {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)} 
+        {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)}
         {renderItemList(gifts, 'gift', 'Gifts', Gift)}
       </div>
 
@@ -263,9 +264,9 @@ export default function ServiceManagementPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {
-                (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' :
+              (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' :
                 (editingItem?.type || itemTypeToAdd) === 'paymentMethod' ? 'Payment Method' :
-                'Gift'
+                  'Gift'
             }</DialogTitle>
             <DialogDescription>
               {editingItem ? 'Update the name of this option.' : 'Enter the name for the new option.'}
@@ -283,7 +284,7 @@ export default function ServiceManagementPage() {
           </form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       {itemToDelete && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -293,7 +294,7 @@ export default function ServiceManagementPage() {
                 <AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the {itemToDelete.type} "<span className="font-semibold">{itemToDelete.name}</span>". 
+                This action cannot be undone. This will permanently delete the {itemToDelete.type} "<span className="font-semibold">{itemToDelete.name}</span>".
                 Ensure this option is not currently used by any orders before proceeding.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -310,4 +311,3 @@ export default function ServiceManagementPage() {
   );
 }
 
-    

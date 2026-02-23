@@ -40,17 +40,17 @@ const formatCurrency = (value?: number | null): string => {
 };
 
 const formatDateSafe = (dateInput: string | Date | undefined | null, formatString: string = 'd MMM yyyy') => {
-    if (!dateInput) return 'N/A';
-    try {
-        const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
-        if (!isValid(date)) {
-            return 'Invalid Date';
-        }
-        return format(date, formatString);
-    } catch (e) {
-        console.error(`Error formatting date: ${dateInput}`, e);
-        return 'Format Error';
+  if (!dateInput) return 'N/A';
+  try {
+    const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
+    if (!isValid(date)) {
+      return 'Invalid Date';
     }
+    return format(date, formatString);
+  } catch (e) {
+    console.error(`Error formatting date: ${dateInput}`, e);
+    return 'Format Error';
+  }
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -109,11 +109,11 @@ export default function PurchaseRequestPage() {
 
     // Filter by user role if not an admin
     if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
-        userFilteredRequests = requests.filter(req => req.requestedByUserId === currentUser.id);
+      userFilteredRequests = requests.filter(req => req.requestedByUserId === currentUser.id);
     }
-    
+
     if (!searchTerm) return userFilteredRequests;
-    
+
     return userFilteredRequests.filter(req =>
       (req.item && req.item.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (req.requestedByUserName && req.requestedByUserName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -137,12 +137,12 @@ export default function PurchaseRequestPage() {
     setEditingRequest(null);
     setIsAddEditOpen(true);
   };
-  
+
   const handleOpenEditDialog = (req: PurchaseRequest) => {
     setEditingRequest(req);
     setIsAddEditOpen(true);
   };
-  
+
   const handleRequestSaved = () => {
     setIsAddEditOpen(false);
     setEditingRequest(null);
@@ -173,9 +173,9 @@ export default function PurchaseRequestPage() {
   }
 
   const canModify = (req: PurchaseRequest) => {
-      if (!currentUser) return false;
-      if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') return true;
-      return currentUser.id === req.requestedByUserId;
+    if (!currentUser) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') return true;
+    return currentUser.id === req.requestedByUserId;
   }
 
   return (
@@ -189,8 +189,8 @@ export default function PurchaseRequestPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10"
               onClick={handleOpenAddDialog}
             >
@@ -202,21 +202,21 @@ export default function PurchaseRequestPage() {
 
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex-grow">
-                      <CardTitle className="text-card-foreground text-xl">Request List</CardTitle>
-                      <CardDescription className="text-muted-foreground text-sm mt-0.5">A list of all purchase requests.</CardDescription>
-                  </div>
-                  <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                      placeholder="Search requests..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 bg-background h-10 rounded-md w-full"
-                      />
-                  </div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex-grow">
+                <CardTitle className="text-card-foreground text-xl">Request List</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">A list of all purchase requests.</CardDescription>
               </div>
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search requests..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -257,81 +257,82 @@ export default function PurchaseRequestPage() {
                         const requester = allUsers.find(u => u.id === req.requestedByUserId);
                         const approver = req.approvedByUserId ? allUsers.find(u => u.id === req.approvedByUserId) : null;
                         return (
-                        <TableRow key={req.id || `req-${index}`} className="hover:bg-muted/50 transition-colors">
-                          <TableCell className="pl-6 font-mono text-sm text-primary">{req.requestId}</TableCell>
-                          <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
-                          <TableCell className="text-card-foreground">{req.quantity}</TableCell>
-                          <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
+                          <TableRow key={req.id || `req-${index}`} className="hover:bg-muted/50 transition-colors">
+                            <TableCell className="pl-6 font-mono text-sm text-primary">{req.requestId}</TableCell>
+                            <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
+                            <TableCell className="text-card-foreground">{req.quantity}</TableCell>
+                            <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
                                 <Avatar className="h-6 w-6">
-                                    <AvatarImage src={requester?.avatarUrl || undefined} alt={req.requestedByUserName} />
-                                    <AvatarFallback className="text-xs">{getInitials(req.requestedByUserName)}</AvatarFallback>
+                                  <AvatarImage src={requester?.avatarUrl || undefined} alt={req.requestedByUserName} />
+                                  <AvatarFallback className="text-xs">{getInitials(req.requestedByUserName)}</AvatarFallback>
                                 </Avatar>
                                 <span className="text-muted-foreground">{req.requestedByUserName}</span>
-                            </div>
-                          </TableCell>
-                           <TableCell>
-                             {req.approvedByUserName ? (
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {req.approvedByUserName ? (
                                 <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
-                                        <AvatarImage src={approver?.avatarUrl || undefined} alt={req.approvedByUserName} />
-                                        <AvatarFallback className="text-xs">{getInitials(req.approvedByUserName)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-muted-foreground">{req.approvedByUserName}</span>
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={approver?.avatarUrl || undefined} alt={req.approvedByUserName} />
+                                    <AvatarFallback className="text-xs">{getInitials(req.approvedByUserName)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-muted-foreground">{req.approvedByUserName}</span>
                                 </div>
-                             ) : <span className="text-muted-foreground">N/A</span>}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span className="cursor-help">
-                                  {formatDateSafe(req.createdAt)}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Last Updated: {formatDateSafe(req.updatedAt, "PPP p")}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {req.notes ? (
-                               <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <StickyNote className="h-5 w-5 text-muted-foreground cursor-pointer" />
+                              ) : <span className="text-muted-foreground">N/A</span>}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <span className="cursor-help">
+                                    {formatDateSafe(req.createdAt)}
+                                  </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="max-w-xs whitespace-pre-wrap">{req.notes}</p>
+                                  <p>Last Updated: {formatDateSafe(req.updatedAt, "PPP p")}</p>
                                 </TooltipContent>
                               </Tooltip>
-                            ) : (
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {req.notes ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <StickyNote className="h-5 w-5 text-muted-foreground cursor-pointer" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="max-w-xs whitespace-pre-wrap">{req.notes}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
                                 <span className="text-muted-foreground text-xs">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="pr-6 text-right">
-                            {canModify(req) && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onSelect={() => handleOpenEditDialog(req)} className="cursor-pointer">
-                                    <Edit className="mr-2 h-4 w-4" /> Edit / View
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => setRequestToDelete(req)} className="text-destructive focus:text-destructive cursor-pointer">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )})}
+                              )}
+                            </TableCell>
+                            <TableCell className="pr-6 text-right">
+                              {canModify(req) && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(req)} className="cursor-pointer">
+                                      <Edit className="mr-2 h-4 w-4" /> Edit / View
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => setRequestToDelete(req)} className="text-destructive focus:text-destructive cursor-pointer">
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TooltipProvider>
                   ) : (
                     <TableRow>
@@ -360,13 +361,13 @@ export default function PurchaseRequestPage() {
       />
 
       {requestToDelete && (
-         <DeletePurchaseRequestDialog
-            isOpen={!!requestToDelete}
-            onOpenChange={() => setRequestToDelete(null)}
-            onConfirmDelete={handleDelete}
-            request={requestToDelete}
-            isDeleting={isDeleting}
-         />
+        <DeletePurchaseRequestDialog
+          isOpen={!!requestToDelete}
+          onOpenChange={() => setRequestToDelete(null)}
+          onConfirmDelete={handleDelete}
+          request={requestToDelete}
+          isDeleting={isDeleting}
+        />
       )}
     </>
   );
