@@ -4,7 +4,7 @@
 import { toast } from '@/hooks/use-toast';
 import { getGlobalSettings } from './settings-service';
 
-export async function sendTelegramMessage(message: string): Promise<boolean> {
+export async function sendTelegramMessage(message: string, replyMarkup?: any): Promise<boolean> {
   try {
     const settings = await getGlobalSettings();
     const token = settings.telegramBotToken;
@@ -29,6 +29,7 @@ export async function sendTelegramMessage(message: string): Promise<boolean> {
             chat_id: chatId,
             text: message,
             parse_mode: 'HTML',
+            reply_markup: replyMarkup,
           }),
         });
 

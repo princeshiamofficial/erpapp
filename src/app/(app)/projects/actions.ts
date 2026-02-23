@@ -259,18 +259,31 @@ export async function transferToCourierAction(
     // Add to the shippedOrders collection for quick sync checks
     await addShippedOrderEntry(order.id, consignment.tracking_code);
 
-    // Send Telegram notification
     const telegramMessage = `
-        <b>🚚 Order Shipped via SteadFast!</b>
-        
-        <b>Order ID:</b> <code>${order.id}</code>
-        <b>Company:</b> ${order.companyName}
-        <b>Recipient:</b> ${recipientNameRaw}
-        <b>COD Amount:</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
-        
-        <b>Tracking Link:</b> <a href="https://steadfast.com.bd/t/${consignment.tracking_code}">${consignment.tracking_code}</a>
+<b>🚚 Order Shipped via SteadFast!</b>
+
+<b>Order ID:</b> <code>${order.id}</code>
+<b>Company:</b> ${order.companyName}
+<b>Recipient:</b> ${recipientNameRaw}
+<b>COD Amount:</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
     `;
-    await sendTelegramMessage(telegramMessage);
+
+    const courierReplyMarkup = {
+      inline_keyboard: [
+        [
+          {
+            text: "📦 Track Order",
+            url: `https://steadfast.com.bd/t/${consignment.tracking_code}`
+          },
+          {
+            text: "📄 View Order",
+            url: `https://app.colorhutbd.xyz/track/${order.id}`
+          }
+        ]
+      ]
+    };
+
+    await sendTelegramMessage(telegramMessage, courierReplyMarkup);
 
     revalidatePath("/(app)/projects");
     revalidatePath(`/track/${order.id}`);

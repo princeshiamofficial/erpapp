@@ -194,18 +194,31 @@ export const addOrder = async (orderData: {
       initialAdvancePayments.push(newPayment);
 
       const message = `
-        <b>🎉 New Advance Payment Received!</b>
-        
-        <b>Order ID:</b> <code>${orderId}</code>
-        <b>Company:</b> ${orderData.companyName}
-        <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
-        <b>Method:</b> ${newPayment.paymentMethod}
-        <b>Recorded By:</b> ${orderData.crmUserName}
-        
-        <a href="https://app.colorhutbd.xyz/track/${orderId}">View Order Details</a>
-        <a href="https://app.colorhutbd.xyz/admin/payment-history">View Payment History</a>
+<b>🎉 New Advance Payment Received!</b>
+
+<b>Order ID:</b> <code>${orderId}</code>
+<b>Company:</b> ${orderData.companyName}
+<b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
+<b>Method:</b> ${newPayment.paymentMethod}
+<b>Recorded By:</b> ${orderData.crmUserName}
       `;
-      await sendTelegramMessage(message);
+
+      const paymentReplyMarkup = {
+        inline_keyboard: [
+          [
+            {
+              text: "📄 View Order",
+              url: `https://app.colorhutbd.xyz/track/${orderId}`
+            },
+            {
+              text: "💰 Payment History",
+              url: `https://app.colorhutbd.xyz/admin/payment-history`
+            }
+          ]
+        ]
+      };
+
+      await sendTelegramMessage(message, paymentReplyMarkup);
     }
 
     const mysqlCreatedAt = format(parseISO(finalCreatedAt), 'yyyy-MM-dd HH:mm:ss');
@@ -335,17 +348,27 @@ export async function updateAdvancePaymentStatus(
         const payment = updatedPayments.find(p => p.id === paymentId);
         if (payment) {
           const message = `
-            <b>✅ Payment Approved!</b>
-            
-            <b>Order ID:</b> <code>${orderId}</code>
-            <b>Company:</b> ${order.companyName}
-            <b>Amount:</b> ${payment.amount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
-            <b>Method:</b> ${payment.paymentMethod}
-            <b>Recorded By:</b> ${payment.recordedByUserName}
-            
-            <a href="https://app.colorhutbd.xyz/track/${orderId}">View Order Details</a>
+<b>✅ Payment Approved!</b>
+
+<b>Order ID:</b> <code>${orderId}</code>
+<b>Company:</b> ${order.companyName}
+<b>Amount:</b> ${payment.amount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
+<b>Method:</b> ${payment.paymentMethod}
+<b>Recorded By:</b> ${payment.recordedByUserName}
           `;
-          await sendTelegramMessage(message);
+
+          const paymentReplyMarkup = {
+            inline_keyboard: [
+              [
+                {
+                  text: "📄 View Order",
+                  url: `https://app.colorhutbd.xyz/track/${orderId}`
+                }
+              ]
+            ]
+          };
+
+          await sendTelegramMessage(message, paymentReplyMarkup);
         }
       }
 

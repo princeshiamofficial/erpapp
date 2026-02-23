@@ -365,18 +365,31 @@ export async function updateOrderAction(
       }
 
       const message = `
-          <b>🎉 New Advance Payment Received!</b>
-          
-          <b>Order ID:</b> <code>${orderId}</code>
-          <b>Company:</b> ${finalUpdates.companyName || existingOrder.companyName}
-          <b>Amount:</b> ${formatAmountForNotification(newAdvanceRecord.amount)}
-          <b>Method:</b> ${newAdvanceRecord.paymentMethod}
-          <b>Recorded By:</b> ${currentUser.name}
-          
-          <a href="https://app.colorhutbd.xyz/track/${orderId}">View Order Details</a>
-          <a href="https://app.colorhutbd.xyz/admin/payment-history">View Payment History</a>
-        `;
-      await sendTelegramMessage(message);
+<b>🎉 New Advance Payment Received!</b>
+
+<b>Order ID:</b> <code>${orderId}</code>
+<b>Company:</b> ${finalUpdates.companyName || existingOrder.companyName}
+<b>Amount:</b> ${formatAmountForNotification(newAdvanceRecord.amount)}
+<b>Method:</b> ${newAdvanceRecord.paymentMethod}
+<b>Recorded By:</b> ${currentUser.name}
+      `;
+
+      const paymentReplyMarkup = {
+        inline_keyboard: [
+          [
+            {
+              text: "📄 View Order",
+              url: `https://app.colorhutbd.xyz/track/${orderId}`
+            },
+            {
+              text: "💰 Payment History",
+              url: `https://app.colorhutbd.xyz/admin/payment-history`
+            }
+          ]
+        ]
+      };
+
+      await sendTelegramMessage(message, paymentReplyMarkup);
 
     } else if (updates.advancePayments) {
       finalUpdates.advancePayments = updates.advancePayments;
