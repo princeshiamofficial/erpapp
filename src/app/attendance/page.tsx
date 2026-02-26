@@ -250,46 +250,59 @@ export default function CheckInOutPage() {
         setWeekendDays(weekendSettings.days);
 
         if ('geolocation' in navigator) {
-          const watchId = navigator.geolocation.watchPosition(
-            (position) => {
-              const { latitude, longitude, accuracy } = position.coords;
-              const newLocation = { lat: latitude, lng: longitude };
-              setCurrentLocation(newLocation);
+          let watchId: number;
 
-              // Emit location update via socket
-              if (socket && isConnected && currentUser) {
-                socket.emit("attendance-location-update", {
-                  userId: currentUser.id,
-                  userName: currentUser.name,
-                  location: newLocation,
-                  accuracy,
-                  timestamp: new Date().toISOString()
-                });
-              }
+          const startWatching = (highAccuracy: boolean): number => {
+            const id: number = navigator.geolocation.watchPosition(
+              (position) => {
+                const { latitude, longitude, accuracy } = position.coords;
+                const newLocation = { lat: latitude, lng: longitude };
+                setCurrentLocation(newLocation);
 
-              let isInside = false;
-              if (locations.length > 0) {
-                for (const office of locations) {
-                  const distance = getDistance(latitude, longitude, office.latitude, office.longitude);
-                  if (distance <= office.radius) { isInside = true; break; }
+                // Emit location update via socket
+                if (socket && isConnected && currentUser) {
+                  socket.emit("attendance-location-update", {
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    location: newLocation,
+                    accuracy,
+                    timestamp: new Date().toISOString()
+                  });
                 }
+
+                let isInside = false;
+                if (locations.length > 0) {
+                  for (const office of locations) {
+                    const distance = getDistance(latitude, longitude, office.latitude, office.longitude);
+                    if (distance <= office.radius) { isInside = true; break; }
+                  }
+                }
+                setLocationStatus(isInside ? 'Inside Office Location' : 'Outside Office Location');
+              },
+              (error) => {
+                if (highAccuracy && (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE)) {
+                  console.warn("High accuracy location failed, falling back to low accuracy...");
+                  navigator.geolocation.clearWatch(id);
+                  watchId = startWatching(false);
+                } else {
+                  switch (error.code) {
+                    case error.PERMISSION_DENIED: setLocationStatus('Location permission denied.'); break;
+                    case error.POSITION_UNAVAILABLE: setLocationStatus('Location information is unavailable.'); break;
+                    case error.TIMEOUT: setLocationStatus('Location request timed out.'); break;
+                    default: setLocationStatus('An unknown error occurred.'); break;
+                  }
+                }
+              },
+              {
+                enableHighAccuracy: highAccuracy,
+                timeout: highAccuracy ? 15000 : 20000,
+                maximumAge: 60000 // Accept a cached position from the last 1 minute
               }
-              setLocationStatus(isInside ? 'Inside Office Location' : 'Outside Office Location');
-            },
-            (error) => {
-              switch (error.code) {
-                case error.PERMISSION_DENIED: setLocationStatus('Location permission denied.'); break;
-                case error.POSITION_UNAVAILABLE: setLocationStatus('Location information is unavailable.'); break;
-                case error.TIMEOUT: setLocationStatus('Location request timed out.'); break;
-                default: setLocationStatus('An unknown error occurred.'); break;
-              }
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0
-            }
-          );
+            );
+            return id;
+          };
+
+          watchId = startWatching(true);
           return () => navigator.geolocation.clearWatch(watchId);
         } else {
           setLocationStatus('Geolocation is not supported by this browser.');
