@@ -62,7 +62,7 @@ import {
   Pie,
   PieChart as RechartsPieChart,
   Cell,
-  Label,
+  Label as RechartsLabel,
 } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -724,7 +724,7 @@ export default function FinanceManagerPage() {
                       outerRadius={80}
                       strokeWidth={5}
                     >
-                      <Label
+                    <RechartsLabel
                         content={({ viewBox }) => {
                           if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                             return (
