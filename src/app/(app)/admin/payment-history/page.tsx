@@ -44,15 +44,20 @@ import { useRouter } from 'next/navigation';
 const ITEMS_PER_PAGE = 25;
 
 const formatCurrency = (value?: number | null): string => {
-  if (value === undefined || value === null) return 'N/A';
+  if (value === undefined || value === null || isNaN(value)) return 'BDT 0.00';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDateSafe = (dateString?: string) => {
-  if (!dateString) return 'No Date';
+const formatDateSafe = (dateValue?: string | Date) => {
+  if (!dateValue) return 'No Date';
   try {
-    return format(parseISO(dateString), 'd MMM, yyyy, h:mm a');
+    const date = typeof dateValue === 'string' ? parseISO(dateValue) : dateValue;
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date');
+    }
+    return format(date, 'd MMM, yyyy, h:mm a');
   } catch (e) {
+    console.error("Invalid date value for formatting:", dateValue, e);
     return 'Invalid Date';
   }
 };
@@ -196,7 +201,7 @@ export default function PaymentHistoryPage() {
     setPaymentToUpdate(null);
   };
   
-  const totalPayment = useMemo(() => filteredAndSortedPayments.reduce((sum, p) => sum + p.payment, 0), [filteredAndSortedPayments]);
+  const totalPayment = useMemo(() => filteredAndSortedPayments.reduce((sum, p) => sum + (Number(p.payment) || 0), 0), [filteredAndSortedPayments]);
 
   const totalPages = Math.ceil(filteredAndSortedPayments.length / ITEMS_PER_PAGE);
 

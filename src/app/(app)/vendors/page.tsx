@@ -78,20 +78,20 @@ const getInitials = (name: string) => {
 const ITEMS_PER_PAGE = 25;
 
 const formatCurrency = (value?: number | null): string => {
-  if (value === undefined || value === null) return 'N/A';
+  if (value === undefined || value === null || isNaN(value)) return 'BDT 0.00';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return "N/A";
+const formatDate = (dateValue?: string | Date) => {
+  if (!dateValue) return "N/A";
   try {
-    const date = parseISO(dateString);
+    const date = typeof dateValue === 'string' ? parseISO(dateValue) : dateValue;
     if (isNaN(date.getTime())) {
       throw new Error('Invalid date');
     }
     return format(date, 'd MMM, yyyy');
   } catch (e) {
-    console.error("Invalid date string for formatting:", dateString, e);
+    console.error("Invalid date value for formatting:", dateValue, e);
     return "Invalid Date";
   }
 };
@@ -745,8 +745,8 @@ export default function VendorsPage() {
                 <Accordion type="single" collapsible className="w-full space-y-3">
                   {reportsByVendor.map(([vendorId, reports], index) => {
                     const vendor = allUsers.find(u => u.id === vendorId);
-                    const totalAmount = reports.reduce((sum, r) => sum + r.amount, 0);
-                    const totalPayment = reports.reduce((sum, r) => sum + r.payment, 0);
+                    const totalAmount = reports.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+                    const totalPayment = reports.reduce((sum, r) => sum + (Number(r.payment) || 0), 0);
                     const totalDue = totalAmount - totalPayment;
 
                     return (

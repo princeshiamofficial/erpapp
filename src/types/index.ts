@@ -429,6 +429,40 @@ export interface Lead {
   updatedAt?: string; // New field for last update timestamp
 }
 
+
+export type FollowUpStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
+
+export interface FollowUpLog {
+  id: string;
+  timestamp: string; // ISO string
+  outcome: string;
+  notes?: string | null;
+  scheduledNext?: string | null; // ISO string
+  recordedByUserId: string;
+  recordedByUserName: string;
+}
+
+export interface FollowUp {
+  id: string;
+  leadId?: string | null; // Optional link back to a lead
+  date: string; // ISO string (initial engagement date)
+  contactName: string;
+  businessName: string;
+  phone: string;
+  address: string;
+  district?: string | null;
+  division?: string | null;
+  category: string;
+  status: FollowUpStatusType;
+  crmId: string;
+  crmName: string;
+  customerType?: CustomerType | null;
+  history?: FollowUpLog[];
+  updatedAt?: string;
+  lastEngagementDate?: string; // ISO string
+  nextScheduledDate?: string | null; // ISO string
+}
+
 export interface DistrictDataEntry {
   id?: string; // Optional Firestore ID
   jobId: string;

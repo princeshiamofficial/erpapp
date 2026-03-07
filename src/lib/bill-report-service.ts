@@ -15,8 +15,8 @@ export const getBillReports = async (): Promise<BillReport[]> => {
       id: row.id,
       vendorId: row.vendor_id,
       vendorName: row.vendor_name,
-      amount: row.amount,
-      payment: row.payment,
+      amount: Number(row.amount) || 0,
+      payment: Number(row.payment) || 0,
       method: row.method,
       date: row.date,
       invoiceId: row.invoice_id
