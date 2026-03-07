@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
+import { useSocket } from '@/contexts/socket-context';
 import {
     DndContext,
     MouseSensor,
@@ -62,6 +63,8 @@ export function FollowUpKanbanClient() {
     const [activeItem, setActiveItem] = useState<FollowUp | null>(null);
     const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
     const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+    
+    const { socket } = useSocket();
 
     const sensors = useSensors(
         useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
@@ -88,9 +91,21 @@ export function FollowUpKanbanClient() {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(() => fetchData(true), 30000);
-        return () => clearInterval(interval);
+        // Removed 30s interval as we now have sockets
     }, [fetchData]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on("follow-up-updated", (data: any) => {
+            // refresh data silently
+            fetchData(true);
+        });
+
+        return () => {
+            socket.off("follow-up-updated");
+        };
+    }, [socket, fetchData]);
 
     const filteredItems = useMemo(() => {
         return followUps.filter(item => {

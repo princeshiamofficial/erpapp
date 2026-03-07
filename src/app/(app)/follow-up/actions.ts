@@ -5,6 +5,7 @@ import { query } from '@/lib/mysql';
 import { getFollowUpById } from '@/lib/follow-up-service';
 import type { FollowUp, FollowUpStatusType, User, FollowUpLog } from '@/types';
 import { revalidatePath } from 'next/cache';
+import { getIO } from '@/lib/socket-io';
 
 export async function updateFollowUpStatusAction(
     followUp: FollowUp,
@@ -44,6 +45,11 @@ export async function updateFollowUpStatusAction(
         );
 
         revalidatePath('/follow-up');
+
+        const io = getIO();
+        if (io) {
+            io.emit("follow-up-updated", { id: followUp.id, status: newStatus });
+        }
 
         return { success: true };
     } catch (error) {
@@ -95,6 +101,10 @@ export async function addFollowUpsBatchAction(
 
   if (createdCount > 0) {
     revalidatePath("/follow-up");
+    const io = getIO();
+    if (io) {
+      io.emit("follow-up-updated", { type: 'batch', count: createdCount });
+    }
   }
 
   return {

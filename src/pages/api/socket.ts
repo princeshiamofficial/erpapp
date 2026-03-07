@@ -43,6 +43,14 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
                 socket.broadcast.emit("attendance-location-update", data);
             });
 
+            socket.on("follow-up-updated", (data) => {
+                socket.broadcast.emit("follow-up-updated", data);
+            });
+
+            socket.on("lead-updated", (data) => {
+                socket.broadcast.emit("lead-updated", data);
+            });
+
             socket.on("disconnect", () => {
                 console.log("Client disconnected:", socket.id);
             });

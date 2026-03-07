@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import type { Lead, User, LeadCategory, LeadStatusType, GlobalSettings } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
+import { useSocket } from '@/contexts/socket-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners, DragOverlay } from '@dnd-kit/core';
 import { getLeads, updateLeadAction, deleteLeadAction, transferSelectedLeadsAction } from '@/app/(app)/pipeline/actions';
 import { getUsers } from '@/lib/user-service';
@@ -89,6 +90,7 @@ export function PipelineClient() {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const { socket } = useSocket();
 
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
@@ -156,6 +158,18 @@ export function PipelineClient() {
   useEffect(() => {
     fetchLeadsAndUsers();
   }, [fetchLeadsAndUsers]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("lead-updated", (data: any) => {
+      fetchLeadsAndUsers(); // refresh leads silently
+    });
+
+    return () => {
+      socket.off("lead-updated");
+    };
+  }, [socket, fetchLeadsAndUsers]);
 
   useEffect(() => {
     const crms = allUsers.filter(u => u.role === 'CRM');

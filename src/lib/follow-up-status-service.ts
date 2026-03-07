@@ -4,6 +4,7 @@
 import { query } from './mysql';
 import type { UserRole, FollowUpStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { getIO } from './socket-io';
 
 const FOLLOW_UP_STATUSES_TABLE = 'follow_up_statuses';
 
@@ -124,12 +125,17 @@ export const addFollowUpStatus = async (data: Omit<FollowUpStatus, 'id' | 'isSys
             ]
         );
 
-        return {
+        const newStatus = {
             ...data,
             id,
             xid: id,
             isSystemStatus: false,
         };
+
+        const io = getIO();
+        if (io) io.emit("follow-up-updated", { type: 'status-create', id });
+
+        return newStatus;
     } catch (error) {
         console.error("Error adding follow-up status:", error);
         return null;
@@ -153,6 +159,10 @@ export const updateFollowUpStatus = async (id: string, updates: Partial<FollowUp
 
         params.push(id);
         await query(`UPDATE ${FOLLOW_UP_STATUSES_TABLE} SET ${fields.join(', ')} WHERE id = ?`, params);
+        
+        const io = getIO();
+        if (io) io.emit("follow-up-updated", { type: 'status-update', id });
+        
         return true;
     } catch (error) {
         console.error(`Error updating follow-up status ${id}:`, error);
@@ -167,6 +177,10 @@ export const deleteFollowUpStatus = async (id: string): Promise<boolean> => {
             throw new Error("Cannot delete system status.");
         }
         await query(`DELETE FROM ${FOLLOW_UP_STATUSES_TABLE} WHERE id = ?`, [id]);
+        
+        const io = getIO();
+        if (io) io.emit("follow-up-updated", { type: 'status-delete', id });
+        
         return true;
     } catch (error) {
         console.error(`Error deleting follow-up status ${id}:`, error);

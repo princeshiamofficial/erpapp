@@ -10,6 +10,16 @@ import {
     DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +61,8 @@ export function ManageFollowUpStatusesDialog({
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [editingStatus, setEditingStatus] = useState<Partial<FollowUpStatus> | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [statusToDelete, setStatusToDelete] = useState<{ id: string, name: string } | null>(null);
 
     const fetchStatuses = async () => {
         setIsLoading(true);
@@ -98,14 +110,19 @@ export function ManageFollowUpStatusesDialog({
         }
     };
 
-    const handleDeleteStatus = async (id: string, name: string) => {
-        if (!confirm(`Are you sure you want to delete the "${name}" stage? This might affect lead organization.`)) return;
+    const handleDeleteStatus = (id: string, name: string) => {
+        setStatusToDelete({ id, name });
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!statusToDelete) return;
 
         setIsSaving(true);
         try {
-            const success = await deleteFollowUpStatus(id);
+            const success = await deleteFollowUpStatus(statusToDelete.id);
             if (success) {
-                toast({ title: "Status Deleted", description: `"${name}" has been removed.` });
+                toast({ title: "Status Deleted", description: `"${statusToDelete.name}" has been removed.` });
                 await fetchStatuses();
                 onUpdate();
             }
@@ -113,6 +130,8 @@ export function ManageFollowUpStatusesDialog({
             toast({ title: "Error", description: error.message || "Failed to delete status.", variant: "destructive" });
         } finally {
             setIsSaving(false);
+            setIsDeleteDialogOpen(false);
+            setStatusToDelete(null);
         }
     };
 
@@ -149,7 +168,8 @@ export function ManageFollowUpStatusesDialog({
     ];
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <>
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-background">
                 <DialogHeader className="p-6 pb-2 border-b bg-muted/5">
                     <DialogTitle className="text-xl flex items-center gap-2">
@@ -299,5 +319,34 @@ export function ManageFollowUpStatusesDialog({
             </DialogContent>
         </Dialog>
 
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="text-xl flex items-center gap-2 text-destructive">
+                        <Trash2 className="h-5 w-5" />
+                        Delete Stage
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-base py-2">
+                        Are you sure you want to delete the <span className="font-bold text-foreground">"{statusToDelete?.name}"</span> stage? 
+                        Any leads currently in this stage will need to be re-organized. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-2">
+                    <AlertDialogCancel className="rounded-xl border-none hover:bg-muted font-semibold h-11">Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            confirmDelete();
+                        }}
+                        className="rounded-xl bg-destructive hover:bg-destructive/90 text-white font-bold h-11 px-8 shadow-lg shadow-destructive/20"
+                        disabled={isSaving}
+                    >
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Delete Permanently
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     );
 }

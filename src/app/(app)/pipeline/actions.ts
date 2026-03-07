@@ -14,6 +14,7 @@ import {
 } from '@/lib/lead-service';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { v4 as uuidv4 } from 'uuid';
+import { getIO } from "@/lib/socket-io";
 
 
 export async function getLeads(): Promise<Lead[]> {
@@ -66,6 +67,8 @@ export async function addLeadAction(
     const newLead = await addLead(leadDataWithUser);
     if (newLead) {
       revalidatePath("/(app)/pipeline");
+      const io = getIO();
+      if (io) io.emit("lead-updated", { id: newLead.id, type: 'create' });
       return { success: true, lead: newLead };
     }
     return { success: false, error: "Failed to add lead to database." };
@@ -98,6 +101,8 @@ export async function addLeadActivityAction(
     if (success) {
       // Revalidation is still useful for other clients.
       revalidatePath("/(app)/pipeline");
+      const io = getIO();
+      if (io) io.emit("lead-updated", { id: leadId, type: 'activity' });
       // For instant update, now fetch the definitive state from the DB.
       const updatedLead = await getLeadById(leadId);
       if (!updatedLead) {
@@ -136,6 +141,8 @@ export async function deleteLeadActivityAction(
 
     if (success) {
       revalidatePath("/(app)/pipeline");
+      const io = getIO();
+      if (io) io.emit("lead-updated", { id: leadId, type: 'activity-delete' });
       const updatedLead = await getLeadById(leadId);
       if (!updatedLead) {
         return { success: false, error: "Failed to retrieve updated lead after deleting activity." };
@@ -191,6 +198,8 @@ export async function addLeadsBatchAction(
 
   if (createdCount > 0) {
     revalidatePath("/(app)/pipeline");
+    const io = getIO();
+    if (io) io.emit("lead-updated", { type: 'batch-create', count: createdCount });
   }
 
   return {
@@ -224,6 +233,8 @@ export async function updateLeadAction(
     const success = await updateLead(leadId, finalUpdates);
     if (success) {
       revalidatePath("/(app)/pipeline");
+      const io = getIO();
+      if (io) io.emit("lead-updated", { id: leadId, type: 'update' });
       const updatedLead = await getLeadById(leadId);
       return { success: true, lead: updatedLead || undefined };
     }
@@ -239,6 +250,8 @@ export async function deleteLeadAction(leadId: string): Promise<{ success: boole
     const success = await deleteLead(leadId);
     if (success) {
       revalidatePath("/(app)/pipeline");
+      const io = getIO();
+      if (io) io.emit("lead-updated", { id: leadId, type: 'delete' });
       return { success: true };
     }
     return { success: false, error: "Failed to delete lead from database." };
@@ -271,6 +284,8 @@ export async function transferLeadAction(
     const success = await updateLead(leadId, updates);
     if (success) {
       revalidatePath("/(app)/pipeline");
+      const io = getIO();
+      if (io) io.emit("lead-updated", { id: leadId, type: 'transfer' });
       return { success: true };
     }
     return { success: false, error: "Failed to update lead in the database during transfer." };
