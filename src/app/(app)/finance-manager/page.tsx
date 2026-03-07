@@ -15,6 +15,7 @@ import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calc
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,7 +87,20 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'send_money', label: 'Sent Money' },
 ];
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8"];
+const COLORS = [
+  "#2563eb", // blue-600
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ec4899", // pink-500
+  "#8b5cf6", // violet-500
+  "#06b6d4", // cyan-500
+  "#f43f5e", // rose-500
+  "#6366f1", // indigo-500
+  "#14b8a6", // teal-500
+  "#f97316", // orange-500
+  "#84cc16", // lime-500
+  "#a855f7", // purple-500
+];
 
 const expenseCategories = [
   { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
@@ -448,9 +462,8 @@ export default function FinanceManagerPage() {
   };
 
   return (
-    <div className="space-y-6">
-
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center flex-wrap">
+    <div className="flex flex-col gap-4 min-h-[calc(100vh-140px)]">
+      <div className="bg-card p-4 rounded-xl shadow-md border border-border/40 flex flex-col sm:flex-row gap-4 items-center flex-wrap">
         {currentUser.role === 'SYSTEM_ADMIN' && (
           <Popover open={isUserFilterPopoverOpen} onOpenChange={setIsUserFilterPopoverOpen}>
             <PopoverTrigger asChild>
@@ -489,7 +502,7 @@ export default function FinanceManagerPage() {
         <div className="w-full sm:w-auto grow sm:grow-0 order-3 sm:order-none sm:min-w-[200px] md:min-w-[240px]">
           <Label htmlFor="transaction-type-filter" className="sr-only">Filter by type</Label>
           <Select value={transactionTypeFilter} onValueChange={setTransactionTypeFilter}>
-            <SelectTrigger id="transaction-type-filter" className="w-full h-10 bg-card border-border/50">
+            <SelectTrigger id="transaction-type-filter" className="w-full h-10 bg-background border-border/50 shadow-sm transition-all focus:ring-2">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Filter by type" />
@@ -521,39 +534,16 @@ export default function FinanceManagerPage() {
             placeholder="Search transactions..."
             value={transactionSearchTerm}
             onChange={(e) => setTransactionSearchTerm(e.target.value)}
-            className="pl-10 bg-background/50 h-10"
+            className="pl-10 bg-background h-10 shadow-sm border-border/50 transition-all focus:ring-2"
           />
         </div>
       </div>
 
 
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {summaryCardsToDisplay.map(card => (
-          <Card key={card.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out border bg-card rounded-xl overflow-hidden transform hover:scale-[1.02]">
-            <CardContent className="p-4 sm:p-5 flex items-center space-x-4">
-              <div className={`p-3 rounded-full ${card.circleBgClass}`}>
-                <card.icon className={`h-6 w-6 ${card.iconColorClass}`} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
-                {isLoadingContent ? (
-                  <Skeleton className="h-8 w-32 mt-1" />
-                ) : (
-                  <div className={cn(
-                    "text-2xl font-bold font-mono",
-                    card.title === 'Available Balance' && availableBalance < 0 ? 'text-red-600' : 'text-card-foreground'
-                  )}>
-                    {formatCurrency(card.value as number)}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Summary grid removed to unify in Financial Overview card */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="shadow-xl border bg-card rounded-lg lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 items-stretch">
+        <Card className="shadow-xl border bg-card rounded-xl flex flex-col lg:col-span-2 overflow-hidden">
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -583,8 +573,8 @@ export default function FinanceManagerPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+          <CardContent className="p-0 flex-1 relative overflow-hidden">
+            <div className="absolute inset-0 overflow-y-auto custom-scrollbar">
               <Table>
                 <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
                   <TableRow>
@@ -659,7 +649,16 @@ export default function FinanceManagerPage() {
                               <span className="text-xs text-muted-foreground/60">-</span>
                             )}
                           </TableCell>
-                          <TableCell className={cn("text-right font-semibold", getAmountColor(t))}>{t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}</TableCell>
+                                                     <TableCell className="text-right">
+                             <Badge variant="outline" className={cn(
+                               "px-2 py-0.5 border-0 font-bold font-mono min-w-[100px] justify-center",
+                               t.type === 'income' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400" :
+                               (t.type === 'expense' && t.category.startsWith('Sent Money')) ? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400" :
+                               "bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400"
+                             )}>
+                               {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                             </Badge>
+                           </TableCell>
                           <TableCell className="pr-6 text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -695,84 +694,114 @@ export default function FinanceManagerPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card className="shadow-xl border bg-card rounded-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground text-xl flex items-center">
-                <PieChart className="mr-2 h-5 w-5 text-primary" />
-                Expense Breakdown
+        <div className="flex flex-col h-full">
+          <Card className="shadow-xl border bg-card rounded-xl overflow-hidden flex flex-col h-full">
+            <CardHeader className="border-b pb-4 bg-muted/20">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <PieChart className="h-5 w-5 text-primary" />
+                Financial Overview
               </CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                Spending by category for the selected period.
-              </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center min-h-60">
-              {isLoadingContent || !isClient ? (
-                <Skeleton className="h-48 w-48 rounded-full" />
-              ) : expenseChartData.length > 0 ? (
-                <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
-                  <RechartsPieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Pie
-                      data={expenseChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={60}
-                      outerRadius={80}
-                      strokeWidth={5}
-                    >
-                    <RechartsLabel
-                        content={({ viewBox }) => {
-                          if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                            return (
-                              <text
-                                x={viewBox.cx}
-                                y={viewBox.cy}
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                              >
-                                <tspan
-                                  x={viewBox.cx}
-                                  y={(viewBox.cy || 0) - 12}
-                                  className="fill-foreground text-2xl font-bold font-mono"
-                                >
-                                  {formatCurrency(totalExpenses).replace('BDT', '৳')}
-                                </tspan>
-                                <tspan
-                                  x={viewBox.cx}
-                                  y={(viewBox.cy || 0) + 12}
-                                  className="fill-muted-foreground text-xs font-medium"
-                                >
-                                  Total Expenses
-                                </tspan>
-                              </text>
-                            )
-                          }
-                        }}
-                        position="center"
-                      />
-                      {expenseChartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color || COLORS[index % COLORS.length]}
-                          className="focus:outline-none"
+            <CardContent className="p-0">
+              {/* Stats Section */}
+              <div className="grid grid-cols-1 divide-y divide-border/40">
+                {summaryCardsToDisplay.map((card, idx) => (
+                  <div key={idx} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("p-2 rounded-lg", card.circleBgClass)}>
+                        <card.icon className={cn("h-4 w-4", card.iconColorClass)} />
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">{card.title}</span>
+                    </div>
+                    {isLoadingContent ? (
+                       <Skeleton className="h-5 w-24" />
+                    ) : (
+                      <Badge variant="outline" className={cn(
+                        "font-mono font-bold text-sm border-0 px-3 py-1",
+                        card.title === 'Total Income' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                        card.title.includes('Expenses') && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                        card.title === 'Available Balance' && (
+                          (availableBalance as number) >= 0 
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+                        )
+                      )}>
+                        {formatCurrency(card.value as number)}
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Chart Section */}
+              <div className="p-6 pt-2">
+                <div className="flex flex-col items-center justify-center min-h-[220px]">
+                  {isLoadingContent || !isClient ? (
+                    <Skeleton className="h-40 w-40 rounded-full" />
+                  ) : expenseChartData.length > 0 ? (
+                    <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[220px]">
+                      <RechartsPieChart>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent hideLabel />}
                         />
-                      ))}
-                    </Pie>
-                    <ChartLegend
-                      content={<ChartLegendContent nameKey="name" />}
-                      className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
-                    />
-                  </RechartsPieChart>
-                </ChartContainer>
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  <p>No expense data to display.</p>
+                        <Pie
+                          data={expenseChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={72}
+                          outerRadius={88}
+                          paddingAngle={4}
+                          cornerRadius={8}
+                          strokeWidth={0}
+                        >
+                          <RechartsLabel
+                            content={({ viewBox }) => {
+                              if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                return (
+                                  <text
+                                    x={viewBox.cx}
+                                    y={viewBox.cy}
+                                    textAnchor="middle"
+                                    dominantBaseline="middle"
+                                  >
+                                    <tspan
+                                      x={viewBox.cx}
+                                      y={(viewBox.cy || 0) - 10}
+                                      className="fill-foreground text-xl font-bold font-mono tracking-tight"
+                                    >
+                                      {formatCurrency(totalExpenses).replace('BDT', '৳')}
+                                    </tspan>
+                                    <tspan
+                                      x={viewBox.cx}
+                                      y={(viewBox.cy || 0) + 14}
+                                      className="fill-muted-foreground text-[10px] uppercase tracking-widest font-semibold"
+                                    >
+                                      Expenses
+                                    </tspan>
+                                  </text>
+                                )
+                              }
+                            }}
+                            position="center"
+                          />
+                          {expenseChartData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color || COLORS[index % COLORS.length]}
+                              className="focus:outline-none"
+                            />
+                          ))}
+                        </Pie>
+                      </RechartsPieChart>
+                    </ChartContainer>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      <p className="text-sm">No expense data available.</p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -51,3 +51,56 @@ export async function updateFollowUpStatusAction(
         return { success: false, error: "Failed to update status." };
     }
 }
+
+export async function addFollowUpsBatchAction(
+  followUpsData: Omit<FollowUp, 'id' | 'crmId' | 'crmName'>[],
+  currentUser: User
+): Promise<{ success: boolean; createdCount: number; errorCount: number; errors: string[] }> {
+  let createdCount = 0;
+  let errorCount = 0;
+  const errors: string[] = [];
+
+  const { addFollowUp } = await import('@/lib/follow-up-service');
+
+  for (const item of followUpsData) {
+    try {
+      const followUpDataWithUser = {
+        ...item,
+        crmId: currentUser.id,
+        crmName: currentUser.name,
+        updatedAt: new Date().toISOString(),
+        history: [{
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            outcome: "Imported via CSV",
+            notes: "Record created during batch import.",
+            recordedByUserId: currentUser.id,
+            recordedByUserName: currentUser.name
+        }]
+      };
+      
+      const newFollowUp = await addFollowUp(followUpDataWithUser as any);
+      if (newFollowUp) {
+        createdCount++;
+      } else {
+        errorCount++;
+        errors.push(`Failed to add record for: ${item.contactName || 'Unknown'}`);
+      }
+    } catch (error) {
+      errorCount++;
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+      errors.push(`Error for ${item.contactName || 'Unknown'}: ${errorMessage}`);
+    }
+  }
+
+  if (createdCount > 0) {
+    revalidatePath("/follow-up");
+  }
+
+  return {
+    success: errorCount === 0,
+    createdCount,
+    errorCount,
+    errors,
+  };
+}

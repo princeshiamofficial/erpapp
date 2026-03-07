@@ -17,7 +17,8 @@ interface FollowUpKanbanColumnProps {
     title: string;
     icon: LucideIcon;
     items: FollowUp[];
-    headerBgClass: string;
+    color?: string;
+    headerBgClass?: string;
     headerTextClass?: string;
     headerIconClass?: string;
     isLoading?: boolean;
@@ -32,6 +33,7 @@ export function FollowUpKanbanColumn({
     title,
     icon: Icon,
     items,
+    color,
     headerBgClass,
     headerTextClass = "text-white",
     headerIconClass = "text-white",
@@ -71,18 +73,21 @@ export function FollowUpKanbanColumn({
                 isOver ? 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.01] bg-muted/40' : 'shadow-sm'
             )}
         >
-            <div className={cn(
-                "px-4 py-3.5 flex items-center justify-between shadow-lg relative z-10",
-                headerBgClass,
-                headerTextClass
-            )}>
+            <div 
+                className={cn(
+                    "px-4 py-3.5 flex items-center justify-between relative shadow-sm",
+                    !color && headerBgClass,
+                    headerTextClass
+                )}
+                style={color ? { backgroundColor: color } : undefined}
+            >
                 <div className="flex items-center gap-2.5">
                     <div className={cn("p-1.5 rounded-lg bg-white/20 backdrop-blur-md", headerIconClass)}>
                         <Icon className="h-4 w-4" />
                     </div>
-                    <h2 className="font-bold text-xs uppercase tracking-widest">{title}</h2>
+                    <h2 className="font-semibold text-sm tracking-wide">{title}</h2>
                 </div>
-                <span className="text-[10px] font-black px-2 py-0.5 bg-black/20 rounded-full border border-white/10 backdrop-blur-sm">
+                <span className="text-[10px] font-semibold px-2 py-0.5 bg-black/20 rounded-full border border-white/10 backdrop-blur-sm">
                     {isLoading ? <Skeleton className="h-3 w-3 bg-white/20" /> : items.length}
                 </span>
             </div>
@@ -98,8 +103,7 @@ export function FollowUpKanbanColumn({
                             </div>
                         ) : visibleItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-48 opacity-40">
-                                <Icon className="h-8 w-8 mb-2 mb-2" />
-                                <p className="text-[10px] uppercase font-bold tracking-tighter italic">No Items</p>
+                                <p className="text-xs font-semibold italic">No lead in this stage.</p>
                             </div>
                         ) : (
                             <AnimatePresence initial={false} mode="popLayout">

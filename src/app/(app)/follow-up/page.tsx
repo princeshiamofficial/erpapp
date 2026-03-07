@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
-import type { FollowUp, FollowUpStatusType, CustomerType } from '@/types';
+import type { FollowUp, FollowUpStatusType, CustomerType, FollowUpStatus } from '@/types';
 import {
     Pagination,
     PaginationContent,
@@ -21,6 +21,7 @@ import {
     PaginationEllipsis
 } from "@/components/ui/pagination";
 import { FollowUpKanbanClient } from '@/components/follow-up/FollowUpKanbanClient';
+import { getFollowUpStatuses } from '@/lib/follow-up-status-service';
 
 const ITEMS_PER_PAGE = 25;
 
@@ -28,6 +29,7 @@ export default function FollowUpPage() {
     const { currentUser } = useAuth();
     const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
     const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+    const [statuses, setStatuses] = useState<FollowUpStatus[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
@@ -37,8 +39,12 @@ export default function FollowUpPage() {
         setIsLoading(true);
         try {
             const { getFollowUps } = await import('@/lib/follow-up-service');
-            const fetched = await getFollowUps();
-            setFollowUps(fetched);
+            const [fetchedFollowUps, fetchedStatuses] = await Promise.all([
+                getFollowUps(),
+                getFollowUpStatuses()
+            ]);
+            setFollowUps(fetchedFollowUps);
+            setStatuses(fetchedStatuses);
         } catch (error) {
             console.error("Failed to fetch follow-ups:", error);
         } finally {
@@ -77,20 +83,27 @@ export default function FollowUpPage() {
         setCurrentPage(1);
     }, [searchTerm]);
 
-    const getStatusBadge = (status: FollowUpStatusType) => {
-        const variants: Record<string, string> = {
-            'New Lead': 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50',
-            'Contacted': 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200/50',
-            'Qualified': 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-200/50',
-            'Proposal Sent': 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200/50',
-            'Negotiation': 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200/50',
-            'Won': 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200/50',
-            'Lost': 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200/50',
+    const getStatusBadge = (statusName: string) => {
+        const foundStatus = statuses.find(s => s.name === statusName);
+        const color = foundStatus?.color || '#64748b'; // default slate color
+        const isLight = (hex: string) => {
+            const h = hex.replace('#', '');
+            const r = parseInt(h.substring(0,2), 16);
+            const g = parseInt(h.substring(2,4), 16);
+            const b = parseInt(h.substring(4,6), 16);
+            return ((r*0.299) + (g*0.587) + (b*0.114)) > 186;
         };
 
         return (
-            <Badge className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-bold border", variants[status] || 'bg-slate-100 text-slate-500')}>
-                {status.toUpperCase()}
+            <Badge 
+                className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-black/5 dark:border-white/5")}
+                style={{ 
+                    backgroundColor: `${color}15`, // Light version for bg (15 is ~8% opacity)
+                    color: color,
+                    borderColor: `${color}30`
+                }}
+            >
+                {statusName}
             </Badge>
         );
     };
@@ -104,7 +117,7 @@ export default function FollowUpPage() {
         };
 
         return (
-            <Badge className={cn("px-2 py-0 h-4 text-[8px] font-black rounded-sm", variants[type])}>
+            <Badge className={cn("px-2 py-0 h-4 text-[8px] font-semibold rounded-sm", variants[type])}>
                 {type}
             </Badge>
         );
@@ -175,12 +188,12 @@ export default function FollowUpPage() {
                         <Table>
                             <TableHeader className="sticky top-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-10 shadow-sm">
                                 <TableRow className="hover:bg-transparent border-b border-slate-50 dark:border-white/5">
-                                    <TableHead className="w-[60px] pl-8 py-5 text-[10px] uppercase tracking-wider font-bold text-slate-400">SL</TableHead>
-                                    <TableHead className="py-5 text-[10px] uppercase tracking-wider font-bold text-slate-400">Biz Info</TableHead>
-                                    <TableHead className="py-5 text-[10px] uppercase tracking-wider font-bold text-slate-400">Contact</TableHead>
-                                    <TableHead className="py-5 text-[10px] uppercase tracking-wider font-bold text-slate-400">Location</TableHead>
-                                    <TableHead className="py-5 text-center text-[10px] uppercase tracking-wider font-bold text-slate-400">Status</TableHead>
-                                    <TableHead className="pr-8 py-5 text-right text-[10px] uppercase tracking-wider font-bold text-slate-400">Action</TableHead>
+                                    <TableHead className="w-[60px] pl-8 py-5 text-[11px] font-semibold text-slate-400">SL</TableHead>
+                                    <TableHead className="py-5 text-[11px] font-semibold text-slate-400">Biz Info</TableHead>
+                                    <TableHead className="py-5 text-[11px] font-semibold text-slate-400">Contact</TableHead>
+                                    <TableHead className="py-5 text-[11px] font-semibold text-slate-400">Location</TableHead>
+                                    <TableHead className="py-5 text-center text-[11px] font-semibold text-slate-400">Status</TableHead>
+                                    <TableHead className="pr-8 py-5 text-right text-[11px] font-semibold text-slate-400">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -200,13 +213,13 @@ export default function FollowUpPage() {
                                         const sl = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                                         return (
                                             <TableRow key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all border-b border-slate-50 dark:border-white/5">
-                                                <TableCell className="pl-8 py-4 font-bold text-[10px] text-slate-300 dark:text-slate-600">
+                                                <TableCell className="pl-8 py-4 font-semibold text-[10px] text-slate-300 dark:text-slate-600">
                                                     {sl < 10 ? `0${sl}` : sl}
                                                 </TableCell>
                                                 <TableCell className="py-4">
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-primary transition-colors line-clamp-1">
+                                                            <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm group-hover:text-primary transition-colors line-clamp-1">
                                                                 {item.businessName || item.contactName}
                                                             </span>
                                                             {getCustomerTypeBadge(item.customerType)}
@@ -219,7 +232,7 @@ export default function FollowUpPage() {
                                                 </TableCell>
                                                 <TableCell className="py-4">
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-slate-600 dark:text-slate-300 font-bold text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md inline-block w-fit">
+                                                        <span className="text-slate-600 dark:text-slate-300 font-semibold text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md inline-block w-fit">
                                                             {item.phone || 'N/A'}
                                                         </span>
                                                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
@@ -243,7 +256,7 @@ export default function FollowUpPage() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="rounded-xl text-[11px] font-bold h-9 px-4 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                                                        className="rounded-xl text-[11px] font-semibold h-9 px-4 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
                                                     >
                                                         <Info className="h-3.5 w-3.5 mr-2" />
                                                         DETAILS

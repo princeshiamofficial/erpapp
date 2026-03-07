@@ -430,7 +430,20 @@ export interface Lead {
 }
 
 
-export type FollowUpStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
+export type FollowUpStatusType = string;
+
+export interface FollowUpStatus {
+  id: string;
+  name: string;
+  color: string;
+  isSystemStatus: boolean;
+  isVisible: boolean;
+  allowedRoles: UserRole[];
+  xid: string;
+  displayOrder: number;
+  icon?: string;
+  headerBgClass?: string;
+}
 
 export interface FollowUpLog {
   id: string;

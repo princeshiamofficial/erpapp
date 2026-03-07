@@ -84,22 +84,22 @@ export const FollowUpCard = ({
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                             {followUp.customerType && (
-                                <Badge className={cn("px-2 py-0 h-4 text-[8px] font-black rounded-sm border-none shadow-none", getCustomerTypeColor(followUp.customerType))}>
+                                <Badge className={cn("px-2 py-0 h-4 text-[8px] font-semibold rounded-sm border-none shadow-none", getCustomerTypeColor(followUp.customerType))}>
                                     {followUp.customerType}
                                 </Badge>
                             )}
-                            <Badge variant="outline" className="px-1.5 py-0 h-4 text-[8px] font-bold rounded-sm border-slate-200 dark:border-white/10 uppercase tracking-tight">
+                            <Badge variant="outline" className="px-1.5 py-0 h-4 text-[8px] font-semibold rounded-sm border-slate-200 dark:border-white/10 tracking-wide">
                                 {followUp.category}
                             </Badge>
                         </div>
-                        <div className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-md">
+                        <div className="text-[10px] font-semibold text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-md">
                             {followUp.id.substring(0, 8)}
                         </div>
                     </div>
 
                     {/* Main Info */}
                     <div className="space-y-1.5">
-                        <h3 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+                        <h3 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight">
                             {followUp.businessName || followUp.contactName}
                         </h3>
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
@@ -145,7 +145,7 @@ export const FollowUpCard = ({
                                 <p className="text-[9px] text-foreground/70 font-medium line-clamp-1 leading-tight italic">
                                     "{lastLog.notes || lastLog.outcome}"
                                 </p>
-                                <span className="text-[8px] text-muted-foreground/60 font-medium uppercase tracking-wider">
+                                <span className="text-[8px] text-muted-foreground/60 font-medium">
                                     {format(parseISO(lastLog.timestamp), 'h:mm a')}
                                 </span>
                             </div>

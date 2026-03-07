@@ -14,7 +14,11 @@ import {
     UserPlus,
     CheckCircle2,
     XCircle,
+    Settings2,
+    Plus,
+    FileSpreadsheet,
 } from "lucide-react";
+import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -33,26 +37,31 @@ import {
 } from '@dnd-kit/core';
 import { updateFollowUpStatusAction } from '@/app/(app)/follow-up/actions';
 import { getFollowUps } from '@/lib/follow-up-service';
+import { getFollowUpStatuses } from '@/lib/follow-up-status-service';
+import type { FollowUpStatus } from '@/types';
 import { FollowUpKanbanColumn } from './FollowUpKanbanColumn';
 import { FollowUpCard } from './FollowUpCard';
+import dynamic from 'next/dynamic';
+import Papa from 'papaparse';
 
-const KANBAN_COLUMNS: Array<{ title: string; status: FollowUpStatusType; icon: any; headerBgClass: string }> = [
-    { title: 'New Lead', status: 'New Lead', icon: UserPlus, headerBgClass: 'bg-blue-600' },
-    { title: 'Contacted', status: 'Contacted', icon: Phone, headerBgClass: 'bg-purple-600' },
-    { title: 'Qualified', status: 'Qualified', icon: CheckCircle2, headerBgClass: 'bg-cyan-600' },
-    { title: 'Proposal', status: 'Proposal Sent', icon: MessageSquare, headerBgClass: 'bg-orange-600' },
-    { title: 'Negotiation', status: 'Negotiation', icon: TrendingUp, headerBgClass: 'bg-indigo-600' },
-    { title: 'Won', status: 'Won', icon: Target, headerBgClass: 'bg-emerald-600' },
-    { title: 'Lost', status: 'Lost', icon: XCircle, headerBgClass: 'bg-rose-600' },
-];
+const ManageFollowUpStatusesDialog = dynamic(() => import('./ManageFollowUpStatusesDialog').then(mod => mod.ManageFollowUpStatusesDialog), { ssr: false });
+const ImportFollowUpsDialog = dynamic(() => import('./ImportFollowUpsDialog').then(mod => mod.ImportFollowUpsDialog), { ssr: false });
+
+const getIcon = (name: string | undefined) => {
+    if (!name) return LucideIcons.HelpCircle;
+    return (LucideIcons as any)[name] || LucideIcons.HelpCircle;
+};
 
 export function FollowUpKanbanClient() {
     const { currentUser } = useAuth();
     const { toast } = useToast();
     const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+    const [statuses, setStatuses] = useState<FollowUpStatus[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeItem, setActiveItem] = useState<FollowUp | null>(null);
+    const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
     const sensors = useSensors(
         useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
@@ -63,11 +72,15 @@ export function FollowUpKanbanClient() {
     const fetchData = useCallback(async (isSilent = false) => {
         if (!isSilent) setIsLoading(true);
         try {
-            const fetched = await getFollowUps();
-            setFollowUps(fetched);
+            const [fetchedFollowUps, fetchedStatuses] = await Promise.all([
+                getFollowUps(),
+                getFollowUpStatuses()
+            ]);
+            setFollowUps(fetchedFollowUps);
+            setStatuses(fetchedStatuses);
         } catch (error) {
-            console.error("Failed to fetch follow-ups:", error);
-            toast({ title: "Error", description: "Failed to load follow-up entries.", variant: "destructive" });
+            console.error("Failed to fetch follow-up data:", error);
+            toast({ title: "Error", description: "Failed to load follow-up information.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
@@ -91,14 +104,48 @@ export function FollowUpKanbanClient() {
 
     const itemsByStatus = useMemo(() => {
         const grouped: Record<string, FollowUp[]> = {};
-        KANBAN_COLUMNS.forEach(col => grouped[col.status] = []);
+        statuses.forEach(col => grouped[col.name] = []);
         filteredItems.forEach(item => {
             if (grouped[item.status]) {
                 grouped[item.status].push(item);
             }
         });
         return grouped;
-    }, [filteredItems]);
+    }, [filteredItems, statuses]);
+
+    const handleExport = useCallback(() => {
+        if (filteredItems.length === 0) {
+            toast({ title: "No Data", description: "No follow-up records to export." });
+            return;
+        }
+
+        const dataToExport = filteredItems.map(item => ({
+            date: item.date,
+            contactName: item.contactName,
+            businessName: item.businessName,
+            phone: item.phone,
+            address: item.address,
+            district: item.district || '',
+            division: item.division || '',
+            status: item.status,
+            category: item.category,
+            lastEngagement: item.lastEngagementDate || '',
+            nextScheduled: item.nextScheduledDate || '',
+        }));
+
+        const csv = Papa.unparse(dataToExport);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'follow_up_records.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({ title: "Export Successful", description: "Follow-up records have been downloaded." });
+    }, [filteredItems, toast]);
 
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event;
@@ -150,8 +197,35 @@ export function FollowUpKanbanClient() {
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-10 px-4 rounded-xl border-border/50 bg-card/50 gap-2 opacity-50 cursor-not-allowed">
-                            <Download className="h-4 w-4" />
+                        {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsManageDialogOpen(true)}
+                                    className="h-10 px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2"
+                                >
+                                    <Settings2 className="h-4 w-4" />
+                                    Manage Columns
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsImportDialogOpen(true)}
+                                    className="h-10 px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2 text-primary"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4" />
+                                    Import Leads
+                                </Button>
+                            </>
+                        )}
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleExport}
+                            className="h-10 px-4 rounded-xl border-border/50 bg-card/50 gap-2 hover:bg-muted transition-all"
+                        >
+                            <Download className="h-4 w-4 text-emerald-600" />
                             <span className="hidden sm:inline">Export</span>
                         </Button>
                     </div>
@@ -159,14 +233,15 @@ export function FollowUpKanbanClient() {
 
                 <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
                     <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
-                        {KANBAN_COLUMNS.map((col) => (
+                        {statuses.map((col) => (
                             <FollowUpKanbanColumn
-                                key={col.status}
-                                id={col.status}
-                                title={col.title}
-                                icon={col.icon}
-                                items={itemsByStatus[col.status] || []}
-                                headerBgClass={col.headerBgClass}
+                                key={col.id}
+                                id={col.name}
+                                title={col.name}
+                                icon={getIcon(col.icon)}
+                                items={itemsByStatus[col.name] || []}
+                                color={col.color}
+                                headerBgClass={col.headerBgClass || 'bg-slate-600'}
                                 isLoading={isLoading}
                                 currentUser={currentUser}
                             />
@@ -174,6 +249,23 @@ export function FollowUpKanbanClient() {
                     </div>
                 </div>
             </div>
+
+            {isManageDialogOpen && (
+                <ManageFollowUpStatusesDialog 
+                    isOpen={isManageDialogOpen} 
+                    onOpenChange={setIsManageDialogOpen} 
+                    onUpdate={() => fetchData(true)} 
+                />
+            )}
+
+            {isImportDialogOpen && (
+                <ImportFollowUpsDialog
+                    isOpen={isImportDialogOpen}
+                    onOpenChange={setIsImportDialogOpen}
+                    onFollowUpsImported={() => fetchData(true)}
+                    currentUser={currentUser!}
+                />
+            )}
 
             <DragOverlay dropAnimation={null}>
                 {activeItem ? (
