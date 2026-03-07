@@ -62,6 +62,7 @@ import {
   Pie,
   PieChart as RechartsPieChart,
   Cell,
+  Label,
 } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -335,12 +336,13 @@ export default function FinanceManagerPage() {
     const categoryTotals: Record<string, number> = {};
 
     filteredTransactions.forEach(t => {
+      const amt = Number(t.amount) || 0;
       if (t.type === 'income') {
-        income += t.amount;
+        income += amt;
       } else if (t.type === 'expense' || t.type === 'purchase') {
-        expensesSum += t.amount;
+        expensesSum += amt;
         const categoryKey = t.category || "Uncategorized";
-        categoryTotals[categoryKey] = (categoryTotals[categoryKey] || 0) + t.amount;
+        categoryTotals[categoryKey] = (categoryTotals[categoryKey] || 0) + amt;
       }
     });
 
@@ -705,7 +707,7 @@ export default function FinanceManagerPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center min-h-60">
-              {isLoadingContent ? (
+              {isLoadingContent || !isClient ? (
                 <Skeleton className="h-48 w-48 rounded-full" />
               ) : expenseChartData.length > 0 ? (
                 <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
@@ -719,42 +721,44 @@ export default function FinanceManagerPage() {
                       dataKey="value"
                       nameKey="name"
                       innerRadius={60}
+                      outerRadius={80}
                       strokeWidth={5}
-                      label={({ cx, cy, ...props }) => {
-                        if (isNaN(cx) || isNaN(cy)) {
-                          return null;
-                        }
-                        return (
-                          <text
-                            x={cx}
-                            y={cy}
-                            textAnchor="middle"
-                            dominantBaseline="central"
-                            className="fill-foreground text-center"
-                          >
-                            <tspan
-                              x={cx}
-                              y={cy - 12}
-                              className="text-2xl font-bold"
-                            >
-                              {formatCurrency(totalExpenses).replace('BDT', '৳')}
-                            </tspan>
-                            <tspan
-                              x={cx}
-                              y={cy + 12}
-                              className="text-xs text-muted-foreground"
-                            >
-                              Total Expenses
-                            </tspan>
-                          </text>
-                        )
-                      }}
                     >
+                      <Label
+                        content={({ viewBox }) => {
+                          if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                            return (
+                              <text
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                              >
+                                <tspan
+                                  x={viewBox.cx}
+                                  y={(viewBox.cy || 0) - 12}
+                                  className="fill-foreground text-2xl font-bold font-mono"
+                                >
+                                  {formatCurrency(totalExpenses).replace('BDT', '৳')}
+                                </tspan>
+                                <tspan
+                                  x={viewBox.cx}
+                                  y={(viewBox.cy || 0) + 12}
+                                  className="fill-muted-foreground text-xs font-medium"
+                                >
+                                  Total Expenses
+                                </tspan>
+                              </text>
+                            )
+                          }
+                        }}
+                        position="center"
+                      />
                       {expenseChartData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color || COLORS[index % COLORS.length]}
-                          className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          className="focus:outline-none"
                         />
                       ))}
                     </Pie>
