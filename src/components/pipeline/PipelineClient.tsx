@@ -136,9 +136,11 @@ export function PipelineClient() {
     useSensor(KeyboardSensor)
   );
 
-  const fetchLeadsAndUsers = useCallback(async () => {
+  const fetchLeadsAndUsers = useCallback(async (isSilent = false) => {
     if (!currentUser) return;
-    setIsLoading(true);
+    if (!isSilent) {
+      setIsLoading(true);
+    }
     try {
       const [fetchedLeads, fetchedUsers, fetchedSettings] = await Promise.all([
         getLeads(),
@@ -163,7 +165,7 @@ export function PipelineClient() {
     if (!socket) return;
 
     socket.on("lead-updated", (data: any) => {
-      fetchLeadsAndUsers(); // refresh leads silently
+      fetchLeadsAndUsers(true); // refresh leads silently
     });
 
     return () => {
@@ -312,7 +314,7 @@ export function PipelineClient() {
         setLeads(prev => [savedLead, ...prev]);
       }
     } else {
-      fetchLeadsAndUsers();
+      fetchLeadsAndUsers(true);
     }
   };
 
@@ -332,7 +334,7 @@ export function PipelineClient() {
   const handleLeadTransferred = () => {
     setIsTransferDialogOpen(false);
     setLeadToTransfer(null);
-    fetchLeadsAndUsers();
+    fetchLeadsAndUsers(true);
   }
 
   const handleConfirmDelete = async () => {
@@ -647,7 +649,7 @@ export function PipelineClient() {
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
-      {currentUser.role !== 'CRM' && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
+      {currentUser.role !== 'CRM' && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={() => fetchLeadsAndUsers(true)} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser} />)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (
@@ -665,7 +667,7 @@ export function PipelineClient() {
           onLeadsTransferred={() => {
             setIsTransferSelectedDialogOpen(false);
             cancelSelectionMode();
-            fetchLeadsAndUsers();
+            fetchLeadsAndUsers(true);
           }}
           selectedLeadIds={Array.from(selectedLeadIds)}
           allCrmUsers={allCrmUsers}
