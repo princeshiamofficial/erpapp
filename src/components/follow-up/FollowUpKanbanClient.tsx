@@ -39,6 +39,7 @@ import {
 import { updateFollowUpStatusAction } from '@/app/(app)/follow-up/actions';
 import { getFollowUps } from '@/lib/follow-up-service';
 import { getFollowUpStatuses } from '@/lib/follow-up-status-service';
+import { getUsers } from '@/lib/user-service';
 import type { FollowUpStatus } from '@/types';
 import { FollowUpKanbanColumn } from './FollowUpKanbanColumn';
 import { FollowUpCard } from './FollowUpCard';
@@ -61,6 +62,7 @@ export function FollowUpKanbanClient() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeItem, setActiveItem] = useState<FollowUp | null>(null);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
     const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
     
@@ -75,12 +77,14 @@ export function FollowUpKanbanClient() {
     const fetchData = useCallback(async (isSilent = false) => {
         if (!isSilent) setIsLoading(true);
         try {
-            const [fetchedFollowUps, fetchedStatuses] = await Promise.all([
+            const [fetchedFollowUps, fetchedStatuses, fetchedUsers] = await Promise.all([
                 getFollowUps(),
-                getFollowUpStatuses()
+                getFollowUpStatuses(),
+                getUsers()
             ]);
             setFollowUps(fetchedFollowUps);
             setStatuses(fetchedStatuses);
+            setAllUsers(fetchedUsers);
         } catch (error) {
             console.error("Failed to fetch follow-up data:", error);
             toast({ title: "Error", description: "Failed to load follow-up information.", variant: "destructive" });
@@ -112,6 +116,7 @@ export function FollowUpKanbanClient() {
             const matchesSearch = !searchTerm ||
                 (item.businessName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (item.contactName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.jobId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (item.phone || "").includes(searchTerm);
             return matchesSearch;
         });
@@ -136,16 +141,11 @@ export function FollowUpKanbanClient() {
 
         const dataToExport = filteredItems.map(item => ({
             date: item.date,
-            contactName: item.contactName,
-            businessName: item.businessName,
+            name: item.contactName,
             phone: item.phone,
             address: item.address,
-            district: item.district || '',
-            division: item.division || '',
+            'job id': item.jobId || '',
             status: item.status,
-            category: item.category,
-            lastEngagement: item.lastEngagementDate || '',
-            nextScheduled: item.nextScheduledDate || '',
         }));
 
         const csv = Papa.unparse(dataToExport);
@@ -201,14 +201,14 @@ export function FollowUpKanbanClient() {
             collisionDetection={closestCorners}
         >
             <div className="flex flex-col h-full space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 px-4 sm:px-0">
-                    <div className="relative w-full sm:w-80">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-0">
+                    <div className="relative w-full sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search follow-ups..."
+                            placeholder="Search records..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 bg-card/50 border-border/50 focus:border-primary/50 text-sm h-10 rounded-xl"
+                            className="pl-10 bg-card/50 border-border/50 focus:border-primary/50 text-sm h-10 rounded-xl w-full"
                         />
                     </div>
                     <div className="flex items-center gap-2">
@@ -218,19 +218,19 @@ export function FollowUpKanbanClient() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsManageDialogOpen(true)}
-                                    className="h-10 px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2"
+                                    className="h-10 flex-1 sm:flex-none px-3 sm:px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2"
                                 >
-                                    <Settings2 className="h-4 w-4" />
-                                    Manage Columns
+                                    <Settings2 className="h-4 w-4 shrink-0" />
+                                    <span className="text-[11px] sm:text-xs font-semibold whitespace-nowrap">Columns</span>
                                 </Button>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsImportDialogOpen(true)}
-                                    className="h-10 px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2 text-primary"
+                                    className="h-10 flex-1 sm:flex-none px-3 sm:px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2 text-primary"
                                 >
-                                    <FileSpreadsheet className="h-4 w-4" />
-                                    Import Leads
+                                    <FileSpreadsheet className="h-4 w-4 shrink-0" />
+                                    <span className="text-[11px] sm:text-xs font-semibold whitespace-nowrap">Import</span>
                                 </Button>
                             </>
                         )}
@@ -259,6 +259,8 @@ export function FollowUpKanbanClient() {
                                 headerBgClass={col.headerBgClass || 'bg-slate-600'}
                                 isLoading={isLoading}
                                 currentUser={currentUser}
+                                allUsers={allUsers}
+                                onViewDetails={(item) => {}}
                             />
                         ))}
                     </div>
@@ -288,6 +290,8 @@ export function FollowUpKanbanClient() {
                         followUp={activeItem}
                         isOverlay
                         currentUser={currentUser}
+                        allUsers={allUsers}
+                        statusColor={statuses.find(s => s.name === activeItem.status)?.color}
                     />
                 ) : null}
             </DragOverlay>

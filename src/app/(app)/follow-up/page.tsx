@@ -68,7 +68,8 @@ export default function FollowUpPage() {
             (item.contactName && item.contactName.toLowerCase().includes(lowerSearchTerm)) ||
             (item.businessName && item.businessName.toLowerCase().includes(lowerSearchTerm)) ||
             (item.phone && item.phone.toLowerCase().includes(lowerSearchTerm)) ||
-            (item.address && item.address.toLowerCase().includes(lowerSearchTerm))
+            (item.address && item.address.toLowerCase().includes(lowerSearchTerm)) ||
+            (item.jobId && item.jobId.toLowerCase().includes(lowerSearchTerm))
         );
     }, [followUps, searchTerm]);
 
@@ -164,7 +165,7 @@ export default function FollowUpPage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] space-y-6">
+        <div className="flex flex-col h-[calc(100vh-theme(spacing.20))] md:h-[calc(100vh-theme(spacing.24))] space-y-4 md:space-y-6 px-2 md:px-0">
 
             {/* Main Content */}
             {viewMode === 'kanban' ? (
@@ -173,14 +174,14 @@ export default function FollowUpPage() {
                 </div>
             ) : (
                 <Card className="flex-1 overflow-hidden border-none bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 dark:ring-white/5 flex flex-col">
-                    <CardHeader className="border-b border-slate-100/50 dark:border-white/5 px-6 py-5 shrink-0">
-                        <div className="relative w-full sm:w-80">
+                    <CardHeader className="border-b border-slate-100/50 dark:border-white/5 px-4 md:px-6 py-4 md:py-5 shrink-0">
+                        <div className="relative w-full md:w-80">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input
                                 placeholder="Search follow-ups..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-11 h-11 rounded-xl bg-white/50 dark:bg-slate-900/50 border-none shadow-sm ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary/50 transition-all font-medium text-sm"
+                                className="pl-11 h-10 md:h-11 rounded-xl bg-white/50 dark:bg-slate-900/50 border-none shadow-sm ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary/50 transition-all font-medium text-sm"
                             />
                         </div>
                     </CardHeader>
@@ -188,12 +189,12 @@ export default function FollowUpPage() {
                         <Table>
                             <TableHeader className="sticky top-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-10 shadow-sm">
                                 <TableRow className="hover:bg-transparent border-b border-slate-50 dark:border-white/5">
-                                    <TableHead className="w-[60px] pl-8 py-5 text-[11px] font-semibold text-slate-400">SL</TableHead>
-                                    <TableHead className="py-5 text-[11px] font-semibold text-slate-400">Biz Info</TableHead>
-                                    <TableHead className="py-5 text-[11px] font-semibold text-slate-400">Contact</TableHead>
-                                    <TableHead className="py-5 text-[11px] font-semibold text-slate-400">Location</TableHead>
-                                    <TableHead className="py-5 text-center text-[11px] font-semibold text-slate-400">Status</TableHead>
-                                    <TableHead className="pr-8 py-5 text-right text-[11px] font-semibold text-slate-400">Action</TableHead>
+                                    <TableHead className="w-[50px] md:w-[60px] pl-4 md:pl-8 py-4 md:py-5 text-[10px] md:text-[11px] font-semibold text-slate-400">SL</TableHead>
+                                    <TableHead className="py-4 md:py-5 text-[10px] md:text-[11px] font-semibold text-slate-400">Biz Info</TableHead>
+                                    <TableHead className="py-4 md:py-5 text-[10px] md:text-[11px] font-semibold text-slate-400">Contact</TableHead>
+                                    <TableHead className="py-4 md:py-5 text-[10px] md:text-[11px] font-semibold text-slate-400 hidden lg:table-cell">Location</TableHead>
+                                    <TableHead className="py-4 md:py-5 text-center text-[10px] md:text-[11px] font-semibold text-slate-400">Status</TableHead>
+                                    <TableHead className="pr-4 md:pr-8 py-4 md:py-5 text-right text-[10px] md:text-[11px] font-semibold text-slate-400">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -213,7 +214,7 @@ export default function FollowUpPage() {
                                         const sl = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                                         return (
                                             <TableRow key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all border-b border-slate-50 dark:border-white/5">
-                                                <TableCell className="pl-8 py-4 font-semibold text-[10px] text-slate-300 dark:text-slate-600">
+                                                <TableCell className="pl-4 md:pl-8 py-3 md:py-4 font-semibold text-[10px] text-slate-300 dark:text-slate-600">
                                                     {sl < 10 ? `0${sl}` : sl}
                                                 </TableCell>
                                                 <TableCell className="py-4">
@@ -227,6 +228,12 @@ export default function FollowUpPage() {
                                                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
                                                             <User className="h-3 w-3" />
                                                             {item.contactName}
+                                                            {item.jobId && (
+                                                                <>
+                                                                    <span className="mx-1">•</span>
+                                                                    <span className="text-primary font-bold">ID: {item.jobId}</span>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </TableCell>
@@ -241,7 +248,7 @@ export default function FollowUpPage() {
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="py-4">
+                                                <TableCell className="py-3 md:py-4 hidden lg:table-cell">
                                                     <div className="text-slate-500 dark:text-slate-400 text-xs max-w-[200px] truncate font-medium" title={item.address}>
                                                         {item.address || 'N/A'}
                                                     </div>
@@ -252,14 +259,15 @@ export default function FollowUpPage() {
                                                 <TableCell className="py-4 text-center">
                                                     {getStatusBadge(item.status)}
                                                 </TableCell>
-                                                <TableCell className="pr-8 py-4 text-right">
+                                                <TableCell className="pr-4 md:pr-8 py-3 md:py-4 text-right">
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="rounded-xl text-[11px] font-semibold h-9 px-4 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                                                        className="rounded-xl text-[10px] md:text-[11px] font-semibold h-8 md:h-9 px-3 md:px-4 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
                                                     >
-                                                        <Info className="h-3.5 w-3.5 mr-2" />
-                                                        DETAILS
+                                                        <Info className="h-3.5 w-3.5 mr-1 md:mr-2" />
+                                                        <span className="hidden sm:inline">DETAILS</span>
+                                                        <span className="sm:hidden">VIEW</span>
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>

@@ -2,7 +2,7 @@
 "use server";
 
 import { query } from '@/lib/mysql';
-import { getFollowUpById } from '@/lib/follow-up-service';
+import { getFollowUpById, deleteFollowUp } from '@/lib/follow-up-service';
 import type { FollowUp, FollowUpStatusType, User, FollowUpLog } from '@/types';
 import { revalidatePath } from 'next/cache';
 import { getIO } from '@/lib/socket-io';
@@ -31,6 +31,8 @@ export async function updateFollowUpStatusAction(
         const finalData = {
             ...existing,
             status: newStatus,
+            crmId: currentUser.id,
+            crmName: currentUser.name,
             updatedAt: new Date().toISOString(),
             history: [...(existing.history || []), activity]
         };
@@ -113,4 +115,22 @@ export async function addFollowUpsBatchAction(
     errorCount,
     errors,
   };
+}
+
+export async function deleteFollowUpAction(id: string) {
+  try {
+    const success = await deleteFollowUp(id);
+    if (success) {
+      revalidatePath('/follow-up');
+      const io = getIO();
+      if (io) {
+        io.emit("follow-up-updated", { type: 'delete', id });
+      }
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete record." };
+  } catch (error) {
+    console.error("Error deleting follow-up:", error);
+    return { success: false, error: "An unexpected error occurred during deletion." };
+  }
 }

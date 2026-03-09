@@ -174,7 +174,7 @@ export function ManageFollowUpStatusesDialog({
                 <DialogHeader className="p-6 pb-2 border-b bg-muted/5">
                     <DialogTitle className="text-xl flex items-center gap-2">
                         <Layout className="h-5 w-5 text-primary" />
-                        Kanban Pipeline Settings
+                        Kanban Settings
                     </DialogTitle>
                     <DialogDescription>
                         Configure your follow-up stages. Changes will reflect immediately on the board.

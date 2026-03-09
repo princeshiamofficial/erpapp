@@ -465,15 +465,13 @@ export interface FollowUp {
   address: string;
   district?: string | null;
   division?: string | null;
-  category: string;
   status: FollowUpStatusType;
   crmId: string;
   crmName: string;
+  jobId?: string | null;
   customerType?: CustomerType | null;
   history?: FollowUpLog[];
   updatedAt?: string;
-  lastEngagementDate?: string; // ISO string
-  nextScheduledDate?: string | null; // ISO string
 }
 
 export interface DistrictDataEntry {

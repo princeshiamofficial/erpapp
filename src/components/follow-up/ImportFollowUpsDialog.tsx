@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { addFollowUpsBatchAction } from '@/app/(app)/follow-up/actions';
-import { Loader2, UploadCloud, FileCheck2, AlertTriangle, TableIcon, Search } from 'lucide-react';
+import { Loader2, UploadCloud, FileCheck2, AlertTriangle, TableIcon, Search, Info, Download } from 'lucide-react';
 import type { FollowUp, User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,7 +28,8 @@ interface ImportFollowUpsDialogProps {
   currentUser: User;
 }
 
-const REQUIRED_HEADERS = ["date", "contactName", "businessName", "phone", "address", "district", "division", "status", "category"];
+const REQUIRED_HEADERS = ["date", "name", "phone"];
+const OPTIONAL_HEADERS = ["address", "job id"];
 
 export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImported, currentUser }: ImportFollowUpsDialogProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -84,8 +85,8 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
         const validationErrors: string[] = [];
 
         results.data.forEach((row, index) => {
-          if (!row.contactName || !row.date || !row.phone) {
-            validationErrors.push(`Row ${index + 2}: Missing required data (contactName, date, or phone).`);
+          if (!row.name || !row.date || !row.phone) {
+            validationErrors.push(`Row ${index + 2}: Missing required data (name, date, or phone).`);
             return;
           }
           const parsedDate = new Date(row.date);
@@ -96,14 +97,14 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
 
           validItems.push({
             date: parsedDate.toISOString(),
-            contactName: row.contactName,
-            businessName: row.businessName || '',
+            contactName: row.name,
+            businessName: '',
             phone: row.phone,
             address: row.address || '',
-            district: row.district || '',
-            division: row.division || '',
-            status: row.status || 'New Lead',
-            category: row.category || 'POG',
+            district: '',
+            division: '',
+            status: 'New Lead',
+            jobId: row['job id'] || '',
             history: [],
           });
         });
@@ -158,14 +159,14 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <UploadCloud className="h-24 w-24" />
             </div>
-          <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+          <DialogTitle className="text-2xl font-semibold tracking-wide flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-xl text-primary">
                 <FileCheck2 className="h-6 w-6" />
             </div>
-            Import Follow-Up Data
+            Import CSV File
           </DialogTitle>
           <DialogDescription className="text-base mt-2">
-            Upload a CSV file to add multiple records to your pipeline stages. 
+            Upload a CSV file to add multiple records to your follow up stages. 
           </DialogDescription>
         </DialogHeader>
         
@@ -197,21 +198,7 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
             </Label>
           </div>
 
-          {!file && (
-             <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-border/50">
-                <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                    <TableIcon className="h-3.5 w-3.5" />
-                    Required CSV Headers
-                </p>
-                <div className="flex flex-wrap gap-2">
-                    {REQUIRED_HEADERS.map(h => (
-                        <span key={h} className="inline-flex px-3 py-1 bg-white dark:bg-slate-800 border border-border/50 rounded-lg text-xs font-mono font-medium shadow-sm">
-                            {h}
-                        </span>
-                    ))}
-                </div>
-             </div>
-          )}
+
 
           {error && (
             <div className="px-5 py-4 bg-destructive/10 text-destructive text-sm rounded-2xl flex items-start gap-3 border border-destructive/20 animate-in fade-in slide-in-from-top-2">
@@ -223,51 +210,7 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
             </div>
           )}
           
-          {parsedData.length > 0 && !error && (
-            <div className="space-y-4">
-                <div className="px-5 py-4 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm rounded-2xl flex items-center gap-3 border border-emerald-500/20">
-                    <FileCheck2 className="h-5 w-5 shrink-0" />
-                    <p className="font-medium">Ready to import <span className="font-bold underline decoration-2">{parsedData.length}</span> records. Please review the preview.</p>
-                </div>
 
-                <div className="border border-border/60 rounded-2xl overflow-hidden bg-card shadow-sm">
-                    <div className="bg-muted/30 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border/40">
-                        Data Preview (showing top 10)
-                    </div>
-                    <ScrollArea className="h-64">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="hover:bg-transparent border-b border-border/40">
-                                    <TableHead className="text-[10px] font-bold">Contact</TableHead>
-                                    <TableHead className="text-[10px] font-bold">Business</TableHead>
-                                    <TableHead className="text-[10px] font-bold">Status</TableHead>
-                                    <TableHead className="text-[10px] font-bold text-right">Phone</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {parsedData.slice(0, 10).map((item, index) => (
-                                    <TableRow key={index} className="hover:bg-muted/20 border-b border-border/40">
-                                        <TableCell className="font-semibold text-xs py-3">{item.contactName}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground">{item.businessName}</TableCell>
-                                        <TableCell>
-                                            <span className="inline-flex px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-bold">
-                                                {item.status}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono text-xs">{item.phone}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
-                    {parsedData.length > 10 && (
-                        <div className="p-3 text-center text-[10px] text-muted-foreground italic bg-muted/5 border-t border-border/40">
-                            + {parsedData.length - 10} more records in file
-                        </div>
-                    )}
-                </div>
-            </div>
-          )}
         </div>
 
         <DialogFooter className="p-8 border-t bg-muted/5">
@@ -278,6 +221,25 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
             className="rounded-2xl h-11 px-6 font-semibold"
           >
             Cancel
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+                const csvContent = "date,name,phone,address,job id\n2024-03-09,John Doe,01700000000,Dhaka Bangladesh,JOB-123";
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'follow_up_template.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }}
+            className="rounded-2xl h-11 px-6 font-semibold border-dashed hover:border-primary hover:text-primary transition-all gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Sample CSV
           </Button>
           <Button 
             onClick={handleSubmit} 

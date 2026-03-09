@@ -23,6 +23,7 @@ interface FollowUpKanbanColumnProps {
     headerIconClass?: string;
     isLoading?: boolean;
     currentUser: User | null;
+    allUsers: User[];
     onViewDetails?: (item: FollowUp) => void;
 }
 
@@ -39,6 +40,7 @@ export function FollowUpKanbanColumn({
     headerIconClass = "text-white",
     isLoading = false,
     currentUser,
+    allUsers,
     onViewDetails = () => { },
 }: FollowUpKanbanColumnProps) {
     const { setNodeRef, isOver } = useDroppable({ id });
@@ -119,6 +121,8 @@ export function FollowUpKanbanColumn({
                                         <FollowUpCard
                                             followUp={item}
                                             currentUser={currentUser}
+                                            allUsers={allUsers}
+                                            statusColor={color}
                                             onViewDetails={onViewDetails}
                                         />
                                     </motion.div>
