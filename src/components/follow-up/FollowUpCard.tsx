@@ -11,10 +11,10 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -36,7 +36,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Edit, Eye, MessageSquare, MapPin, StickyNote, CalendarDays, ExternalLink, Phone, Info, User as UserIcon, Trash2, Loader2 } from 'lucide-react';
+import { MapPin, StickyNote, CalendarDays, ExternalLink, Phone, Info, User as UserIcon, Trash2, Loader2 } from 'lucide-react';
 
 interface FollowUpCardProps {
     followUp: FollowUp;
@@ -216,7 +216,7 @@ export const FollowUpCard = ({
                         </TooltipProvider>
 
                         <div className="flex items-center gap-1">
-                            {lastLog && (
+                            {followUp.history && followUp.history.length > 0 && (
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
@@ -224,14 +224,50 @@ export const FollowUpCard = ({
                                                 <StickyNote className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent className="max-w-xs p-3 rounded-xl border-none shadow-2xl bg-white dark:bg-slate-900 text-foreground dark:text-white">
-                                            <div className="flex flex-col gap-1.5">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Last Activity</span>
-                                                    <span className="text-[9px] text-muted-foreground">{format(parseISO(lastLog.timestamp), 'h:mm a, MMM dd')}</span>
+                                        <TooltipContent className="w-[320px] p-0 rounded-3xl border border-border/50 shadow-2xl bg-white dark:bg-slate-950 overflow-hidden" side="right" align="start" sideOffset={10}>
+                                            <div className="bg-slate-50/50 dark:bg-white/[0.02] px-5 py-4 border-b border-border/50">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                                    <h4 className="text-[11px] font-bold uppercase tracking-[0.1em] text-foreground/70">Activity Timeline</h4>
                                                 </div>
-                                                <p className="text-xs leading-relaxed italic">"{lastLog.notes || lastLog.outcome}"</p>
                                             </div>
+                                            <ScrollArea className="h-[320px] w-full">
+                                                <div className="p-6 relative">
+                                                    {/* Timeline Line */}
+                                                    <div className="absolute left-[29px] top-6 bottom-6 w-[1px] bg-border/60" />
+                                                    
+                                                    <div className="space-y-6">
+                                                        {[...followUp.history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((log, idx) => (
+                                                            <div key={log.id || idx} className="relative flex gap-4 pr-2">
+                                                                {/* Timeline Dot */}
+                                                                <div className="relative z-10 mt-1">
+                                                                    <div className="h-2 w-2 rounded-full border-2 border-white dark:border-slate-950 bg-orange-500 shadow-[0_0_0_2px_rgba(249,115,22,0.1)]" />
+                                                                </div>
+
+                                                                <div className="flex-1 space-y-1.5">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <span className="text-[10px] font-bold text-foreground/90">{log.recordedByUserName}</span>
+                                                                        <span className="text-[9px] text-muted-foreground/60 font-medium">
+                                                                            {format(parseISO(log.timestamp), 'h:mm a, MMM dd')}
+                                                                        </span>
+                                                                    </div>
+                                                                    
+                                                                    <div className="bg-slate-50 dark:bg-white/[0.03] rounded-xl p-2.5 border border-border/40">
+                                                                        <p className="text-[11px] font-semibold text-orange-600/90 dark:text-orange-400 leading-snug">
+                                                                            {log.outcome}
+                                                                        </p>
+                                                                        {log.notes && (
+                                                                            <p className="text-[10px] text-muted-foreground/80 mt-1 italic leading-relaxed">
+                                                                                "{log.notes}"
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </ScrollArea>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>

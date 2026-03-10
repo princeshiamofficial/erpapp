@@ -48,6 +48,7 @@ import Papa from 'papaparse';
 
 const ManageFollowUpStatusesDialog = dynamic(() => import('./ManageFollowUpStatusesDialog').then(mod => mod.ManageFollowUpStatusesDialog), { ssr: false });
 const ImportFollowUpsDialog = dynamic(() => import('./ImportFollowUpsDialog').then(mod => mod.ImportFollowUpsDialog), { ssr: false });
+const FollowUpStageChangeDialog = dynamic(() => import('./FollowUpStageChangeDialog').then(mod => mod.FollowUpStageChangeDialog), { ssr: false });
 
 const getIcon = (name: string | undefined) => {
     if (!name) return LucideIcons.HelpCircle;
@@ -65,6 +66,10 @@ export function FollowUpKanbanClient() {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
     const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+    
+    // Stage Change Dialog State
+    const [isStageChangeDialogOpen, setIsStageChangeDialogOpen] = useState(false);
+    const [pendingChange, setPendingChange] = useState<{ item: FollowUp, newStatus: FollowUpStatusType } | null>(null);
     
     const { socket } = useSocket();
 
@@ -178,17 +183,29 @@ export function FollowUpKanbanClient() {
 
         if (item.status === newStatus) return;
 
+        setPendingChange({ item, newStatus });
+        setIsStageChangeDialogOpen(true);
+    }, [currentUser]);
+
+    const handleConfirmStageChange = async (notes: string) => {
+        if (!pendingChange || !currentUser) return;
+
+        const { item, newStatus } = pendingChange;
+        
         // Optimistic update
         setFollowUps(prev => prev.map(l => l.id === item.id ? { ...l, status: newStatus } : l));
 
-        const result = await updateFollowUpStatusAction(item, newStatus, currentUser);
+        const result = await updateFollowUpStatusAction(item, newStatus, currentUser, notes);
         if (!result.success) {
             toast({ title: "Update Failed", description: result.error, variant: "destructive" });
             setFollowUps(prev => prev.map(l => l.id === item.id ? { ...l, status: item.status } : l));
         } else {
             toast({ title: "Status Updated", description: `Record moved to ${newStatus}.` });
         }
-    }, [currentUser, toast]);
+
+        setIsStageChangeDialogOpen(false);
+        setPendingChange(null);
+    };
 
     const handleDragCancel = () => setActiveItem(null);
 
@@ -281,6 +298,17 @@ export function FollowUpKanbanClient() {
                     onOpenChange={setIsImportDialogOpen}
                     onFollowUpsImported={() => fetchData(true)}
                     currentUser={currentUser!}
+                />
+            )}
+
+            {isStageChangeDialogOpen && pendingChange && (
+                <FollowUpStageChangeDialog
+                    isOpen={isStageChangeDialogOpen}
+                    onOpenChange={setIsStageChangeDialogOpen}
+                    onConfirm={handleConfirmStageChange}
+                    oldStatus={pendingChange.item.status}
+                    newStatus={pendingChange.newStatus}
+                    businessName={pendingChange.item.businessName || pendingChange.item.contactName}
                 />
             )}
 
