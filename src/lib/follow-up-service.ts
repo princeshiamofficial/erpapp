@@ -33,6 +33,32 @@ export const getFollowUpById = async (id: string): Promise<FollowUp | null> => {
     return null;
 };
 
+export const getFollowUpByPhone = async (phone: string): Promise<FollowUp | null> => {
+    if (!phone) return null;
+    try {
+        const rows = await query<any[]>(`SELECT id, data_json FROM ${FOLLOWUPS_TABLE} WHERE phone = ?`, [phone]);
+        if (rows.length > 0) {
+            return { id: rows[0].id, ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as FollowUp;
+        }
+    } catch (error) {
+        console.error(`Error fetching follow-up by phone ${phone}:`, error);
+    }
+    return null;
+};
+
+export const getFollowUpByJobId = async (jobId: string): Promise<FollowUp | null> => {
+    if (!jobId) return null;
+    try {
+        const rows = await query<any[]>(`SELECT id, data_json FROM ${FOLLOWUPS_TABLE} WHERE JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.jobId')) = ?`, [jobId]);
+        if (rows.length > 0) {
+            return { id: rows[0].id, ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as FollowUp;
+        }
+    } catch (error) {
+        console.error(`Error fetching follow-up by jobId ${jobId}:`, error);
+    }
+    return null;
+};
+
 export const addFollowUp = async (data: Omit<FollowUp, 'id'>): Promise<FollowUp | null> => {
     try {
         const id = uuidv4();

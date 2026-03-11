@@ -68,10 +68,29 @@ export async function addFollowUpsBatchAction(
   let errorCount = 0;
   const errors: string[] = [];
 
-  const { addFollowUp } = await import('@/lib/follow-up-service');
+  const { addFollowUp, getFollowUpByPhone, getFollowUpByJobId } = await import('@/lib/follow-up-service');
 
   for (const item of followUpsData) {
     try {
+      // Check for duplicate phone
+      if (item.phone) {
+        const existingByPhone = await getFollowUpByPhone(item.phone);
+        if (existingByPhone) {
+            errorCount++;
+            errors.push(`Record with phone number ${item.phone} already exists.`);
+            continue;
+        }
+      }
+
+      // Check for duplicate jobId
+      if (item.jobId) {
+        const existingByJobId = await getFollowUpByJobId(item.jobId);
+        if (existingByJobId) {
+            errorCount++;
+            errors.push(`Record with Job ID ${item.jobId} already exists.`);
+            continue;
+        }
+      }
       const followUpDataWithUser = {
         ...item,
         crmId: currentUser.id,
