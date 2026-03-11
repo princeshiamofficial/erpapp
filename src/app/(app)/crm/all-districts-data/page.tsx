@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, FileSpreadsheet, PlusCircle } from 'lucide-react';
+import { Search, FileSpreadsheet, PlusCircle, CalendarDays } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
@@ -18,6 +18,9 @@ import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataDialog';
 import { cn } from '@/lib/utils';
+import { DateRangePicker3, type PredefinedRange } from '@/components/dashboard/date-range-picker3';
+import type { DateRange } from "react-day-picker";
+import { isWithinInterval, startOfDay, endOfDay, subDays } from 'date-fns';
 
 
 const formatDate = (dateString?: string) => {
@@ -138,6 +141,17 @@ export default function AllDistrictsDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+  const [dateRangeLabel, setDateRangeLabel] = useState<string>("All Time");
+
+  const handleDateRangeChange = (
+    range: DateRange | undefined,
+    displayLabel: string,
+    predefinedValue: PredefinedRange | "custom" | null
+  ) => {
+    setSelectedDateRange(range);
+    setDateRangeLabel(displayLabel);
+  };
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -161,29 +175,41 @@ export default function AllDistrictsDataPage() {
   }, [fetchData]);
 
   const filteredData = useMemo(() => {
-    if (!searchTerm) {
-      return districtData;
-    }
-
     const lowercasedSearchTerm = searchTerm.toLowerCase();
 
     return districtData.map(division => {
       const filteredDistricts = division.districts.map(district => {
-        const filteredEntries = district.entries.filter(entry =>
-          entry.jobId.toLowerCase().includes(lowercasedSearchTerm) ||
-          entry.businessName.toLowerCase().includes(lowercasedSearchTerm) ||
-          entry.address.toLowerCase().includes(lowercasedSearchTerm) ||
-          entry.phone.toLowerCase().includes(lowercasedSearchTerm) ||
-          district.name.toLowerCase().includes(lowercasedSearchTerm) ||
-          division.division.toLowerCase().includes(lowercasedSearchTerm)
-        );
+        const filteredEntries = district.entries.filter(entry => {
+          // Date Range Filter
+          if (selectedDateRange?.from) {
+            const entryDate = parseISO(entry.orderDate);
+            const startDate = startOfDay(selectedDateRange.from);
+            const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
+            if (!isWithinInterval(entryDate, { start: startDate, end: endDate })) {
+              return false;
+            }
+          }
+
+          // Search Term Filter
+          if (searchTerm) {
+            return (
+              entry.jobId.toLowerCase().includes(lowercasedSearchTerm) ||
+              entry.businessName.toLowerCase().includes(lowercasedSearchTerm) ||
+              entry.address.toLowerCase().includes(lowercasedSearchTerm) ||
+              entry.phone.toLowerCase().includes(lowercasedSearchTerm) ||
+              district.name.toLowerCase().includes(lowercasedSearchTerm) ||
+              division.division.toLowerCase().includes(lowercasedSearchTerm)
+            );
+          }
+          return true;
+        });
         return { ...district, entries: filteredEntries };
       }).filter(district => district.entries.length > 0);
 
       return { ...division, districts: filteredDistricts };
     }).filter(division => division.districts.length > 0);
 
-  }, [districtData, searchTerm]);
+  }, [districtData, searchTerm, selectedDateRange]);
 
   const handleExport = () => {
     if (filteredData.length === 0) {
@@ -243,8 +269,12 @@ export default function AllDistrictsDataPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex-grow">
                     <CardTitle>District Data</CardTitle>
-                    <CardDescription>
-                      A comprehensive list of data for all divisions and their respective districts.
+                    <CardDescription className="flex flex-col gap-1.5">
+                      <span>A comprehensive list of data for all divisions and their respective districts.</span>
+                      <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10 w-fit mt-1">
+                          <CalendarDays className="h-3 w-3" />
+                          <span>Range: {dateRangeLabel}</span>
+                      </div>
                     </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -257,6 +287,7 @@ export default function AllDistrictsDataPage() {
                       className="pl-10 bg-background h-10 rounded-md w-full"
                     />
                   </div>
+                  <DateRangePicker3 initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
                   {canAddData && (
                     <Button
                       onClick={() => setIsAddEditDialogOpen(true)}
