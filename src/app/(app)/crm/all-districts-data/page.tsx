@@ -30,15 +30,21 @@ const formatDate = (dateString?: string) => {
 };
 
 const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataEntry[]): DivisionData[] => {
-    const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
-
     const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
+
+    // 1. Process all sources into a unified list of entries
+    const allEntries: DistrictDataEntry[] = [];
 
     // Process orders from tracking links
     orders.forEach(order => {
+        const companyNameParts = order.companyName.split('•').map(part => part.trim());
+        const jobId = (companyNameParts.length > 1 ? companyNameParts[0] : order.id).trim();
+        const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
+        const phone = order.phoneNumber.trim();
+
+        // Calculate division/district for orders based on address
         let longestMatch: { name: string; division: string; } | null = null;
         let longestMatchLength = 0;
-        
         const simplifiedAddress = simplifyString(order.address);
 
         for (const div of divisions) {
@@ -56,29 +62,54 @@ const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataE
             }
         }
 
-        const districtName = longestMatch ? longestMatch.name : "Unknown";
-        const divisionName = longestMatch ? longestMatch.division : "Unknown";
-
-        if (!divisionMap[divisionName]) divisionMap[divisionName] = {};
-        if (!divisionMap[divisionName][districtName]) divisionMap[divisionName][districtName] = [];
-
-        const companyNameParts = order.companyName.split('•').map(part => part.trim());
-        const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id;
-        const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
-
-        divisionMap[divisionName][districtName].push({
+        allEntries.push({
             jobId,
             businessName,
             address: order.address,
-            phone: order.phoneNumber,
+            phone,
             orderDate: order.createdAt,
+            district: longestMatch ? longestMatch.name : "Unknown",
+            division: longestMatch ? longestMatch.division : "Unknown",
         });
     });
 
-    // Process manual entries
+    // Add manual entries
     manualEntries.forEach(entry => {
-        const divisionName = entry.division || 'Unknown';
-        const districtName = entry.district || 'Unknown';
+        allEntries.push({
+            ...entry,
+            jobId: entry.jobId.trim(),
+            phone: entry.phone.trim(),
+            division: entry.division || 'Unknown',
+            district: entry.district || 'Unknown',
+        });
+    });
+
+    // 2. Sort by date descending (latest first)
+    allEntries.sort((a, b) => {
+        const dateA = new Date(a.orderDate).getTime();
+        const dateB = new Date(b.orderDate).getTime();
+        return dateB - dateA;
+    });
+
+    // 3. De-duplicate based on Job ID or Phone, keeping the latest (since we sorted)
+    const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
+    const seenJobIds = new Set<string>();
+    const seenPhones = new Set<string>();
+
+    allEntries.forEach(entry => {
+        const jobIdLower = entry.jobId.toLowerCase();
+        const phone = entry.phone;
+
+        if (seenJobIds.has(jobIdLower) || seenPhones.has(phone)) {
+            return; // Skip duplicate
+        }
+
+        seenJobIds.add(jobIdLower);
+        seenPhones.add(phone);
+
+        // 4. Organize into division/district map
+        const divisionName = entry.division!;
+        const districtName = entry.district!;
 
         if (!divisionMap[divisionName]) divisionMap[divisionName] = {};
         if (!divisionMap[divisionName][districtName]) divisionMap[divisionName][districtName] = [];
