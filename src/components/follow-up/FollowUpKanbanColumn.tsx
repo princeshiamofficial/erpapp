@@ -71,7 +71,7 @@ export function FollowUpKanbanColumn({
         <div
             ref={setNodeRef}
             className={cn(
-                "w-[260px] sm:w-[280px] shrink-0 flex flex-col bg-muted/20 sm:bg-muted/30 rounded-2xl overflow-hidden transition-all duration-300 ease-in-out h-full border border-border/10",
+                "w-[280px] sm:w-[300px] shrink-0 flex flex-col bg-muted/20 sm:bg-muted/30 rounded-2xl overflow-hidden transition-all duration-300 ease-in-out h-full border border-border/10",
                 isOver ? 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.01] bg-muted/40' : 'shadow-sm'
             )}
         >
