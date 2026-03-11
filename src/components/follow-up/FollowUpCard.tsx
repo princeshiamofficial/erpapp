@@ -121,7 +121,7 @@ export const FollowUpCard = ({
             onClick={() => !isOverlay && onViewDetails(followUp)}
         >
             <Card className={cn(
-                "bg-card w-full shadow-sm hover:shadow-md transition-all duration-300",
+                "bg-card w-full shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden",
                 isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing"),
             )}>
                 <CardContent className="p-3.5 space-y-2.5">
@@ -145,7 +145,7 @@ export const FollowUpCard = ({
 
                     {/* Contact Info */}
                     <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium">
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium min-w-0">
                             <UserIcon className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate">{followUp.contactName}</span>
                         </div>
