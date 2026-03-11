@@ -124,7 +124,7 @@ export const FollowUpCard = ({
                 "bg-card w-full shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden",
                 isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing"),
             )}>
-                <CardContent className="p-3.5 space-y-2.5">
+                <CardContent className="p-3 space-y-2.5">
                     {/* Header: Title and Actions */}
                     <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0 pr-4">
@@ -204,8 +204,8 @@ export const FollowUpCard = ({
                                                 {getInitials(followUp.crmName)}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <div className="flex flex-col -space-y-0.5">
-                                            <span className="text-[10px] font-bold text-foreground/80">{followUp.crmName}</span>
+                                        <div className="flex flex-col -space-y-0.5 min-w-0">
+                                            <span className="text-[10px] font-bold text-foreground/80 truncate max-w-[80px]">{followUp.crmName}</span>
                                         </div>
                                     </div>
                                 </TooltipTrigger>

@@ -77,7 +77,7 @@ export function FollowUpKanbanColumn({
         >
             <div 
                 className={cn(
-                    "px-4 py-3.5 flex items-center justify-between relative shadow-sm",
+                    "px-3 py-2.5 flex items-center justify-between relative shadow-sm",
                     !color && headerBgClass,
                     headerTextClass
                 )}
