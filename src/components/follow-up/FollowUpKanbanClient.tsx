@@ -219,7 +219,7 @@ export function FollowUpKanbanClient() {
             collisionDetection={closestCorners}
         >
             <div className="flex flex-col h-full space-y-4">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-0">
                     <div className="relative w-full sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -264,27 +264,24 @@ export function FollowUpKanbanClient() {
                     </div>
                 </div>
 
-                <div className="flex-1 w-full max-w-full px-4 sm:px-6 lg:px-8 overflow-hidden">
-                    <ScrollArea className="h-full w-full">
-                        <div className="flex space-x-4 h-full min-w-max pb-6">
-                                {statuses.map((col) => (
-                                    <FollowUpKanbanColumn
-                                        key={col.id}
-                                        id={col.name}
-                                        title={col.name}
-                                        icon={getIcon(col.icon)}
-                                        items={itemsByStatus[col.name] || []}
-                                        color={col.color}
-                                        headerBgClass={col.headerBgClass || 'bg-slate-600'}
-                                        isLoading={isLoading}
-                                        currentUser={currentUser}
-                                        allUsers={allUsers}
-                                        onViewDetails={(item) => {}}
-                                    />
-                                ))}
-                        </div>
-                        <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
+                <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
+                    <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
+                        {statuses.map((col) => (
+                            <FollowUpKanbanColumn
+                                key={col.id}
+                                id={col.name}
+                                title={col.name}
+                                icon={getIcon(col.icon)}
+                                items={itemsByStatus[col.name] || []}
+                                color={col.color}
+                                headerBgClass={col.headerBgClass || 'bg-slate-600'}
+                                isLoading={isLoading}
+                                currentUser={currentUser}
+                                allUsers={allUsers}
+                                onViewDetails={(item) => { }}
+                            />
+                        ))}
+                    </div>
                 </div>
             </div>
 

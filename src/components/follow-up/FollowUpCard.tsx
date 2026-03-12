@@ -117,7 +117,7 @@ export const FollowUpCard = ({
               rotate: isOverlay ? 2 : 0,
             }}
             transition={{ duration: 0.15, ease: "easeInOut" }}
-            className={cn("relative group w-[276px]", isOverlay ? "z-50" : (isDragging ? "z-50" : ""))}
+            className={cn("relative group w-full", isOverlay ? "z-50" : (isDragging ? "z-50" : ""))}
             onClick={() => !isOverlay && onViewDetails(followUp)}
         >
             <Card className={cn(
