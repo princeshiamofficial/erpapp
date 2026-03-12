@@ -219,7 +219,7 @@ export function FollowUpKanbanClient() {
             collisionDetection={closestCorners}
         >
             <div className="flex flex-col h-full space-y-4">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-0">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
                     <div className="relative w-full sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -265,7 +265,7 @@ export function FollowUpKanbanClient() {
                 </div>
 
                 <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
-                    <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
+                    <div className="flex space-x-4 h-full min-w-max px-4 sm:px-6 lg:px-8">
                         {statuses.map((col) => (
                             <FollowUpKanbanColumn
                                 key={col.id}
