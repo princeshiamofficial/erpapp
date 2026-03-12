@@ -26,7 +26,7 @@ export const getRoles = async (): Promise<UserRoleDefinition[]> => {
         color: row.color,
         isDefault: Boolean(row.is_default),
         priority: row.priority,
-        createdAt: row.created_at.toISOString(),
+        createdAt: row.created_at ? (row.created_at instanceof Date ? row.created_at : new Date(row.created_at)).toISOString() : new Date().toISOString(),
       } as UserRoleDefinition));
     } else {
       // Seed default roles
