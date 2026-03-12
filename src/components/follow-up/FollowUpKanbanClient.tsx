@@ -265,7 +265,7 @@ export function FollowUpKanbanClient() {
                 </div>
 
                 <div className="flex-1 w-full max-w-full px-4 sm:px-6 lg:px-8 overflow-hidden">
-                    <ScrollArea className="h-full w-full" orientation="horizontal">
+                    <ScrollArea className="h-full w-full">
                         <div className="flex space-x-4 h-full min-w-max pb-6">
                                 {statuses.map((col) => (
                                     <FollowUpKanbanColumn
