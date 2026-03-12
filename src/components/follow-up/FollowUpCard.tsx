@@ -147,7 +147,7 @@ export const FollowUpCard = ({
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium min-w-0">
                             <UserIcon className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate flex-1 block">{followUp.contactName}</span>
+                            <span className="truncate max-w-[150px] block">{followUp.contactName}</span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium">
                             <Phone className="h-3.5 w-3.5 shrink-0" />
