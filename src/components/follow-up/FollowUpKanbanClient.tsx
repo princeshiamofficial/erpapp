@@ -21,6 +21,7 @@ import {
 import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { useSocket } from '@/contexts/socket-context';
@@ -218,7 +219,7 @@ export function FollowUpKanbanClient() {
             collisionDetection={closestCorners}
         >
             <div className="flex flex-col h-full space-y-4">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-0">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
                     <div className="relative w-full sm:max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -235,7 +236,7 @@ export function FollowUpKanbanClient() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsManageDialogOpen(true)}
-                                    className="h-10 flex-1 sm:flex-none px-3 sm:px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2"
+                                    className="h-10 flex-1 sm:flex-none px-3 sm:px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2 shadow-sm bg-white"
                                 >
                                     <Settings2 className="h-4 w-4 shrink-0" />
                                     <span className="text-[11px] sm:text-xs font-semibold whitespace-nowrap">Columns</span>
@@ -244,43 +245,46 @@ export function FollowUpKanbanClient() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsImportDialogOpen(true)}
-                                    className="h-10 flex-1 sm:flex-none px-3 sm:px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2 text-primary"
+                                    className="h-10 flex-1 sm:flex-none px-3 sm:px-4 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all gap-2 text-primary shadow-sm bg-white"
                                 >
                                     <FileSpreadsheet className="h-4 w-4 shrink-0" />
                                     <span className="text-[11px] sm:text-xs font-semibold whitespace-nowrap">Import</span>
                                 </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={handleExport}
+                                    className="h-10 px-4 rounded-xl border-border/50 bg-white gap-2 hover:bg-muted transition-all shadow-sm"
+                                >
+                                    <Download className="h-4 w-4 text-emerald-600" />
+                                    <span className="hidden sm:inline">Export</span>
+                                </Button>
                             </>
                         )}
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handleExport}
-                            className="h-10 px-4 rounded-xl border-border/50 bg-card/50 gap-2 hover:bg-muted transition-all"
-                        >
-                            <Download className="h-4 w-4 text-emerald-600" />
-                            <span className="hidden sm:inline">Export</span>
-                        </Button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar-hidden">
-                    <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
-                        {statuses.map((col) => (
-                            <FollowUpKanbanColumn
-                                key={col.id}
-                                id={col.name}
-                                title={col.name}
-                                icon={getIcon(col.icon)}
-                                items={itemsByStatus[col.name] || []}
-                                color={col.color}
-                                headerBgClass={col.headerBgClass || 'bg-slate-600'}
-                                isLoading={isLoading}
-                                currentUser={currentUser}
-                                allUsers={allUsers}
-                                onViewDetails={(item) => {}}
-                            />
-                        ))}
-                    </div>
+                <div className="flex-1 w-full max-w-full px-4 sm:px-6 lg:px-8 overflow-hidden">
+                    <ScrollArea className="h-full w-full" orientation="horizontal">
+                        <div className="flex space-x-4 h-full min-w-max pb-6">
+                                {statuses.map((col) => (
+                                    <FollowUpKanbanColumn
+                                        key={col.id}
+                                        id={col.name}
+                                        title={col.name}
+                                        icon={getIcon(col.icon)}
+                                        items={itemsByStatus[col.name] || []}
+                                        color={col.color}
+                                        headerBgClass={col.headerBgClass || 'bg-slate-600'}
+                                        isLoading={isLoading}
+                                        currentUser={currentUser}
+                                        allUsers={allUsers}
+                                        onViewDetails={(item) => {}}
+                                    />
+                                ))}
+                        </div>
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
                 </div>
             </div>
 

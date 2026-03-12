@@ -165,7 +165,7 @@ export default function FollowUpPage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-theme(spacing.20))] md:h-[calc(100vh-theme(spacing.24))] space-y-4 md:space-y-6 px-2 md:px-0">
+        <div className="flex flex-col h-[calc(100vh-theme(spacing.20))] md:h-[calc(100vh-theme(spacing.24))] space-y-4 md:space-y-6 w-full max-w-full overflow-hidden">
 
             {/* Main Content */}
             {viewMode === 'kanban' ? (

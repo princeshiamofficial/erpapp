@@ -13,6 +13,26 @@ interface InvoicePageProps {
   params: Promise<{ orderId: string }>;
 }
 
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: InvoicePageProps): Promise<Metadata> {
+  const { orderId } = await params;
+  const order = await getOrderById(orderId);
+
+  if (!order) {
+    return {
+      title: 'Invoice Not Found',
+    };
+  }
+
+  const companyNameParts = order.companyName.split('•').map((part: string) => part.trim());
+  const businessName = companyNameParts.length > 1 ? companyNameParts[companyNameParts.length - 1] : order.companyName;
+
+  return {
+    title: `${businessName} | Order Invoice`,
+  };
+}
+
 export default async function InvoicePage({ params }: InvoicePageProps) {
   const { orderId } = await params;
 

@@ -61,7 +61,7 @@ export function AppHeader() {
   const showSyncButton = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md md:hidden" />

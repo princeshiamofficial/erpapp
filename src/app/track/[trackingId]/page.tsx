@@ -10,6 +10,25 @@ import { Package } from 'lucide-react';
 import { OrderDetailsLoader } from './OrderDetailsLoader';
 import { cookies } from 'next/headers';
 import type { User } from '@/types';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: PublicTrackingPageProps): Promise<Metadata> {
+  const { trackingId } = await params;
+  const order = await getOrderById(trackingId);
+
+  if (!order) {
+    return {
+      title: 'Order Not Found',
+    };
+  }
+
+  const companyNameParts = order.companyName.split('•').map((part: string) => part.trim());
+  const businessName = companyNameParts.length > 1 ? companyNameParts[companyNameParts.length - 1] : order.companyName;
+
+  return {
+    title: `${businessName} | Order Info`,
+  };
+}
 
 
 function TrackingPageSkeleton() {
