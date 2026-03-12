@@ -225,7 +225,7 @@ export function FollowUpKanbanClient() {
                             placeholder="Search records..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 bg-card/50 border-border/50 focus:border-primary/50 text-sm h-10 rounded-xl w-full"
+                            className="pl-10 bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] border-border/40 focus:border-primary/50 text-sm h-10 rounded-xl w-full"
                         />
                     </div>
                     <div className="flex items-center gap-2">

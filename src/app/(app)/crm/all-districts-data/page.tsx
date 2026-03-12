@@ -143,6 +143,7 @@ export default function AllDistrictsDataPage() {
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [dateRangeLabel, setDateRangeLabel] = useState<string>("All Time");
+  const [showAddButton, setShowAddButton] = useState(false);
 
   const handleDateRangeChange = (
     range: DateRange | undefined,
@@ -268,13 +269,14 @@ export default function AllDistrictsDataPage() {
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex-grow">
-                    <CardTitle>District Data</CardTitle>
-                    <CardDescription className="flex flex-col gap-1.5">
-                      <span>A comprehensive list of data for all divisions and their respective districts.</span>
-                      <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/5 px-2.5 py-1 rounded-full border border-primary/10 w-fit mt-1">
-                          <CalendarDays className="h-3 w-3" />
-                          <span>Range: {dateRangeLabel}</span>
-                      </div>
+                    <CardTitle 
+                      onDoubleClick={() => setShowAddButton(true)} 
+                      className="cursor-default select-none"
+                    >
+                      District Data
+                    </CardTitle>
+                    <CardDescription>
+                      A comprehensive list of data for all divisions and their respective districts.
                     </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -288,7 +290,7 @@ export default function AllDistrictsDataPage() {
                     />
                   </div>
                   <DateRangePicker3 initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
-                  {canAddData && (
+                  {canAddData && showAddButton && (
                     <Button
                       onClick={() => setIsAddEditDialogOpen(true)}
                       variant="outline"
