@@ -87,6 +87,16 @@ export const FollowUpCard = ({
     const lastLog = followUp.history?.[followUp.history.length - 1];
     const crmUser = allUsers.find(u => u.id === followUp.crmId);
 
+    const displayName = followUp.businessName || followUp.contactName;
+    const truncatedDisplayName = displayName.length > 35
+        ? `${displayName.substring(0, 35)}...`
+        : displayName;
+
+    const contactName = followUp.contactName || '';
+    const truncatedContactName = contactName.length > 30
+        ? `${contactName.substring(0, 30)}...`
+        : contactName;
+
     const handleDelete = async () => {
         setIsDeleting(true);
         try {
@@ -113,7 +123,9 @@ export const FollowUpCard = ({
             animate={{
               scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1),
               opacity: !isOverlay && isDragging ? 0.4 : 1,
-              boxShadow: isOverlay ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2)" : "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              boxShadow: isOverlay
+                ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2), 0px 5px 10px -6px rgba(0, 0, 0, 0.2)"
+                : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
               rotate: isOverlay ? 2 : 0,
             }}
             transition={{ duration: 0.15, ease: "easeInOut" }}
@@ -121,15 +133,15 @@ export const FollowUpCard = ({
             onClick={() => !isOverlay && onViewDetails(followUp)}
         >
             <Card className={cn(
-                "bg-card w-full shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden",
+                "bg-card w-full shadow-none",
                 isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing"),
             )}>
                 <CardContent className="p-3 space-y-2.5">
                     {/* Header: Title and Actions */}
                     <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0 pr-4">
-                            <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors w-full">
-                                {followUp.businessName || followUp.contactName}
+                            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors w-full" title={displayName}>
+                                {truncatedDisplayName}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 {followUp.customerType && (
@@ -147,7 +159,7 @@ export const FollowUpCard = ({
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium min-w-0">
                             <UserIcon className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate flex-1 block">{followUp.contactName}</span>
+                            <span className="flex-1 block" title={contactName}>{truncatedContactName}</span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium">
                             <Phone className="h-3.5 w-3.5 shrink-0" />
