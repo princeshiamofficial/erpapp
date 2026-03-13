@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import {
   Pagination,
   PaginationContent,
@@ -92,7 +92,10 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewType, setViewType] = useState<'orders' | 'reorders'>('orders');
 
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
 
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
 
