@@ -56,8 +56,9 @@ import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import { DateRangePicker3, type PredefinedRange } from '@/components/dashboard/date-range-picker3';
 import type { DateRange } from "react-day-picker";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -83,7 +84,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
 function KanbanSkeleton() {
   return (
     <div className="flex flex-col h-full space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
         <Skeleton className="h-10 w-full rounded-md" />
         <Skeleton className="h-10 w-full rounded-md" />
         <Skeleton className="h-10 w-full rounded-md" />
@@ -127,7 +128,7 @@ export function ProjectsKanbanClient() {
   const [isDataFetching, setIsDataFetching] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+
   const { toast } = useToast();
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
@@ -412,54 +413,45 @@ export function ProjectsKanbanClient() {
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
   }, [toast]);
 
-  const handleExport = async () => {
-    const deliveredProjects = projects.filter(p => p.status === 'Delivered');
+  const handleExport = async (status: ProjectStatusType = 'Delivered') => {
+    const targetProjects = projects.filter(p => p.status === status);
 
-    if (deliveredProjects.length === 0) {
-      toast({ title: "No Data", description: "There are no projects in the 'Delivered' stage to export." });
+    if (targetProjects.length === 0) {
+      toast({ title: "No Data", description: `There are no projects in the '${status}' stage to export.` });
       return;
     }
 
-    setIsDataFetching(true);
-
-    const ordersDataPromises = deliveredProjects.map(p => getOrderById(p.id));
-    const ordersResults = await Promise.all(ordersDataPromises);
-    const ordersMap = new Map(ordersResults.filter(o => o).map(o => [o!.id, o]));
-
-    setIsDataFetching(false);
-
-    const dataToExport = deliveredProjects.map(p => {
-      const order = ordersMap.get(p.id);
-      const deliveredLog = order?.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
-      const deliveryDate = deliveredLog ? format(parseISO(deliveredLog.timestamp), 'yyyy-MM-dd HH:mm') : 'N/A';
+    // Instant export using data already available in project object
+    const dataToExport = targetProjects.map(p => {
       const nameParts = (p.name || '').split(' • ');
       const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
       const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
-
+      
       return {
         'Job ID': jobId,
         'Company Name': companyName,
-        'Phone': order?.phoneNumber || 'N/A',
-        'Address': order?.address || 'N/A',
-        'Delivery Date': deliveryDate,
+        'Assignee': p.assigneeName || 'N/A',
+        'DR': p.designerRepresentativeName || 'N/A',
+        'Status': p.status,
+        'Created At': p.createdAt ? format(parseISO(p.createdAt), 'yyyy-MM-dd HH:mm') : 'N/A',
       };
     });
 
     const csv = Papa.unparse(dataToExport, {
       header: true,
-      columns: ["Job ID", "Company Name", "Phone", "Address", "Delivery Date"]
+      columns: ["Job ID", "Company Name", "Assignee", "DR", "Status", "Created At"]
     });
 
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'delivered_projects_export.csv');
+    link.setAttribute('download', `${status.toLowerCase().replace(/ /g, '_')}_projects_export.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    toast({ title: "Export Started", description: "Your delivered projects data is being downloaded." });
+    toast({ title: "Export Started", description: `Your ${status} projects data is being downloaded.` });
   };
 
   const canFilterUsers = useMemo(() => {
@@ -567,7 +559,6 @@ export function ProjectsKanbanClient() {
         project.assigneeName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         (project.designerRepresentativeName || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
-      const matchesCategory = categoryFilter === 'all' || project.categoryTag === categoryFilter;
 
       let matchesDate = true;
       if (selectedDateRange?.from) {
@@ -580,9 +571,9 @@ export function ProjectsKanbanClient() {
           matchesDate = false;
         }
       }
-      return matchesSearchTerm && matchesCategory && matchesDate;
+      return matchesSearchTerm && matchesDate;
     });
-  }, [projects, debouncedSearchTerm, categoryFilter, selectedDateRange, currentUser, projectOwnerFilter, hashId, selectedUserIdFilter, allUsers, globalSettings]);
+  }, [projects, debouncedSearchTerm, selectedDateRange, currentUser, projectOwnerFilter, hashId, selectedUserIdFilter, allUsers, globalSettings]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
@@ -604,10 +595,6 @@ export function ProjectsKanbanClient() {
     return grouped;
   }, [filteredProjects]);
 
-  const categoryOptions = useMemo(() => {
-    const categories = new Set(projects.map(p => p.categoryTag).filter(Boolean));
-    return Array.from(categories).sort();
-  }, [projects]);
 
 
   return (
@@ -627,7 +614,7 @@ export function ProjectsKanbanClient() {
         )}
 
         {!isReadOnly && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 px-4 sm:px-0">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 px-4 sm:px-0">
             <div className="relative">
               <Input
                 placeholder="Search projects..."
@@ -683,30 +670,38 @@ export function ProjectsKanbanClient() {
                 </PopoverContent>
               </Popover>
             )}
-            <DateRangePicker
+            <DateRangePicker3
               initialRange={selectedDateRange}
               onDateRangeChange={handleDateRangeChange}
               className="bg-card border-border/50 focus:border-primary"
             />
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="bg-card border-border/50 focus:border-primary">
-                <SelectValue placeholder="Filter by category..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {currentUser?.role === 'SYSTEM_ADMIN' && (
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                disabled={isLoading}
-                className="bg-card border-border/50 focus:border-primary"
-              >
-                {isDataFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                Export Delivered
-              </Button>
+            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={isLoading}
+                    className="bg-card border-border/50 focus:border-primary w-full sm:w-auto"
+                  >
+                    {isDataFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Export Data
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Select Stage to Export</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {KANBAN_COLUMNS_CONFIG.map((col) => (
+                    <DropdownMenuItem
+                      key={col.status}
+                      onClick={() => handleExport(col.status)}
+                      className="cursor-pointer"
+                    >
+                      <col.icon className="mr-2 h-4 w-4 opacity-70" />
+                      {col.title}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         )}
@@ -751,7 +746,7 @@ export function ProjectsKanbanClient() {
               <ClipboardCheck className="mx-auto h-16 w-16 opacity-30 mb-4" />
               <p className="text-xl font-semibold">No projects found.</p>
               <p className="text-sm">
-                {searchTerm || categoryFilter !== 'all'
+                {searchTerm
                   ? "Try adjusting your filters or search term."
                   : "Get started by adding new orders or projects."}
               </p>
