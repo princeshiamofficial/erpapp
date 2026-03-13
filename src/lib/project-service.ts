@@ -37,10 +37,16 @@ export const getProjects = async (): Promise<Project[]> => {
 
   let ordersToDisplayAsProjects: Project[] = [];
   try {
-    const [allOrders, _allUsers] = await Promise.all([
+    const [allOrders, _allUsers, persistentProjects] = await Promise.all([
       getOrders(),
-      getAllUsersService()
+      getAllUsersService(),
+      query<any[]>(`SELECT id, data_json FROM ${PROJECTS_TABLE}`)
     ]);
+
+    const projectsMap = new Map(persistentProjects.map(p => [
+      p.id, 
+      typeof p.data_json === 'string' ? JSON.parse(p.data_json) : p.data_json
+    ]));
 
     ordersToDisplayAsProjects = allOrders
       .map(order => {
@@ -57,17 +63,25 @@ export const getProjects = async (): Promise<Project[]> => {
         else if (order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design')) projectStatus = 'On Design';
         else projectStatus = 'CR Clearance';
 
+        const persistentData = projectsMap.get(order.id) || {};
+
         const dynamicProject: Project = {
+          ...persistentData,
           id: order.id,
-          projectIdDisplay: order.id, name: order.companyName, status: projectStatus,
-          assigneeId: order.crmUserId, assigneeName: order.crmUserName,
+          projectIdDisplay: order.id, 
+          name: order.companyName, 
+          status: projectStatus,
+          assigneeId: order.crmUserId, 
+          assigneeName: order.crmUserName,
           assigneeInitials: getInitialsForName(order.crmUserName),
           assigneeAvatarUrl: null,
           designerRepresentativeId: order.designerRepresentativeId || null,
           designerRepresentativeName: order.designerRepresentativeName || null,
           designerRepresentativeAvatarUrl: null,
-          categoryTag: 'From Order', createdAt: projectCreatedAt,
-          updatedAt: order.updatedAt || projectCreatedAt, endDate: projectEndDate,
+          categoryTag: 'From Order', 
+          createdAt: projectCreatedAt,
+          updatedAt: order.updatedAt || projectCreatedAt, 
+          endDate: projectEndDate,
         };
         return dynamicProject;
       });
