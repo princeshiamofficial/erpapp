@@ -49,7 +49,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis
 } from "@/components/ui/pagination";
-import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import { DateRangePicker3, type PredefinedRange } from '@/components/dashboard/date-range-picker3';
 import type { DateRange } from "react-day-picker";
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog), { ssr: false });
@@ -461,7 +461,7 @@ export default function OrdersPage() {
               </Button>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <DateRangePicker
+              <DateRangePicker3
                 initialRange={selectedDateRange}
                 onDateRangeChange={handleDateRangeChange}
                 className="h-10"
