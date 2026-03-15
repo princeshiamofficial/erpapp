@@ -110,7 +110,7 @@ const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onCon
 
 
 export default function CheckInOutPage() {
-  const { currentUser, isLoading: isAuthLoading } = useAuth();
+  const { currentUser, isLoading: isAuthLoading, stopImpersonating, originalUser } = useAuth();
   const { socket, isConnected } = useSocket();
   const router = useRouter();
   const [status, setStatus] = useState<'Checked In' | 'Checked Out'>('Checked Out');
@@ -478,7 +478,27 @@ export default function CheckInOutPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-between bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 pb-28">
+    <div className="flex min-h-screen flex-col items-center justify-between bg-gray-100 dark:bg-gray-900 p-0 sm:p-6 pb-28">
+      {originalUser && (
+        <div className="w-full bg-primary/10 border-b border-primary/20 py-3 px-4 flex flex-col sm:flex-row justify-center items-center gap-3 z-50">
+          <p className="text-xs sm:text-sm font-medium text-primary flex items-center gap-2 text-center">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            Viewing as <span className="font-bold">{currentUser?.name}</span>
+          </p>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="h-8 bg-primary text-primary-foreground hover:bg-primary/90 border-none px-4 text-xs"
+            onClick={stopImpersonating}
+          >
+            Return to My Account
+          </Button>
+        </div>
+      )}
+      <div className="w-full max-w-md p-4 sm:p-0 flex-grow flex flex-col items-center justify-between">
       {/* Header */}
       <div className="w-full max-w-md flex justify-between items-center">
         <div>
@@ -575,6 +595,7 @@ export default function CheckInOutPage() {
           </div>
         </SheetContent>
       </Sheet>
+      </div>
     </div>
   );
 }

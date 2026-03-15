@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsLoading(false);
 
           // Redirect logic based on role
-          const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
+          const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
           if (!systemRoles.includes(authenticatedUser.role)) {
             router.push('/attendance');
           } else if (authenticatedUser.role === 'LR') {
@@ -216,14 +216,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentUser(userToStore as User);
     localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
     
-    // Redirect logic based on role
-    const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
+    // Redirect logic based on role with full refresh
+    const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
     if (!systemRoles.includes(user.role)) {
-      router.push('/attendance');
+      window.location.href = '/attendance';
     } else if (user.role === 'LR') {
-      router.push('/projects');
+      window.location.href = '/projects';
     } else {
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }
     
     toast({
@@ -242,7 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setOriginalUser(null);
     localStorage.removeItem('colorhut-original-user');
     
-    router.push('/dashboard');
+    window.location.href = '/dashboard';
     
     toast({
         title: "Returned to Account",

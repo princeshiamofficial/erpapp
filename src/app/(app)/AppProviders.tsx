@@ -57,7 +57,7 @@ function AppShell({
   children: React.ReactNode;
   initialGlobalSettings: GlobalSettings;
 }) {
-  const { currentUser, isLoading, logout, isSuspendedDialogOpen } = useAuth();
+  const { currentUser, isLoading, logout, isSuspendedDialogOpen, originalUser } = useAuth();
   const router = useRouter();
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
@@ -87,12 +87,13 @@ function AppShell({
       router.replace('/login');
     } else if (!isLoading && currentUser) {
       // Guard for custom roles: They cannot access internal (app) routes
-      const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
-      if (!systemRoles.includes(currentUser.role)) {
+      // If originalUser is present, it means an admin is impersonating, so we allow them to stay
+      const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
+      if (!systemRoles.includes(currentUser.role) && !originalUser) {
         router.replace('/attendance');
       }
     }
-  }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
+  }, [currentUser, isLoading, router, isSuspendedDialogOpen, originalUser]);
 
   const inMaintenanceMode = useMemo(() => {
     if (isLoading || !initialGlobalSettings) return false;
