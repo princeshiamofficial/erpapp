@@ -317,33 +317,10 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-        <div>
-          <h1 className="page-title">User Management</h1>
-          <p className="page-description">
-            Manage user accounts, roles, and permissions from MySQL database.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <AddUserDialog
-            onUserAdded={handleUserAdded}
-            currentUser={currentUser}
-            isOpen={isAddUserDialogOpen}
-            onOpenChange={setIsAddUserDialogOpen}
-          >
-            <Button
-              size="lg"
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10"
-            >
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Add New User
-            </Button>
-          </AddUserDialog>
-        </div>
-      </div>
 
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
+
+      <Card className="shadow-xl border bg-card rounded-lg">
+        <CardHeader className="sticky top-[4.5rem] z-20 bg-card/95 backdrop-blur-sm border-b p-5 rounded-t-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="text-card-foreground text-xl">All Users</CardTitle>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
@@ -370,6 +347,20 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
               )}
+              <AddUserDialog
+                onUserAdded={handleUserAdded}
+                currentUser={currentUser}
+                isOpen={isAddUserDialogOpen}
+                onOpenChange={setIsAddUserDialogOpen}
+              >
+                <Button
+                  size="sm"
+                  className="w-full sm:w-auto rounded-md h-10 bg-orange-500 hover:bg-orange-600 text-white"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4 text-white" />
+                  Add New User
+                </Button>
+              </AddUserDialog>
             </div>
           </div>
         </CardHeader>

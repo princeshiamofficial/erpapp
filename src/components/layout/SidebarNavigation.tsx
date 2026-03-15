@@ -87,6 +87,7 @@ const navItems: NavItem[] = [
       { href: "/salary-transfer", label: "Salary Transfer", icon: Wallet, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/hrm/attendance", label: "Attendance", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/hrm/geoforce", label: "Office Location", icon: MapPin, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/hrm/documentation", label: "Documentation", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN"] },
     ]
   },
   { href: "/vendors", label: "Vendors", icon: Store, roles: ["SYSTEM_ADMIN", "ADMIN"] },
