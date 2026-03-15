@@ -19,7 +19,9 @@ export const initBillReportsTable = async () => {
         payment DECIMAL(15, 2) DEFAULT 0,
         method VARCHAR(255),
         date DATETIME NOT NULL,
-        invoice_id VARCHAR(255)
+        invoice_id VARCHAR(255),
+        status VARCHAR(255),
+        notes TEXT
       )
     `);
   } catch (error) {
@@ -51,11 +53,12 @@ export const addBillReport = async (reportData: Omit<BillReport, 'id'>): Promise
   try {
     await initBillReportsTable();
     const id = uuidv4();
-    const date = typeof reportData.date === 'string' ? reportData.date : format(reportData.date, 'yyyy-MM-dd HH:mm:ss');
+    const parsedDate = new Date(reportData.date);
+    const formattedDate = isNaN(parsedDate.getTime()) ? format(new Date(), 'yyyy-MM-dd HH:mm:ss') : format(parsedDate, 'yyyy-MM-dd HH:mm:ss');
 
     await query(
       `INSERT INTO ${BILL_REPORTS_TABLE} (id, vendor_id, vendor_name, amount, payment, method, date, invoice_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, reportData.vendorId, reportData.vendorName, reportData.amount || 0, reportData.payment || 0, reportData.method, date, reportData.invoiceId]
+      [id, reportData.vendorId, reportData.vendorName, reportData.amount || 0, reportData.payment || 0, reportData.method, formattedDate, reportData.invoiceId]
     );
 
     return { id, ...reportData } as BillReport;
@@ -77,7 +80,8 @@ export const updateBillReport = async (id: string, updates: Partial<BillReport>)
     if (updates.method !== undefined) { fields.push('method = ?'); values.push(updates.method); }
     if (updates.date !== undefined) {
       fields.push('date = ?');
-      values.push(typeof updates.date === 'string' ? updates.date : format(updates.date, 'yyyy-MM-dd HH:mm:ss'));
+      const parsedDate = new Date(updates.date);
+      values.push(isNaN(parsedDate.getTime()) ? format(new Date(), 'yyyy-MM-dd HH:mm:ss') : format(parsedDate, 'yyyy-MM-dd HH:mm:ss'));
     }
     if (updates.invoiceId !== undefined) { fields.push('invoice_id = ?'); values.push(updates.invoiceId); }
 

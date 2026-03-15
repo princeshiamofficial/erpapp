@@ -1,0 +1,1 @@
+import { addBillReport } from './src/lib/bill-report-service'; addBillReport({vendorId: '1', vendorName: 'v', date: new Date().toISOString(), invoiceId: '123', amount: 0, payment: 10, method: 'Cash'}).then(console.log).catch(console.error);

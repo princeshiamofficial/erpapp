@@ -108,8 +108,14 @@ export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<V
     const billDataWithId = { ...billData, billId };
     const createdAt = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
     const updatedAt = createdAt;
-    const billDate = typeof billData.billDate === 'string' ? billData.billDate : format(billData.billDate, 'yyyy-MM-dd HH:mm:ss');
-    const dueDate = billData.dueDate ? (typeof billData.dueDate === 'string' ? billData.dueDate : format(billData.dueDate, 'yyyy-MM-dd HH:mm:ss')) : null;
+    const parsedBillDate = new Date(billData.billDate);
+    const billDate = isNaN(parsedBillDate.getTime()) ? format(new Date(), 'yyyy-MM-dd HH:mm:ss') : format(parsedBillDate, 'yyyy-MM-dd HH:mm:ss');
+    
+    let dueDate = null;
+    if (billData.dueDate) {
+      const parsedDueDate = new Date(billData.dueDate);
+      dueDate = isNaN(parsedDueDate.getTime()) ? null : format(parsedDueDate, 'yyyy-MM-dd HH:mm:ss');
+    }
 
     await query(
       `INSERT INTO ${VENDOR_BILLS_TABLE} (id, vendor_id, vendor_name, bill_date, due_date, total_amount, paid_amount, due_amount, status, items, payments, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -147,11 +153,17 @@ export const updateVendorBill = async (id: string, updates: Partial<Omit<VendorB
     if (updates.vendorName !== undefined) { fields.push('vendor_name = ?'); values.push(updates.vendorName); }
     if (updates.billDate !== undefined) {
       fields.push('bill_date = ?');
-      values.push(typeof updates.billDate === 'string' ? updates.billDate : format(updates.billDate, 'yyyy-MM-dd HH:mm:ss'));
+      const parsedBillDate = new Date(updates.billDate);
+      values.push(isNaN(parsedBillDate.getTime()) ? format(new Date(), 'yyyy-MM-dd HH:mm:ss') : format(parsedBillDate, 'yyyy-MM-dd HH:mm:ss'));
     }
     if (updates.dueDate !== undefined) {
       fields.push('due_date = ?');
-      values.push(updates.dueDate ? (typeof updates.dueDate === 'string' ? updates.dueDate : format(updates.dueDate, 'yyyy-MM-dd HH:mm:ss')) : null);
+      if (updates.dueDate) {
+        const parsedDueDate = new Date(updates.dueDate);
+        values.push(isNaN(parsedDueDate.getTime()) ? null : format(parsedDueDate, 'yyyy-MM-dd HH:mm:ss'));
+      } else {
+        values.push(null);
+      }
     }
     if (updates.total !== undefined) { fields.push('total_amount = ?'); values.push(updates.total); }
     if (updates.paidAmount !== undefined) { fields.push('paid_amount = ?'); values.push(updates.paidAmount); }
