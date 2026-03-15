@@ -108,7 +108,7 @@ export function UploadDocumentDialog({ user, isOpen, onOpenChange, onUploadSucce
     }
 
     const pdfBytes = await mergedPdf.save();
-    return new File([pdfBytes], `merged_docs_${user.name.replace(/\s+/g, '_')}.pdf`, { type: 'application/pdf' });
+    return new File([pdfBytes as any], `merged_docs_${user.name.replace(/\s+/g, '_')}.pdf`, { type: 'application/pdf' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -240,7 +240,7 @@ export function UploadDocumentDialog({ user, isOpen, onOpenChange, onUploadSucce
                   type="file"
                   accept={level.accept}
                   className="hidden"
-                  ref={el => fileInputRefs.current[level.id] = el}
+                  ref={el => { fileInputRefs.current[level.id] = el; }}
                   onChange={(e) => handleFileChange(level.id, e)}
                   disabled={isLoading}
                 />
