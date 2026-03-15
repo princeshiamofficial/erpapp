@@ -40,7 +40,7 @@ export const getUserDocuments = async (userId: string): Promise<UserDocument[]> 
     const results = await query<any[]>(`SELECT * FROM ${DOCUMENTS_TABLE} WHERE user_id = ? ORDER BY uploaded_at DESC`, [userId]);
     return results.map(row => ({
       ...row,
-      uploaded_at: row.uploaded_at.toISOString()
+      uploaded_at: row.uploaded_at instanceof Date ? row.uploaded_at.toISOString() : new Date(row.uploaded_at).toISOString()
     } as UserDocument));
   } catch (error) {
     console.error(`Error fetching documents for user ${userId}:`, error);
@@ -65,6 +65,7 @@ export const addUserDocument = async (userId: string, doc: Omit<UserDocument, 'i
 
 export const deleteUserDocument = async (id: string): Promise<boolean> => {
   try {
+    await initDocumentsTable();
     await query(`DELETE FROM ${DOCUMENTS_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
@@ -75,6 +76,7 @@ export const deleteUserDocument = async (id: string): Promise<boolean> => {
 
 export const clearUserDocuments = async (userId: string): Promise<boolean> => {
     try {
+      await initDocumentsTable();
       await query(`DELETE FROM ${DOCUMENTS_TABLE} WHERE user_id = ?`, [userId]);
       return true;
     } catch (error) {
@@ -82,13 +84,16 @@ export const clearUserDocuments = async (userId: string): Promise<boolean> => {
       return false;
     }
   };
+
 export const getLatestUserDocument = async (userId: string): Promise<UserDocument | null> => {
   try {
+    await initDocumentsTable();
     const results = await query<any[]>(`SELECT * FROM ${DOCUMENTS_TABLE} WHERE user_id = ? ORDER BY uploaded_at DESC LIMIT 1`, [userId]);
     if (results.length > 0) {
+      const row = results[0];
       return {
-        ...results[0],
-        uploaded_at: results[0].uploaded_at.toISOString()
+        ...row,
+        uploaded_at: row.uploaded_at instanceof Date ? row.uploaded_at.toISOString() : new Date(row.uploaded_at).toISOString()
       } as UserDocument;
     }
     return null;

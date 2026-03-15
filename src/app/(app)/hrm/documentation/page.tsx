@@ -121,10 +121,15 @@ export default function DocumentationPage() {
       if (result.success && result.doc) {
         window.open(result.doc.file_url, '_blank');
       } else {
-        toast({ title: "Error", description: "Could not find document file.", variant: "destructive" });
+        console.warn(`Document marked as submitted but not found in DB for user ${userId}`);
+        toast({ 
+          title: "Document Missing", 
+          description: "The record was found but the actual file location is unavailable. Try uploading again.", 
+          variant: "destructive" 
+        });
       }
     } catch (error) {
-       toast({ title: "Error", description: "Failed to open document.", variant: "destructive" });
+       toast({ title: "Error", description: "Failed to open document due to a system error.", variant: "destructive" });
     }
   };
 
@@ -139,7 +144,12 @@ export default function DocumentationPage() {
         link.click();
         document.body.removeChild(link);
       } else {
-        toast({ title: "Error", description: "Could not find document file.", variant: "destructive" });
+        console.warn(`Document marked as submitted but not found in DB for user ${userId}`);
+        toast({ 
+          title: "Download Failed", 
+          description: "Could not locate the document record. It may have been removed.", 
+          variant: "destructive" 
+        });
       }
     } catch (error) {
        toast({ title: "Error", description: "Failed to download document.", variant: "destructive" });
