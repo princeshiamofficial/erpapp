@@ -8,8 +8,33 @@ import { addBillReport } from './bill-report-service';
 
 const VENDOR_BILLS_TABLE = 'vendor_bills';
 
+export const initVendorBillsTable = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ${VENDOR_BILLS_TABLE} (
+        id VARCHAR(50) PRIMARY KEY,
+        vendor_id VARCHAR(50) NOT NULL,
+        vendor_name VARCHAR(255),
+        bill_date DATETIME NOT NULL,
+        due_date DATETIME,
+        total_amount DECIMAL(15, 2) DEFAULT 0,
+        paid_amount DECIMAL(15, 2) DEFAULT 0,
+        due_amount DECIMAL(15, 2) DEFAULT 0,
+        status VARCHAR(50),
+        items JSON,
+        payments JSON,
+        created_at DATETIME,
+        updated_at DATETIME
+      )
+    `);
+  } catch (error) {
+    console.error("Error creating vendor_bills table:", error);
+  }
+};
+
 export const getVendorBills = async (): Promise<VendorBill[]> => {
   try {
+    await initVendorBillsTable();
     const results = await query<any[]>(`SELECT * FROM ${VENDOR_BILLS_TABLE} ORDER BY bill_date DESC`);
     return results.map(row => ({
       id: row.id,
@@ -66,6 +91,7 @@ export const getBillById = async (id: string): Promise<VendorBill | null> => {
 
 export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<VendorBill | null> => {
   try {
+    await initVendorBillsTable();
     const currentDate = new Date();
     const datePrefix = `INV-${format(currentDate, 'yyyyMMdd')}-`;
 

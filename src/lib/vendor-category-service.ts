@@ -6,8 +6,22 @@ import { v4 as uuidv4 } from 'uuid';
 
 const VENDOR_CATEGORIES_TABLE = 'vendor_categories';
 
+export const initVendorCategoriesTable = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ${VENDOR_CATEGORIES_TABLE} (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL
+      )
+    `);
+  } catch (error) {
+    console.error("Error creating vendor_categories table:", error);
+  }
+};
+
 export const getVendorCategories = async (): Promise<VendorCategory[]> => {
   try {
+    await initVendorCategoriesTable();
     const results = await query<any[]>(`SELECT * FROM ${VENDOR_CATEGORIES_TABLE} ORDER BY name ASC`);
     return results.map(row => ({
       id: row.id,
@@ -22,6 +36,7 @@ export const getVendorCategories = async (): Promise<VendorCategory[]> => {
 
 export const addVendorCategory = async (categoryData: Omit<VendorCategory, 'id'>): Promise<VendorCategory | null> => {
   try {
+    await initVendorCategoriesTable();
     const id = uuidv4();
     await query(`INSERT INTO ${VENDOR_CATEGORIES_TABLE} (id, name) VALUES (?, ?)`, [id, categoryData.name]);
     return { id, ...categoryData } as VendorCategory;

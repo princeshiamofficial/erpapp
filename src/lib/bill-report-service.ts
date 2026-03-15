@@ -8,8 +8,28 @@ import { format } from 'date-fns';
 
 const BILL_REPORTS_TABLE = 'bill_reports';
 
+export const initBillReportsTable = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ${BILL_REPORTS_TABLE} (
+        id VARCHAR(255) PRIMARY KEY,
+        vendor_id VARCHAR(255) NOT NULL,
+        vendor_name VARCHAR(255) NOT NULL,
+        amount DECIMAL(15, 2) DEFAULT 0,
+        payment DECIMAL(15, 2) DEFAULT 0,
+        method VARCHAR(255),
+        date DATETIME NOT NULL,
+        invoice_id VARCHAR(255)
+      )
+    `);
+  } catch (error) {
+    console.error("Error creating bill_reports table:", error);
+  }
+};
+
 export const getBillReports = async (): Promise<BillReport[]> => {
   try {
+    await initBillReportsTable();
     const results = await query<any[]>(`SELECT * FROM ${BILL_REPORTS_TABLE} ORDER BY date DESC`);
     return results.map(row => ({
       id: row.id,
@@ -29,6 +49,7 @@ export const getBillReports = async (): Promise<BillReport[]> => {
 
 export const addBillReport = async (reportData: Omit<BillReport, 'id'>): Promise<BillReport | null> => {
   try {
+    await initBillReportsTable();
     const id = uuidv4();
     const date = typeof reportData.date === 'string' ? reportData.date : format(reportData.date, 'yyyy-MM-dd HH:mm:ss');
 

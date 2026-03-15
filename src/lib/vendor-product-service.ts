@@ -6,8 +6,25 @@ import { v4 as uuidv4 } from 'uuid';
 
 const VENDOR_PRODUCTS_TABLE = 'vendor_products';
 
+export const initVendorProductsTable = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ${VENDOR_PRODUCTS_TABLE} (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(255),
+        price DECIMAL(15, 2) DEFAULT 0,
+        description TEXT
+      )
+    `);
+  } catch (error) {
+    console.error("Error creating vendor_products table:", error);
+  }
+};
+
 export const getVendorProducts = async (): Promise<VendorProduct[]> => {
   try {
+    await initVendorProductsTable();
     const results = await query<any[]>(`SELECT * FROM ${VENDOR_PRODUCTS_TABLE} ORDER BY name ASC`);
     return results.map(row => ({
       id: row.id,
@@ -24,6 +41,7 @@ export const getVendorProducts = async (): Promise<VendorProduct[]> => {
 
 export const addVendorProduct = async (productData: Omit<VendorProduct, 'id'>): Promise<VendorProduct | null> => {
   try {
+    await initVendorProductsTable();
     const id = uuidv4();
     await query(
       `INSERT INTO ${VENDOR_PRODUCTS_TABLE} (id, name, category, price, description) VALUES (?, ?, ?, ?, ?)`,
