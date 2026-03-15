@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter } from "lucide-react";
+import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter, LogIn, Eye } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole, UserRoleDefinition } from "@/types";
@@ -48,7 +48,7 @@ const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-di
 
 
 export default function UsersPage() {
-  const { currentUser, refreshCurrentUser } = useAuth();
+  const { currentUser, refreshCurrentUser, impersonate } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -448,6 +448,14 @@ export default function UsersPage() {
                               <DropdownMenuLabel>Actions for {user.name}</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuGroup>
+                                {currentUser?.role === 'SYSTEM_ADMIN' && user.role !== 'SYSTEM_ADMIN' && roleDef?.isDefault && (
+                                  <DropdownMenuItem
+                                    onSelect={() => impersonate(user)}
+                                    className="cursor-pointer text-orange-600 focus:text-orange-700"
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" /> View as
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                   onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
                                   disabled={!canAdminModifyTargetUser(user)}

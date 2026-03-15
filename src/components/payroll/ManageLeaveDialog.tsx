@@ -44,6 +44,8 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
   const [editedLeaveTaken, setEditedLeaveTaken] = useState<string>('');
   const [recordToDelete, setRecordToDelete] = useState<LeaveRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const { toast } = useToast();
 
   const currentYear = new Date().getFullYear();
@@ -80,13 +82,68 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
   }, [employee?.joiningDate]);
 
 
-  const leaveTaken = useMemo(() => {
-    if (!employee?.leaveHistory) return 0;
-    // Sum up all leave days regardless of year
-    return employee.leaveHistory.reduce((sum, leave) => sum + leave.days, 0);
-  }, [employee?.leaveHistory]);
-  
-  const availableLeave = useMemo(() => totalLeaveAccrued - leaveTaken, [totalLeaveAccrued, leaveTaken]);
+  const years = useMemo(() => {
+    if (!employee?.joiningDate) return [new Date().getFullYear()];
+    const startYear = getYear(new Date(employee.joiningDate));
+    const endYear = new Date().getFullYear() + 1;
+    const yearsArray = [];
+    for (let i = startYear; i <= endYear; i++) {
+      yearsArray.push(i);
+    }
+    return yearsArray.reverse();
+  }, [employee?.joiningDate]);
+
+
+  const stats = useMemo(() => {
+    if (!employee?.joiningDate) return { accrued: 0, taken: 0, available: 0 };
+    
+    const joiningDate = new Date(employee.joiningDate);
+    const now = new Date();
+    const currentYearNum = now.getFullYear();
+    const history = employee.leaveHistory || [];
+
+    if (selectedYear === 'all') {
+      const taken = history.reduce((sum, leave) => sum + leave.days, 0);
+      return {
+        accrued: totalLeaveAccrued,
+        taken: taken,
+        available: totalLeaveAccrued - taken
+      };
+    }
+
+    // Year specific stats
+    let accrued = 0;
+    if (selectedYear === getYear(joiningDate)) {
+      // Pro-rated for joining year
+      const startMonth = getMonth(joiningDate);
+      const isCurrentYear = selectedYear === currentYearNum;
+      const endMonth = isCurrentYear ? getMonth(now) : 11;
+      accrued = Math.max(0, endMonth - startMonth + 1);
+    } else if (selectedYear < getYear(joiningDate) || selectedYear > currentYearNum) {
+      accrued = 0;
+    } else if (selectedYear === currentYearNum) {
+      // Current year up to current month
+      accrued = getMonth(now) + 1;
+    } else {
+      // Full past year
+      accrued = 12;
+    }
+
+    const taken = history
+      .filter(record => getYear(parseISO(record.date)) === selectedYear)
+      .reduce((sum, leave) => sum + leave.days, 0);
+
+    return {
+      accrued,
+      taken,
+      available: accrued - taken
+    };
+  }, [employee, selectedYear, totalLeaveAccrued]);
+
+
+  const leaveTaken = stats.taken;
+  const availableLeave = stats.available;
+  const displayAccrued = stats.accrued;
   
   const canAdminEdit = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN';
 
@@ -96,15 +153,27 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
       setLeaveReason('');
       setEditedLeaveTaken('');
       setRecordToDelete(null);
+      setSelectedYear(new Date().getFullYear());
+      setCurrentMonth(new Date());
     } else if (employee) {
       setEditedLeaveTaken(leaveTaken.toString());
     }
   }, [isOpen, employee, leaveTaken]);
+
+  useEffect(() => {
+    if (selectedYear !== 'all' && selectedYear !== currentMonth.getFullYear()) {
+      const newMonth = new Date(currentMonth);
+      newMonth.setFullYear(selectedYear);
+      setCurrentMonth(newMonth);
+    }
+  }, [selectedYear]);
   
   const filteredLeaveHistory = useMemo(() => {
     if (!employee?.leaveHistory) return [];
-    return employee.leaveHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [employee?.leaveHistory]);
+    return employee.leaveHistory
+      .filter(record => selectedYear === 'all' || getYear(parseISO(record.date)) === selectedYear)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [employee?.leaveHistory, selectedYear]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,6 +193,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     
     const newLeaveRecord: Omit<LeaveRecord, 'id'> = {
       date: selectedDates![0].toISOString(),
+      allDates: selectedDates!.map(d => d.toISOString()).sort(),
       days,
       reason: leaveReason.trim(),
       recordedByUserId: currentUser.id,
@@ -166,28 +236,52 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Manage Leave for {employee?.name}</DialogTitle>
-            <DialogDescription>View and record leave for this employee.</DialogDescription>
+            <div className="flex items-center justify-between mt-1.5">
+              <DialogDescription className="text-sm text-muted-foreground mr-4">
+                View and record leave for this employee.
+              </DialogDescription>
+              <Select value={selectedYear.toString()} onValueChange={val => setSelectedYear(val === 'all' ? 'all' : parseInt(val))}>
+                <SelectTrigger className="w-[110px] h-7 text-[11px] font-bold uppercase tracking-wider border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-[11px] font-bold">All Time</SelectItem>
+                  {years.map(y => (
+                    <SelectItem key={y} value={y.toString()} className="text-[11px] font-bold">{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Accrued</p>
-                <p className="text-2xl font-bold">{totalLeaveAccrued}</p>
+            <div className="grid grid-cols-3 gap-0 py-6 px-2 bg-[#f0f2f5] rounded-xl border border-slate-100 mb-6">
+              <div className="flex flex-col items-center justify-center border-r border-slate-200">
+                <Label className="text-[11px] text-[#919db1] uppercase font-bold tracking-[0.05em] mb-3 leading-none">Accrued</Label>
+                <div className="text-[24px] font-bold text-[#1a1f2c] leading-none h-[24px] flex items-center justify-center">
+                  {displayAccrued}
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="leave-taken-edit" className="text-sm text-muted-foreground">Taken</Label>
-                <Input
-                  id="leave-taken-edit"
-                  type="number"
-                  value={editedLeaveTaken}
-                  onChange={e => setEditedLeaveTaken(e.target.value)}
-                  className="text-2xl font-bold text-destructive h-auto p-0 border-none text-center bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  readOnly={!canAdminEdit}
-                />
+              <div className="flex flex-col items-center justify-center border-r border-slate-200 px-1">
+                <Label htmlFor="leave-taken-edit" className="text-[11px] text-[#919db1] uppercase font-bold tracking-[0.05em] mb-3 leading-none cursor-pointer">Taken</Label>
+                <div className="h-[24px] w-full flex items-center justify-center">
+                  <input
+                    id="leave-taken-edit"
+                    name="leaveTaken"
+                    type="number"
+                    value={editedLeaveTaken}
+                    onChange={e => setEditedLeaveTaken(e.target.value)}
+                    className="h-full w-full p-0 m-0 border-none bg-transparent text-center text-[24px] font-bold text-[#e11d48] leading-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    readOnly={!canAdminEdit || selectedYear !== 'all'}
+                    title={selectedYear !== 'all' ? "Switch to 'All Time' to edit total leave taken" : ""}
+                    autoComplete="off"
+                  />
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Available</p>
-                <p className="text-2xl font-bold text-green-600">{availableLeave}</p>
+              <div className="flex flex-col items-center justify-center">
+                <Label className="text-[11px] text-[#919db1] uppercase font-bold tracking-[0.05em] mb-3 leading-none">Available</Label>
+                <div className={cn("text-[24px] font-bold leading-none h-[24px] flex items-center justify-center", availableLeave < 0 ? "text-[#e11d48]" : "text-[#059669]")}>
+                  {availableLeave}
+                </div>
               </div>
             </div>
             
@@ -202,15 +296,27 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
             <ScrollArea className="h-40 border rounded-md p-2 bg-muted/50">
               {filteredLeaveHistory.length > 0 ? (
                   filteredLeaveHistory.map(record => (
-                      <div
-                        key={record.id}
-                        className="text-sm p-1.5 border-b last:border-b-0 hover:bg-muted/80 rounded-sm"
-                        onDoubleClick={() => canAdminEdit && setRecordToDelete(record)}
-                        title={canAdminEdit ? "Double-click to delete" : ""}
-                      >
-                         <p><span className="font-semibold">{record.days} day(s)</span> on {format(parseISO(record.date), 'd MMM, yyyy')}</p>
-                         <p className="text-xs text-muted-foreground italic">Reason: {record.reason}</p>
-                      </div>
+                        <div
+                          key={record.id}
+                          className="text-sm p-1.5 border-b last:border-b-0 hover:bg-muted/80 rounded-sm"
+                          onDoubleClick={() => canAdminEdit && setRecordToDelete(record)}
+                          title={canAdminEdit ? "Double-click to delete" : ""}
+                        >
+                          <p>
+                            <span className="font-semibold text-primary/80">{record.days} day(s)</span> on{' '}
+                            <span className="font-medium">
+                              {record.allDates && record.allDates.length > 0 
+                                ? record.allDates.map((d, i) => {
+                                    const dateObj = parseISO(d);
+                                    const isLast = i === record.allDates!.length - 1;
+                                    const showYear = isLast; // Only show year on the last date or if it changes? For now, let's follow the user's example: 19 Nov, 7 Dec, 12 Dec 2025
+                                    return format(dateObj, showYear ? 'd MMM, yyyy' : 'd MMM') + (isLast ? '' : ', ');
+                                  }).join('')
+                                : format(parseISO(record.date), 'd MMM, yyyy')}
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-muted-foreground italic leading-tight mt-0.5">Reason: {record.reason}</p>
+                        </div>
                   ))
               ) : (
                   <div className="text-center text-sm text-muted-foreground py-10">No leave history recorded.</div>
@@ -224,38 +330,52 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                 <PlusCircle className="mr-2 h-5 w-5 text-primary" />
                 Record New Leave
               </h4>
-              <div className="space-y-1">
-                <Label>Leave Dates *</Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            className={cn("w-full justify-start text-left font-normal", !selectedDates?.length && "text-muted-foreground")}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDates?.length ? (
-                                `${selectedDates.length} date(s) selected`
-                            ) : (
-                                <span>Pick dates</span>
-                            )}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                            mode="multiple"
-                            selected={selectedDates}
-                            onSelect={setSelectedDates}
-                            initialFocus
-                            disabled={{ before: new Date(new Date().setFullYear(new Date().getFullYear() - 1)) }}
-                        />
-                    </PopoverContent>
-                </Popover>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label>Leave Dates *</Label>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                              variant="outline"
+                              className={cn("w-full justify-start text-left font-normal h-10 px-3", !selectedDates?.length && "text-muted-foreground")}
+                          >
+                              <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                              {selectedDates?.length ? (
+                                  <span className="truncate">{selectedDates.length} date(s)</span>
+                              ) : (
+                                  <span>Pick dates</span>
+                              )}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                              mode="multiple"
+                              selected={selectedDates}
+                              onSelect={setSelectedDates}
+                              month={currentMonth}
+                              onMonthChange={setCurrentMonth}
+                              initialFocus
+                              disabled={employee?.joiningDate ? { before: new Date(employee.joiningDate) } : undefined}
+                          />
+                      </PopoverContent>
+                  </Popover>
+                </div>
+                
+                 <div className="space-y-1">
+                    <Label htmlFor="leave-reason">Reason *</Label>
+                    <Input 
+                      id="leave-reason" 
+                      value={leaveReason} 
+                      onChange={(e) => setLeaveReason(e.target.value)} 
+                      required 
+                      placeholder="e.g., Sick"
+                      className="h-10"
+                    />
+                </div>
               </div>
-               <div className="space-y-1">
-                  <Label htmlFor="leave-reason">Reason *</Label>
-                  <Textarea id="leave-reason" value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} required placeholder="e.g., Sick leave"/>
-              </div>
-              <DialogFooter className="pt-4">
+
+              <DialogFooter className="pt-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
                 <Button type="submit" disabled={isSubmitting || !selectedDates || selectedDates.length === 0 || !leaveReason}>
                   {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recording...</> : "Record Leave"}

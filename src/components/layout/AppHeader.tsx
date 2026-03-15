@@ -22,7 +22,7 @@ import { FaqDialog } from './FaqDialog';
 export function AppHeader() {
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser, stopImpersonating, originalUser } = useAuth();
   const { state: sidebarState, isMobile, openMobile } = useSidebar();
   const isSidebarExpanded = isMobile ? openMobile : sidebarState === 'expanded';
 
@@ -62,6 +62,25 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
+      {originalUser && (
+        <div className="bg-primary/10 border-b border-primary/20 py-2 px-4 flex justify-center items-center gap-4">
+          <p className="text-sm font-medium text-primary flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            Currently viewing as <span className="font-bold underline">{currentUser?.name}</span> ({currentUser?.role?.replace(/_/g, ' ') || 'User'})
+          </p>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="h-7 bg-primary text-primary-foreground hover:bg-primary/90 border-none px-3"
+            onClick={stopImpersonating}
+          >
+            Return to My Account ({originalUser.name})
+          </Button>
+        </div>
+      )}
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md md:hidden" />

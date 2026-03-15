@@ -38,6 +38,7 @@ export interface SalaryIncrement {
 export interface LeaveRecord {
   id: string;
   date: string; // ISO string for when the leave was taken/recorded
+  allDates?: string[]; // Multiple selected dates (ISO strings)
   days: number;
   reason: string;
   recordedByUserId: string;

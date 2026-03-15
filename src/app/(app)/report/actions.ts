@@ -5,7 +5,21 @@
 import { revalidatePath } from "next/cache";
 import { setReportProductFilters } from "@/lib/settings-service";
 import type { TaskEntry } from '@/types';
-import { updateTaskEntry, deleteTaskEntry as deleteTaskEntryFromDb } from '@/lib/team-performance-service';
+import { updateTaskEntry, deleteTaskEntry as deleteTaskEntryFromDb, getTaskEntries } from '@/lib/team-performance-service';
+import { getOrders } from "@/lib/order-service";
+import { getGlobalSettings } from "@/lib/settings-service";
+import { getUsers } from "@/lib/user-service";
+
+export async function getReportDataAction() {
+  const [orders, settings, users, tasks] = await Promise.all([
+    getOrders(),
+    getGlobalSettings(),
+    getUsers(),
+    getTaskEntries(),
+  ]);
+  return { orders, settings, users, tasks };
+}
+
 
 export async function updateReportFiltersAction(filters: string[]): Promise<{ success: boolean; error?: string }> {
   try {

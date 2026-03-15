@@ -32,12 +32,22 @@ import {
     Layout, 
     Check,
     AlertCircle,
-    Loader2
+    Loader2,
+    UserPlus,
+    Phone,
+    CheckCircle2,
+    MessageSquare,
+    TrendingUp,
+    Target,
+    XCircle,
+    Calendar,
+    Star,
+    HelpCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { FollowUpStatus } from "@/types";
 import { cn } from "@/lib/utils";
-import * as LucideIcons from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
 import { 
     addFollowUpStatus, 
     updateFollowUpStatus, 
@@ -50,6 +60,25 @@ interface ManageFollowUpStatusesDialogProps {
     onOpenChange: (open: boolean) => void;
     onUpdate: () => void;
 }
+
+const iconMap: Record<string, LucideIcon> = {
+    UserPlus,
+    Phone,
+    CheckCircle2,
+    MessageSquare,
+    TrendingUp,
+    Target,
+    XCircle,
+    Layout,
+    Calendar,
+    Star,
+    HelpCircle
+};
+
+const getIcon = (name: string | undefined): LucideIcon => {
+    if (!name) return HelpCircle;
+    return iconMap[name] || HelpCircle;
+};
 
 export function ManageFollowUpStatusesDialog({
     isOpen,
@@ -202,7 +231,7 @@ export function ManageFollowUpStatusesDialog({
                                             className="h-10 w-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0 border border-white/20"
                                             style={{ backgroundColor: status.color, boxShadow: `0 4px 12px ${status.color}40` }}
                                         >
-                                            {React.createElement((LucideIcons as any)[status.icon || 'Layout'] || LucideIcons.Layout, { className: "h-5 w-5" })}
+                                            {React.createElement(getIcon(status.icon), { className: "h-5 w-5" })}
                                         </div>
                                         
                                         <div className="flex-1 min-w-0">
@@ -283,7 +312,7 @@ export function ManageFollowUpStatusesDialog({
                                                         )}
                                                         onClick={() => handleUpdateStatus(status.id, { icon: icon.name })}
                                                     >
-                                                        {React.createElement((LucideIcons as any)[icon.name] || LucideIcons.HelpCircle, { className: "h-4 w-4" })}
+                                                        {React.createElement(getIcon(icon.name), { className: "h-4 w-4" })}
                                                     </button>
                                                 ))}
                                             </div>

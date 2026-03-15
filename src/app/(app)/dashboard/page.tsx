@@ -1341,9 +1341,6 @@ function DashboardContent() {
           {canSeeAdminCharts && (
             <OrderAnalysisClient allOrders={allOrders} />
           )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 mt-6 print:hidden lg:grid-cols-2">
           {!isDesignerRepOrLrOrCo && (
             <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
               {/* Premium background highlight for mobile */}
@@ -1451,8 +1448,9 @@ function DashboardContent() {
               </CardContent>
             </Card>
           )}
-          {(isDesignerRepOrLrOrCo) && (<div className="lg:col-span-1"></div>)}
         </div>
+
+
 
         {!isDesignerRepOrLrOrCo && (
           <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>

@@ -926,7 +926,7 @@ export default function AttendancePage() {
                                 <TableHead>Total Accrued</TableHead>
                                 <TableHead>Leave Taken</TableHead>
                                 <TableHead>Available</TableHead>
-                                <TableHead className="text-center">Action</TableHead>
+                                {currentUser?.role === 'SYSTEM_ADMIN' && <TableHead className="text-center">Action</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -941,7 +941,7 @@ export default function AttendancePage() {
                                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                                        <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
+                                        {currentUser?.role === 'SYSTEM_ADMIN' && <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>}
                                     </TableRow>
                                 ))
                             ) : paginatedEmployees.length > 0 ? (
@@ -996,9 +996,11 @@ export default function AttendancePage() {
                                             <TableCell className="font-semibold text-blue-600">{yearlyAccrued}</TableCell>
                                             <TableCell className="font-semibold text-red-600">{leaveTakenInYear}</TableCell>
                                             <TableCell className={cn("font-semibold", yearlyAvailable < 0 ? "text-red-600" : "text-green-600")}>{yearlyAvailable}</TableCell>
-                                            <TableCell className="text-center">
-                                                <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee as Employee)}>Manage</Button>
-                                            </TableCell>
+                                            {currentUser?.role === 'SYSTEM_ADMIN' && (
+                                                <TableCell className="text-center">
+                                                    <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee as Employee)}>Manage</Button>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     )
                                 })

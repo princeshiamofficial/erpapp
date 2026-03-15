@@ -75,6 +75,7 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
                         className={cn(
                             "flex-1 bg-background selection:bg-primary/20 selection:text-primary",
                             isNoPaddingPage ? "p-0" : "p-4 sm:p-6 lg:p-8",
+                            pathname === '/dashboard' && "pt-0 sm:pt-0 lg:pt-0",
                             showBottomNav && "pb-24" // Add more padding to avoid overlap
                         )}
                     >

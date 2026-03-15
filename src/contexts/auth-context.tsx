@@ -4,7 +4,7 @@
 import type { User } from '@/types';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
-import { getUserByEmail, seedInitialAdminUser, updateUserAvatar as updateUserAvatarService, getUserById, verifyUserPassword } from '@/lib/user-service';
+import { serverSeedInitialAdminUser as seedInitialAdminUser, serverGetUserById as getUserById, serverVerifyUserPassword as verifyUserPassword, serverUpdateUserAvatar as updateUserAvatarService } from '@/app/actions/auth';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -14,6 +14,9 @@ interface AuthContextType {
   logout: () => void;
   updateUserAvatar: (avatarUrl: string | null) => Promise<boolean>;
   refreshCurrentUser: () => Promise<void>;
+  impersonate: (user: User) => void;
+  stopImpersonating: () => void;
+  originalUser: User | null;
   isSuspendedDialogOpen: boolean;
 }
 
@@ -21,6 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [originalUser, setOriginalUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSuspendedDialogOpen, setIsSuspendedDialogOpen] = useState(false);
   const router = useRouter();
@@ -29,8 +33,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(() => {
     console.log("AuthContext: Logging out user.");
     setCurrentUser(null);
+    setOriginalUser(null);
     setIsSuspendedDialogOpen(false);
     localStorage.removeItem('colorhut-user');
+    localStorage.removeItem('colorhut-original-user');
     router.push('/login');
   }, [router]);
 
@@ -107,6 +113,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("AuthContext: Error during initial admin user seeding phase:", seedError);
       } finally {
         console.log("AuthContext: Initialization complete. Setting isLoading to false.");
+        
+        // Handle original user for impersonation
+        const storedOriginalUserJson = localStorage.getItem('colorhut-original-user');
+        if (storedOriginalUserJson) {
+           try {
+             setOriginalUser(JSON.parse(storedOriginalUserJson));
+           } catch (e) {
+             console.error("AuthContext: Failed to parse original user", e);
+           }
+        }
+        
         setIsLoading(false);
       }
     };
@@ -186,8 +203,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return success;
   };
 
+  const impersonate = useCallback((user: User) => {
+    console.log(`AuthContext: Impersonating user: ${user.id}`);
+    
+    // Store current user as original user if not already impersonating
+    if (!originalUser && currentUser) {
+        setOriginalUser(currentUser);
+        localStorage.setItem('colorhut-original-user', JSON.stringify(currentUser));
+    }
+
+    const { password, ...userToStore } = user;
+    setCurrentUser(userToStore as User);
+    localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+    
+    // Redirect logic based on role
+    const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
+    if (!systemRoles.includes(user.role)) {
+      router.push('/attendance');
+    } else if (user.role === 'LR') {
+      router.push('/projects');
+    } else {
+      router.push('/dashboard');
+    }
+    
+    toast({
+        title: "Viewing Mode Active",
+        description: `You are now viewing as ${user.name}.`,
+    });
+  }, [router, toast, currentUser, originalUser]);
+
+  const stopImpersonating = useCallback(() => {
+    if (!originalUser) return;
+    
+    console.log(`AuthContext: Stopping impersonation, returning to: ${originalUser.id}`);
+    setCurrentUser(originalUser);
+    localStorage.setItem('colorhut-user', JSON.stringify(originalUser));
+    
+    setOriginalUser(null);
+    localStorage.removeItem('colorhut-original-user');
+    
+    router.push('/dashboard');
+    
+    toast({
+        title: "Returned to Account",
+        description: `Logged back in as ${originalUser.name}.`,
+    });
+  }, [router, toast, originalUser]);
+
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUserAvatar, refreshCurrentUser, isSuspendedDialogOpen }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUserAvatar, refreshCurrentUser, impersonate, stopImpersonating, originalUser, isSuspendedDialogOpen }}>
       {children}
     </AuthContext.Provider>
   );

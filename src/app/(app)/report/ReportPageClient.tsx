@@ -23,10 +23,6 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TrackingLink, GlobalSettings, User, TaskEntry, UserRole } from '@/types';
-import { getOrders } from '@/lib/order-service';
-import { getGlobalSettings, setReportProductFilters } from '@/lib/settings-service';
-import { getUsers } from '@/lib/user-service';
-import { getTaskEntries } from '@/lib/team-performance-service';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2, Download, LineChart as LineChartIcon, ChevronsUpDown, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
@@ -34,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateTaskEntryAction, deleteTaskEntryAction, updateReportFiltersAction } from './actions';
+import { updateTaskEntryAction, deleteTaskEntryAction, updateReportFiltersAction, getReportDataAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -246,16 +242,11 @@ export function ReportPageClient() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedOrders, fetchedSettings, fetchedUsers, fetchedTasks] = await Promise.all([
-        getOrders(),
-        getGlobalSettings(),
-        getUsers(),
-        getTaskEntries(), // Fetch task entries
-      ]);
-      setOrders(fetchedOrders);
-      setGlobalSettings(fetchedSettings);
-      setAllUsers(fetchedUsers);
-      setAllTasks(fetchedTasks); // Set tasks state
+      const { orders, settings, users, tasks } = await getReportDataAction();
+      setOrders(orders);
+      setGlobalSettings(settings);
+      setAllUsers(users);
+      setAllTasks(tasks); 
     } catch (error) {
       console.error("Failed to fetch data for report:", error);
       toast({

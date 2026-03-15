@@ -1161,12 +1161,22 @@ export default function PayrollPage() {
                     <p className="text-sm text-muted-foreground">No salary history.</p>
                   )}
                 </div>
-                <div>
-                  <h4 className="font-semibold text-md mb-2">Leave History</h4>
+                <div>                  <h4 className="font-semibold text-md mb-2">Leave History</h4>
                   {historyToView.leaveHistory && historyToView.leaveHistory.length > 0 ? (
                     historyToView.leaveHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(leave => (
                       <div key={leave.id} className="text-sm p-2 border-b">
-                        <p>{leave.days} day(s) on <span className="font-medium">{format(parseISO(leave.date), 'd MMM, yyyy')}</span></p>
+                        <p>
+                          <span className="font-medium">{leave.days} day(s)</span> on{' '}
+                          <span className="font-medium">
+                            {leave.allDates && leave.allDates.length > 0 
+                              ? leave.allDates.map((d, i) => {
+                                  const dateObj = parseISO(d);
+                                  const isLast = i === leave.allDates!.length - 1;
+                                  return format(dateObj, isLast ? 'd MMM, yyyy' : 'd MMM') + (isLast ? '' : ', ');
+                                }).join('')
+                              : format(parseISO(leave.date), 'd MMM, yyyy')}
+                          </span>
+                        </p>
                         <p className="text-xs text-muted-foreground italic">Reason: {leave.reason}</p>
                       </div>
                     ))

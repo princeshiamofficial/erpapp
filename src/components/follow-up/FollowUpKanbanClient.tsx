@@ -17,8 +17,9 @@ import {
     Settings2,
     Plus,
     FileSpreadsheet,
+    HelpCircle,
 } from "lucide-react";
-import * as LucideIcons from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -51,9 +52,20 @@ const ManageFollowUpStatusesDialog = dynamic(() => import('./ManageFollowUpStatu
 const ImportFollowUpsDialog = dynamic(() => import('./ImportFollowUpsDialog').then(mod => mod.ImportFollowUpsDialog), { ssr: false });
 const FollowUpStageChangeDialog = dynamic(() => import('./FollowUpStageChangeDialog').then(mod => mod.FollowUpStageChangeDialog), { ssr: false });
 
-const getIcon = (name: string | undefined) => {
-    if (!name) return LucideIcons.HelpCircle;
-    return (LucideIcons as any)[name] || LucideIcons.HelpCircle;
+const iconMap: Record<string, LucideIcon> = {
+    UserPlus,
+    Phone,
+    CheckCircle2,
+    MessageSquare,
+    TrendingUp,
+    Target,
+    XCircle,
+    HelpCircle
+};
+
+const getIcon = (name: string | undefined): LucideIcon => {
+    if (!name) return HelpCircle;
+    return iconMap[name] || HelpCircle;
 };
 
 export function FollowUpKanbanClient() {
