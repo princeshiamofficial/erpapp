@@ -10,11 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { getModels, updateModelStock } from '@/lib/service-options-service';
-import { sendTelegramMessage } from "@/lib/notification-utils";
 
-const formatAmountForNotification = (amount: number): string => {
-  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(amount);
-};
 
 
 interface CreateQuotationDialogFormData {
@@ -259,31 +255,6 @@ export async function updateQuotationAction(
       };
       finalUpdates.advancePayments = [...(existingQuotation.advancePayments || []), newAdvanceRecord];
 
-      const isAdjustment = existingQuotation.advancePayments && existingQuotation.advancePayments.length > 0;
-      const notificationTitle = isAdjustment ? "New Adjustment Payment Received!" : "New Advance Payment Received!";
-
-      const message = `
-<b>🎉 ${notificationTitle}</b>
-
-<b>Quotation ID:</b> <code>${quotationId}</code>
-<b>Company:</b> ${finalUpdates.companyName || existingQuotation.companyName}
-<b>Amount:</b> ${formatAmountForNotification(newAdvanceRecord.amount)}
-<b>Method:</b> ${newAdvanceRecord.paymentMethod}
-<b>Recorded By:</b> ${currentUser.name}
-      `;
-
-      const paymentReplyMarkup = {
-        inline_keyboard: [
-          [
-            {
-              text: "📄 View Quotation",
-              url: `https://app.colorhutbd.xyz/track/${quotationId}`
-            }
-          ]
-        ]
-      };
-
-      await sendTelegramMessage(message, paymentReplyMarkup);
     } else if (updates.advancePayments) {
       finalUpdates.advancePayments = updates.advancePayments;
     }
