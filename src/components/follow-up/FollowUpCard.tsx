@@ -165,12 +165,7 @@ export const FollowUpCard = ({
                             <Phone className="h-3.5 w-3.5 shrink-0" />
                             <span>{followUp.phone}</span>
                         </div>
-                        {followUp.jobId && (
-                            <div className="flex items-center gap-2 text-[11px] text-primary font-bold bg-primary/5 px-2 py-0.5 rounded-lg w-fit mt-1">
-                                <Info className="h-3.5 w-3.5 shrink-0" />
-                                <span>ID: {followUp.jobId}</span>
-                            </div>
-                        )}
+
                     </div>
 
                     {/* Date and Location Badge */}
