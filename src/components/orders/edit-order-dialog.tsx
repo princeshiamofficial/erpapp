@@ -605,7 +605,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               <div className="mt-4 border-t border-border pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1">
                   <Label htmlFor="newAdvanceAmount">
-                    {existingAdvancePayments.length > 0 ? "Add Adjustment Payment" : "Add Advance Payment"}
+                    {existingAdvancePayments.length > 0 ? "Adjustment Payment" : "Advance Payment"}
                   </Label>
                   <Input id="newAdvanceAmount" type="number" value={newAdvanceAmount} onChange={(e) => setNewAdvanceAmount(e.target.value)} placeholder="Amount (BDT)" min="0" step="0.01" disabled={isSubmitting} />
                 </div>
