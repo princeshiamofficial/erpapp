@@ -365,7 +365,7 @@ export async function updateOrderAction(
       }
 
       const isAdjustment = existingOrder.advancePayments && existingOrder.advancePayments.length > 0;
-      const notificationTitle = isAdjustment ? "New Adjustment Payment Received!" : "New Advance Payment Received!";
+      const notificationTitle = isAdjustment ? "Adjustment Payment Received!" : "Advance Payment Received!";
 
       const message = `
 <b>🎉 ${notificationTitle}</b>
