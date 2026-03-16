@@ -20,6 +20,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getUsers } from '@/lib/user-service';
 import { getRoles } from '@/lib/user-role-service';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +60,7 @@ export default function DocumentationPage() {
 
   const [selectedUserForUpload, setSelectedUserForUpload] = useState<User | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [clearConfirmUser, setClearConfirmUser] = useState<User | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
@@ -346,14 +357,18 @@ export default function DocumentationPage() {
                                 >
                                   <Download className="mr-2 h-4 w-4" /> Download
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                    className="cursor-pointer text-destructive focus:text-destructive"
-                                    onSelect={() => handleClearDocuments(user.id)}
-                                    disabled={!isSubmitted}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" /> Clear Documents
-                                </DropdownMenuItem>
+                                {currentUser.role === 'SYSTEM_ADMIN' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                        className="cursor-pointer text-destructive focus:text-destructive"
+                                        onSelect={() => setClearConfirmUser(user)}
+                                        disabled={!isSubmitted}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" /> Clear Documents
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuGroup>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -393,6 +408,33 @@ export default function DocumentationPage() {
             onUploadSuccess={handleUploadSuccess}
         />
       )}
+
+      <AlertDialog open={!!clearConfirmUser} onOpenChange={(open) => { if (!open) setClearConfirmUser(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Documents?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all documents for{' '}
+              <span className="font-semibold text-foreground">{clearConfirmUser?.name}</span>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (clearConfirmUser) {
+                  handleClearDocuments(clearConfirmUser.id);
+                  setClearConfirmUser(null);
+                }
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Yes, Clear Documents
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

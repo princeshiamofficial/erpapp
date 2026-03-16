@@ -106,7 +106,8 @@ export const getFollowUpStatuses = async (): Promise<FollowUpStatus[]> => {
 
 export const addFollowUpStatus = async (data: Omit<FollowUpStatus, 'id' | 'isSystemStatus' | 'xid'>): Promise<FollowUpStatus | null> => {
     try {
-        const id = data.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || uuidv4();
+        const slug = data.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const id = `${slug || 'stage'}-${uuidv4().slice(0, 8)}`;
         
         await query(
             `INSERT INTO ${FOLLOW_UP_STATUSES_TABLE} (id, name, color, is_system_status, is_visible, allowed_roles, xid, display_order, icon, header_bg_class) 
