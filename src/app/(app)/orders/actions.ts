@@ -364,8 +364,11 @@ export async function updateOrderAction(
         return { success: false, error: `Total advance payment (${totalAdvanceAfterNew}) cannot exceed grand total amount (${currentGrandTotal}).` };
       }
 
+      const isAdjustment = existingOrder.advancePayments && existingOrder.advancePayments.length > 0;
+      const notificationTitle = isAdjustment ? "New Adjustment Payment Received!" : "New Advance Payment Received!";
+
       const message = `
-<b>🎉 New Advance Payment Received!</b>
+<b>🎉 ${notificationTitle}</b>
 
 <b>Order ID:</b> <code>${orderId}</code>
 <b>Company:</b> ${finalUpdates.companyName || existingOrder.companyName}
