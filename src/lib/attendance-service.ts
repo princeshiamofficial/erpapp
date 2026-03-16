@@ -273,3 +273,14 @@ export const saveAttendanceAction = async (
     return { success: false, error: "An unexpected server error occurred." };
   }
 };
+
+export const deleteAttendanceRecord = async (employeeId: string, date: string): Promise<boolean> => {
+    try {
+        const documentId = `${employeeId}_${date}`;
+        await query(`DELETE FROM ${ATTENDANCE_TABLE} WHERE id = ?`, [documentId]);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting attendance record ${employeeId}_${date}:`, error);
+        return false;
+    }
+};

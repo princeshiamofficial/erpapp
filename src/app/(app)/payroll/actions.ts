@@ -14,6 +14,7 @@ import {
   getPayslipForMonth,
   updatePayslipInDb,
 } from "@/lib/employee-service";
+import { addOrUpdateAttendanceRecord, deleteAttendanceRecord } from "@/lib/attendance-service";
 import { updateProvidentFundRecord, getProvidentFundRecords } from "@/lib/provident-fund-service";
 
 export async function addEmployeeAction(
@@ -267,7 +268,29 @@ export async function addLeaveRecordAction(
   try {
     const success = await addLeaveRecordService(employeeId, leaveData, newTotalLeaveTaken);
     if (success) {
+      // Record attendance as Paid Leave
+      const employee = await getEmployeeById(employeeId);
+      if (employee && employee.userId && leaveData.allDates) {
+        for (const dateIso of leaveData.allDates) {
+           const dateOnly = dateIso.split('T')[0];
+           await addOrUpdateAttendanceRecord({
+               employeeId: employee.userId,
+               employeeName: employee.name,
+               date: dateOnly,
+               status: 'Paid Leave',
+               checkInTime: dateIso,
+               checkOutTime: null,
+               location: 'Remote',
+               hoursWorked: null,
+               lateReason: null,
+               earlyOutReason: null,
+               checkInLocation: undefined,
+               checkOutLocation: undefined
+           });
+        }
+      }
       revalidatePath("/(app)/payroll");
+      revalidatePath("/(app)/hrm/attendance");
       return { success: true };
     }
     return { success: false, error: "Failed to record leave in database." };
@@ -280,9 +303,22 @@ export async function addLeaveRecordAction(
 // New action for deleting a leave record
 export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const employee = await getEmployeeById(employeeId);
+    if (!employee) return { success: false, error: "Employee not found." };
+    
+    const recordToDelete = employee.leaveHistory?.find(r => r.id === leaveRecordId);
+    
     const success = await deleteLeaveRecordService(employeeId, leaveRecordId);
     if (success) {
+      // Remove corresponding attendance records
+      if (employee.userId && recordToDelete?.allDates) {
+        for (const dateIso of recordToDelete.allDates) {
+          const dateOnly = dateIso.split('T')[0];
+          await deleteAttendanceRecord(employee.userId, dateOnly);
+        }
+      }
       revalidatePath("/(app)/payroll");
+      revalidatePath("/(app)/hrm/attendance");
       return { success: true };
     }
     return { success: false, error: "Failed to delete leave record from database." };

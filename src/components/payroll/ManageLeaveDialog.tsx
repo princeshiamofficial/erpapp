@@ -17,9 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, ClipboardList, PlusCircle, AlertTriangle, Trash2 } from 'lucide-react';
-import type { Employee, LeaveRecord, User } from '@/types';
+import type { Employee, LeaveRecord, User, AttendanceRecord } from '@/types';
 import { addLeaveRecordAction, deleteLeaveRecordAction } from '@/app/(app)/payroll/actions';
-import { format, parseISO, getYear, getMonth, differenceInMonths, isAfter } from 'date-fns';
+import { format, parseISO, getYear, getMonth, differenceInMonths, isAfter, startOfDay, isBefore, isSameDay } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -35,9 +35,11 @@ interface ManageLeaveDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentUser: User;
+  attendanceRecords?: AttendanceRecord[];
+  weekendDays?: string[];
 }
 
-export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChange, currentUser }: ManageLeaveDialogProps) {
+export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChange, currentUser, attendanceRecords = [], weekendDays = [] }: ManageLeaveDialogProps) {
   const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([]);
   const [leaveReason, setLeaveReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -170,10 +172,74 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
   
   const filteredLeaveHistory = useMemo(() => {
     if (!employee?.leaveHistory) return [];
-    return employee.leaveHistory
-      .filter(record => selectedYear === 'all' || getYear(parseISO(record.date)) === selectedYear)
+    return (employee.leaveHistory as LeaveRecord[])
+      .filter((record: LeaveRecord) => selectedYear === 'all' || getYear(parseISO(record.date)) === selectedYear)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [employee?.leaveHistory, selectedYear]);
+
+  const recordedLeaveDates = useMemo(() => {
+    if (!employee?.leaveHistory) return new Set<string>();
+    const dates: string[] = [];
+    (employee.leaveHistory as LeaveRecord[]).forEach((record: LeaveRecord) => {
+      if (record.allDates && record.allDates.length > 0) {
+        record.allDates.forEach((d: string) => dates.push(format(parseISO(d), 'yyyy-MM-dd')));
+      } else if (record.date) {
+        dates.push(format(parseISO(record.date), 'yyyy-MM-dd'));
+      }
+    });
+    return new Set(dates);
+  }, [employee?.leaveHistory]);
+
+  const absentDates = useMemo(() => {
+    if (!employee || !attendanceRecords.length) return [];
+    
+    // We only care about dates where status is specifically 'Absent'
+    // or dates that are in the past, not weekends, and have no attendance record.
+    const absences: Date[] = [];
+    const today = new Date();
+    const joiningDate = employee.joiningDate ? new Date(employee.joiningDate) : new Date(0);
+    
+    const attendedDates = new Set(
+      attendanceRecords
+        .filter(r => r.employeeId === employee.userId)
+        .map(r => format(parseISO(r.date), 'yyyy-MM-dd'))
+    );
+    
+    const weekendDayIndexes = weekendDays.map(day => 
+      ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(day)
+    );
+
+    // Filter attendance records that are explicitly 'Absent'
+    attendanceRecords.forEach(r => {
+      const dateKey = format(parseISO(r.date), 'yyyy-MM-dd');
+      if (r.employeeId === employee.userId && r.status === 'Absent' && !recordedLeaveDates.has(dateKey)) {
+        absences.push(parseISO(r.date));
+      }
+    });
+
+    // Check for gaps in the last 2 years (same as AttendancePage fetch range)
+    const startDate = new Date(today);
+    startDate.setFullYear(today.getFullYear() - 2);
+    const actualStartDate = joiningDate > startDate ? joiningDate : startDate;
+
+    let curr = startOfDay(actualStartDate);
+    const end = startOfDay(today);
+
+    while (curr <= end) {
+      const dateKey = format(curr, 'yyyy-MM-dd');
+      const dayOfWeek = curr.getDay();
+      
+      if (!attendedDates.has(dateKey) && !weekendDayIndexes.includes(dayOfWeek) && !recordedLeaveDates.has(dateKey)) {
+        // Double check it's not already in absences
+        if (!absences.some(d => isSameDay(d, curr))) {
+            absences.push(new Date(curr));
+        }
+      }
+      curr = new Date(curr.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    return absences;
+  }, [employee, attendanceRecords, weekendDays, recordedLeaveDates]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,10 +372,10 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                             <span className="font-semibold text-primary/80">{record.days} day(s)</span> on{' '}
                             <span className="font-medium">
                               {record.allDates && record.allDates.length > 0 
-                                ? record.allDates.map((d, i) => {
+                                ? record.allDates.map((d: string, i: number) => {
                                     const dateObj = parseISO(d);
                                     const isLast = i === record.allDates!.length - 1;
-                                    const showYear = isLast; // Only show year on the last date or if it changes? For now, let's follow the user's example: 19 Nov, 7 Dec, 12 Dec 2025
+                                    const showYear = isLast;
                                     return format(dateObj, showYear ? 'd MMM, yyyy' : 'd MMM') + (isLast ? '' : ', ');
                                   }).join('')
                                 : format(parseISO(record.date), 'd MMM, yyyy')}
@@ -356,7 +422,32 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                               month={currentMonth}
                               onMonthChange={setCurrentMonth}
                               initialFocus
-                              disabled={employee?.joiningDate ? { before: new Date(employee.joiningDate) } : undefined}
+                              disabled={(date) => {
+                                // Joining date check
+                                const isBeforeJoining = employee?.joiningDate ? isBefore(date, startOfDay(new Date(employee.joiningDate))) : false;
+                                if (isBeforeJoining) return true;
+
+                                // Preserve function: Allow selecting future dates
+                                const today = startOfDay(new Date());
+                                const isFuture = isAfter(startOfDay(date), today);
+                                if (isFuture) return false;
+
+                                // Don't allow selecting dates that already have leave recorded
+                                const dateKey = format(date, 'yyyy-MM-dd');
+                                if (recordedLeaveDates.has(dateKey)) return true;
+
+                                // For past dates (including today), only allow "absent" dates
+                                const isAbsent = absentDates.some(absentDate => isSameDay(absentDate, date));
+                                return !isAbsent;
+                              }}
+                              modifiers={{
+                                absent: (date) => absentDates.some(d => isSameDay(d, date)),
+                                recorded: (date) => recordedLeaveDates.has(format(date, 'yyyy-MM-dd'))
+                              }}
+                              modifiersClassNames={{
+                                absent: "bg-red-50 text-red-600 font-bold hover:bg-red-100",
+                                recorded: "bg-green-100 text-green-700 font-bold opacity-100"
+                              }}
                           />
                       </PopoverContent>
                   </Popover>

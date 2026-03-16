@@ -62,7 +62,7 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent' | 'Weekend') => {
+const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent' | 'Weekend' | 'Paid Leave') => {
     switch (status) {
         case 'On Time':
             return 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200';
@@ -70,6 +70,8 @@ const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent' | 'Weekend') 
             return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200';
         case 'Absent':
             return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
+        case 'Paid Leave':
+            return 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200 border-indigo-200';
         case 'Weekend':
             return 'bg-blue-50 text-blue-700 border-blue-100';
         default:
@@ -820,15 +822,15 @@ export default function AttendancePage() {
                                                         {entry.status}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell>{(entry as any).checkInTime ? format(new Date((entry as any).checkInTime), 'h:mm a') : '-'}</TableCell>
-                                                <TableCell>{(entry as any).checkOutTime ? format(new Date((entry as any).checkOutTime), 'h:mm a') : '-'}</TableCell>
-                                                <TableCell>{(entry as any).hoursWorked || '-'}</TableCell>
+                                                <TableCell>{entry.status === 'Paid Leave' ? '-' : ((entry as any).checkInTime ? format(new Date((entry as any).checkInTime), 'h:mm a') : '-')}</TableCell>
+                                                <TableCell>{entry.status === 'Paid Leave' ? '-' : ((entry as any).checkOutTime ? format(new Date((entry as any).checkOutTime), 'h:mm a') : '-')}</TableCell>
+                                                <TableCell>{entry.status === 'Paid Leave' ? '-' : ((entry as any).hoursWorked || '-')}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            disabled={!(entry as any).checkInLocation?.lat || !(entry as any).checkInLocation?.lng}
+                                                            disabled={entry.status === 'Paid Leave' || !(entry as any).checkInLocation?.lat || !(entry as any).checkInLocation?.lng}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 if ((entry as any).checkInLocation?.lat && (entry as any).checkInLocation?.lng) {
@@ -848,7 +850,7 @@ export default function AttendancePage() {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            disabled={!(entry as any).checkOutLocation?.lat || !(entry as any).checkOutLocation?.lng}
+                                                            disabled={entry.status === 'Paid Leave' || !(entry as any).checkOutLocation?.lat || !(entry as any).checkOutLocation?.lng}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 if ((entry as any).checkOutLocation?.lat && (entry as any).checkOutLocation?.lng) {
@@ -1374,6 +1376,8 @@ export default function AttendancePage() {
                     employee={leaveToManage}
                     currentUser={currentUser}
                     onLeaveUpdated={fetchData}
+                    attendanceRecords={attendanceData}
+                    weekendDays={selectedWeekends}
                 />
             )}
             <LocationMapDialog

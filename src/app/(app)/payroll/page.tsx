@@ -1127,6 +1127,8 @@ export default function PayrollPage() {
           employee={leaveToManage}
           currentUser={currentUser}
           onLeaveUpdated={fetchData}
+          attendanceRecords={attendanceData}
+          weekendDays={weekendDays}
         />
       )}
       {historyToView && (

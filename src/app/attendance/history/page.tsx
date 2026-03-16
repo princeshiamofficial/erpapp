@@ -206,7 +206,13 @@ export default function AttendanceHistoryPage() {
             if (isToday(date)) status = 'today';
 
             if (record) {
-                status = record.status === 'Late' ? 'late' : 'present';
+                if (record.status === 'Late') {
+                    status = 'late';
+                } else if (record.status === 'Paid Leave') {
+                    status = 'leave';
+                } else {
+                    status = 'present';
+                }
             } else if (absences.includes(dateKey)) {
                 status = 'absent';
             }
@@ -361,15 +367,20 @@ export default function AttendanceHistoryPage() {
                                                         <Badge className={cn(
                                                             record.status === 'On Time' && 'bg-green-100 text-green-800',
                                                             record.status === 'Late' && 'bg-yellow-100 text-yellow-800',
-                                                            record.status === 'Absent' && 'bg-red-100 text-red-800'
+                                                            record.status === 'Absent' && 'bg-red-100 text-red-800',
+                                                            record.status === 'Paid Leave' && 'bg-indigo-100 text-indigo-800'
                                                         )}>{record.status}</Badge>
                                                     </div>
                                                     <div className="flex flex-col items-center justify-center">
-                                                        <p className="font-semibold text-foreground">{checkInTime} - {checkOutTime}</p>
+                                                        <p className="font-semibold text-foreground">
+                                                            {record.status === 'Paid Leave' ? '-' : `${checkInTime} - ${checkOutTime}`}
+                                                        </p>
                                                         <p className="text-xs text-muted-foreground">Check-in/out</p>
                                                     </div>
                                                     <div className="flex flex-col items-center justify-center">
-                                                        <p className="font-semibold text-foreground">{totalHours}h</p>
+                                                        <p className="font-semibold text-foreground">
+                                                            {record.status === 'Paid Leave' ? '-' : `${totalHours}h`}
+                                                        </p>
                                                         <p className="text-xs text-muted-foreground">Working Hours</p>
                                                     </div>
                                                 </div>
