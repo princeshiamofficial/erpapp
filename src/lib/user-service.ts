@@ -3,46 +3,19 @@
 import { query } from './mysql';
 import type { User, UserRole } from '@/types';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 
 const USERS_TABLE = 'users';
 
-const getRolePrefix = (role: string): string => {
-  const defaults: Record<string, string> = {
-    'ADMIN': 'Admin-',
-    'CRM': 'CRM-',
-    'DESIGNER_REPRESENTATIVE': 'DR-',
-    'SYSTEM_ADMIN': 'SysAdmin-',
-    'VENDOR': 'Vendor-',
-    'LR': 'LR-',
-    'CO': 'CO-',
-  };
-  return defaults[role] || `${role}-`;
-};
 
 // Add a new user to MySQL
 export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Promise<User | null> => {
-  const rolePrefix = getRolePrefix(userData.role);
-
   try {
     let userId = userData.id;
 
     if (!userId) {
-      // Find the max ID for this role prefix
-      const result = await query<{ id: string }[]>(
-        `SELECT id FROM ${USERS_TABLE} WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
-        [`${rolePrefix}%`]
-      );
-
-      let maxUserNumber = 0;
-      if (result.length > 0) {
-        const lastId = result[0].id;
-        const numPart = parseInt(lastId.substring(rolePrefix.length), 10);
-        if (!isNaN(numPart)) {
-          maxUserNumber = numPart;
-        }
-      }
-      const newUserNumber = maxUserNumber + 1;
-      userId = `${rolePrefix}${String(newUserNumber).padStart(3, '0')}`;
+      // Generate a unique ID using UUID
+      userId = uuidv4();
     } else {
       // Check if custom ID already exists
       const existingUser = await getUserById(userId);
