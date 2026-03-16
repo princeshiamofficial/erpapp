@@ -140,8 +140,8 @@ export const FollowUpCard = ({
                     {/* Header: Title and Actions */}
                     <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0 pr-4">
-                            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors w-full" title={displayName}>
-                                {truncatedDisplayName}
+                            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors w-full" title={followUp.jobId ? `${followUp.jobId} • ${displayName}` : displayName}>
+                                {followUp.jobId ? `${followUp.jobId} • ` : ''}{truncatedDisplayName}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 {followUp.customerType && (
