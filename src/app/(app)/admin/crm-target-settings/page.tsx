@@ -292,9 +292,6 @@ export default function CrmTargetSettingsPage() {
             Configure global settings for CRM, projects, notifications, and more.
           </p>
         </div>
-        <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-          <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
       </div>
 
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">

@@ -221,9 +221,6 @@ export default function TrackingLinksPage() {
               <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of generated tracking links and their status.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input

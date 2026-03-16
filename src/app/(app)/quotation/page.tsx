@@ -325,9 +325,6 @@ export default function QuotationsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-            <RefreshCw className={cn("h-5 w-5", isLoading && quotations.length > 0 && "animate-spin")} />
-          </Button>
           {(currentUser.role === 'SYSTEM_ADMIN') && (
             <Link href="/admin/service-management" passHref>
               <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">

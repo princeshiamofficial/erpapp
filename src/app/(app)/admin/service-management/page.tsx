@@ -247,9 +247,6 @@ export default function ServiceManagementPage() {
               Go to App Settings <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-            <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
         </div>
       </div>
 
