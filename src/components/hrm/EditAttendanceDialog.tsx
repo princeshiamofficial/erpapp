@@ -139,6 +139,7 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
                 <SelectItem value="On Time">On Time</SelectItem>
                 <SelectItem value="Late">Late</SelectItem>
                 <SelectItem value="Absent">Absent</SelectItem>
+                <SelectItem value="Paid Leave">Paid Leave</SelectItem>
               </SelectContent>
             </Select>
           </div>

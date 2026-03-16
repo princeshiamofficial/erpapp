@@ -235,6 +235,7 @@ export default function AttendanceHistoryPage() {
 
         const onTime = sortedRecords.filter(r => r.status === 'On Time').length;
         const late = sortedRecords.filter(r => r.status === 'Late').length;
+        const paidLeave = sortedRecords.filter(r => r.status === 'Paid Leave').length;
         const absenceDaysCount = absenceDates.length;
 
         const totalDaysInMonth = getDaysInMonth(currentMonth);
@@ -269,6 +270,7 @@ export default function AttendanceHistoryPage() {
         const data = [];
         if (onTime > 0) data.push({ name: 'On Time', value: onTime, color: '#a3be8c' });
         if (late > 0) data.push({ name: 'Late', value: late, color: '#ebcb8b' });
+        if (paidLeave > 0) data.push({ name: 'Paid Leave', value: paidLeave, color: '#81a1c1' });
         if (absenceDaysCount > 0) data.push({ name: 'Absent', value: absenceDaysCount, color: '#d08770' });
         if (remainingWorkingDays > 0) data.push({ name: 'Working Days', value: remainingWorkingDays, color: '#4c566a' });
 

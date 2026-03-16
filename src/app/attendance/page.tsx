@@ -20,7 +20,7 @@ import { getOfficeTimes } from '@/lib/office-time-service';
 import { saveAttendanceAction } from '@/app/(app)/hrm/attendance/actions';
 import { getAttendanceMark } from '@/lib/attendance-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
-import type { OfficeTime } from '@/types';
+import type { OfficeTime, AttendanceStatus } from '@/types';
 
 
 
@@ -126,7 +126,7 @@ export default function CheckInOutPage() {
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
-  const [attendanceStatus, setAttendanceStatus] = useState<'On Time' | 'Late' | 'Absent'>('On Time');
+  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>('On Time');
 
   useEffect(() => {
     if (!isAuthLoading && !currentUser) {
