@@ -213,23 +213,26 @@
   @media print {
     @page {
       size: A4;
-      margin: 0;
+      margin: 10mm;
     }
     html, body {
       width: 210mm;
-      height: 297mm;
+      height: auto;
+      background: #fff !important;
     }
     .invoice-page {
       page-break-after: always;
-      width: 210mm;
-      height: 297mm;
+      width: 100%;
+      height: auto;
       box-sizing: border-box;
-      overflow: hidden;
+      overflow: visible !important;
+      background: #fff !important;
     }
     .invoice-page:last-child {
       page-break-after: avoid;
     }
   }
+
 
   .custom-scrollbar-hidden::-webkit-scrollbar {
     display: none;
