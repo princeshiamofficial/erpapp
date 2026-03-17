@@ -48,8 +48,8 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           format: "CODE128",
           displayValue: false,
           width: 2,
-          height: 50,
-          margin: 10,
+          height: 40,
+          margin: 5,
         });
       } catch (e) {
         console.error("JsBarcode error:", e);
@@ -110,10 +110,10 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
 
 
   return (
-    <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl print:shadow-none print:border-none print:p-0 print:max-w-none print:w-full print:bg-transparent">
-      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-4 print:pb-4 print:border-border/50 print:break-inside-avoid">
+    <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl invoice-page print:shadow-none print:border-none print:p-0 print:max-w-none print:w-full print:bg-transparent print:text-[13px] print:leading-tight">
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-2 print:pb-2 print:border-border/50 print:break-inside-avoid">
         <div>
-          <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> INVOICE</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-2 flex items-center print:text-xl print:mb-1"><FileText className="h-8 w-8 mr-3 print:h-6 print:w-6" /> INVOICE</h2>
           <div className="mb-2">
             <Image
               src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
@@ -121,7 +121,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
               width={160}
               height={40}
               priority
-              className="object-contain rounded-md"
+              className="object-contain rounded-md print:w-32 print:h-auto"
             />
           </div>
           <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
@@ -135,14 +135,14 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4 print:break-inside-avoid">
-        <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-2 print:break-inside-avoid">
+        <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:p-2">
           <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
           <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
           <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
           <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
         </div>
-        {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:hidden">
+        {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:hidden print:p-2">
           <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
           <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
           <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
@@ -150,8 +150,8 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
       </div>
 
       {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
-        <div className="mb-6 print:mb-4 print:break-inside-auto">
-          <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">Order Items</h3>
+        <div className="mb-6 print:mb-2 print:break-inside-auto">
+          <h3 className="text-lg font-semibold mb-3 print:mb-1 text-foreground flex items-start">Order Items</h3>
           <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
             <Table><TableHeader><TableRow><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead></TableRow></TableHeader>
               <TableBody>{order.orderItems.map((item, index) => (<TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors print:break-inside-avoid">
@@ -161,22 +161,22 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         </div>
       )}
 
-      {order.orderNotes && (<div className="mb-8 print:mb-4">
-        <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
-        <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
+      {order.orderNotes && (<div className="mb-8 print:mb-2">
+        <h3 className="text-lg font-semibold text-foreground mb-2 print:mb-1 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
+        <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 print:p-2 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
       </div>)}
 
       {allAdvancePaymentRecords.length > 0 && (
-        <div className="mb-8 print:mb-4">
-          <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
-          <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
+        <div className="mb-8 print:mb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-3 print:mb-1 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
+          <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm print:shadow-none">
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
               <TableBody>
                 {allAdvancePaymentRecords.map((record) => (
                   <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="text-xs text-muted-foreground">{isClient ? formatDate(record.date) : <Skeleton className="h-4 w-24" />}</TableCell>
-                    <TableCell className="font-medium text-green-600">{formatCurrency(record.amount)}</TableCell>
+                    <TableCell className="font-medium text-green-600 print:text-green-700">{formatCurrency(record.amount)}</TableCell>
                     <TableCell className="text-card-foreground">{record.paymentMethod || 'N/A'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.notes || 'N/A'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.recordedByUserName || 'N/A'}</TableCell>
@@ -188,7 +188,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         </div>
       )}
 
-      <div className="flex justify-end mt-8 pt-6 border-t border-border/30 print:mt-4 print:pt-4 print:break-inside-avoid">
+      <div className="flex justify-end mt-8 pt-6 border-t border-border/30 print:mt-2 print:pt-2 print:break-inside-avoid">
         <div className="w-full max-w-xs sm:max-w-sm relative">
           <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
           {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
