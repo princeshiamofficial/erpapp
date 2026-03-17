@@ -21,7 +21,11 @@ const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "Loading date...";
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    const day = date.getDate();
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${day} ${month}, ${year} at ${time}`;
   } catch (e) {
     return "Invalid Date";
   }
@@ -175,7 +179,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
               <TableBody>
                 {allAdvancePaymentRecords.map((record) => (
                   <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="text-xs text-muted-foreground">{isClient ? formatDate(record.date) : <Skeleton className="h-4 w-24" />}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{isClient ? formatDate(record.date) : <Skeleton className="h-4 w-24" />}</TableCell>
                     <TableCell className="font-medium text-green-600 print:text-green-700">{formatCurrency(record.amount)}</TableCell>
                     <TableCell className="text-card-foreground">{record.paymentMethod || 'N/A'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{record.notes || 'N/A'}</TableCell>
