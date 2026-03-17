@@ -53,43 +53,15 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   }
 };
 
-export const getOrdersPaginated = async (limit: number, offset: number, searchTerm: string = '', statusId: string = ''): Promise<{ orders: TrackingLink[], total: number }> => {
+export const getOrdersPaginated = async (limit: number, offset: number, searchTerm: string = ''): Promise<{ orders: TrackingLink[], total: number }> => {
   try {
-    let whereClauseParts = [];
+    let whereClause = '';
     const params: any[] = [];
-
     if (searchTerm) {
-      whereClauseParts.push(`(id LIKE ? OR company_name LIKE ? OR phone_number LIKE ? OR crm_user_name LIKE ?)`);
+      whereClause = `WHERE id LIKE ? OR company_name LIKE ? OR phone_number LIKE ? OR crm_user_name LIKE ?`;
       const searchParam = `%${searchTerm}%`;
       params.push(searchParam, searchParam, searchParam, searchParam);
     }
-
-
-    if (statusId) {
-      if (statusId === 'CR Clearance') {
-        whereClauseParts.push(`current_status NOT IN ('cancelled', 'delivered', 'shipped', 'on-hold', 'logistics', 'co-clearance', 'ready-for-design') AND current_status NOT LIKE '%design%'`);
-      } else if (statusId === 'CO Clearance') {
-        whereClauseParts.push(`current_status = 'co-clearance'`);
-      } else if (statusId === 'On Design') {
-        whereClauseParts.push(`(current_status = 'ready-for-design' OR current_status LIKE '%design%')`);
-      } else if (statusId === 'On Hold') {
-        whereClauseParts.push(`current_status = 'on-hold'`);
-      } else if (statusId === 'Logistics') {
-        whereClauseParts.push(`current_status = 'logistics'`);
-      } else if (statusId === 'Courier') {
-        whereClauseParts.push(`current_status = 'shipped'`);
-      } else if (statusId === 'Delivered') {
-        whereClauseParts.push(`current_status = 'delivered'`);
-      } else if (statusId === 'Cancel') {
-        whereClauseParts.push(`current_status = 'cancelled'`);
-      } else {
-        whereClauseParts.push(`current_status = ?`);
-        params.push(statusId);
-      }
-    }
-
-
-    const whereClause = whereClauseParts.length > 0 ? `WHERE ${whereClauseParts.join(' AND ')}` : '';
 
     const countResults = await query<any[]>(`SELECT COUNT(*) as total FROM ${ORDERS_TABLE} ${whereClause}`, params);
     const total = countResults[0].total;
@@ -106,7 +78,6 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
     return { orders: [], total: 0 };
   }
 };
-
 
 
 

@@ -22,13 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { InvoiceDetailsClient } from '../invoice/[orderId]/InvoiceDetailsClient';
 import { cn } from '@/lib/utils';
 import { useInView } from 'react-intersection-observer';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 
 const formatCurrency = (value: number | null | undefined): string => {
@@ -44,7 +37,6 @@ export default function InvoiceListPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [ordersToPrint, setOrdersToPrint] = useState<TrackingLink[] | null>(null);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
@@ -62,7 +54,7 @@ export default function InvoiceListPage() {
   });
 
 
-  const fetchInvoiceData = useCallback(async (isInitial = true, currentSearch = searchTerm, currentStatus = selectedStatus) => {
+  const fetchInvoiceData = useCallback(async (isInitial = true, currentSearch = searchTerm) => {
     if (!currentUser) {
       setIsLoading(false);
       return;
@@ -77,11 +69,10 @@ export default function InvoiceListPage() {
 
     try {
       const offset = isInitial ? 0 : (page + 1) * LIMIT;
-      const effectiveStatus = currentStatus === 'all' ? '' : currentStatus;
 
       // Fetch statuses and users only once
       const promises: any[] = [
-        getOrdersPaginated(LIMIT, offset, currentSearch, effectiveStatus),
+        getOrdersPaginated(LIMIT, offset, currentSearch),
       ];
 
       if (allStatuses.length === 0) promises.push(getStatuses());
@@ -98,8 +89,7 @@ export default function InvoiceListPage() {
       }
 
       setTotalCount(orderResult.total);
-      const currentOrdersCount = isInitial ? orderResult.orders.length : allOrders.length + orderResult.orders.length;
-      setHasMore(currentOrdersCount < orderResult.total);
+      setHasMore(allOrders.length + orderResult.orders.length < orderResult.total);
 
       if (fetchedStatuses) setAllStatuses(fetchedStatuses);
       if (fetchedUsers) setAllUsers(fetchedUsers);
@@ -110,15 +100,15 @@ export default function InvoiceListPage() {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [currentUser, toast, page, allStatuses.length, allUsers.length, searchTerm, selectedStatus, LIMIT]);
+  }, [currentUser, toast, page, allStatuses.length, allUsers.length, searchTerm, LIMIT]);
 
   useEffect(() => {
-    // Debounce search and status changes
+    // Debounce search
     const timer = setTimeout(() => {
-      fetchInvoiceData(true, searchTerm, selectedStatus);
+      fetchInvoiceData(true, searchTerm);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm, selectedStatus, currentUser]);
+  }, [searchTerm, currentUser]);
 
   useEffect(() => {
     if (inView && hasMore && !isLoading && !isLoadingMore) {
@@ -174,8 +164,7 @@ export default function InvoiceListPage() {
 
   useEffect(() => {
     setSelectedRowIds(new Set());
-  }, [searchTerm, selectedStatus]);
-  
+  }, [searchTerm]);
 
   const getOrderFinancials = useCallback((order: TrackingLink) => {
     const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
@@ -247,38 +236,14 @@ export default function InvoiceListPage() {
                   A list of all generated orders and their financial status.
                 </CardDescription>
               </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-grow sm:flex-grow-0 sm:min-w-[280px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search orders..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-background h-10 rounded-md w-full"
-                  />
-                </div>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="w-full sm:w-[180px] h-10 bg-background">
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {[
-                      'CR Clearance',
-                      'CO Clearance',
-                      'On Design',
-                      'On Hold',
-                      'Logistics',
-                      'Courier',
-                      'Delivered',
-                      'Cancel'
-                    ].map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
+                />
               </div>
             </div>
           </CardHeader>
