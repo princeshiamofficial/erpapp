@@ -37,6 +37,7 @@ import {
   Wallet,
   Archive,
   Phone,
+  Activity,
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ const navItems: NavItem[] = [
       { href: "/crm/all-districts-data", label: "ADD", icon: Map, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/sow", label: "SOW", icon: FolderHeart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/follow-up", label: "Follow-UP", icon: Phone, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "/order-pulse", label: "OrderPulse", icon: Activity, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
