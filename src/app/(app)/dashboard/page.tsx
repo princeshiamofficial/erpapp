@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, differenceInMonths, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays, subMonths } from "date-fns";
+import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays, subMonths } from "date-fns";
 import {
   Hand,
   ShoppingCart,
@@ -300,7 +300,6 @@ function DashboardContent() {
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
   const [feedbackToDelete, setFeedbackToDelete] = useState<Feedback | null>(null);
   const [isDeletingFeedback, setIsDeletingFeedback] = useState(false);
-  const [isLongRange, setIsLongRange] = useState(false);
 
 
   const isDesignerRepOrLrOrCo = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR' || currentUser?.role === 'CO';
@@ -659,57 +658,28 @@ function DashboardContent() {
         .map(([hour, data]) => ({ date: hour.toString(), sales: data.sales, orders: data.orders }))
         .sort((a, b) => parseInt(a.date) - parseInt(b.date));
     } else if (selectedDateRange?.from && selectedDateRange?.to) {
-      if (isLongRange) {
-        const monthlyData = new Map<string, { sales: number; orders: number }>();
-        let tempDate = startOfMonth(new Date(selectedDateRange.from));
-        const endDate = endOfMonth(new Date(selectedDateRange.to));
-
-        while (tempDate <= endDate) {
-          monthlyData.set(format(tempDate, 'yyyy-MM'), { sales: 0, orders: 0 });
-          tempDate = addDays(endOfMonth(tempDate), 1);
-        }
-
-        filteredOrders.forEach(order => {
-          if (order.createdAt) {
-            try {
-              const orderDate = parseISO(order.createdAt);
-              const monthKey = format(orderDate, 'yyyy-MM');
-              if (monthlyData.has(monthKey)) {
-                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
-                const existing = monthlyData.get(monthKey) || { sales: 0, orders: 0 };
-                monthlyData.set(monthKey, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
-              }
-            } catch (e) { /* ignore */ }
-          }
-        });
-
-        chartData = Array.from(monthlyData.entries())
-          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
-          .sort((a, b) => a.date.localeCompare(b.date));
-      } else {
-        const dailyData = new Map<string, { sales: number; orders: number }>();
-        let tempDate = new Date(selectedDateRange.from);
-        while (tempDate <= selectedDateRange.to) {
-          dailyData.set(format(tempDate, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
-          tempDate = addDays(tempDate, 1);
-        }
-
-        filteredOrders.forEach(order => {
-          if (order.createdAt) {
-            try {
-              const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
-              if (dailyData.has(orderDateStr)) {
-                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
-                const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
-                dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
-              }
-            } catch (e) { /* ignore */ }
-          }
-        });
-        chartData = Array.from(dailyData.entries())
-          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const dailyData = new Map<string, { sales: number; orders: number }>();
+      let tempDate = new Date(selectedDateRange.from);
+      while (tempDate <= selectedDateRange.to) {
+        dailyData.set(format(tempDate, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
+        tempDate = addDays(tempDate, 1);
       }
+
+      filteredOrders.forEach(order => {
+        if (order.createdAt) {
+          try {
+            const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
+            if (dailyData.has(orderDateStr)) {
+              const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
+              const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
+              dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
+            }
+          } catch (e) { /* ignore */ }
+        }
+      });
+      chartData = Array.from(dailyData.entries())
+        .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
 
     return {
@@ -857,13 +827,6 @@ function DashboardContent() {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
     setSelectedPredefinedValue(predefined);
-
-    if (range?.from && range?.to) {
-      const months = differenceInMonths(range.to, range.from);
-      setIsLongRange(months >= 6);
-    } else {
-      setIsLongRange(false);
-    }
   };
 
   const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
@@ -924,7 +887,7 @@ function DashboardContent() {
     return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CR";
   }, [selectedCrmId, allCrmUsers]);
 
-  const chartDataKey = currentUser?.role === 'CRM' ? 'orders' : 'sales';
+  const chartDataKey = currentUser?.role === 'SYSTEM_ADMIN' ? 'sales' : 'orders';
 
   const canSeeAdminCharts = useMemo(() => {
     if (!currentUser) return false;
@@ -959,20 +922,20 @@ function DashboardContent() {
                       if (hour < 12) return `${hour} AM`;
                       return `${hour - 12} PM`;
                     })()
-                    : isLongRange ? format(parseISO(`${label}-01`), 'MMM, yyyy') : format(parseISO(label), 'd MMM, yyyy')
+                    : format(parseISO(label), 'd MMM, yyyy')
                 ) : 'N/A'}
               </span>
             </div>
             {dataPayload && (
               <div className="flex flex-col">
                 <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: dataPayload.color }}>
-                  {currentUser?.role === 'CRM' ? `Sales: ${dataPayload.payload.orders}` : `Sales (${dataPayload.payload.orders} orders)`}
+                  {currentUser?.role === 'SYSTEM_ADMIN' ? `Sales (${dataPayload.payload.orders} orders)` : `Sales Count`}
                 </span>
                 <span
                   className="font-bold"
                   style={{ color: dataPayload.color }}
                 >
-                  {currentUser?.role === 'CRM' ? dataPayload.value : formatCurrency(dataPayload.value as number)}
+                  {currentUser?.role === 'SYSTEM_ADMIN' ? formatCurrency(dataPayload.value as number) : dataPayload.value}
                 </span>
               </div>
             )}
@@ -1211,9 +1174,6 @@ function DashboardContent() {
                               return `${hour - 12} PM`;
                             }
                             try {
-                              if (isLongRange) {
-                                return format(parseISO(`${value}-01`), 'MMM');
-                              }
                               return format(parseISO(value), 'd MMM');
                             } catch (e) { return value; }
                           }}
@@ -1224,7 +1184,7 @@ function DashboardContent() {
                           tickLine={false}
                           axisLine={false}
                           tickMargin={8}
-                          tickFormatter={(value) => currentUser?.role === 'CRM' ? value : `৳${Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                          tickFormatter={(value) => currentUser?.role === 'SYSTEM_ADMIN' ? `৳${Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : value}
                           className="text-xs"
                         />
                         <ChartTooltip
