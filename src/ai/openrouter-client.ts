@@ -13,7 +13,7 @@ import { salarySheetTool } from './tools/salary-sheet-tool';
 import { modelSearchTool } from './tools/model-search-tool';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = "arcee-ai/trinity-large-preview:free";
+const MODEL = "qwen/qwen3.6-plus-preview:free";
 
 export interface Message {
   role: 'user' | 'assistant' | 'tool' | 'system';
@@ -127,13 +127,17 @@ const TOOLS = [
  * Executes a tool by name with provided arguments.
  */
 async function executeTool(name: string, args: any) {
+  // Normalize arguments to ensure dateRange is always named correctly
+  const normalizedArgs = { ...args };
+  if (args.date && !args.dateRange) normalizedArgs.dateRange = args.date;
+
   switch (name) {
-    case 'orderSearchTool': return await orderSearchTool(args);
-    case 'salesReportTool': return await salesReportTool(args);
-    case 'userSearchTool': return await userSearchTool(args);
-    case 'attendanceReportTool': return await attendanceReportTool(args);
-    case 'salarySheetTool': return await salarySheetTool(args);
-    case 'modelSearchTool': return await modelSearchTool(args);
+    case 'orderSearchTool': return await orderSearchTool(normalizedArgs);
+    case 'salesReportTool': return await salesReportTool(normalizedArgs);
+    case 'userSearchTool': return await userSearchTool(normalizedArgs);
+    case 'attendanceReportTool': return await attendanceReportTool(normalizedArgs);
+    case 'salarySheetTool': return await salarySheetTool(normalizedArgs);
+    case 'modelSearchTool': return await modelSearchTool(normalizedArgs);
     default: throw new Error(`Unknown tool: ${name}`);
   }
 }
@@ -166,8 +170,11 @@ export async function generateOpenRouterResponse(messages: Message[]): Promise<{
       throw new Error(error.error?.message || "OpenRouter API request failed");
     }
 
-    const { choices } = await response.json();
-    const assistantMessage = choices[0].message;
+    const result = await response.json();
+    if (!result.choices || result.choices.length === 0) {
+      throw new Error("OpenRouter returned an empty response.");
+    }
+    const assistantMessage = result.choices[0].message;
 
     // Add assistant's response to history
     currentMessages.push(assistantMessage);
@@ -175,15 +182,25 @@ export async function generateOpenRouterResponse(messages: Message[]): Promise<{
     if (assistantMessage.tool_calls) {
       // Process tool calls
       for (const toolCall of assistantMessage.tool_calls) {
-        const args = JSON.parse(toolCall.function.arguments);
-        const result = await executeTool(toolCall.function.name, args);
-        
-        currentMessages.push({
-          role: 'tool',
-          name: toolCall.function.name,
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(result)
-        });
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          const result = await executeTool(toolCall.function.name, args);
+          
+          currentMessages.push({
+            role: 'tool',
+            name: toolCall.function.name,
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(result)
+          });
+        } catch (toolError) {
+          console.error(`Error executing tool ${toolCall.function.name}:`, toolError);
+          currentMessages.push({
+            role: 'tool',
+            name: toolCall.function.name,
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({ error: "An error occurred while executing this tool." })
+          });
+        }
       }
       maxRetries--;
     } else {

@@ -48,7 +48,13 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       When presenting details, format it nicely using Markdown. Be concise and helpful.
       Summarize the key details. If multiple items are found, list them briefly.
       If no information is found, inform the user.
-      Do not make up information. If a tool does not provide an answer, say you cannot find the information.`;
+      Do not make up information. If a tool does not provide an answer, say you cannot find the information.
+
+      Language & Tone:
+      - Reply in the same language as the user (supports English, Bengali, and especially Banglish).
+      - Be extremely fast and concise. Avoid unnecessary preamble. 
+      - If the user uses Banglish (Bengali in Roman script), reply in Banglish to maintain the conversational flow.
+      - Focus on speed and direct answers.`;
 
   const initialMessages: Message[] = [
     { role: 'system', content: systemPrompt },
@@ -63,11 +69,11 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
         reasoning_details: result.reasoning_details,
         history: result.messages
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("OpenRouter flow error:", error);
     return {
-        content: "I'm sorry, I encountered an error while processing your request.",
-        history: [...initialMessages, { role: 'assistant', content: "Error occurred." }]
+        content: `I'm sorry, I encountered an error: ${error.message || 'Unknown error.'}`,
+        history: [...initialMessages, { role: 'assistant', content: `Error occurred: ${error.message}` }]
     };
   }
 }
