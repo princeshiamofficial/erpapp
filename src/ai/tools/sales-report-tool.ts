@@ -93,7 +93,7 @@ export const salesReportTool = ai.defineTool(
       const productSales: Record<string, { quantity: number, totalSales: number }> = {};
 
       ordersInRange.forEach(order => {
-        order.orderItems.forEach(item => {
+        (order.orderItems || []).forEach(item => {
           const itemTotal = item.lineItemTotalPrice || 0;
           totalSales += itemTotal;
           if (!productSales[item.model]) {

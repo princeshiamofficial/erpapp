@@ -13,17 +13,24 @@ import { attendanceReportTool } from '@/ai/tools/attendance-report-tool';
 import { salarySheetTool } from '@/ai/tools/salary-sheet-tool';
 import { modelSearchTool } from '@/ai/tools/model-search-tool';
 
+import { generateOpenRouterResponse, Message } from '@/ai/openrouter-client';
+
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 const AssistantInputSchema = z.object({
   query: z.string().describe("The user's query for the assistant."),
+  history: z.array(z.any()).optional().describe("Previous conversation history."),
 });
 
 export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
-const AssistantOutputSchema = z.string().describe("The assistant's response.");
+const AssistantOutputSchema = z.object({
+  content: z.string().describe("The assistant's response content."),
+  reasoning_details: z.string().optional().describe("The assistant's reasoning process."),
+  history: z.array(z.any()).describe("Updated conversation history including tool calls."),
+});
 
 
 /**
- * The main assistant flow that responds to user queries.
+ * The main assistant flow that responds to user queries using OpenRouter.
  * @param {AssistantInput} input The user's query.
  * @returns {Promise<AssistantOutput>} The assistant's response.
  */
@@ -43,15 +50,26 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       If no information is found, inform the user.
       Do not make up information. If a tool does not provide an answer, say you cannot find the information.`;
 
-  const llmResponse = await ai.generate({
-    prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool, modelSearchTool],
-    config: {
-      maxSteps: 5,
-    },
-  });
+  const initialMessages: Message[] = [
+    { role: 'system', content: systemPrompt },
+    ...(input.history || []) as Message[],
+    { role: 'user', content: input.query }
+  ];
 
-  return llmResponse.text ?? "I'm sorry, I couldn't generate a response.";
+  try {
+    const result = await generateOpenRouterResponse(initialMessages);
+    return {
+        content: result.content,
+        reasoning_details: result.reasoning_details,
+        history: result.messages
+    };
+  } catch (error) {
+    console.error("OpenRouter flow error:", error);
+    return {
+        content: "I'm sorry, I encountered an error while processing your request.",
+        history: [...initialMessages, { role: 'assistant', content: "Error occurred." }]
+    };
+  }
 }
 
 ai.defineFlow(
