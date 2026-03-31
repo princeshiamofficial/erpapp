@@ -11,14 +11,14 @@ import { salesReportTool } from '@/ai/tools/sales-report-tool';
 import { userSearchTool } from '@/ai/tools/user-search-tool';
 import { attendanceReportTool } from '@/ai/tools/attendance-report-tool';
 import { salarySheetTool } from '@/ai/tools/salary-sheet-tool';
-import { modelSearchTool } from '@/ai/tools/model-search-tool';
-
 import { generateOpenRouterResponse, Message } from '@/ai/openrouter-client';
+import { getEmployees } from '@/lib/employee-service';
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 const AssistantInputSchema = z.object({
   query: z.string().describe("The user's query for the assistant."),
   history: z.array(z.any()).optional().describe("Previous conversation history."),
+  currentUser: z.any().optional().describe("Information about the current user."),
 });
 
 export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
@@ -35,7 +35,15 @@ const AssistantOutputSchema = z.object({
  * @returns {Promise<AssistantOutput>} The assistant's response.
  */
 export async function assistant(input: AssistantInput): Promise<AssistantOutput> {
+  const allEmployees = await getEmployees();
+  const employeeProfile = allEmployees.find(emp => emp.userId === input.currentUser?.id);
+
+  const personalInfo = employeeProfile 
+    ? `Current User Profile: Name: ${employeeProfile.name}, Designation: ${employeeProfile.designation}, Salary: ${employeeProfile.salary || 'Not specified'}, Joining Date: ${employeeProfile.joiningDate}.`
+    : `Current User Profile: Name: ${input.currentUser?.name || 'Unknown'}, Role: ${input.currentUser?.role || 'Unknown'}.`;
+
   const systemPrompt = `You are a helpful AI assistant for an application called Color Hut.
+      ${personalInfo}
       You have access to several tools to get information about orders, sales reports, attendance, users, and product models.
       - If the user asks about a specific order, use the orderSearchTool.
       - If the user asks for sales data, order counts, or revenue over a period of time (e.g., "today's sales", "last week's orders", "this year's revenue"), use the salesReportTool.
@@ -43,6 +51,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       - If the user asks for a salary sheet for a specific month (e.g., "this month's salary sheet", "last month's salary sheet"), use the salarySheetTool.
       - If the user asks for information about a user, use the userSearchTool.
       - If the user asks for information about a product model, such as price or stock, use the modelSearchTool.
+      - If the user asks for their own profile, name, or salary, use the profile information provided above.
       - You can also perform simple calculations and answer general knowledge questions.
 
       When presenting details, format it nicely using Markdown. Be concise and helpful.

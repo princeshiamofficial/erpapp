@@ -50,27 +50,58 @@ const initialMessages = [
 export function AssistantSheet({ children }: AssistantSheetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState(initialMessages as any[]);
-  const [history, setHistory] = useState<any[]>([]); // New history state for OpenRouter
+  const [messages, setMessages] = useState<any[]>(initialMessages);
+  const [history, setHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { currentUser } = useAuth();
   const isMobile = useIsMobile();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load chat history from localStorage on mount
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+    const savedMessages = localStorage.getItem('assistant_messages');
+    const savedHistory = localStorage.getItem('assistant_history');
+    if (savedMessages) {
+        try {
+            setMessages(JSON.parse(savedMessages));
+        } catch (e) {
+            console.error("Error parsing saved messages:", e);
+        }
     }
-  }, [messages]);
+    if (savedHistory) {
+        try {
+            setHistory(JSON.parse(savedHistory));
+        } catch (e) {
+            console.error("Error parsing saved history:", e);
+        }
+    }
+  }, []);
 
+  // Save to localStorage whenever chat changes
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
+    if (messages.length > 1) {
+        localStorage.setItem('assistant_messages', JSON.stringify(messages));
     }
-  }, [isOpen]);
+    if (history.length > 0) {
+        localStorage.setItem('assistant_history', JSON.stringify(history));
+    }
+  }, [messages, history]);
+
+  // Improved auto-scroll
+  useEffect(() => {
+    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  const clearChat = () => {
+    setMessages(initialMessages);
+    setHistory([]);
+    localStorage.removeItem('assistant_messages');
+    localStorage.removeItem('assistant_history');
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +115,12 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
     try {
       const response = await assistant({ 
         query: userMessage.text,
-        history: history 
+        history: history,
+        currentUser: {
+            id: currentUser?.id,
+            name: currentUser?.name,
+            role: currentUser?.role
+        }
       });
 
       const aiResponse = { 
@@ -130,9 +166,28 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
                    </div>
                 </div>
            </div>
-           <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted/50">
-                <Sparkles className="h-5 w-5 text-primary" />
-           </Button>
+           <div className="flex items-center gap-2">
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearChat}
+                    className="text-[10px] h-8 px-2 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                    Clear Chat
+                </Button>
+                <div className="h-4 w-[1px] bg-border/50 mx-1" />
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full hover:bg-muted/50 h-8 w-8"
+                    onClick={() => {
+                        setInput('');
+                        inputRef.current?.focus();
+                    }}
+                >
+                    <Sparkles className="h-4 w-4 text-primary" />
+                </Button>
+           </div>
         </div>
 
         <ScrollArea className="flex-1" ref={scrollAreaRef}>
@@ -168,25 +223,6 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
                                 "flex flex-col gap-1.5 max-w-[80%] sm:max-w-md",
                                 msg.sender === 'user' ? "items-end" : "items-start"
                             )}>
-                                {msg.reasoning && (
-                                    <motion.div 
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        className="w-full text-[11px] text-muted-foreground/80 bg-muted/40 p-3 rounded-2xl border border-border/10 italic shadow-sm"
-                                    >
-                                        <div className="font-bold mb-1 flex items-center gap-1.5 text-primary/70">
-                                            <div className="flex gap-0.5">
-                                                <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-                                                <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
-                                                <span className="h-1 w-1 rounded-full bg-primary animate-bounce" />
-                                            </div>
-                                            Internal Reasoning
-                                        </div>
-                                        <div className="line-clamp-2 hover:line-clamp-none transition-all duration-500 cursor-help">
-                                            {msg.reasoning}
-                                        </div>
-                                    </motion.div>
-                                )}
                                 <div className={cn(
                                     "p-4 rounded-3xl shadow-sm prose prose-sm dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-headings:my-2",
                                     msg.sender === 'user' 
@@ -247,9 +283,6 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
                 </Button>
             </div>
           </form>
-          <div className="mt-3 text-center">
-            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.2em] font-bold">Powered by Color Hut AI • Arcee Trinity</p>
-          </div>
         </div>
     </div>
   );
