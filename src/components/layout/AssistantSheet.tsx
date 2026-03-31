@@ -89,8 +89,12 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
 
       const aiResponse = { 
         sender: 'assistant', 
-        text: response.content, 
-        reasoning: response.reasoning_details 
+        text: typeof response.content === 'object' 
+            ? JSON.stringify(response.content) 
+            : (response.content || ""), 
+        reasoning: typeof response.reasoning_details === 'object' 
+            ? JSON.stringify(response.reasoning_details, null, 2) 
+            : response.reasoning_details 
       };
       
       setMessages(prev => [...prev, aiResponse]);
