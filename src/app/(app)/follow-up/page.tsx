@@ -12,6 +12,13 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import type { FollowUp, FollowUpStatusType, CustomerType, FollowUpStatus } from '@/types';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     Pagination,
     PaginationContent,
     PaginationItem,
@@ -31,6 +38,7 @@ export default function FollowUpPage() {
     const [followUps, setFollowUps] = useState<FollowUp[]>([]);
     const [statuses, setStatuses] = useState<FollowUpStatus[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchField, setSearchField] = useState<'all' | 'phone' | 'jobId' | 'name'>('all');
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -64,14 +72,26 @@ export default function FollowUpPage() {
         }
 
         const lowerSearchTerm = searchTerm.toLowerCase();
-        return followUps.filter(item =>
-            (item.contactName && item.contactName.toLowerCase().includes(lowerSearchTerm)) ||
-            (item.businessName && item.businessName.toLowerCase().includes(lowerSearchTerm)) ||
-            (item.phone && item.phone.toLowerCase().includes(lowerSearchTerm)) ||
-            (item.address && item.address.toLowerCase().includes(lowerSearchTerm)) ||
-            (item.jobId && item.jobId.toLowerCase().includes(lowerSearchTerm))
-        );
-    }, [followUps, searchTerm]);
+        return followUps.filter(item => {
+            if (searchField === 'phone') {
+                return item.phone && item.phone.toLowerCase().includes(lowerSearchTerm);
+            }
+            if (searchField === 'jobId') {
+                return item.jobId && item.jobId.toLowerCase().includes(lowerSearchTerm);
+            }
+            if (searchField === 'name') {
+                return (item.contactName && item.contactName.toLowerCase().includes(lowerSearchTerm)) ||
+                       (item.businessName && item.businessName.toLowerCase().includes(lowerSearchTerm));
+            }
+            
+            // default 'all'
+            return (item.contactName && item.contactName.toLowerCase().includes(lowerSearchTerm)) ||
+                (item.businessName && item.businessName.toLowerCase().includes(lowerSearchTerm)) ||
+                (item.phone && item.phone.toLowerCase().includes(lowerSearchTerm)) ||
+                (item.address && item.address.toLowerCase().includes(lowerSearchTerm)) ||
+                (item.jobId && item.jobId.toLowerCase().includes(lowerSearchTerm));
+        });
+    }, [followUps, searchTerm, searchField]);
 
     const totalPages = Math.ceil(filteredFollowUps.length / ITEMS_PER_PAGE);
 
@@ -175,14 +195,35 @@ export default function FollowUpPage() {
             ) : (
                 <Card className="flex-1 overflow-hidden border-none bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 dark:ring-white/5 flex flex-col">
                     <CardHeader className="border-b border-slate-100/50 dark:border-white/5 px-4 md:px-6 py-4 md:py-5 shrink-0">
-                        <div className="relative w-full md:w-80">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search follow-ups..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-11 h-10 md:h-11 rounded-xl bg-white/50 dark:bg-slate-900/50 border-none shadow-sm ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary/50 transition-all font-medium text-sm"
-                            />
+                        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                            <div className="relative w-full md:w-80">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input
+                                    placeholder={
+                                        searchField === 'phone' ? "Search by phone..." :
+                                        searchField === 'jobId' ? "Search by Job ID..." :
+                                        searchField === 'name' ? "Search by name..." :
+                                        "Search follow-ups..."
+                                    }
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-11 h-10 md:h-11 rounded-xl bg-white/50 dark:bg-slate-900/50 border-none shadow-sm ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary/50 transition-all font-medium text-sm"
+                                />
+                            </div>
+                            <Select 
+                                value={searchField} 
+                                onValueChange={(value: any) => setSearchField(value)}
+                            >
+                                <SelectTrigger className="w-full md:w-[130px] h-10 md:h-11 rounded-xl bg-white/50 dark:bg-slate-900/50 border-none shadow-sm ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary/50 font-medium text-xs">
+                                    <SelectValue placeholder="Search by" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-none shadow-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl">
+                                    <SelectItem value="all" className="rounded-lg focus:bg-primary/10 focus:text-primary">All Fields</SelectItem>
+                                    <SelectItem value="name" className="rounded-lg focus:bg-primary/10 focus:text-primary">Name</SelectItem>
+                                    <SelectItem value="phone" className="rounded-lg focus:bg-primary/10 focus:text-primary">Phone</SelectItem>
+                                    <SelectItem value="jobId" className="rounded-lg focus:bg-primary/10 focus:text-primary">Job ID</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0 flex-1 overflow-auto">
