@@ -94,7 +94,7 @@ export async function updateTrackingLinkAction(
       await autoSettleOrderIfDelivered(orderId, `System auto-settled: Status changed to '${DELIVERED_STATUS_ID}'.`, currentUser);
     }
 
-    revalidatePath("/(app)/tracking-links");
+    revalidatePath("/(app)/all-orders");
     revalidatePath(`/track/${orderId}`);
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");

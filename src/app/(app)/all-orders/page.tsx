@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical, Briefcase } from "lucide-react";
+import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
@@ -34,11 +34,11 @@ import {
 } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
 
-const EditTrackingLinkDialog = dynamic(() => import('@/components/tracking-links/edit-tracking-link-dialog').then(mod => mod.EditTrackingLinkDialog));
+const EditTrackingLinkDialog = dynamic(() => import('@/components/all-orders/edit-tracking-link-dialog').then(mod => mod.EditTrackingLinkDialog));
 
 const ITEMS_PER_PAGE = 25;
 
-export default function TrackingLinksPage() {
+export default function AllOrdersPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>([]);
@@ -46,7 +46,6 @@ export default function TrackingLinksPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
-  const [copiedProjectLinkId, setCopiedProjectLinkId] = useState<string | null>(null);
 
   const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -94,13 +93,10 @@ export default function TrackingLinksPage() {
     setSelectedLink(null);
   };
 
-  const handleCopyLink = async (linkId: string, linkType: 'feedback' | 'project') => {
-    const urlToCopy = linkType === 'feedback'
-      ? `${window.location.origin}/feedback/${linkId}`
-      : `${window.location.origin}/my-project/${linkId}`;
-
-    const successMessage = linkType === 'feedback' ? "Feedback link copied!" : "Project link copied!";
-    const setter = linkType === 'feedback' ? setCopiedLinkId : setCopiedProjectLinkId;
+  const handleCopyLink = async (linkId: string) => {
+    const urlToCopy = `${window.location.origin}/feedback/${linkId}`;
+    const successMessage = "Feedback link copied!";
+    const setter = setCopiedLinkId;
 
     try {
       if (!navigator.clipboard) {
@@ -217,8 +213,8 @@ export default function TrackingLinksPage() {
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-grow">
-              <CardTitle className="text-card-foreground text-xl">Track Orders</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of generated tracking links and their status.</CardDescription>
+              <CardTitle className="text-card-foreground text-xl">All Orders</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of all orders and their current status.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
@@ -294,18 +290,11 @@ export default function TrackingLinksPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onSelect={() => handleCopyLink(link.id, 'feedback')}
+                                onSelect={() => handleCopyLink(link.id)}
                                 className="cursor-pointer"
                               >
                                 {copiedLinkId === link.id ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <ClipboardCopy className="mr-2 h-4 w-4" />}
                                 {copiedLinkId === link.id ? "Copied!" : "Copy Feedback Link"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() => handleCopyLink(link.id, 'project')}
-                                className="cursor-pointer"
-                              >
-                                {copiedProjectLinkId === link.id ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Briefcase className="mr-2 h-4 w-4" />}
-                                {copiedProjectLinkId === link.id ? "Copied!" : "Copy Project Link"}
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild className="cursor-pointer">
                                 <Link href={`/track/${link.id}`}>

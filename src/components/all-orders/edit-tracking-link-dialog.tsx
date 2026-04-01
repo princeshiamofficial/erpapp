@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea"; 
 import type { TrackingLink, CustomStatus, User, UserRole } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { updateTrackingLinkAction } from '@/app/(app)/tracking-links/actions'; 
+import { updateTrackingLinkAction } from '@/app/(app)/all-orders/actions'; 
 import { AlertTriangle } from 'lucide-react';
 
 interface EditTrackingLinkDialogProps {

@@ -16,7 +16,7 @@ export async function addStatusAction(
     if (newStatus) {
       revalidatePath("/(app)/admin/statuses");
       revalidatePath("/(app)/orders"); 
-      revalidatePath("/(app)/tracking-links"); 
+      revalidatePath("/(app)/all-orders"); 
       return { success: true, status: newStatus };
     }
     return { success: false, error: "Failed to add status to database." };
@@ -39,7 +39,7 @@ export async function updateStatusAction(
     if (success) {
       revalidatePath("/(app)/admin/statuses");
       revalidatePath("/(app)/orders");
-      revalidatePath("/(app)/tracking-links");
+      revalidatePath("/(app)/all-orders");
       revalidatePath("/track/[trackingId]", "layout"); 
       return { success: true };
     }
@@ -56,7 +56,7 @@ export async function deleteStatusAction(id: string): Promise<{ success: boolean
     if (success) {
       revalidatePath("/(app)/admin/statuses");
       revalidatePath("/(app)/orders");
-      revalidatePath("/(app)/tracking-links");
+      revalidatePath("/(app)/all-orders");
       return { success: true };
     }
     return { success: false, error: "Failed to delete status from database." };
