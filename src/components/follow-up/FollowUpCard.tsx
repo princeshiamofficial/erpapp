@@ -88,13 +88,13 @@ export const FollowUpCard = ({
     const crmUser = allUsers.find(u => u.id === followUp.crmId);
 
     const displayName = followUp.businessName || followUp.contactName || '';
-    const truncatedDisplayName = displayName.length > 26
-        ? `${displayName.substring(0, 26)}...`
+    const truncatedDisplayName = displayName.length > 22
+        ? `${displayName.substring(0, 22)}...`
         : displayName;
 
     const contactName = followUp.contactName || '';
-    const truncatedContactName = contactName.length > 26
-        ? `${contactName.substring(0, 26)}...`
+    const truncatedContactName = contactName.length > 40
+        ? `${contactName.substring(0, 40)}...`
         : contactName;
 
     const handleDelete = async () => {
