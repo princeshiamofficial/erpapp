@@ -68,6 +68,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOrderDatePopoverOpen, setIsOrderDatePopoverOpen] = useState(false);
+  const [isDeliveryDatePopoverOpen, setIsDeliveryDatePopoverOpen] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
   const [newAdvancePaymentNotes, setNewAdvancePaymentNotes] = useState('');
 
@@ -543,57 +545,57 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </div>
               <div className="space-y-1">
                 <Label htmlFor="orderDate">Order Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !currentOrderDate && "text-muted-foreground"
-                      )}
-                      disabled={isSubmitting}
-                    >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      {currentOrderDate ? format(currentOrderDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={currentOrderDate}
-                      onSelect={setCurrentOrderDate}
-                      initialFocus
-                      disabled={isSubmitting}
-                    />
-                  </PopoverContent>
-                </Popover>
+                 <Popover open={isOrderDatePopoverOpen} onOpenChange={setIsOrderDatePopoverOpen}>
+                   <PopoverTrigger asChild>
+                     <Button
+                       variant={"outline"}
+                       className={cn(
+                         "w-full justify-start text-left font-normal",
+                         !currentOrderDate && "text-muted-foreground"
+                       )}
+                       disabled={isSubmitting}
+                     >
+                       <CalendarDays className="mr-2 h-4 w-4" />
+                       {currentOrderDate ? format(currentOrderDate, "PPP") : <span>Pick a date</span>}
+                     </Button>
+                   </PopoverTrigger>
+                   <PopoverContent className="w-auto p-0" align="start">
+                     <Calendar
+                       mode="single"
+                       selected={currentOrderDate}
+                       onSelect={(date) => { setCurrentOrderDate(date); setIsOrderDatePopoverOpen(false); }}
+                       initialFocus
+                       disabled={isSubmitting}
+                     />
+                   </PopoverContent>
+                 </Popover>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="acceptedDeliveryDate">Delivery Date (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !acceptedDeliveryDate && "text-muted-foreground"
-                      )}
-                      disabled={isSubmitting}
-                    >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      {acceptedDeliveryDate ? format(acceptedDeliveryDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={acceptedDeliveryDate}
-                      onSelect={setAcceptedDeliveryDate}
-                      initialFocus
-                      disabled={isSubmitting}
-                    />
-                  </PopoverContent>
-                </Popover>
+                 <Popover open={isDeliveryDatePopoverOpen} onOpenChange={setIsDeliveryDatePopoverOpen}>
+                   <PopoverTrigger asChild>
+                     <Button
+                       variant={"outline"}
+                       className={cn(
+                         "w-full justify-start text-left font-normal",
+                         !acceptedDeliveryDate && "text-muted-foreground"
+                       )}
+                       disabled={isSubmitting}
+                     >
+                       <CalendarDays className="mr-2 h-4 w-4" />
+                       {acceptedDeliveryDate ? format(acceptedDeliveryDate, "PPP") : <span>Pick a date</span>}
+                     </Button>
+                   </PopoverTrigger>
+                   <PopoverContent className="w-auto p-0" align="start">
+                     <Calendar
+                       mode="single"
+                       selected={acceptedDeliveryDate}
+                       onSelect={(date) => { setAcceptedDeliveryDate(date); setIsDeliveryDatePopoverOpen(false); }}
+                       initialFocus
+                       disabled={isSubmitting}
+                     />
+                   </PopoverContent>
+                 </Popover>
               </div>
             </div>
 
