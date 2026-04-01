@@ -262,13 +262,13 @@ export default function FollowUpPage() {
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm group-hover:text-primary transition-colors line-clamp-1">
-                                                                {item.businessName || item.contactName}
+                                                                {(item.businessName || item.contactName || '').length > 26 ? `${(item.businessName || item.contactName || '').substring(0, 26)}...` : (item.businessName || item.contactName)}
                                                             </span>
                                                             {getCustomerTypeBadge(item.customerType)}
                                                         </div>
                                                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
                                                             <User className="h-3 w-3" />
-                                                            {item.contactName}
+                                                            {item.contactName && item.contactName.length > 26 ? `${item.contactName.substring(0, 26)}...` : (item.contactName || 'N/A')}
                                                             {item.jobId && (
                                                                 <>
                                                                     <span className="mx-1">•</span>
