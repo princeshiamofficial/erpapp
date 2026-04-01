@@ -72,6 +72,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [createdAt, setCreatedAt] = useState<Date | undefined>(undefined);
+  const [acceptedDeliveryDate, setAcceptedDeliveryDate] = useState<Date | undefined>(undefined);
   const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
   const [orderNotes, setOrderNotes] = useState('');
 
@@ -141,9 +142,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       } else {
         setJobIdInput(''); setCompanyNameInput(companyNameString.trim());
       }
-      setAddress(order.address);
+       setAddress(order.address);
       setPhoneNumber(order.phoneNumber);
       setCreatedAt(order.createdAt ? parseISO(order.createdAt) : undefined);
+      setAcceptedDeliveryDate(order.acceptedDeliveryDate ? parseISO(order.acceptedDeliveryDate) : undefined);
       setSpecialClientDiscount(order.specialClientDiscount?.toString() || '');
       setOrderNotes(order.orderNotes || '');
       setOrderItems(order.orderItems.map(item => ({ ...item, quantity: item.quantity.toString() })));
@@ -400,8 +402,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     } = {
       companyName: `${jobIdInput.trim()} • ${companyNameInput.trim()}`,
       address: address.trim(),
-      phoneNumber: phoneNumber.trim(),
+       phoneNumber: phoneNumber.trim(),
       createdAt: createdAt!.toISOString(),
+      acceptedDeliveryDate: acceptedDeliveryDate ? acceptedDeliveryDate.toISOString() : null,
       specialClientDiscountString: specialClientDiscount.trim() || null,
       shippingCharge: parseFloat(shippingCharge) || 0,
       orderNotes: orderNotes.trim() || null,
@@ -448,7 +451,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => setCompanyNameInput(e.target.value)} required disabled={isSubmitting} /></div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
                   <Input
@@ -469,7 +472,34 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     placeholder="01xxxxxxxxx"
                   />
                 </div>
-                <div className="space-y-1"><Label htmlFor="edit-orderDate">Date Created *</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !createdAt && "text-muted-foreground")} disabled={isSubmitting}><CalendarDays className="mr-2 h-4 w-4" />{createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} /></PopoverContent></Popover></div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-orderDate">Date Created *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !createdAt && "text-muted-foreground")} disabled={isSubmitting}>
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-acceptedDeliveryDate">Delivery Date (Optional)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !acceptedDeliveryDate && "text-muted-foreground")} disabled={isSubmitting}>
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {acceptedDeliveryDate ? formatDateForDialogInput(acceptedDeliveryDate) : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={acceptedDeliveryDate} onSelect={setAcceptedDeliveryDate} initialFocus disabled={isSubmitting} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting} /></div>
               <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Order Items *</Label>

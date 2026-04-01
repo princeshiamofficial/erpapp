@@ -10,7 +10,11 @@ import { Package } from 'lucide-react';
 import { OrderDetailsLoader } from './OrderDetailsLoader';
 import { cookies } from 'next/headers';
 import type { User } from '@/types';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+
+export const viewport: Viewport = {
+  width: 1024,
+};
 
 export async function generateMetadata({ params }: PublicTrackingPageProps): Promise<Metadata> {
   const { trackingId } = await params;

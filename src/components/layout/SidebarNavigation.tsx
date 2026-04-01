@@ -38,6 +38,7 @@ import {
   Archive,
   Phone,
   Activity,
+  ShoppingBag,
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -75,7 +76,7 @@ const navItems: NavItem[] = [
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
-  { href: "/all-orders", label: "All Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+  { href: "/all-orders", label: "All Orders", icon: ShoppingBag, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/quotation", label: "Quotations", icon: ClipboardList, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/gifts", label: "Gifts", icon: Gift, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   {

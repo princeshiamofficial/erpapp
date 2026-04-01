@@ -51,9 +51,9 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         JsBarcode(barcodeRef.current, order.id, {
           format: "CODE128",
           displayValue: false,
-          width: 2,
-          height: 40,
-          margin: 5,
+          width: 1.4,
+          height: 30,
+          margin: 2,
         });
       } catch (e) {
         console.error("JsBarcode error:", e);
@@ -125,16 +125,16 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
               width={160}
               height={40}
               priority
-              className="object-contain rounded-md print:w-32 print:h-auto"
+              className="object-contain rounded-lg print:w-32 print:h-auto"
             />
           </div>
           <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
           <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-          <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt)} ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+
         </div>
         <div className="text-left sm:text-right mt-4 sm:mt-0">
           <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-          <div className="text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+          <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
           <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
         </div>
       </div>

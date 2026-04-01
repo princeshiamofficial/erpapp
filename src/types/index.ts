@@ -182,6 +182,7 @@ export interface TrackingLink {
   assigneeAvatarUrl?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
   createdAt: string; // ISO string
+  acceptedDeliveryDate?: string | null; // ISO string
   updatedAt?: string; // ISO string for last edit of order details
   updatedByUserId?: string;
   updatedByUserName?: string;

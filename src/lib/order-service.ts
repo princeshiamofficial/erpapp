@@ -30,6 +30,7 @@ const mapRowToOrder = (row: any): TrackingLink => ({
   assigneeAvatarUrl: row.assignee_avatar_url,
   designerRepresentativeAvatarUrl: row.designer_representative_avatar_url,
   createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+  acceptedDeliveryDate: row.accepted_delivery_date instanceof Date ? row.accepted_delivery_date.toISOString() : row.accepted_delivery_date,
   updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
   updatedByUserId: row.updated_by_user_id,
   updatedByUserName: row.updated_by_user_name,
@@ -179,6 +180,7 @@ export const addOrder = async (orderData: {
   crmUserId: string;
   crmUserName: string;
   createdAt: string;
+  acceptedDeliveryDate?: string | null;
 }): Promise<TrackingLink | null> => {
   const transactionTime = new Date().toISOString();
 
@@ -256,13 +258,15 @@ export const addOrder = async (orderData: {
     await query(
       `INSERT INTO ${ORDERS_TABLE} (
         id, company_name, address, phone_number, order_items, special_client_discount, shipping_charge, 
-        order_notes, crm_user_id, crm_user_name, created_at, updated_at, updated_by_user_id, 
+        order_notes, crm_user_id, crm_user_name, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
         updated_by_user_name, is_public, current_status, status_history, comments, view_count, advance_payments
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         orderId, orderData.companyName, orderData.address, orderData.phoneNumber, JSON.stringify(orderData.orderItems),
         orderData.specialClientDiscount ?? null, orderData.shippingCharge ?? null, orderData.orderNotes || null,
-        orderData.crmUserId, orderData.crmUserName, mysqlCreatedAt, mysqlUpdatedAt, orderData.crmUserId,
+        orderData.crmUserId, orderData.crmUserName, mysqlCreatedAt, 
+        orderData.acceptedDeliveryDate ? format(parseISO(orderData.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null,
+        mysqlUpdatedAt, orderData.crmUserId,
         orderData.crmUserName, false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
         JSON.stringify([]), 0, JSON.stringify(initialAdvancePayments)
       ]
@@ -276,7 +280,9 @@ export const addOrder = async (orderData: {
       crmUserId: orderData.crmUserId, crmUserName: orderData.crmUserName,
       designerRepresentativeId: null, designerRepresentativeName: null,
       assigneeAvatarUrl: null, designerRepresentativeAvatarUrl: null,
-      createdAt: finalCreatedAt, updatedAt: transactionTime,
+      createdAt: finalCreatedAt, 
+      acceptedDeliveryDate: orderData.acceptedDeliveryDate || null,
+      updatedAt: transactionTime,
       updatedByUserId: orderData.crmUserId, updatedByUserName: orderData.crmUserName,
       isPublic: false, currentStatus: orderData.initialStatusId,
       statusHistory: [initialLogEntry], comments: [], viewCount: 0,
@@ -326,6 +332,10 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     if (updates.advancePayments !== undefined) { fields.push('advance_payments = ?'); params.push(JSON.stringify(updates.advancePayments)); }
     if (updates.packzyConsignmentId !== undefined) { fields.push('packzy_consignment_id = ?'); params.push(updates.packzyConsignmentId); }
     if (updates.packzyTrackingCode !== undefined) { fields.push('packzy_tracking_code = ?'); params.push(updates.packzyTrackingCode); }
+    if (updates.acceptedDeliveryDate !== undefined) { 
+        fields.push('accepted_delivery_date = ?'); 
+        params.push(updates.acceptedDeliveryDate ? format(parseISO(updates.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null); 
+    }
 
     if (fields.length === 0) return true;
 

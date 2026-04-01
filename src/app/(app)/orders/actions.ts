@@ -37,6 +37,7 @@ interface CreateOrderDialogFormData {
   customPaymentMethodText?: string;
   orderNotes?: string | null;
   initialStatusId: string;
+  acceptedDeliveryDate?: string | null;
 }
 
 const formatAmountForNotification = (amount: number): string => {
@@ -150,6 +151,7 @@ export async function createOrderAction(
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
       newAdvancePaymentNotes: data.newAdvancePaymentNotes || null,
+      acceptedDeliveryDate: data.acceptedDeliveryDate || null,
     };
 
     const createdOrder = await addOrderService(newOrderDataForService);
@@ -286,7 +288,8 @@ export async function updateOrderAction(
       finalUpdates.phoneNumber = phoneNumber;
     }
 
-    if (updates.orderNotes !== undefined) finalUpdates.orderNotes = updates.orderNotes?.trim() || null;
+     if (updates.orderNotes !== undefined) finalUpdates.orderNotes = updates.orderNotes?.trim() || null;
+    if (updates.acceptedDeliveryDate !== undefined) finalUpdates.acceptedDeliveryDate = updates.acceptedDeliveryDate || null;
 
     if (updates.orderItems) {
       if (!Array.isArray(updates.orderItems) || updates.orderItems.length === 0) return { success: false, error: "Order must have at least one item." };

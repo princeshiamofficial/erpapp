@@ -90,6 +90,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
   const [isPaymentMethodPopoverOpen, setIsPaymentMethodPopoverOpen] = useState(false);
   const [currentOrderDate, setCurrentOrderDate] = useState<Date | undefined>(new Date());
+  const [acceptedDeliveryDate, setAcceptedDeliveryDate] = useState<Date | undefined>(undefined);
 
   const { toast } = useToast();
 
@@ -112,9 +113,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setOrderItemsTotal(0);
     setCalculatedDiscountAmount(0);
     setNetPayable(0);
-    setAmountDue(0);
+     setAmountDue(0);
     setIsSubmitting(false);
     setCurrentOrderDate(new Date());
+    setAcceptedDeliveryDate(undefined);
     setIsAutoFilled(false);
     setSelectedPaymentProof(null);
     setIsUploadingProof(false);
@@ -474,6 +476,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       specialClientDiscount: calculatedDiscountAmount > 0 ? calculatedDiscountAmount : null,
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
+      acceptedDeliveryDate: acceptedDeliveryDate ? acceptedDeliveryDate.toISOString() : null,
     };
 
     const result = await createOrderAction(orderDataForAction, currentUser);
@@ -559,6 +562,33 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       mode="single"
                       selected={currentOrderDate}
                       onSelect={setCurrentOrderDate}
+                      initialFocus
+                      disabled={isSubmitting}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="acceptedDeliveryDate">Delivery Date (Optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !acceptedDeliveryDate && "text-muted-foreground"
+                      )}
+                      disabled={isSubmitting}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {acceptedDeliveryDate ? format(acceptedDeliveryDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={acceptedDeliveryDate}
+                      onSelect={setAcceptedDeliveryDate}
                       initialFocus
                       disabled={isSubmitting}
                     />

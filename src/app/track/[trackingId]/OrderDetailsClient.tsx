@@ -43,7 +43,7 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDate = (dateString: string | undefined, relative: boolean = false) => {
+const formatDate = (dateString: string | undefined, relative: boolean = false, includeTime: boolean = true) => {
   if (!dateString) return "Loading date...";
   try {
     const date = parseISO(dateString);
@@ -51,7 +51,8 @@ const formatDate = (dateString: string | undefined, relative: boolean = false) =
       return formatDistanceToNowStrict(date, { addSuffix: true });
     }
     // Using a consistent format string avoids locale-based hydration mismatches
-    return formatDateFns(parseISO(dateString), "d MMM yyyy, h:mm a");
+    const formatStr = includeTime ? "d MMM yyyy, h:mm a" : "d MMM yyyy";
+    return formatDateFns(parseISO(dateString), formatStr);
   } catch (e) {
     return "Invalid Date";
   }
@@ -127,9 +128,9 @@ export function OrderDetailsClient({
         JsBarcode(barcodeRef.current, order.id, {
           format: "CODE128",
           displayValue: false,
-          width: 2,
-          height: 50,
-          margin: 10,
+          width: 1.4,
+          height: 30,
+          margin: 2,
         });
       } catch (e) {
         console.error("JsBarcode error:", e);
@@ -510,7 +511,7 @@ export function OrderDetailsClient({
                   width={160}
                   height={40}
                   priority
-                  className="object-contain"
+                  className="object-contain rounded-lg"
                 />
               </div>
             </div>
@@ -554,7 +555,10 @@ export function OrderDetailsClient({
             </div>
             <div className="text-left sm:text-right mt-4 sm:mt-0">
               <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-              <div className="text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+              <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+              {order.acceptedDeliveryDate && (
+                <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+              )}
               <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
             </div>
           </div>
