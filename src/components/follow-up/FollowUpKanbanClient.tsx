@@ -45,6 +45,13 @@ import { getUsers } from '@/lib/user-service';
 import type { FollowUpStatus } from '@/types';
 import { FollowUpKanbanColumn } from './FollowUpKanbanColumn';
 import { FollowUpCard } from './FollowUpCard';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import dynamic from 'next/dynamic';
 import Papa from 'papaparse';
 
@@ -75,6 +82,7 @@ export function FollowUpKanbanClient() {
     const [statuses, setStatuses] = useState<FollowUpStatus[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchField, setSearchField] = useState<'all' | 'phone' | 'jobId' | 'name'>('all');
     const [activeItem, setActiveItem] = useState<FollowUp | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
@@ -131,14 +139,27 @@ export function FollowUpKanbanClient() {
 
     const filteredItems = useMemo(() => {
         return followUps.filter(item => {
-            const matchesSearch = !searchTerm ||
-                (item.businessName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (item.contactName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (item.jobId || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            if (!searchTerm) return true;
+            const lowerSearchTerm = searchTerm.toLowerCase();
+
+            if (searchField === 'phone') {
+                return (item.phone || "").toLowerCase().includes(lowerSearchTerm);
+            }
+            if (searchField === 'jobId') {
+                return (item.jobId || "").toLowerCase().includes(lowerSearchTerm);
+            }
+            if (searchField === 'name') {
+                return (item.businessName || "").toLowerCase().includes(lowerSearchTerm) ||
+                       (item.contactName || "").toLowerCase().includes(lowerSearchTerm);
+            }
+
+            // default 'all'
+            return (item.businessName || "").toLowerCase().includes(lowerSearchTerm) ||
+                (item.contactName || "").toLowerCase().includes(lowerSearchTerm) ||
+                (item.jobId || "").toLowerCase().includes(lowerSearchTerm) ||
                 (item.phone || "").includes(searchTerm);
-            return matchesSearch;
         });
-    }, [followUps, searchTerm]);
+    }, [followUps, searchTerm, searchField]);
 
     const itemsByStatus = useMemo(() => {
         const grouped: Record<string, FollowUp[]> = {};
@@ -232,14 +253,35 @@ export function FollowUpKanbanClient() {
         >
             <div className="flex flex-col h-full space-y-4">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-0">
-                    <div className="relative w-full sm:max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search records..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] border-border/40 focus:border-primary/50 text-sm h-10 rounded-xl w-full"
-                        />
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:max-w-md">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={
+                                    searchField === 'phone' ? "Search by phone..." :
+                                    searchField === 'jobId' ? "Search by Job ID..." :
+                                    searchField === 'name' ? "Search by name..." :
+                                    "Search records..."
+                                }
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] border-border/40 focus:border-primary/50 text-sm h-10 rounded-xl w-full"
+                            />
+                        </div>
+                        <Select 
+                            value={searchField} 
+                            onValueChange={(value: any) => setSearchField(value)}
+                        >
+                            <SelectTrigger className="w-full sm:w-[130px] h-10 rounded-xl bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] border-border/40 focus:border-primary/50 font-medium text-xs">
+                                <SelectValue placeholder="Search by" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-none shadow-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl">
+                                <SelectItem value="all" className="rounded-lg focus:bg-primary/10 focus:text-primary">All Fields</SelectItem>
+                                <SelectItem value="name" className="rounded-lg focus:bg-primary/10 focus:text-primary">Name</SelectItem>
+                                <SelectItem value="phone" className="rounded-lg focus:bg-primary/10 focus:text-primary">Phone</SelectItem>
+                                <SelectItem value="jobId" className="rounded-lg focus:bg-primary/10 focus:text-primary">Job ID</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="flex items-center gap-2">
                         {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
