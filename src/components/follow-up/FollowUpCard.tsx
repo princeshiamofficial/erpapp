@@ -88,14 +88,8 @@ export const FollowUpCard = ({
     const crmUser = allUsers.find(u => u.id === followUp.crmId);
 
     const displayName = followUp.businessName || followUp.contactName;
-    const truncatedDisplayName = displayName.length > 35
-        ? `${displayName.substring(0, 35)}...`
-        : displayName;
 
     const contactName = followUp.contactName || '';
-    const truncatedContactName = contactName.length > 30
-        ? `${contactName.substring(0, 30)}...`
-        : contactName;
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -140,8 +134,8 @@ export const FollowUpCard = ({
                     {/* Header: Title and Actions */}
                     <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0 pr-4">
-                            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors w-full" title={followUp.jobId ? `${followUp.jobId} • ${displayName}` : displayName}>
-                                {followUp.jobId ? `${followUp.jobId} • ` : ''}{truncatedDisplayName}
+                            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate w-full" title={followUp.jobId ? `${followUp.jobId} • ${displayName}` : displayName}>
+                                {followUp.jobId ? `${followUp.jobId} • ` : ''}{displayName}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 {followUp.customerType && (
@@ -159,7 +153,7 @@ export const FollowUpCard = ({
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium min-w-0">
                             <UserIcon className="h-3.5 w-3.5 shrink-0" />
-                            <span className="flex-1 block" title={contactName}>{truncatedContactName}</span>
+                            <span className="flex-1 truncate" title={contactName}>{contactName}</span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium">
                             <Phone className="h-3.5 w-3.5 shrink-0" />
