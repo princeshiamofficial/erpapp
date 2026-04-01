@@ -72,16 +72,6 @@ export async function addFollowUpsBatchAction(
 
   for (const item of followUpsData) {
     try {
-      // Check for duplicate phone
-      if (item.phone) {
-        const existingByPhone = await getFollowUpByPhone(item.phone);
-        if (existingByPhone) {
-            errorCount++;
-            errors.push(`Record with phone number ${item.phone} already exists.`);
-            continue;
-        }
-      }
-
       // Check for duplicate jobId
       if (item.jobId) {
         const existingByJobId = await getFollowUpByJobId(item.jobId);

@@ -97,18 +97,15 @@ const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataE
     // 3. De-duplicate based on Job ID or Phone, keeping the latest (since we sorted)
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
     const seenJobIds = new Set<string>();
-    const seenPhones = new Set<string>();
 
     allEntries.forEach(entry => {
         const jobIdLower = entry.jobId.toLowerCase();
-        const phone = entry.phone;
 
-        if (seenJobIds.has(jobIdLower) || seenPhones.has(phone)) {
+        if (seenJobIds.has(jobIdLower)) {
             return; // Skip duplicate
         }
 
         seenJobIds.add(jobIdLower);
-        seenPhones.add(phone);
 
         // 4. Organize into division/district map
         const divisionName = entry.division!;

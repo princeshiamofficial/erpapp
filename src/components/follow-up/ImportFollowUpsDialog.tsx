@@ -99,7 +99,6 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
 
         const validItems: Omit<FollowUp, 'id' | 'crmId' | 'crmName'>[] = [];
         const validationErrors: string[] = [];
-        const seenPhones = new Set<string>();
         const seenJobIds = new Set<string>();
 
         let total = 0;
@@ -115,7 +114,7 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
             return;
           }
 
-          if (seenPhones.has(row.phone) || (row['job id'] && seenJobIds.has(row['job id']))) {
+          if (row['job id'] && seenJobIds.has(row['job id'])) {
             duplicates++;
             return;
           }
@@ -126,7 +125,6 @@ export function ImportFollowUpsDialog({ isOpen, onOpenChange, onFollowUpsImporte
             return;
           }
 
-          seenPhones.add(row.phone);
           if (row['job id']) seenJobIds.add(row['job id']);
           unique++;
 

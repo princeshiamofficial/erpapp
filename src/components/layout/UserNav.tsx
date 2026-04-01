@@ -13,9 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, User as UserIcon, Settings, Edit3, Bot } from "lucide-react";
+import { LogOut, User as UserIcon, Settings, Edit3 } from "lucide-react";
 import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
-import { AssistantSheet } from "./AssistantSheet"; // Import the new component
 
 export function UserNav() {
   const { currentUser, logout } = useAuth();
@@ -66,12 +65,6 @@ export function UserNav() {
               <span>Edit Profile</span>
             </DropdownMenuItem>
           </EditProfileDialog>
-          <AssistantSheet>
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
-              <Bot className="mr-2 h-4 w-4" />
-              <span>Assistant</span>
-            </DropdownMenuItem>
-          </AssistantSheet>
           <DropdownMenuItem disabled>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile (Soon)</span>
