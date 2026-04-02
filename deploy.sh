@@ -11,10 +11,6 @@ git pull origin restore
 echo "Installing dependencies..."
 npm install --legacy-peer-deps
 
-# 3. Handle Database Migrations
-echo "Checking and applying database migrations..."
-node scripts/add-delivery-date-col.js
-
 # 3. Build the application
 echo "Building the application..."
 npm run build
