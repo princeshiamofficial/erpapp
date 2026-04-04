@@ -11,7 +11,11 @@ git pull origin restore
 echo "Installing dependencies..."
 npm install --legacy-peer-deps
 
-# 3. Build the application
+# 3. Running migrations
+echo "Running database migrations..."
+node scripts/migrate-trash-by.js
+
+# 4. Build the application
 echo "Building the application..."
 npm run build
 

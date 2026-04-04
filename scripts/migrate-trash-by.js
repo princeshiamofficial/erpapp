@@ -9,18 +9,35 @@ async function run() {
         database: process.env.DATABASE_NAME || 'erp_database',
         port: parseInt(process.env.DATABASE_PORT || '3306', 10),
     });
-    try {
-        console.log('Adding deleted_by_id and deleted_by_name to orders table...');
-        await pool.execute('ALTER TABLE orders ADD COLUMN deleted_by_id VARCHAR(255) DEFAULT NULL');
-        await pool.execute('ALTER TABLE orders ADD COLUMN deleted_by_name VARCHAR(255) DEFAULT NULL');
-        console.log('Done with orders table.');
 
-        console.log('Adding deleted_by_id and deleted_by_name to quotations table...');
-        await pool.execute('ALTER TABLE quotations ADD COLUMN deleted_by_id VARCHAR(255) DEFAULT NULL');
-        await pool.execute('ALTER TABLE quotations ADD COLUMN deleted_by_name VARCHAR(255) DEFAULT NULL');
-        console.log('Done with quotations table.');
+    const addColumnIfNotExists = async (table, column, definition) => {
+        try {
+            console.log(`Checking column '${column}' in table '${table}'...`);
+            const [rows] = await pool.execute(`SHOW COLUMNS FROM ${table} LIKE ?`, [column]);
+            if (rows.length === 0) {
+                console.log(`Adding column '${column}' to ${table}...`);
+                await pool.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+                console.log(`Column '${column}' added.`);
+            } else {
+                console.log(`Column '${column}' already exists in ${table}.`);
+            }
+        } catch (e) {
+            console.error(`Error with column '${column}' on table '${table}':`, e.message);
+        }
+    };
+
+    try {
+        const tables = ['orders', 'quotations'];
+        for (const table of tables) {
+            console.log(`\nProcessing table: ${table}`);
+            await addColumnIfNotExists(table, 'is_deleted', 'BOOLEAN DEFAULT FALSE');
+            await addColumnIfNotExists(table, 'deleted_at', 'DATETIME DEFAULT NULL');
+            await addColumnIfNotExists(table, 'deleted_by_id', 'VARCHAR(255) DEFAULT NULL');
+            await addColumnIfNotExists(table, 'deleted_by_name', 'VARCHAR(255) DEFAULT NULL');
+        }
+        console.log('\nMigration completed successfully!');
     } catch (e) {
-        console.error('Error during migration:', e.message);
+        console.error('Migration failed:', e.message);
     } finally {
         await pool.end();
     }
