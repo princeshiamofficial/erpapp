@@ -13,7 +13,10 @@ async function run() {
     const addColumnIfNotExists = async (table, column, definition) => {
         try {
             console.log(`Checking column '${column}' in table '${table}'...`);
-            const [rows] = await pool.execute(`SHOW COLUMNS FROM ${table} LIKE ?`, [column]);
+            const [rows] = await pool.execute(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = ? AND TABLE_SCHEMA = DATABASE()`,
+                [table, column]
+            );
             if (rows.length === 0) {
                 console.log(`Adding column '${column}' to ${table}...`);
                 await pool.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
