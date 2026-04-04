@@ -279,4 +279,120 @@
       transform: rotate(360deg) scale(1.2);
     }
   }
+
+  /* From Uiverse.io by akshat-patel28 */ 
+  .uiverse-toast-card {
+    width: 380px;
+    height: 85px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    padding: 10px 15px;
+    background-color: hsl(var(--card));
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 8px 24px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 15px;
+    transition: all 0.3s ease;
+  }
+  
+  .uiverse-toast-wave {
+    position: absolute;
+    transform: rotate(90deg);
+    left: -35px;
+    top: 32px;
+    width: 90px;
+    opacity: 0.2;
+  }
+  
+  .uiverse-toast-card[data-variant="destructive"] .uiverse-toast-wave {
+    fill: #fc0c0c;
+  }
+  
+  .uiverse-toast-card[data-variant="default"] .uiverse-toast-wave {
+    fill: #10b981;
+  }
+
+  .uiverse-toast-icon-container {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    margin-left: 5px;
+    flex-shrink: 0;
+  }
+  
+  .uiverse-toast-card[data-variant="destructive"] .uiverse-toast-icon-container {
+    background-color: #fc0c0c48;
+  }
+  
+  .uiverse-toast-card[data-variant="default"] .uiverse-toast-icon-container {
+    background-color: #10b98120;
+  }
+
+  .uiverse-toast-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .uiverse-toast-card[data-variant="destructive"] .uiverse-toast-icon {
+    color: #d10d0d;
+  }
+  
+  .uiverse-toast-card[data-variant="default"] .uiverse-toast-icon {
+    color: #059669;
+  }
+
+  .uiverse-toast-text-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  .uiverse-toast-message-text {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+  }
+  
+  .uiverse-toast-card[data-variant="destructive"] .uiverse-toast-message-text {
+    color: #d10d0d;
+  }
+  
+  .uiverse-toast-card[data-variant="default"] .uiverse-toast-message-text {
+    color: #059669;
+  }
+
+  .uiverse-toast-sub-text {
+    font-size: 13px;
+    color: hsl(var(--muted-foreground));
+    margin: 0;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .uiverse-toast-cross-icon {
+    width: 18px;
+    height: 18px;
+    color: hsl(var(--muted-foreground));
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s;
+  }
+  
+  .uiverse-toast-cross-icon:hover {
+    color: hsl(var(--foreground));
+  }
 }

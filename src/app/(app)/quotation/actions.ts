@@ -4,7 +4,15 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User, OrderItem, AdvancePaymentRecord, ServiceModelItem, OrderLogEntry } from "@/types";
-import { addQuotation as addQuotationService, getQuotationById, deleteQuotation as deleteQuotationFromDb, updateQuotation as updateQuotationService } from "@/lib/quotation-service";
+import { 
+  addQuotation as addQuotationService, 
+  getQuotationById, 
+  deleteQuotation as deleteQuotationFromDb, 
+  updateQuotation as updateQuotationService,
+  getDeletedQuotations,
+  restoreQuotation as restoreQuotationFromDb,
+  permanentlyDeleteQuotation as permanentlyDeleteQuotationFromDb
+} from "@/lib/quotation-service";
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
@@ -357,7 +365,7 @@ export async function deleteQuotationAction(
       return { success: false, error: "You do not have permission to delete this quotation." };
     }
 
-    const success = await deleteQuotationFromDb(quotationId);
+    const success = await deleteQuotationFromDb(quotationId, currentUser.id);
     if (success) {
       revalidatePath("/(app)/quotation");
       return { success: true };
@@ -368,4 +376,26 @@ export async function deleteQuotationAction(
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while deleting quotation.";
     return { success: false, error: errorMessage };
   }
+}
+
+export async function getDeletedQuotationsAction(): Promise<TrackingLink[]> {
+  return await getDeletedQuotations();
+}
+
+export async function restoreQuotationAction(quotationId: string): Promise<{ success: boolean; error?: string }> {
+  const success = await restoreQuotationFromDb(quotationId);
+  if (success) {
+    revalidatePath("/(app)/quotation");
+    return { success: true };
+  }
+  return { success: false, error: "Failed to restore quotation." };
+}
+
+export async function permanentlyDeleteQuotationAction(quotationId: string): Promise<{ success: boolean; error?: string }> {
+  const success = await permanentlyDeleteQuotationFromDb(quotationId);
+  if (success) {
+    revalidatePath("/(app)/quotation");
+    return { success: true };
+  }
+  return { success: false, error: "Failed to permanently delete quotation." };
 }

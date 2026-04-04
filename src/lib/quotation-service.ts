@@ -9,7 +9,7 @@ const QUOTATIONS_TABLE = 'quotations';
 
 export const getQuotations = async (): Promise<TrackingLink[]> => {
   try {
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${QUOTATIONS_TABLE} ORDER BY id DESC`);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${QUOTATIONS_TABLE} WHERE is_deleted = FALSE ORDER BY id DESC`);
     return rows.map(row => ({
       id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
@@ -23,7 +23,7 @@ export const getQuotations = async (): Promise<TrackingLink[]> => {
 export const getQuotationById = async (id: string): Promise<TrackingLink | undefined> => {
   if (!id) return undefined;
   try {
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${QUOTATIONS_TABLE} WHERE id = ?`, [id]);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${QUOTATIONS_TABLE} WHERE id = ? AND is_deleted = FALSE`, [id]);
     if (rows.length > 0) {
       return { id: rows[0].id, ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as TrackingLink;
     }
@@ -128,12 +128,56 @@ export const updateQuotation = async (id: string, updates: Partial<TrackingLink>
   }
 };
 
-export const deleteQuotation = async (quotationId: string): Promise<boolean> => {
+export const deleteQuotation = async (quotationId: string, userId: string): Promise<boolean> => {
+  try {
+    const mysqlDeletedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    await query(`UPDATE ${QUOTATIONS_TABLE} SET is_deleted = TRUE, deleted_at = ?, deleted_by_id = ? WHERE id = ?`, [mysqlDeletedAt, userId, quotationId]);
+    return true;
+  } catch (error) {
+    console.error(`Error soft deleting quotation ${quotationId} from MySQL:`, error);
+    return false;
+  }
+};
+
+export const getDeletedQuotations = async (): Promise<TrackingLink[]> => {
+  try {
+    const rows = await query<any[]>(`
+      SELECT q.id, q.data_json, q.deleted_at, q.deleted_by_id, u.name as deleted_by_name, u.avatar_url as deleted_by_avatar_url 
+      FROM ${QUOTATIONS_TABLE} q
+      LEFT JOIN users u ON q.deleted_by_id = u.id
+      WHERE q.is_deleted = TRUE 
+      ORDER BY q.deleted_at DESC
+    `);
+    return rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json),
+      deletedAt: row.deleted_at,
+      deletedById: row.deleted_by_id,
+      deletedByName: row.deleted_by_name, // Using name from users table
+      deletedByAvatarUrl: row.deleted_by_avatar_url,
+    } as TrackingLink));
+  } catch (error) {
+    console.error("Error fetching deleted quotations from MySQL:", error);
+    return [];
+  }
+};
+
+export const restoreQuotation = async (quotationId: string): Promise<boolean> => {
+  try {
+    await query(`UPDATE ${QUOTATIONS_TABLE} SET is_deleted = FALSE, deleted_at = NULL WHERE id = ?`, [quotationId]);
+    return true;
+  } catch (error) {
+    console.error(`Error restoring quotation ${quotationId} from MySQL:`, error);
+    return false;
+  }
+};
+
+export const permanentlyDeleteQuotation = async (quotationId: string): Promise<boolean> => {
   try {
     await query(`DELETE FROM ${QUOTATIONS_TABLE} WHERE id = ?`, [quotationId]);
     return true;
   } catch (error) {
-    console.error(`Error deleting quotation ${quotationId} from MySQL:`, error);
+    console.error(`Error permanently deleting quotation ${quotationId} from MySQL:`, error);
     return false;
   }
 };

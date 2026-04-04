@@ -42,11 +42,14 @@ const mapRowToOrder = (row: any): TrackingLink => ({
   advancePayments: typeof row.advance_payments === 'string' ? JSON.parse(row.advance_payments) : row.advance_payments,
   packzyConsignmentId: row.packzy_consignment_id,
   packzyTrackingCode: row.packzy_tracking_code,
+  deletedAt: row.deleted_at,
+  deletedById: row.deleted_by_id,
+  deletedByName: row.deleted_by_name,
 });
 
 export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} ORDER BY created_at DESC`);
+    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE is_deleted = FALSE ORDER BY created_at DESC`);
     return results.map(mapRowToOrder);
   } catch (error) {
     console.error("Error fetching orders from MySQL:", error);
@@ -56,7 +59,7 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
 
 export const getOrdersPaginated = async (limit: number, offset: number, searchTerm: string = '', statusId: string = ''): Promise<{ orders: TrackingLink[], total: number }> => {
   try {
-    let whereClauseParts = [];
+    let whereClauseParts = ['is_deleted = FALSE'];
     const params: any[] = [];
 
     if (searchTerm) {
@@ -114,7 +117,7 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
 export const getOrderById = async (id: string): Promise<TrackingLink | undefined> => {
   if (!id) return undefined;
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE id = ?`, [id]);
+    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE id = ? AND is_deleted = FALSE`, [id]);
     if (results.length > 0) {
       return mapRowToOrder(results[0]);
     }
@@ -128,7 +131,7 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
 export const getOrderByTrackingCode = async (trackingCode: string): Promise<TrackingLink | null> => {
   if (!trackingCode) return null;
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE packzy_tracking_code = ?`, [trackingCode]);
+    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE packzy_tracking_code = ? AND is_deleted = FALSE`, [trackingCode]);
     if (results.length > 0) {
       return mapRowToOrder(results[0]);
     }
@@ -435,14 +438,56 @@ export const updateOrdersBatch = async (updates: { id: string, data: Partial<Tra
 };
 
 
-export const deleteOrder = async (orderId: string): Promise<boolean> => {
+export const deleteOrder = async (orderId: string, userId: string): Promise<boolean> => {
+  try {
+    const mysqlDeletedAt = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+    await query(`UPDATE ${ORDERS_TABLE} SET is_deleted = TRUE, deleted_at = ?, deleted_by_id = ? WHERE id = ?`, [mysqlDeletedAt, userId, orderId]);
+    // We keep entries in projects and shipped_orders for now to maintain consistency if restored
+    return true;
+  } catch (error) {
+    console.error(`Error soft deleting order ${orderId} from MySQL:`, error);
+    return false;
+  }
+};
+
+export const getDeletedOrders = async (): Promise<TrackingLink[]> => {
+  try {
+    const results = await query<any[]>(`
+      SELECT o.*, u.name as deleted_by_name, u.avatar_url as deleted_by_avatar_url 
+      FROM ${ORDERS_TABLE} o
+      LEFT JOIN users u ON o.deleted_by_id = u.id
+      WHERE o.is_deleted = TRUE 
+      ORDER BY o.deleted_at DESC
+    `);
+    return results.map(row => ({
+      ...mapRowToOrder(row),
+      deletedByName: row.deleted_by_name,
+      deletedByAvatarUrl: row.deleted_by_avatar_url,
+    }));
+  } catch (error) {
+    console.error("Error fetching deleted orders from MySQL:", error);
+    return [];
+  }
+};
+
+export const restoreOrder = async (orderId: string): Promise<boolean> => {
+  try {
+    await query(`UPDATE ${ORDERS_TABLE} SET is_deleted = FALSE, deleted_at = NULL WHERE id = ?`, [orderId]);
+    return true;
+  } catch (error) {
+    console.error(`Error restoring order ${orderId} from MySQL:`, error);
+    return false;
+  }
+};
+
+export const permanentlyDeleteOrder = async (orderId: string): Promise<boolean> => {
   try {
     await query(`DELETE FROM ${ORDERS_TABLE} WHERE id = ?`, [orderId]);
     await query(`DELETE FROM ${PROJECTS_TABLE} WHERE id = ?`, [orderId]);
     await query(`DELETE FROM ${SHIPPED_ORDERS_TABLE} WHERE order_id = ?`, [orderId]);
     return true;
   } catch (error) {
-    console.error(`Error deleting order ${orderId} from MySQL:`, error);
+    console.error(`Error permanently deleting order ${orderId} from MySQL:`, error);
     return false;
   }
 };

@@ -3,7 +3,15 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User, OrderItem, AdvancePaymentRecord, ServiceModelItem, OrderLogEntry, Project } from "@/types";
-import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder as updateOrderService } from "@/lib/order-service";
+import { 
+  addOrder as addOrderService, 
+  getOrderById, 
+  deleteOrder as deleteOrderFromDb, 
+  updateOrder as updateOrderService,
+  getDeletedOrders,
+  restoreOrder as restoreOrderFromDb,
+  permanentlyDeleteOrder as permanentlyDeleteOrderFromDb
+} from "@/lib/order-service";
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
@@ -610,7 +618,7 @@ export async function deleteOrderAction(
       }
     }
 
-    const success = await deleteOrderFromDb(orderId);
+    const success = await deleteOrderFromDb(orderId, currentUser.id);
     if (success) {
       revalidatePath("/(app)/orders");
       revalidatePath("/(app)/dashboard");
@@ -639,4 +647,26 @@ export async function deleteOrderAction(
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while deleting order.";
     return { success: false, error: errorMessage };
   }
+}
+
+export async function getDeletedOrdersAction(): Promise<TrackingLink[]> {
+  return await getDeletedOrders();
+}
+
+export async function restoreOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
+  const success = await restoreOrderFromDb(orderId);
+  if (success) {
+    revalidatePath("/(app)/orders");
+    return { success: true };
+  }
+  return { success: false, error: "Failed to restore order." };
+}
+
+export async function permanentlyDeleteOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
+  const success = await permanentlyDeleteOrderFromDb(orderId);
+  if (success) {
+    revalidatePath("/(app)/orders");
+    return { success: true };
+  }
+  return { success: false, error: "Failed to permanently delete order." };
 }

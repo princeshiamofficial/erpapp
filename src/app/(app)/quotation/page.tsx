@@ -17,7 +17,7 @@ import { getContrastTextColor } from '@/lib/color-utils';
 import { getQuotations } from '@/lib/quotation-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deleteQuotationAction, updateQuotationStatusAction } from './actions';
+import { deleteQuotationAction, updateQuotationStatusAction, getDeletedQuotationsAction, restoreQuotationAction, permanentlyDeleteQuotationAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -54,6 +54,8 @@ import {
 
 const CreateQuotationDialog = dynamic(() => import('@/components/quotations/create-quotation-dialog').then(mod => mod.CreateQuotationDialog));
 const EditQuotationDialog = dynamic(() => import('@/components/quotations/edit-quotation-dialog').then(mod => mod.EditQuotationDialog));
+import { TrashDialog } from '@/components/shared/trash-dialog';
+
 
 
 const formatDate = (dateString?: string) => {
@@ -86,6 +88,10 @@ export default function QuotationsPage() {
   const [isEditQuotationDialogOpen, setIsEditQuotationDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewType, setViewType] = useState<'quotations' | 're-quotations'>('quotations');
+  const [isTrashDialogOpen, setIsTrashDialogOpen] = useState(false);
+  const [deletedQuotations, setDeletedQuotations] = useState<TrackingLink[]>([]);
+  const [isTrashLoading, setIsTrashLoading] = useState(false);
+
 
 
   const fetchQuotationData = useCallback(async () => {
@@ -233,7 +239,7 @@ export default function QuotationsPage() {
     setIsDeletingQuotation(true);
     const result = await deleteQuotationAction(quotationToDelete.id, currentUser);
     if (result.success) {
-      toast({ title: "Quotation Deleted", description: `Quotation ${quotationToDelete.id} has been deleted successfully.` });
+      toast({ title: "Moved to Trash", description: `Quotation ${quotationToDelete.id} has been moved to the trash bin.` });
       await fetchQuotationData();
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete the quotation.", variant: "destructive" });
@@ -241,6 +247,46 @@ export default function QuotationsPage() {
     setIsDeletingQuotation(false);
     setIsDeleteDialogOpen(false);
     setQuotationToDelete(null);
+  };
+
+  const fetchDeletedQuotations = useCallback(async () => {
+    setIsTrashLoading(true);
+    try {
+      const fetched = await getDeletedQuotationsAction();
+      setDeletedQuotations(fetched);
+    } catch (error) {
+      console.error("Failed to fetch deleted quotations:", error);
+      toast({ title: "Error", description: "Could not load deleted quotations.", variant: "destructive" });
+    } finally {
+      setIsTrashLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (isTrashDialogOpen) {
+      fetchDeletedQuotations();
+    }
+  }, [isTrashDialogOpen, fetchDeletedQuotations]);
+
+  const handleRestoreQuotation = async (id: string) => {
+    const result = await restoreQuotationAction(id);
+    if (result.success) {
+      toast({ title: "Quotation Restored", description: `Quotation ${id} has been restored.` });
+      fetchDeletedQuotations();
+      fetchData();
+    } else {
+      toast({ title: "Restore Failed", description: result.error, variant: "destructive" });
+    }
+  };
+
+  const handlePermanentlyDeleteQuotation = async (id: string) => {
+    const result = await permanentlyDeleteQuotationAction(id);
+    if (result.success) {
+      toast({ title: "Quotation Permanently Deleted", description: `Quotation ${id} has been permanently removed.` });
+      fetchDeletedQuotations();
+    } else {
+      toast({ title: "Deletion Failed", description: result.error, variant: "destructive" });
+    }
   };
 
   const handleOpenEditQuotationDialog = (quotation: TrackingLink) => {
@@ -326,11 +372,14 @@ export default function QuotationsPage() {
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {(currentUser.role === 'SYSTEM_ADMIN') && (
-            <Link href="/admin/service-management" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
-                <Settings2 className="mr-2 h-4 w-4" /> Configure Options
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setIsTrashDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Trash
+            </Button>
           )}
           {(currentUser.role === 'ADMIN') && (
             <Link href="/admin/model-management" passHref>
@@ -565,11 +614,10 @@ export default function QuotationsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                Are you absolutely sure?
+                Move to Trash Bin?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete quotation "<span className="font-semibold">{quotationToDelete.id}</span>".
-                This cannot be undone.
+                Quotation "<span className="font-semibold">{quotationToDelete.id}</span>" will be moved to the trash bin. It can be restored or permanently deleted from there.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -579,12 +627,22 @@ export default function QuotationsPage() {
                 className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 disabled={isDeletingQuotation}
               >
-                {isDeletingQuotation ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete quotation"}
+                {isDeletingQuotation ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Moving to Trash...</> : "Move to Trash"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <TrashDialog 
+        isOpen={isTrashDialogOpen} 
+        onOpenChange={setIsTrashDialogOpen} 
+        title="Quotation Trash Bin"
+        items={deletedQuotations}
+        isLoading={isTrashLoading}
+        onRestore={handleRestoreQuotation}
+        onDeletePermanently={handlePermanentlyDeleteQuotation}
+      />
     </div>
   );
 }

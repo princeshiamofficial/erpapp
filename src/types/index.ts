@@ -197,10 +197,12 @@ export interface TrackingLink {
   shippingArea?: string | null;
   shippingCharge?: number | null;
   feedback?: { // This field is now deprecated but kept for backwards compatibility
-    rating: number;
-    text: string;
     submittedAt: string;
   };
+  deletedAt?: string | null;
+  deletedById?: string | null;
+  deletedByName?: string | null;
+  deletedByAvatarUrl?: string | null;
 }
 
 export interface Comment {

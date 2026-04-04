@@ -354,7 +354,7 @@ export default function OrderPulsePage() {
     setIsDeletingOrder(true);
     const result = await deleteOrderAction(orderToDelete.id, currentUser);
     if (result.success) {
-      toast({ title: "Order Deleted", description: `Order ${orderToDelete.id} has been deleted successfully.` });
+      toast({ title: "Moved to Trash", description: `Order ${orderToDelete.id} has been moved to the trash bin.` });
       await fetchOrderData();
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete the order.", variant: "destructive" });
@@ -652,11 +652,10 @@ export default function OrderPulsePage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                Are you absolutely sure?
+                Move to Trash Bin?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete pulse "<span className="font-semibold">{orderToDelete.id}</span>".
-                This cannot be undone.
+                The order "<span className="font-semibold">{orderToDelete.id}</span>" will be moved to the trash bin. It can be restored or permanently deleted from there.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -666,7 +665,7 @@ export default function OrderPulsePage() {
                 className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 disabled={isDeletingOrder}
               >
-                {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete pulse"}
+                {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Moving to Trash...</> : "Move to Trash"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

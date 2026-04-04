@@ -19,7 +19,7 @@ import { getContrastTextColor } from '@/lib/color-utils';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deleteOrderAction, updateOrderAction } from './actions';
+import { deleteOrderAction, updateOrderAction, getDeletedOrdersAction, restoreOrderAction, permanentlyDeleteOrderAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -55,6 +55,8 @@ import type { DateRange } from "react-day-picker";
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog), { ssr: false });
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog), { ssr: false });
 const EditOrderDialog = dynamic(() => import('@/components/orders/edit-order-dialog').then(mod => mod.EditOrderDialog), { ssr: false });
+import { TrashDialog } from '@/components/shared/trash-dialog';
+
 
 
 const formatDate = (dateString?: string) => {
@@ -97,7 +99,11 @@ export default function OrdersPage() {
     to: endOfMonth(new Date())
   });
 
+  const [isTrashDialogOpen, setIsTrashDialogOpen] = useState(false);
+  const [deletedOrders, setDeletedOrders] = useState<TrackingLink[]>([]);
+  const [isTrashLoading, setIsTrashLoading] = useState(false);
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
+
 
 
   const fetchOrderData = useCallback(async () => {
@@ -316,7 +322,7 @@ export default function OrdersPage() {
     setIsDeletingOrder(true);
     const result = await deleteOrderAction(orderToDelete.id, currentUser);
     if (result.success) {
-      toast({ title: "Order Deleted", description: `Order ${orderToDelete.id} has been deleted successfully.` });
+      toast({ title: "Moved to Trash", description: `Order ${orderToDelete.id} has been moved to the trash bin.` });
       await fetchOrderData();
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete the order.", variant: "destructive" });
@@ -335,6 +341,46 @@ export default function OrdersPage() {
     console.log("OrdersPage/handleOpenEditOrderDialog: Opening for order:", order.id, "with currentUser:", JSON.stringify(currentUser));
     setOrderToEdit(order);
     setIsEditOrderDialogOpen(true);
+  };
+
+  const fetchDeletedOrders = useCallback(async () => {
+    setIsTrashLoading(true);
+    try {
+      const fetched = await getDeletedOrdersAction();
+      setDeletedOrders(fetched);
+    } catch (error) {
+      console.error("Failed to fetch deleted orders:", error);
+      toast({ title: "Error", description: "Could not load deleted orders.", variant: "destructive" });
+    } finally {
+      setIsTrashLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (isTrashDialogOpen) {
+      fetchDeletedOrders();
+    }
+  }, [isTrashDialogOpen, fetchDeletedOrders]);
+
+  const handleRestoreOrder = async (id: string) => {
+    const result = await restoreOrderAction(id);
+    if (result.success) {
+      toast({ title: "Order Restored", description: `Order ${id} has been restored.` });
+      fetchDeletedOrders();
+      fetchOrderData();
+    } else {
+      toast({ title: "Restore Failed", description: result.error, variant: "destructive" });
+    }
+  };
+
+  const handlePermanentlyDeleteOrder = async (id: string) => {
+    const result = await permanentlyDeleteOrderAction(id);
+    if (result.success) {
+      toast({ title: "Order Permanently Deleted", description: `Order ${id} has been permanently removed.` });
+      fetchDeletedOrders();
+    } else {
+      toast({ title: "Deletion Failed", description: result.error, variant: "destructive" });
+    }
   };
 
   const handleOrderUpdated = useCallback(async (updatedOrder: TrackingLink) => {
@@ -398,11 +444,14 @@ export default function OrdersPage() {
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {(currentUser.role === 'SYSTEM_ADMIN') && (
-            <Link href="/admin/service-management" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
-                <Settings2 className="mr-2 h-4 w-4" /> Configure Options
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setIsTrashDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Trash
+            </Button>
           )}
           {(currentUser.role === 'ADMIN') && (
             <Link href="/admin/model-management" passHref>
@@ -686,11 +735,10 @@ export default function OrdersPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                Are you absolutely sure?
+                Move to Trash Bin?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete order "<span className="font-semibold">{orderToDelete.id}</span>".
-                This cannot be undone.
+                Order "<span className="font-semibold">{orderToDelete.id}</span>" will be moved to the trash bin. It can be restored or permanently deleted from there.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -700,12 +748,22 @@ export default function OrdersPage() {
                 className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 disabled={isDeletingOrder}
               >
-                {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete order"}
+                {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Moving to Trash...</> : "Move to Trash"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <TrashDialog 
+        isOpen={isTrashDialogOpen} 
+        onOpenChange={setIsTrashDialogOpen} 
+        title="Order Trash Bin"
+        items={deletedOrders}
+        isLoading={isTrashLoading}
+        onRestore={handleRestoreOrder}
+        onDeletePermanently={handlePermanentlyDeleteOrder}
+      />
     </div>
   );
 }
