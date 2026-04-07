@@ -36,9 +36,9 @@ export async function addLeadAction(
   currentUser: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
-    const phoneRegex = /^0\d{10}$/;
+    const phoneRegex = /^(0\d{10}|\+\d{9,14})$/;
     if (!phoneRegex.test(leadData.phone)) {
-      return { success: false, error: "Invalid phone number. It must be an 11-digit number starting with 0." };
+      return { success: false, error: "Invalid phone number. Use 11 digits starting with 0, or an international number starting with + (up to 15 digits)." };
     }
 
     const existingLead = await getLeadByPhone(leadData.phone);
@@ -217,9 +217,9 @@ export async function updateLeadAction(
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
     if (updates.phone) {
-      const phoneRegex = /^0\d{10}$/;
+      const phoneRegex = /^(0\d{10}|\+\d{9,14})$/;
       if (!phoneRegex.test(updates.phone)) {
-        return { success: false, error: "Invalid phone number. It must be an 11-digit number starting with 0." };
+        return { success: false, error: "Invalid phone number. Use 11 digits starting with 0, or an international number starting with + (up to 15 digits)." };
       }
 
       const existingLead = await getLeadByPhone(updates.phone);

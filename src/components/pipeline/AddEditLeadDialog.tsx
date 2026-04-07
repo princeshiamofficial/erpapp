@@ -56,10 +56,22 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const isEditMode = !!lead;
 
   const validatePhone = (phoneNumber: string) => {
-    if (phoneNumber.length > 0 && !phoneNumber.startsWith('0')) {
-      setPhoneError("Phone number must start with 0.");
-    } else if (phoneNumber.length > 0 && phoneNumber.length !== 11) {
-      setPhoneError("Phone number must be 11 digits long.");
+    if (phoneNumber.length > 0) {
+      if (phoneNumber.startsWith('0')) {
+        if (phoneNumber.length !== 11) {
+          setPhoneError("Local phone number must be exactly 11 digits.");
+        } else {
+          setPhoneError(null);
+        }
+      } else if (phoneNumber.startsWith('+')) {
+        if (phoneNumber.length < 10 || phoneNumber.length > 15) {
+          setPhoneError("International phone number must be between 10 and 15 characters.");
+        } else {
+          setPhoneError(null);
+        }
+      } else {
+        setPhoneError("Phone number must start with 0 or +.");
+      }
     } else {
       setPhoneError(null);
     }
@@ -102,10 +114,19 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   }, [isOpen, lead, isEditMode]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const numericValue = e.target.value.replace(/[^0-9]/g, '');
-    if (numericValue.length <= 11) {
-        setPhone(numericValue);
-        validatePhone(numericValue);
+    let value = e.target.value;
+    
+    // Allow '+' at the beginning, then only digits
+    if (value.startsWith('+')) {
+      value = '+' + value.slice(1).replace(/[^0-9]/g, '');
+    } else {
+      value = value.replace(/[^0-9]/g, '');
+    }
+
+    const maxLen = value.startsWith('+') ? 15 : 11;
+    if (value.length <= maxLen) {
+        setPhone(value);
+        validatePhone(value);
     }
   };
 
@@ -130,11 +151,11 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
       return;
     }
 
-    const phoneRegex = /^0\d{10}$/;
+    const phoneRegex = /^(0\d{10}|\+\d{9,14})$/;
     if (!phoneRegex.test(phone)) {
       toast({
         title: "Validation Error",
-        description: "Invalid phone number. It must be an 11-digit number starting with 0.",
+        description: "Invalid phone number. Use 11 digits starting with 0, or an international number starting with +.",
         variant: "destructive"
       });
       return;
@@ -250,8 +271,8 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                     value={phone}
                     onChange={handlePhoneChange}
                     required
-                    maxLength={11}
-                    placeholder="01xxxxxxxxx"
+                    maxLength={15}
+                    placeholder="01xxxxxxxxx or +xxxxxxxxxx"
                     className={cn(phoneError && "border-destructive focus-visible:ring-destructive")}
                 />
                 {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
