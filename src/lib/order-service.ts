@@ -335,6 +335,10 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     if (updates.advancePayments !== undefined) { fields.push('advance_payments = ?'); params.push(JSON.stringify(updates.advancePayments)); }
     if (updates.packzyConsignmentId !== undefined) { fields.push('packzy_consignment_id = ?'); params.push(updates.packzyConsignmentId); }
     if (updates.packzyTrackingCode !== undefined) { fields.push('packzy_tracking_code = ?'); params.push(updates.packzyTrackingCode); }
+    if (updates.createdAt !== undefined) { 
+        fields.push('created_at = ?'); 
+        params.push(updates.createdAt ? format(parseISO(updates.createdAt), 'yyyy-MM-dd HH:mm:ss') : null); 
+    }
     if (updates.acceptedDeliveryDate !== undefined) { 
         fields.push('accepted_delivery_date = ?'); 
         params.push(updates.acceptedDeliveryDate ? format(parseISO(updates.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null); 

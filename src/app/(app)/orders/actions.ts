@@ -446,6 +446,7 @@ export async function updateOrderAction(
         const projectUpdates: Partial<Project> = {};
         if (finalUpdates.companyName) projectUpdates.name = finalUpdates.companyName;
         if (finalUpdates.crmUserName) projectUpdates.assigneeName = finalUpdates.crmUserName;
+        if (finalUpdates.createdAt) projectUpdates.createdAt = finalUpdates.createdAt;
         if (finalUpdates.designerRepresentativeName !== undefined) {
           projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
           projectUpdates.designerRepresentativeAvatarUrl = null;
