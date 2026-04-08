@@ -95,10 +95,14 @@ export function FollowUpKanbanClient() {
     const { socket } = useSocket();
 
     const sensors = useSensors(
-        useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+        useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
         useSensor(KeyboardSensor)
     );
+
+    const handleViewDetails = useCallback((item: FollowUp) => {
+        // Handle view details if needed
+    }, []);
 
     const fetchData = useCallback(async (isSilent = false) => {
         if (!isSilent) setIsLoading(true);
@@ -250,6 +254,11 @@ export function FollowUpKanbanClient() {
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
             collisionDetection={closestCorners}
+            measuring={{
+              droppable: {
+                strategy: 1, // MeasuringStrategy.Always
+              },
+            }}
         >
             <div className="flex flex-col h-full space-y-4">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-0">
@@ -332,7 +341,7 @@ export function FollowUpKanbanClient() {
                                 isLoading={isLoading}
                                 currentUser={currentUser}
                                 allUsers={allUsers}
-                                onViewDetails={(item) => { }}
+                                onViewDetails={handleViewDetails}
                             />
                         ))}
                     </div>

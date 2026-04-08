@@ -54,13 +54,13 @@ const getInitials = (name: string | undefined): string => {
     return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-export const FollowUpCard = ({
+export const FollowUpCard = React.memo(({
     followUp,
     isOverlay = false,
     currentUser,
     allUsers = [],
     statusColor,
-    onViewDetails = () => { },
+    onViewDetails,
 }: FollowUpCardProps) => {
     const { toast } = useToast();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -326,4 +326,16 @@ export const FollowUpCard = ({
             </AlertDialog>
         </motion.div>
     );
-};
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.followUp.id === nextProps.followUp.id &&
+        prevProps.followUp.status === nextProps.followUp.status &&
+        prevProps.followUp.updatedAt === nextProps.followUp.updatedAt &&
+        prevProps.isOverlay === nextProps.isOverlay &&
+        prevProps.statusColor === nextProps.statusColor &&
+        prevProps.currentUser?.id === nextProps.currentUser?.id &&
+        prevProps.allUsers?.length === nextProps.allUsers?.length
+    );
+});
+
+FollowUpCard.displayName = "FollowUpCard";

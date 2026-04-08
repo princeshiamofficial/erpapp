@@ -29,7 +29,7 @@ interface FollowUpKanbanColumnProps {
 
 const ITEMS_PER_PAGE = 20;
 
-export function FollowUpKanbanColumn({
+export const FollowUpKanbanColumn = React.memo(({
     id,
     title,
     icon: Icon,
@@ -42,7 +42,7 @@ export function FollowUpKanbanColumn({
     currentUser,
     allUsers,
     onViewDetails = () => { },
-}: FollowUpKanbanColumnProps) {
+}: FollowUpKanbanColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({ id });
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
@@ -139,4 +139,16 @@ export function FollowUpKanbanColumn({
             </ScrollArea>
         </div>
     );
-}
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.id === nextProps.id &&
+        prevProps.items.length === nextProps.items.length &&
+        prevProps.items === nextProps.items &&
+        prevProps.isLoading === nextProps.isLoading &&
+        prevProps.color === nextProps.color &&
+        prevProps.allUsers?.length === nextProps.allUsers?.length &&
+        prevProps.currentUser?.id === nextProps.currentUser?.id
+    );
+});
+
+FollowUpKanbanColumn.displayName = "FollowUpKanbanColumn";
