@@ -245,7 +245,7 @@ export async function updateOrderAction(
     delete finalUpdates.newAdvancePaymentDocumentUrl;
     delete finalUpdates.specialClientDiscountString;
 
-    let currentOrderItemsTotal = (updates.orderItems || existingOrder.orderItems).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    let currentOrderItemsTotal = (updates.orderItems || existingOrder.orderItems).reduce((sum, item) => sum + (Number(item.lineItemTotalPrice) || 0), 0);
 
     if (updates.createdAt) {
       try {
@@ -260,7 +260,7 @@ export async function updateOrderAction(
       if (isNaN(charge) || charge < 0) {
         return { success: false, error: "Shipping charge must be a non-negative number." };
       }
-      finalUpdates.shippingCharge = charge > 0 ? charge : null;
+      finalUpdates.shippingCharge = charge;
     }
 
     if (updates.specialClientDiscountString !== undefined) {
@@ -279,7 +279,7 @@ export async function updateOrderAction(
         if (numericDiscount > currentOrderItemsTotal && currentOrderItemsTotal > 0) return { success: false, error: "Special Client Discount cannot exceed the total order price." };
         finalUpdates.specialClientDiscount = numericDiscount;
       } else {
-        finalUpdates.specialClientDiscount = null;
+        finalUpdates.specialClientDiscount = 0;
       }
     }
 
@@ -367,8 +367,9 @@ export async function updateOrderAction(
       finalUpdates.advancePayments = [...(existingOrder.advancePayments || []), newAdvanceRecord];
 
       const totalAdvanceAfterNew = (finalUpdates.advancePayments || []).reduce((sum: number, record: AdvancePaymentRecord) => sum + record.amount, 0);
-      const currentNetPayable = currentOrderItemsTotal - (finalUpdates.specialClientDiscount ?? existingOrder.specialClientDiscount ?? 0);
-      const currentShippingCharge = finalUpdates.shippingCharge ?? existingOrder.shippingCharge ?? 0;
+      const totalDiscount = finalUpdates.specialClientDiscount !== undefined ? finalUpdates.specialClientDiscount : (existingOrder.specialClientDiscount ?? 0);
+      const currentNetPayable = currentOrderItemsTotal - totalDiscount;
+      const currentShippingCharge = finalUpdates.shippingCharge !== undefined ? finalUpdates.shippingCharge : (existingOrder.shippingCharge ?? 0);
       const currentGrandTotal = currentNetPayable + currentShippingCharge;
 
       if (totalAdvanceAfterNew > currentGrandTotal && currentGrandTotal > 0) {

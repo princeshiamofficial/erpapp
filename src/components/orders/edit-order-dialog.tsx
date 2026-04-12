@@ -148,10 +148,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setPhoneNumber(order.phoneNumber);
       setCreatedAt(order.createdAt ? parseISO(order.createdAt) : undefined);
       setAcceptedDeliveryDate(order.acceptedDeliveryDate ? parseISO(order.acceptedDeliveryDate) : undefined);
-      setSpecialClientDiscount(order.specialClientDiscount?.toString() || '');
+      setSpecialClientDiscount(order.specialClientDiscount && Number(order.specialClientDiscount) !== 0 ? order.specialClientDiscount.toString() : '');
       setOrderNotes(order.orderNotes || '');
       setOrderItems(order.orderItems.map(item => ({ ...item, quantity: item.quantity.toString() })));
-      setShippingCharge(order.shippingCharge?.toString() || '0');
+      setShippingCharge(order.shippingCharge && Number(order.shippingCharge) !== 0 ? order.shippingCharge.toString() : '');
 
       const currentAdvancePayments = order.advancePayments || [];
       if (currentAdvancePayments.length === 0 && order.advancePayment && order.advancePayment > 0) {
