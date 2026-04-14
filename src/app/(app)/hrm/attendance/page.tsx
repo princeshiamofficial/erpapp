@@ -87,6 +87,24 @@ export default function AttendancePage() {
     const router = useRouter();
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState("attendees_report");
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as any);
+    window.history.replaceState(null, '', `#${value}`);
+  }, []);
+
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
@@ -1357,7 +1375,7 @@ export default function AttendancePage() {
 
     return (
         <div className="space-y-6 bg-transparent p-4 sm:p-6 lg:p-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
                     <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendance History</TabsTrigger>
                     <TabsTrigger value="attendance_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendance Report</TabsTrigger>

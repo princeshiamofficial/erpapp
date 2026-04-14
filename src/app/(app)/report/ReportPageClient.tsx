@@ -222,6 +222,24 @@ export function ReportPageClient() {
     to: new Date(),
   });
   const [activeTab, setActiveTab] = useState("sales_report");
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as any);
+    window.history.replaceState(null, '', `#${value}`);
+  }, []);
+
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('CRM');
 
   const [taskToEdit, setTaskToEdit] = useState<TaskEntry | null>(null);
@@ -480,7 +498,7 @@ export function ReportPageClient() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <div className="flex justify-between items-center mb-4">
               <TabsList>
                   <TabsTrigger value="sales_report">Sales Report</TabsTrigger>

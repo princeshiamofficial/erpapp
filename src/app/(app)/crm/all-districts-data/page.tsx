@@ -172,8 +172,10 @@ export default function AllDistrictsDataPage() {
     fetchData();
   }, [fetchData]);
 
+  const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
+
   const filteredData = useMemo(() => {
-    const lowercasedSearchTerm = searchTerm.toLowerCase();
+    const lowercasedSearchTerm = searchTerm.trim().toLowerCase();
 
     return districtData.map(division => {
       const filteredDistricts = division.districts.map(district => {
@@ -199,7 +201,8 @@ export default function AllDistrictsDataPage() {
               division.division.toLowerCase().includes(lowercasedSearchTerm)
             );
           }
-          return true;
+          // If no search term, only system admins can see the data by default
+          return isSystemAdmin;
         });
         return { ...district, entries: filteredEntries };
       }).filter(district => district.entries.length > 0);
@@ -207,7 +210,7 @@ export default function AllDistrictsDataPage() {
       return { ...division, districts: filteredDistricts };
     }).filter(division => division.districts.length > 0);
 
-  }, [districtData, searchTerm, selectedDateRange]);
+  }, [districtData, searchTerm, selectedDateRange, isSystemAdmin]);
 
   const handleExport = () => {
     if (filteredData.length === 0) {
@@ -382,7 +385,9 @@ export default function AllDistrictsDataPage() {
                   }) : (
                     <TableRow>
                       <TableCell colSpan={7} className="h-24 text-center">
-                        No results found{searchTerm ? ` for "${searchTerm}"` : ''}.
+                        {!isSystemAdmin && !searchTerm.trim() 
+                          ? "Please enter a search term to view results." 
+                          : `No results found${searchTerm ? ` for "${searchTerm}"` : ''}.`}
                       </TableCell>
                     </TableRow>
                   )}

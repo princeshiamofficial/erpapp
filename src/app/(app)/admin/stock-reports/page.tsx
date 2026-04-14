@@ -35,6 +35,24 @@ export default function StockReportsPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState('history');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as any);
+    window.history.replaceState(null, '', `#${value}`);
+  }, []);
+
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<ServiceModelItem | null>(null);
@@ -282,7 +300,7 @@ export default function StockReportsPage() {
 
     return (
         <div className="px-0 py-2 sm:p-6 lg:p-8 pt-2 sm:pt-2 lg:pt-2 sm:bg-white/60 sm:backdrop-blur-md sm:rounded-3xl sm:border sm:border-border/40 sm:shadow-sm">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="products" className="flex items-center gap-2">
                         <Package className="h-4 w-4" />

@@ -19,6 +19,8 @@ import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
 export function UserNav() {
   const { currentUser, logout } = useAuth();
 
+  const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
+
   if (!currentUser) {
     return null;
   }
@@ -73,6 +75,7 @@ export function UserNav() {
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings (Soon)</span>
           </DropdownMenuItem>
+
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">

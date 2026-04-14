@@ -82,6 +82,24 @@ export default function LeaderboardPage() {
   );
 
   useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as any);
+    window.history.replaceState(null, '', `#${value}`);
+  }, []);
+
+
+  useEffect(() => {
     if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
       setActiveTab('dr_board');
     } else if (currentUser?.role === 'CRM') {
@@ -338,7 +356,7 @@ export default function LeaderboardPage() {
         </header>
 
         {showTabs ? (
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'cr_board' | 'dr_board')} className="w-full relative z-10">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full relative z-10">
             <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto bg-black/30 border-none text-white/80">
               <TabsTrigger value="cr_board">CR Board</TabsTrigger>
               <TabsTrigger value="dr_board">DR Board</TabsTrigger>

@@ -16,6 +16,7 @@ import {
 } from "@/lib/employee-service";
 import { addOrUpdateAttendanceRecord, deleteAttendanceRecord } from "@/lib/attendance-service";
 import { updateProvidentFundRecord, getProvidentFundRecords } from "@/lib/provident-fund-service";
+import { query } from "@/lib/mysql";
 
 export async function addEmployeeAction(
   employeeData: Omit<Employee, 'id' | 'employeeId'>
@@ -325,5 +326,24 @@ export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId:
   } catch (error) {
     console.error("Error in deleteLeaveRecordAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function getLastAttendanceDatesAction(): Promise<Record<string, string>> {
+  try {
+    const results = await query<any[]>(
+      `SELECT employee_id, MAX(date) as last_date FROM attendance_records GROUP BY employee_id`
+    );
+    const lastDates: Record<string, string> = {};
+    results.forEach(row => {
+      if (row.employee_id && row.last_date) {
+        const dateObj = row.last_date instanceof Date ? row.last_date : new Date(row.last_date);
+        lastDates[row.employee_id] = dateObj.toISOString();
+      }
+    });
+    return lastDates;
+  } catch (error) {
+    console.error("Error fetching last attendance dates:", error);
+    return {};
   }
 }

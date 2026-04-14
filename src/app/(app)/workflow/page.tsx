@@ -44,6 +44,24 @@ export default function DR2OPage() {
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<Dr2oEntry | null>(null);
   const [activeTab, setActiveTab] = useState<TeamType>("CR");
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash as any);
+      }
+    };
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as any);
+    window.history.replaceState(null, '', `#${value}`);
+  }, []);
+
   
   const [entryToDelete, setEntryToDelete] = useState<Dr2oEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -590,7 +608,7 @@ export default function DR2OPage() {
   return (
     <>
       <div className="p-4 sm:p-6 lg:p-8">
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TeamType)} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             {isAdmin && (
               <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                   <TabsTrigger value="CR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>

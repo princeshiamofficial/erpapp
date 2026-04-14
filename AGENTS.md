@@ -30,4 +30,18 @@ Specific knowledge bases:
 ## Interaction Guidelines
 - **Premium UI**: Always prioritize high-end design. Use Radix UI components, Framer Motion for transitions, and curated Color palettes.
 - **AI-First**: When building features, consider how Genkit AI can enhance the user experience (e.g., smart summaries, automated forms).
+- **Banglish Summary**: Provide a concise summary of the work performed in **Banglish** (Bengali in Latin script) after completing each task.
 - **Safety**: Ensure all database operations are sanitized and follow the established Zod validation patterns.
+
+## Commit Messages & PR Descriptions
+**Prefer Conventional Commits**: `type(scope): subject` (scope optional)
+Example: `feat(auth): add user authentication`
+*Do not reference Claude in commit messages.*
+
+### PR Description Format
+- Start with a short, user-facing paragraph describing the product change.
+- Add a **Closes** section with relevant issue links (GitHub, Linear, etc.).
+- For feature PRs, add **How to test** from a product/UX standpoint.
+- For bugfix PRs, use **How to reproduce** when helpful.
+- Optionally add a **What changed** section for implementation highlights.
+- *Do not* add a "How this was tested" section listing specs/commands.

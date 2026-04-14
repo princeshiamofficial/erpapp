@@ -62,6 +62,7 @@ function AppShell({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
 
+
   // This effect handles the logout button which is now part of a server component layout
   useEffect(() => {
     const logoutButton = document.querySelector('[data-logout-button]');
@@ -154,7 +155,11 @@ function AppShell({
 
   return (
     <SidebarProvider>
-      {currentUser && !isSuspendedDialogOpen ? children : null}
+      <motion.div
+        className="flex-grow w-full min-h-svh"
+      >
+        {currentUser && !isSuspendedDialogOpen ? children : null}
+      </motion.div>
       {isSuspendedDialogOpen && <AccountSuspendedDialog isOpen={isSuspendedDialogOpen} onConfirmLogout={logout} />}
     </SidebarProvider>
   );

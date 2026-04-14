@@ -18,14 +18,14 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Check, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, Calendar, UserRoundX } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Check, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, Calendar, UserRoundX, SquarePen } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord, ProvidentFundRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, endOfMonth, startOfMonth, parseISO } from 'date-fns';
-import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, endOfMonth, startOfMonth, parseISO, intervalToDuration } from 'date-fns';
+import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth, getLastAttendanceDatesAction } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import {
@@ -106,6 +106,7 @@ export default function PayrollPage() {
   const [salarySheetData, setSalarySheetData] = useState<Payslip[]>([]);
   const [pfRecords, setPfRecords] = useState<ProvidentFundRecord[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
+  const [lastAttendanceMap, setLastAttendanceMap] = useState<Record<string, string>>({});
 
 
   const fetchData = useCallback(async () => {
@@ -118,14 +119,16 @@ export default function PayrollPage() {
         fetchedAttendance,
         fetchedSalarySheet,
         fetchedWeekendSettings,
-        fetchedPfRecords
+        fetchedPfRecords,
+        fetchedLastAttendance
       ] = await Promise.all([
         getEmployees(),
         getUsers(),
         getAttendanceForMonth(selectedDate),
         getSalarySheetForMonth(monthStr),
         getWeekendSettings(),
-        getProvidentFundRecords()
+        getProvidentFundRecords(),
+        getLastAttendanceDatesAction()
       ]);
       setEmployees(fetchedEmployees);
       setAllUsers(fetchedUsers);
@@ -133,6 +136,7 @@ export default function PayrollPage() {
       setSalarySheetData(fetchedSalarySheet);
       setWeekendDays(fetchedWeekendSettings.days);
       setPfRecords(fetchedPfRecords);
+      setLastAttendanceMap(fetchedLastAttendance);
     } catch (error) {
       console.error("Failed to fetch page data:", error);
       toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
@@ -488,6 +492,7 @@ export default function PayrollPage() {
                 <TableHead>Date of Birth</TableHead>
                 {currentUser?.role === 'SYSTEM_ADMIN' && <TableHead>Salary</TableHead>}
                 <TableHead>Joining Date</TableHead>
+                <TableHead>Working Period</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>PF Status</TableHead>
                 <TableHead className="text-center">Action</TableHead>
@@ -505,6 +510,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     {currentUser?.role === 'SYSTEM_ADMIN' && <TableCell><Skeleton className="h-4 w-16" /></TableCell>}
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-8 w-8 mx-auto rounded-md" /></TableCell>
@@ -535,6 +541,30 @@ export default function PayrollPage() {
                         </TableCell>
                       )}
                       <TableCell>{format(new Date((employee as Employee).joiningDate), 'yyyy-MM-dd')}</TableCell>
+                      <TableCell>
+                        {(() => {
+                            const parts = [];
+                            try {
+                              const emp = employee as Employee;
+                              const start = parseISO(emp.joiningDate);
+                              
+                              // Use the absolute last attendance date from history, or joining date if none
+                              const absoluteLastAtt = emp.userId && lastAttendanceMap[emp.userId] ? parseISO(lastAttendanceMap[emp.userId]) : null;
+
+                              const end = absoluteLastAtt || start;
+
+                              if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'N/A';
+                              
+                              const duration = intervalToDuration({ start, end });
+                              if (duration.years) parts.push(`${duration.years} ${duration.years === 1 ? 'Year' : 'Years'}`);
+                              if (duration.months) parts.push(`${duration.months} ${duration.months === 1 ? 'Month' : 'Months'}`);
+                              if (duration.days && parts.length < 2) parts.push(`${duration.days} ${duration.days === 1 ? 'Day' : 'Days'}`);
+                            } catch (e) {
+                              return 'N/A';
+                            }
+                            return parts.length > 0 ? parts.join(' ') : '0 Days';
+                        })()}
+                      </TableCell>
                       <TableCell><Badge className={cn((employee as Employee).status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></TableCell>
                       <TableCell>
                         <Badge className={cn((employee as Employee).providentFundStatus === 'Active' ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>
@@ -584,7 +614,7 @@ export default function PayrollPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={currentUser?.role === 'SYSTEM_ADMIN' ? 11 : 10} className="text-center h-48 text-gray-500">
+                  <TableCell colSpan={currentUser?.role === 'SYSTEM_ADMIN' ? 12 : 11} className="text-center h-48 text-gray-500">
                     <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                     No employees found.
                   </TableCell>
@@ -756,8 +786,8 @@ export default function PayrollPage() {
                       <TableCell className="text-center">
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8"
+                          size="icon"
+                          className="h-8 w-8 transition-all hover:bg-primary hover:text-white border-primary/20"
                           onClick={() => {
                             const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                             const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
@@ -765,7 +795,7 @@ export default function PayrollPage() {
                             setPayslipToEdit(data);
                           }}
                         >
-                          Edit payslip
+                          <SquarePen className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -886,7 +916,9 @@ export default function PayrollPage() {
                         </div>
                       </TableCell>
                       <TableCell className="py-4 text-right">
-                        {formatCurrency(data.previousFund).replace('BDT', '').trim()}
+                        <Badge variant="outline" className={cn("font-medium", data.previousFund > 0 ? "bg-purple-100 text-purple-700 border-purple-200" : "border-transparent text-gray-400 bg-transparent shadow-none")}>
+                          {data.previousFund > 0 ? `${formatCurrency(data.previousFund).replace('BDT', '').trim()}/-` : formatCurrency(data.previousFund).replace('BDT', '').trim()}
+                        </Badge>
                       </TableCell>
                       {walletVisibleMonths.map(m => {
                         const monthIdx = parseInt(m.value);
@@ -894,20 +926,27 @@ export default function PayrollPage() {
                         return (
                           <TableCell key={m.value} className="py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              {fund.status === 'Paid' && <Check className="h-3 w-3 text-green-500" />}
-                              <span>{fund.amount > 0 ? formatCurrency(fund.amount).replace('BDT', '').trim() : '-'}</span>
+                              {fund.status === 'Paid' ? (
+                                <CheckCircle className="h-4 w-4 fill-green-700 text-white" />
+                              ) : (
+                                <Badge variant="outline" className={cn("font-medium whitespace-nowrap", fund.amount > 0 ? "bg-gray-100 text-gray-700 border-gray-200" : "border-transparent text-gray-400 bg-transparent shadow-none")}>
+                                  {fund.amount > 0 ? `${formatCurrency(fund.amount).replace('BDT', '').trim()}/-` : '-'}
+                                </Badge>
+                              )}
                             </div>
                           </TableCell>
                         );
                       })}
-                      <TableCell className="py-4 text-right font-semibold text-primary">
-                        {formatCurrency(data.totalFund).replace('BDT', '').trim()}
+                      <TableCell className="py-4 text-right">
+                        <Badge variant="outline" className={cn("font-semibold", data.totalFund > 0 ? "bg-green-100 text-green-700 border-green-200" : "bg-transparent text-gray-400 border-transparent shadow-none px-0")}>
+                          {data.totalFund > 0 ? `${formatCurrency(data.totalFund).replace('BDT', '').trim()}/-` : formatCurrency(data.totalFund).replace('BDT', '').trim()}
+                        </Badge>
                       </TableCell>
                       <TableCell className="pr-4 py-4 text-center">
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 text-[10px] font-bold uppercase transition-all hover:bg-primary hover:text-white border-primary/20"
+                          size="icon"
+                          className="h-8 w-8 transition-all hover:bg-primary hover:text-white border-primary/20"
                           onClick={() => {
                             const salaryData = salaryStatusMap.get(data.employeeId);
                             if (salaryData) {
@@ -918,8 +957,7 @@ export default function PayrollPage() {
                             }
                           }}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit PF
+                          <SquarePen className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -985,8 +1023,8 @@ export default function PayrollPage() {
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 text-[9px] font-bold uppercase transition-all hover:bg-primary hover:text-white border-primary/20 bg-white"
+                          size="icon"
+                          className="h-8 w-8 transition-all hover:bg-primary hover:text-white border-primary/20 bg-white"
                           onClick={() => {
                             const salaryData = salaryStatusMap.get(data.employeeId);
                             if (salaryData) {
@@ -997,8 +1035,7 @@ export default function PayrollPage() {
                             }
                           }}
                         >
-                          <Pencil className="h-3 w-3" />
-                          Edit PF
+                          <SquarePen className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -1007,11 +1044,19 @@ export default function PayrollPage() {
                   <div className="grid grid-cols-2 gap-3 mb-5 relative z-10">
                     <div className="bg-gray-50/80 rounded-xl p-3 border border-gray-100/50">
                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1">Previous Fund</p>
-                      <p className="text-xs font-semibold text-gray-700">{formatCurrency(data.previousFund).replace('BDT', '').trim()}</p>
+                      <div>
+                        <Badge variant="outline" className={cn("text-xs font-bold pb-0.5", data.previousFund > 0 ? "bg-purple-100 text-purple-700 border-purple-200" : "bg-transparent text-gray-400 border-transparent shadow-none px-0")}>
+                          {data.previousFund > 0 ? `${formatCurrency(data.previousFund).replace('BDT', '').trim()}/-` : formatCurrency(data.previousFund).replace('BDT', '').trim()}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
-                      <p className="text-[9px] font-bold text-primary/60 uppercase tracking-wider mb-1">Total Fund</p>
-                      <p className="text-sm font-bold text-primary">{formatCurrency(data.totalFund).replace('BDT', '').trim()}</p>
+                    <div className="bg-green-50/80 rounded-xl p-3 border border-green-100/50">
+                      <p className="text-[9px] font-bold text-green-700/60 uppercase tracking-wider mb-1">Total Fund</p>
+                      <div>
+                        <Badge variant="outline" className={cn("text-sm font-bold pb-0.5", data.totalFund > 0 ? "bg-green-100 text-green-700 border-green-200" : "bg-transparent text-gray-400 border-transparent shadow-none px-0")}>
+                          {data.totalFund > 0 ? `${formatCurrency(data.totalFund).replace('BDT', '').trim()}/-` : formatCurrency(data.totalFund).replace('BDT', '').trim()}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
 
@@ -1026,16 +1071,21 @@ export default function PayrollPage() {
                         const fund = data.monthlyFunds[monthIdx];
                         return (
                           <div key={m.value} className={cn(
-                            "flex flex-col items-center min-w-[62px] p-2 rounded-xl border transition-colors",
-                            fund.status === 'Paid' ? "bg-white border-primary/20 shadow-sm ring-1 ring-primary/5" : "bg-gray-50/30 border-gray-100"
+                            "flex flex-col items-center justify-center min-w-[62px] h-[52px] p-2 rounded-xl border transition-colors",
+                            fund.status === 'Paid' ? "bg-green-50/50 border-green-200" : "bg-gray-50/30 border-gray-100"
                           )}>
-                            <span className={cn("text-[8px] font-bold uppercase mb-1 flex items-center gap-1", fund.status === 'Paid' ? "text-primary" : "text-gray-400")}>
-                              {fund.status === 'Paid' && <Check className="h-2 w-2" />}
+                            <span className={cn("text-[8px] font-bold uppercase mb-1", fund.status === 'Paid' ? "text-green-700" : "text-gray-400")}>
                               {m.label.substring(0, 3)}
                             </span>
-                            <span className={cn("text-[10px] font-bold", fund.status === 'Paid' ? "text-gray-900" : "text-gray-300")}>
-                              {fund.amount > 0 ? formatCurrency(fund.amount).replace('BDT', '').trim() : '-'}
-                            </span>
+                            {fund.status === 'Paid' ? (
+                              <CheckCircle className="h-4 w-4 fill-green-700 text-white" />
+                            ) : fund.amount > 0 ? (
+                              <Badge variant="outline" className="text-[10px] font-bold bg-gray-100 text-gray-700 border-gray-200 px-1.5 py-0 h-4 shadow-none">
+                                {formatCurrency(fund.amount).replace('BDT', '').trim()}/-
+                              </Badge>
+                            ) : (
+                              <span className="text-[10px] font-bold text-gray-300">-</span>
+                            )}
                           </div>
                         );
                       })}
