@@ -192,11 +192,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
             {title}
           </p>
           <p className="text-[15px] sm:text-2xl font-bold text-foreground font-mono mt-0.5 sm:mt-0 px-1 leading-tight">
-            {hideValue ? (
-              <spoiler-span>{value}</spoiler-span>
-            ) : (
-              value
-            )}
+            <spoiler-span>{value}</spoiler-span>
           </p>
         </div>
       </div>
@@ -551,17 +547,20 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
 
-  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoiceCodPaid } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoiceCodPaid: 0 };
+      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0 };
     }
 
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
+    let currentTotalPurchaseItemQuantity = 0;
     let currentOrdersWithDueCount = 0;
     let currentInvoiceCodPaid = 0;
+    let currentInvoiceCodPaidCount = 0;
+    let currentInvoicePaidCount = 0;
 
     let ordersForCalcs = allOrders;
     if (currentUser?.role === 'CRM') {
@@ -587,6 +586,7 @@ function DashboardContent() {
             const modelDetails = allModels.find(m => m.name === item.model);
             if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
               currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
+              currentTotalPurchaseItemQuantity += item.quantity;
             }
           });
         }
@@ -605,8 +605,12 @@ function DashboardContent() {
         order.advancePayments.forEach(payment => {
           if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
             const methodName = payment.paymentMethod?.toLowerCase() || '';
-            if (methodName === 'cod' || methodName === 'system auto-settled' || methodName === 'courier') {
+            const isCod = methodName === 'cod' || methodName === 'system auto-settled' || methodName === 'courier';
+            if (isCod) {
               currentInvoiceCodPaid += payment.amount;
+              currentInvoiceCodPaidCount++;
+            } else {
+              currentInvoicePaidCount++;
             }
           }
         });
@@ -686,12 +690,16 @@ function DashboardContent() {
       totalSales: currentTotalSales,
       invoiceDue: currentInvoiceDue,
       totalPurchase: currentTotalPurchaseValue,
+      totalPurchaseCount: currentTotalPurchaseItemQuantity,
       netValue: currentTotalSales - currentTotalPurchaseValue,
       salesChartData: chartData,
       deliveredCount: currentDeliveredCount.toString(),
       ordersWithDueCount: currentOrdersWithDueCount,
       invoicePaid: currentInvoicePaid,
+      invoicePaidCount: currentInvoicePaidCount,
       invoiceCodPaid: currentInvoiceCodPaid,
+      invoiceCodPaidCount: currentInvoiceCodPaidCount,
+      salesCount: filteredOrders.length,
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
 
@@ -850,6 +858,7 @@ function DashboardContent() {
     }
   }
 
+  const isSystemAdmin = useMemo(() => currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
   const isCrm = useMemo(() => currentUser?.role === 'CRM', [currentUser]);
 
   const hideFinancials = useMemo(() => {
@@ -860,23 +869,65 @@ function DashboardContent() {
 
   const summaryCardDefinitions = useMemo(() => {
     return [
-      { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : formatCurrency(totalSales), icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, currentUser, hideValue: hideFinancials },
-      { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : formatCurrency(invoiceDue), icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, currentUser, hideValue: hideFinancials },
-      { title: "Advance Paid", value: formatCurrency(invoicePaid), icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { title: "Invoice COD Paid", value: formatCurrency(invoiceCodPaid), icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'], currentUser },
-      { title: "Net", value: formatCurrency(netValue), icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { title: "Total purchase", value: formatCurrency(totalPurchase), icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
+      { 
+        title: isCrm ? "Sales" : "Total Sales", 
+        value: isSystemAdmin ? formatCurrency(totalSales) : salesCount.toString(), 
+        icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Invoice due", 
+        value: isSystemAdmin ? formatCurrency(invoiceDue) : ordersWithDueCount.toString(), 
+        icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Advance Paid", 
+        value: isSystemAdmin ? formatCurrency(invoicePaid) : invoicePaidCount.toString(), 
+        icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Invoice COD Paid", 
+        value: isSystemAdmin ? formatCurrency(invoiceCodPaid) : invoiceCodPaidCount.toString(), 
+        icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Delivered", 
+        value: deliveredCount, 
+        icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'], currentUser 
+      },
+      { 
+        title: "Net", 
+        value: isSystemAdmin ? formatCurrency(netValue) : salesCount.toString(), 
+        icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Total Sell Return", 
+        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Total purchase", 
+        value: isSystemAdmin ? formatCurrency(totalPurchase) : totalPurchaseCount.toString(), 
+        icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Purchase due", 
+        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
+      { 
+        title: "Total Purchase Return", 
+        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
+      { 
+        title: "Expense", 
+        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
     ];
-  }, [isCrm, filteredOrders.length, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoiceCodPaid, deliveredCount, netValue, totalPurchase, isLoadingData, currentUser, hideFinancials]);
+  }, [isCrm, isSystemAdmin, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
-      if (currentUser?.role === 'ADMIN') return false; // Hide for ADMIN role
       if (!card.roles) return true;
       return card.roles.includes(currentUser?.role || '');
     });
@@ -1109,23 +1160,21 @@ function DashboardContent() {
               </Card>
             </div>
 
-            {currentUser?.role !== 'ADMIN' && (
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 print:hidden">
-                {summaryCardData.map((card) => (
-                  <SummaryCard
-                    key={card.title}
-                    title={card.title}
-                    value={card.value}
-                    icon={card.icon}
-                    iconColorClass={card.iconColorClass}
-                    circleBgClass={card.circleBgClass}
-                    isLoading={isLoadingContent}
-                    currentUser={currentUser}
-                    hideValue={card.hideValue}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 print:hidden">
+              {summaryCardData.map((card) => (
+                <SummaryCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.value}
+                  icon={card.icon}
+                  iconColorClass={card.iconColorClass}
+                  circleBgClass={card.circleBgClass}
+                  isLoading={isLoadingContent}
+                  currentUser={currentUser}
+                  hideValue={card.hideValue}
+                />
+              ))}
+            </div>
 
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
@@ -1284,7 +1333,11 @@ function DashboardContent() {
                                     <div className="rounded-lg border bg-background p-2 shadow-sm">
                                       <div className="grid grid-cols-1 gap-1.5">
                                         <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                        <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
+                                        {isSystemAdmin ? (
+                                          <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
+                                        )}
                                       </div>
                                     </div>
                                   )
