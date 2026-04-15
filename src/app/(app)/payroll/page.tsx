@@ -490,7 +490,7 @@ export default function PayrollPage() {
                 <TableHead>Designation</TableHead>
                 <TableHead>Mobile NO</TableHead>
                 <TableHead>Date of Birth</TableHead>
-                {currentUser?.role === 'SYSTEM_ADMIN' && <TableHead>Salary</TableHead>}
+                {(currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && <TableHead>Salary</TableHead>}
                 <TableHead>Joining Date</TableHead>
                 <TableHead>Working Period</TableHead>
                 <TableHead>Status</TableHead>
@@ -508,7 +508,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    {currentUser?.role === 'SYSTEM_ADMIN' && <TableCell><Skeleton className="h-4 w-16" /></TableCell>}
+                    {(currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && <TableCell><Skeleton className="h-4 w-16" /></TableCell>}
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
@@ -535,7 +535,7 @@ export default function PayrollPage() {
                       <TableCell>{(employee as Employee).designation}</TableCell>
                       <TableCell>{(employee as Employee).mobileNo}</TableCell>
                       <TableCell>{format(new Date((employee as Employee).dob), 'yyyy-MM-dd')}</TableCell>
-                      {currentUser?.role === 'SYSTEM_ADMIN' && (
+                      {(currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && (
                         <TableCell className="font-medium text-gray-800">
                           <spoiler-span>{formatCurrency((employee as Employee).salary)}</spoiler-span>
                         </TableCell>
@@ -588,13 +588,13 @@ export default function PayrollPage() {
                               <Pencil className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </DropdownMenuItem>
-                            {currentUser?.role === 'SYSTEM_ADMIN' && (
+                            {(currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && (
                               <DropdownMenuItem onSelect={() => setEmployeeToIncrement(employee as Employee)} className="cursor-pointer">
                                 <TrendingUp className="mr-2 h-4 w-4" />
                                 <span>Increment Salary</span>
                               </DropdownMenuItem>
                             )}
-                            {currentUser?.role === 'SYSTEM_ADMIN' && (
+                            {(currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && (
                               <DropdownMenuItem onSelect={() => setLeaveToManage(employee as Employee)} className="cursor-pointer">
                                 <Calendar className="mr-2 h-4 w-4" />
                                 <span>Manage Leave</span>
