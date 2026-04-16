@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,13 +14,46 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, User as UserIcon, Settings, Edit3 } from "lucide-react";
+import { LogOut, User as UserIcon, Settings, Edit3, Calculator, Hash } from "lucide-react";
 import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
+
+const GyroscopeIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <ellipse cx="12" cy="12" rx="10" ry="3" transform="rotate(45 12 12)" />
+    <ellipse cx="12" cy="12" rx="10" ry="3" transform="rotate(-45 12 12)" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" />
+  </svg>
+);
 
 export function UserNav() {
   const { currentUser, logout } = useAuth();
+  const [displayMode, setDisplayMode] = useState<'amount'|'quantity'>('quantity');
 
   const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('dashboardDisplayMode') as 'amount'|'quantity' || 'quantity';
+      setDisplayMode(savedMode);
+    }
+  }, []);
+
+  const toggleDisplayMode = () => {
+    const newMode = displayMode === 'amount' ? 'quantity' : 'amount';
+    setDisplayMode(newMode);
+    localStorage.setItem('dashboardDisplayMode', newMode);
+    window.dispatchEvent(new CustomEvent('dashboardDisplayModeChanged', { detail: { mode: newMode } }));
+  };
 
   if (!currentUser) {
     return null;
@@ -67,6 +101,16 @@ export function UserNav() {
               <span>Edit Profile</span>
             </DropdownMenuItem>
           </EditProfileDialog>
+          {isSystemAdmin && (
+            <DropdownMenuItem 
+              onDoubleClick={toggleDisplayMode} 
+              onSelect={(e) => e.preventDefault()} 
+              className="cursor-pointer"
+            >
+              <GyroscopeIcon className="mr-2 h-4 w-4" />
+              <span>Gyroscope</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem disabled>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile (Soon)</span>

@@ -192,7 +192,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
             {title}
           </p>
           <p className="text-[15px] sm:text-2xl font-bold text-foreground font-mono mt-0.5 sm:mt-0 px-1 leading-tight">
-            <spoiler-span>{value}</spoiler-span>
+            <spoiler-span key={value}>{value}</spoiler-span>
           </p>
         </div>
       </div>
@@ -296,6 +296,31 @@ function DashboardContent() {
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
   const [feedbackToDelete, setFeedbackToDelete] = useState<Feedback | null>(null);
   const [isDeletingFeedback, setIsDeletingFeedback] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'amount'|'quantity'>('quantity');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('dashboardDisplayMode') as 'amount'|'quantity' || 'quantity';
+      setDisplayMode(savedMode);
+
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'dashboardDisplayMode' && e.newValue) {
+          setDisplayMode(e.newValue as 'amount'|'quantity');
+        }
+      };
+      
+      const handleCustomEvent = (e: any) => {
+        setDisplayMode(e.detail.mode);
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('dashboardDisplayModeChanged', handleCustomEvent);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('dashboardDisplayModeChanged', handleCustomEvent);
+      };
+    }
+  }, []);
 
 
   const isDesignerRepOrLrOrCo = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR' || currentUser?.role === 'CO';
@@ -868,25 +893,27 @@ function DashboardContent() {
   }, [currentUser, globalSettings]);
 
   const summaryCardDefinitions = useMemo(() => {
+    const showAmount = isSystemAdmin && displayMode === 'amount';
+
     return [
       { 
         title: isCrm ? "Sales" : "Total Sales", 
-        value: isSystemAdmin ? formatCurrency(totalSales) : salesCount.toString(), 
+        value: showAmount ? formatCurrency(totalSales) : salesCount.toString(), 
         icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Invoice due", 
-        value: isSystemAdmin ? formatCurrency(invoiceDue) : ordersWithDueCount.toString(), 
+        value: showAmount ? formatCurrency(invoiceDue) : ordersWithDueCount.toString(), 
         icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Advance Paid", 
-        value: isSystemAdmin ? formatCurrency(invoicePaid) : invoicePaidCount.toString(), 
+        value: showAmount ? formatCurrency(invoicePaid) : invoicePaidCount.toString(), 
         icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Invoice COD Paid", 
-        value: isSystemAdmin ? formatCurrency(invoiceCodPaid) : invoiceCodPaidCount.toString(), 
+        value: showAmount ? formatCurrency(invoiceCodPaid) : invoiceCodPaidCount.toString(), 
         icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
@@ -896,35 +923,35 @@ function DashboardContent() {
       },
       { 
         title: "Net", 
-        value: isSystemAdmin ? formatCurrency(netValue) : salesCount.toString(), 
+        value: showAmount ? formatCurrency(netValue) : salesCount.toString(), 
         icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Total Sell Return", 
-        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        value: showAmount ? formatCurrency(0) : "0", 
         icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Total purchase", 
-        value: isSystemAdmin ? formatCurrency(totalPurchase) : totalPurchaseCount.toString(), 
+        value: showAmount ? formatCurrency(totalPurchase) : totalPurchaseCount.toString(), 
         icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Purchase due", 
-        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        value: showAmount ? formatCurrency(0) : "0", 
         icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Total Purchase Return", 
-        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        value: showAmount ? formatCurrency(0) : "0", 
         icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
       { 
         title: "Expense", 
-        value: isSystemAdmin ? formatCurrency(0) : "0", 
+        value: showAmount ? formatCurrency(0) : "0", 
         icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
     ];
-  }, [isCrm, isSystemAdmin, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials]);
+  }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
