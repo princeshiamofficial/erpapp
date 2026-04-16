@@ -43,7 +43,7 @@ export function UserNav() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('dashboardDisplayMode') as 'amount'|'quantity' || 'quantity';
+      const savedMode = sessionStorage.getItem('dashboardDisplayMode') as 'amount'|'quantity' || 'quantity';
       setDisplayMode(savedMode);
     }
   }, []);
@@ -51,7 +51,7 @@ export function UserNav() {
   const toggleDisplayMode = () => {
     const newMode = displayMode === 'amount' ? 'quantity' : 'amount';
     setDisplayMode(newMode);
-    localStorage.setItem('dashboardDisplayMode', newMode);
+    sessionStorage.setItem('dashboardDisplayMode', newMode);
     window.dispatchEvent(new CustomEvent('dashboardDisplayModeChanged', { detail: { mode: newMode } }));
   };
 

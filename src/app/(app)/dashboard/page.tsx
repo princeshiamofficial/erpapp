@@ -300,7 +300,7 @@ function DashboardContent() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('dashboardDisplayMode') as 'amount'|'quantity' || 'quantity';
+      const savedMode = sessionStorage.getItem('dashboardDisplayMode') as 'amount'|'quantity' || 'quantity';
       setDisplayMode(savedMode);
 
       const handleStorageChange = (e: StorageEvent) => {
@@ -965,7 +965,8 @@ function DashboardContent() {
     return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CR";
   }, [selectedCrmId, allCrmUsers]);
 
-  const chartDataKey = currentUser?.role === 'SYSTEM_ADMIN' ? 'sales' : 'orders';
+  const showAmount = isSystemAdmin && displayMode === 'amount';
+  const chartDataKey = showAmount ? 'sales' : 'orders';
 
   const canSeeAdminCharts = useMemo(() => {
     if (!currentUser) return false;
@@ -1007,13 +1008,13 @@ function DashboardContent() {
             {dataPayload && (
               <div className="flex flex-col">
                 <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: dataPayload.color }}>
-                  {currentUser?.role === 'SYSTEM_ADMIN' ? `Sales (${dataPayload.payload.orders} orders)` : `Sales Count`}
+                  {showAmount ? `Sales (${dataPayload.payload.orders} orders)` : `Sales Count`}
                 </span>
                 <span
                   className="font-bold"
                   style={{ color: dataPayload.color }}
                 >
-                  {currentUser?.role === 'SYSTEM_ADMIN' ? formatCurrency(dataPayload.value as number) : dataPayload.value}
+                  {showAmount ? formatCurrency(dataPayload.value as number) : dataPayload.value}
                 </span>
               </div>
             )}
@@ -1260,7 +1261,7 @@ function DashboardContent() {
                           tickLine={false}
                           axisLine={false}
                           tickMargin={8}
-                          tickFormatter={(value) => currentUser?.role === 'SYSTEM_ADMIN' ? `৳${Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : value}
+                          tickFormatter={(value) => showAmount ? `৳${Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : value}
                           className="text-xs"
                         />
                         <ChartTooltip
@@ -1360,7 +1361,7 @@ function DashboardContent() {
                                     <div className="rounded-lg border bg-background p-2 shadow-sm">
                                       <div className="grid grid-cols-1 gap-1.5">
                                         <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                        {isSystemAdmin ? (
+                                        {showAmount ? (
                                           <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
                                         ) : (
                                           <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
@@ -1424,6 +1425,7 @@ function DashboardContent() {
             <SalesPerformanceClient
               allOrders={salesPerformanceOrders}
               allCrmUsers={allCrmUsers}
+              displayMode={displayMode}
             />
           )}
           {canSeeAdminCharts && (

@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface SalesPerformanceClientProps {
   allOrders: TrackingLink[];
   allCrmUsers: User[];
+  displayMode?: 'amount' | 'quantity';
 }
 
 interface MonthlySalesData {
@@ -39,11 +40,12 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerformanceClientProps) {
+export function SalesPerformanceClient({ allOrders, allCrmUsers, displayMode = 'amount' }: SalesPerformanceClientProps) {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
   const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
 
+  const showAmount = displayMode === 'amount';
   const userMap = useMemo(() => new Map(allCrmUsers.map(u => [u.id, u])), [allCrmUsers]);
 
   const availableYears = useMemo(() => {
@@ -110,8 +112,8 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
 
     const xAxis = <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} dy={10} interval={isMobile ? 1 : 0} />;
     const yAxisLeft = <YAxis yAxisId="left" stroke="hsl(var(--primary))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => value === 0 ? '' : `${Number(value) / 1000}k`} />;
-    const yAxisRight = <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--chart-2))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => value === 0 ? '' : value} />;
-    const tooltip = <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }} />;
+    const yAxisRight = <YAxis yAxisId="right" orientation={showAmount ? "right" : "left"} stroke="hsl(var(--chart-2))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => value === 0 ? '' : value} />;
+    const tooltip = <Tooltip content={<ChartTooltipContentCustom active={false} payload={[]} label={""} userMap={userMap} displayMode={displayMode} />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }} />;
     const legend = (
       <Legend verticalAlign="bottom" height={36} content={(props) => (
         <div className="flex justify-center gap-6 mt-6 select-none">
@@ -130,11 +132,11 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
         return (
           <RechartsLineChart {...commonProps}>
             {xAxis}
-            {yAxisLeft}
+            {showAmount && yAxisLeft}
             {yAxisRight}
             {tooltip}
             {legend}
-            <Line yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={1500} />
+            {showAmount && <Line yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={1500} />}
             <Line yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6, strokeWidth: 0 }} animationDuration={1500} />
           </RechartsLineChart>
         );
@@ -152,11 +154,11 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
               </linearGradient>
             </defs>
             {xAxis}
-            {yAxisLeft}
+            {showAmount && yAxisLeft}
             {yAxisRight}
             {tooltip}
             {legend}
-            <Area yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={3} fill="url(#colorSalesPerformance)" animationDuration={1500} />
+            {showAmount && <Area yAxisId="left" type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" strokeWidth={3} fill="url(#colorSalesPerformance)" animationDuration={1500} />}
             <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="hsl(var(--chart-2))" strokeWidth={3} fill="url(#colorOrdersPerformance)" animationDuration={1500} />
           </RechartsAreaChart>
         );
@@ -165,11 +167,11 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
         return (
           <RechartsBarChart {...commonProps}>
             {xAxis}
-            {yAxisLeft}
+            {showAmount && yAxisLeft}
             {yAxisRight}
             {tooltip}
             {legend}
-            <Bar yAxisId="left" dataKey="sales" name="Sales" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} animationDuration={1500} />
+            {showAmount && <Bar yAxisId="left" dataKey="sales" name="Sales" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} animationDuration={1500} />}
             <Bar yAxisId="right" dataKey="orders" name="Orders" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} animationDuration={1500} />
           </RechartsBarChart>
         );
@@ -242,11 +244,16 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
   );
 }
 
-const ChartTooltipContentCustom = ({ active, payload, label, userMap }: any) => {
+const ChartTooltipContentCustom = ({ active, payload, label, userMap, displayMode }: any) => {
   if (active && payload && payload.length) {
     const salesPayload = payload.find((p: any) => p.dataKey === 'sales');
     const ordersPayload = payload.find((p: any) => p.dataKey === 'orders');
-    const crmSalesData = salesPayload?.payload?.crmSales;
+    const showAmount = displayMode === 'amount';
+    // Fallback to orders if sales is missing or amount is hidden
+    const activePayload = showAmount && salesPayload ? salesPayload : ordersPayload;
+    if (!activePayload) return null;
+
+    const crmSalesData = activePayload?.payload?.crmSales;
 
     const crmBreakdown = crmSalesData ? Object.entries(crmSalesData)
       .map(([crmId, data]: [string, any]) => ({
@@ -256,13 +263,14 @@ const ChartTooltipContentCustom = ({ active, payload, label, userMap }: any) => 
         user: userMap.get(crmId),
       }))
       .filter(item => item.user)
-      .sort((a, b) => b.sales - a.sales) : [];
+      // Sort by sales if showing amount, otherwise sort by orders
+      .sort((a, b) => showAmount ? b.sales - a.sales : b.orders - a.orders) : [];
 
     return (
       <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
         <div className="grid grid-cols-1 gap-1.5">
           <p className="font-semibold text-foreground">{label}</p>
-          {salesPayload && (
+          {showAmount && salesPayload && (
             <div className="flex items-center gap-2">
               <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: salesPayload.color }}></div>
               <span className="text-sm text-muted-foreground">Total Sales:</span>
@@ -291,7 +299,7 @@ const ChartTooltipContentCustom = ({ active, payload, label, userMap }: any) => 
                       </Avatar>
                       <span className="text-muted-foreground truncate flex-1">{user?.name}</span>
                       <span className="font-medium text-right">{orders} orders</span>
-                      <span className="font-medium text-right">{formatCurrencyBdt(sales)}</span>
+                      {showAmount && <span className="font-medium text-right">{formatCurrencyBdt(sales)}</span>}
                     </div>
                   ))}
                 </div>
