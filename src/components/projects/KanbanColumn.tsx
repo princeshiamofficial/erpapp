@@ -33,7 +33,7 @@ interface KanbanColumnProps {
 
 const PROJECTS_PER_PAGE = 20;
 
-export function KanbanColumn({
+const KanbanColumnComponent = function KanbanColumn({
   id,
   title,
   icon: Icon,
@@ -52,10 +52,19 @@ export function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id });
   const [visibleCount, setVisibleCount] = useState(PROJECTS_PER_PAGE);
 
-  // Reset visible count when the underlying leads array changes (e.g., due to filtering)
+  // Optimization: Only reset visible count when the search state changes, 
+  // not on every data refresh to avoid double renders and jumping UI.
+  const projectsLength = projects.length;
+  const prevProjectsLength = React.useRef(projectsLength);
+
   useEffect(() => {
-    setVisibleCount(PROJECTS_PER_PAGE);
-  }, [projects]);
+    // If the length changed significantly (likely a filter/search change), reset.
+    // If it's just a minor change, keep the visible count.
+    if (Math.abs(projectsLength - prevProjectsLength.current) > 5 || isSearching) {
+       setVisibleCount(PROJECTS_PER_PAGE);
+    }
+    prevProjectsLength.current = projectsLength;
+  }, [projectsLength, isSearching]);
 
   const handleLoadMore = () => {
     setVisibleCount(prevCount => prevCount + PROJECTS_PER_PAGE);
@@ -142,4 +151,14 @@ export function KanbanColumn({
       </ScrollArea>
     </div>
   );
-}
+};
+
+export const KanbanColumn = React.memo(KanbanColumnComponent, (prev, next) => {
+  return (
+    prev.projects.length === next.projects.length &&
+    prev.isLoading === next.isLoading &&
+    prev.id === next.id &&
+    prev.currentUser?.id === next.currentUser?.id &&
+    prev.projects === next.projects // This is a shallow check but usually projects array is new if data changed
+  );
+});

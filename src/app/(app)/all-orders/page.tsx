@@ -84,7 +84,7 @@ export default function AllOrdersPage() {
 
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
-    return ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
+    return ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'CO'].includes(currentUser.role);
   };
 
   const handleTrackingLinkUpdated = () => {
@@ -236,7 +236,6 @@ export default function AllOrdersPage() {
                 <TableRow>
                   <TableHead className="pl-6">Order ID</TableHead>
                   <TableHead>Company</TableHead>
-                  <TableHead>Visibility</TableHead>
                   <TableHead>Order Status</TableHead>
                   <TableHead>CRM Contact</TableHead>
                   <TableHead>Assigned DR</TableHead>
@@ -249,7 +248,6 @@ export default function AllOrdersPage() {
                     <TableRow key={`skel-link-${i}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -269,11 +267,6 @@ export default function AllOrdersPage() {
                           </Link>
                         </TableCell>
                         <TableCell className="text-card-foreground">{link.companyName}</TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${link.isPublic ? 'bg-green-500/20 text-green-700 border-green-500/30 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20' : 'bg-red-500/20 text-red-700 border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20'}`}>
-                            {link.isPublic ? 'Public' : 'Private'}
-                          </span>
-                        </TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                             {statusInfo.name}
@@ -317,7 +310,7 @@ export default function AllOrdersPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                    <TableCell colSpan={6} className="text-center py-12 h-[300px]">
                       <Link2 className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                       <p className="text-lg text-muted-foreground font-medium">
                         {searchTerm ? "No tracking links match your search." : "No tracking links found."}

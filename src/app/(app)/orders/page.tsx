@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useSocket } from "@/contexts/socket-context";
 import Link from "next/link";
@@ -92,7 +92,7 @@ export default function OrdersPage() {
   const [orderToEdit, setOrderToEdit] = useState<TrackingLink | null>(null);
   const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewType, setViewType] = useState<'orders' | 'reorders'>('orders');
+  const [viewType, setViewType] = useState<'orders' | 'reorders' | 'pending_payment'>('orders');
 
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
@@ -196,6 +196,12 @@ export default function OrdersPage() {
       result = result.filter(order => {
         const jobId = (order.companyName || '').split(' • ')[0].trim();
         return jobId && reorderJobIds.has(jobId);
+      });
+    }
+
+    if (viewType === 'pending_payment') {
+      result = result.filter(order => {
+        return !order.advancePayments || order.advancePayments.length === 0;
       });
     }
 
@@ -491,24 +497,37 @@ export default function OrdersPage() {
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex-grow flex items-center gap-2">
-              <Button
-                variant={viewType === 'orders' ? 'default' : 'outline'}
-                onClick={() => setViewType('orders')}
-                className="h-10 rounded-md"
-              >
-                <PackageIcon className="mr-2 h-4 w-4" />
-                Orders
-              </Button>
-              <Button
-                variant={viewType === 'reorders' ? 'default' : 'outline'}
-                onClick={() => setViewType('reorders')}
-                className="h-10 rounded-md"
-              >
-                <Repeat className="mr-2 h-4 w-4" />
-                Reorders
-              </Button>
-            </div>
+            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+              <div className="flex-grow flex items-center gap-2">
+                <Button
+                  variant={viewType === 'orders' ? 'default' : 'outline'}
+                  onClick={() => setViewType('orders')}
+                  className="h-10 rounded-md"
+                >
+                  <PackageIcon className="mr-2 h-4 w-4" />
+                  Orders
+                </Button>
+                <Button
+                  variant={viewType === 'reorders' ? 'default' : 'outline'}
+                  onClick={() => setViewType('reorders')}
+                  className="h-10 rounded-md"
+                >
+                  <Repeat className="mr-2 h-4 w-4" />
+                  Reorders
+                </Button>
+                <Button
+                  variant={viewType === 'pending_payment' ? 'default' : 'outline'}
+                  onClick={() => setViewType('pending_payment')}
+                  className="h-10 rounded-md whitespace-nowrap"
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Pending Payment
+                </Button>
+              </div>
+            )}
+            {!(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+              <div className="flex-grow" />
+            )}
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <DateRangePicker3
                 initialRange={selectedDateRange}

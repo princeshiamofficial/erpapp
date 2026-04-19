@@ -203,7 +203,7 @@ const calculateProgressInfo = (
   };
 };
 
-export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, allUsers, onOpenAssignDrDialog, onViewLead }: ProjectCardProps) {
+const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, allUsers, onOpenAssignDrDialog, onViewLead }: ProjectCardProps) {
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     setIsMounted(true);
@@ -408,4 +408,20 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
       </Card>
     </motion.div>
   );
-}
+};
+
+export const ProjectCard = React.memo(ProjectCardComponent, (prevProps, nextProps) => {
+  // Only re-render if essential props change
+  return (
+    prevProps.project.id === nextProps.project.id &&
+    prevProps.project.status === nextProps.project.status &&
+    prevProps.project.updatedAt === nextProps.project.updatedAt &&
+    prevProps.project.name === nextProps.project.name &&
+    prevProps.project.endDate === nextProps.project.endDate &&
+    prevProps.project.designerRepresentativeId === nextProps.project.designerRepresentativeId &&
+    prevProps.currentUser?.id === nextProps.currentUser?.id &&
+    prevProps.isOverlay === nextProps.isOverlay &&
+    prevProps.allStatuses.length === nextProps.allStatuses.length &&
+    prevProps.allUsers.length === nextProps.allUsers.length
+  );
+});
