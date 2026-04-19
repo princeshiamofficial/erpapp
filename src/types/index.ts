@@ -126,6 +126,7 @@ export interface OrderLogEntry {
   changedByUserId: string;
   changedByUserName: string;
   notes?: string;
+  type?: string; 
 }
 
 export interface OrderItem {

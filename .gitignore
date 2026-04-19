@@ -43,3 +43,6 @@ node_modules/
 !/public/uploads/.gitkeep
 /storage/uploads/*
 !/storage/uploads/.gitkeep
+
+# scratch
+scratch/
