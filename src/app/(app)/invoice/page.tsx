@@ -31,9 +31,16 @@ import {
 } from "@/components/ui/select";
 
 
-const formatCurrency = (value: number | null | undefined): string => {
+const formatCurrency = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
-  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+  const amount = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(amount)) return 'N/A';
+  return new Intl.NumberFormat('en-BD', {
+    style: 'currency',
+    currency: 'BDT',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 };
 
 export default function InvoiceListPage() {
@@ -178,18 +185,18 @@ export default function InvoiceListPage() {
   
 
   const getOrderFinancials = useCallback((order: TrackingLink) => {
-    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-    const effectiveDiscount = order.specialClientDiscount || 0;
+    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+    const effectiveDiscount = Number(order.specialClientDiscount) || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
-    const shippingCharge = order.shippingCharge || 0;
+    const shippingCharge = Number(order.shippingCharge) || 0;
 
     const allAdvancePaymentRecords: AdvancePaymentRecord[] = [];
     if (order.advancePayments && order.advancePayments.length > 0) {
       allAdvancePaymentRecords.push(...order.advancePayments);
-    } else if (order.advancePayment && order.advancePayment > 0) {
+    } else if (order.advancePayment && Number(order.advancePayment) > 0) {
       allAdvancePaymentRecords.push({
         id: 'legacy-advance',
-        amount: order.advancePayment,
+        amount: Number(order.advancePayment),
         date: order.createdAt,
         paymentMethod: order.paymentMethod || "Unknown",
         notes: "Initial advance payment (legacy data).",
@@ -198,7 +205,7 @@ export default function InvoiceListPage() {
       });
     }
 
-    const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
+    const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
     const grandTotal = netPayable + shippingCharge;
     const amountDue = grandTotal - totalAdvancePaid;
 
@@ -364,7 +371,9 @@ export default function InvoiceListPage() {
                           <TableCell className="text-card-foreground">{order.companyName}</TableCell>
                           <TableCell className="text-card-foreground font-mono">{formatCurrency(financials.netPayable)}</TableCell>
                           <TableCell className="text-green-600 font-mono">{formatCurrency(financials.paidAmount)}</TableCell>
-                          <TableCell className="text-red-600 font-mono">{formatCurrency(financials.dueAmount)}</TableCell>
+                          <TableCell className={cn("font-mono", financials.dueAmount > 0.01 ? "text-red-600" : "text-green-600")}>
+                            {formatCurrency(financials.dueAmount)}
+                          </TableCell>
                           <TableCell>
                             <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                               {statusInfo.name}

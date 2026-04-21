@@ -12,9 +12,16 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 import { getPackzyDeliveryStatusAction } from '../actions';
 
-const formatCurrency = (value: number | null | undefined): string => {
+const formatCurrency = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+  const amount = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(amount)) return 'N/A';
+  return new Intl.NumberFormat('en-BD', {
+    style: 'currency',
+    currency: 'BDT',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 };
 
 const formatDate = (dateString: string | undefined) => {
@@ -120,7 +127,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-2 flex items-center print:text-xl print:mb-1"><FileText className="h-8 w-8 mr-3 print:h-6 print:w-6" /> INVOICE</h2>
           <div className="mb-2">
             <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+              src="/logo.png"
               alt="Color Hut Logo"
               width={160}
               height={40}
@@ -146,7 +153,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
           <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
         </div>
-        {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:hidden print:p-2">
+        {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:p-2">
           <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
           <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
           <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
