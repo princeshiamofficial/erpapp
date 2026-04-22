@@ -181,7 +181,7 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
   return (
     <div className="relative z-10">
       {topThree.length > 0 && (
-        <div className="px-4 pt-16 pb-12 sm:pt-20 sm:pb-16 relative">
+        <div className="px-4 pt-28 pb-0 sm:pt-36 sm:pb-0 relative z-20">
 
           <div className="flex justify-around items-end max-w-sm sm:max-w-md mx-auto">
             {podiumUsers.rank2 ? <PodiumItem user={podiumUsers.rank2} rank={2} /> : <div className="w-[110px] sm:w-[130px]"></div>}
@@ -192,7 +192,7 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
       )}
       
       {performanceData.length > 0 && ( 
-        <div className="bg-[hsl(var(--leaderboard-list-area-bg))] rounded-t-[30px] sm:rounded-t-[40px] shadow-2xl pt-6 pb-8 min-h-[300px] mt-[-50px] sm:mt-[-60px] mx-0 sm:mx-2 md:mx-4 lg:mx-auto lg:max-w-2xl">
+        <div className="bg-[hsl(var(--leaderboard-list-area-bg))] rounded-[30px] sm:rounded-[40px] shadow-2xl pt-6 pb-8 min-h-[300px] mt-0 mx-0 sm:mx-2 md:mx-4 lg:mx-auto lg:max-w-2xl mb-10 relative z-10">
           <AnimatePresence>
             {rest.map((user, index) => (
               <RankListItem
