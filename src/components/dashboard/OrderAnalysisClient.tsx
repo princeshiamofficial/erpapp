@@ -72,21 +72,27 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
     sortedOrders.forEach(order => {
       try {
         const orderDate = parseISO(order.createdAt);
-        if (getYear(orderDate) !== selectedYear) return;
-
-        const monthIndex = getMonth(orderDate);
-        months[monthIndex].totalOrders += 1;
+        const orderYear = getYear(orderDate);
 
         const companyNameParts = (order.companyName || '').split('•');
         const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim() : null;
 
+        let isReorder = false;
         if (jobId) {
           if (customerOrderHistory[jobId]) {
-            // It's a reorder if we've seen this Job ID before
-            months[monthIndex].reorders += 1;
+            isReorder = true;
           } else {
-            // First time seeing this Job ID
             customerOrderHistory[jobId] = true;
+          }
+        }
+
+        // Only add to chart data if it's in the selected year
+        if (orderYear === selectedYear) {
+          const monthIndex = getMonth(orderDate);
+          months[monthIndex].totalOrders += 1;
+          
+          if (isReorder) {
+            months[monthIndex].reorders += 1;
           }
         }
       } catch (e) {

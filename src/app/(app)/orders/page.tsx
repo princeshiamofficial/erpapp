@@ -183,7 +183,9 @@ export default function OrdersPage() {
     }
 
     if (viewType === 'reorders') {
-      const jobCounts = result.reduce((acc, order) => {
+      // Calculate jobCounts across ALL orders (not just the currently filtered 'result')
+      // to correctly identify reorders that span across different months/filters.
+      const jobCounts = orders.reduce((acc, order) => {
         const jobId = (order.companyName || '').split(' • ')[0].trim();
         if (jobId) {
           acc[jobId] = (acc[jobId] || 0) + 1;

@@ -149,7 +149,7 @@ export default function QuotationsPage() {
     }
 
     if (viewType === 're-quotations') {
-      const jobCounts = result.reduce((acc, quotation) => {
+      const jobCounts = quotations.reduce((acc, quotation) => {
         const jobId = (quotation.companyName || '').split(' • ')[0].trim();
         if (jobId) {
           acc[jobId] = (acc[jobId] || 0) + 1;
