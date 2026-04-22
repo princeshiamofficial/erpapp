@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Crown, ArrowUp, ArrowDown, Award, Briefcase, CheckCircle } from 'lucide-react'; // Added Award, Briefcase, CheckCircle
+import { ArrowUp, ArrowDown, Award, Briefcase, CheckCircle } from 'lucide-react'; // Added Award, Briefcase, CheckCircle
 import { motion, AnimatePresence } from 'framer-motion';
 import type { User, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
@@ -52,27 +52,42 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, delay: rank * 0.1 }}
       className={cn(
-        "flex flex-col items-center text-center relative px-2 pt-3 pb-4 rounded-t-3xl shadow-lg bg-gradient-to-b from-[hsl(var(--leaderboard-podium-bg))] to-[hsl(var(--leaderboard-podium-bg)/0.8)]",
-        isCenter ? "w-[130px] sm:w-[150px] h-[190px] sm:h-[220px] mt-[-20px] z-10 shadow-2xl" : "w-[110px] sm:w-[130px] h-[170px] sm:h-[200px]"
+        "flex flex-col items-center justify-center text-center relative px-2 rounded-t-3xl shadow-lg bg-gradient-to-b from-[hsl(var(--leaderboard-podium-bg))] to-[hsl(var(--leaderboard-podium-bg)/0.8)]",
+        isCenter ? "w-[130px] sm:w-[150px] h-[110px] sm:h-[140px] mt-[-20px] z-10 shadow-2xl" : "w-[110px] sm:w-[130px] h-[90px] sm:h-[120px]"
       )}
     >
-      <div className={cn(
-          "absolute -top-3 left-1/2 -translate-x-1/2 flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full text-[hsl(var(--leaderboard-rank-badge-text))] font-bold text-sm sm:text-base border-2 border-white shadow-lg",
-          rankColors[rank as keyof typeof rankColors] || "bg-gray-400"
-      )}>
-        {rank}
+      <div className="relative mt-4 -translate-y-10 sm:-translate-y-14 -mb-10 sm:-mb-14">
+        {isCenter && (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="absolute -top-10 sm:-top-12 left-1/2 -translate-x-1/2 h-16 w-16 sm:h-20 sm:w-20 text-[hsl(var(--leaderboard-gold))] drop-shadow-lg z-0"
+          >
+            <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" />
+          </svg>
+        )}
+        {rank !== 1 && (
+          <div className={cn(
+              "absolute -top-3 sm:-top-4 z-20 left-1/2 -translate-x-1/2 flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full text-[hsl(var(--leaderboard-rank-badge-text))] font-bold text-sm sm:text-base border-2 border-white shadow-lg",
+              rankColors[rank as keyof typeof rankColors] || "bg-gray-400"
+          )}>
+            {rank}
+          </div>
+        )}
+        <Avatar className={cn(
+            "border-4 shadow-xl overflow-hidden relative z-10 mx-auto",
+            isCenter ? "h-20 w-20 sm:h-24 sm:w-24 border-[hsl(var(--leaderboard-gold))] border-[4px]" : "h-16 w-16 sm:h-20 sm:w-20 border-white/70 border-2"
+        )}>
+          <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="leaderboard user avatar" />
+          <AvatarFallback className="bg-gray-700 text-white text-2xl sm:text-3xl">{getInitials(user.userName)}</AvatarFallback>
+        </Avatar>
       </div>
-      <Avatar className={cn(
-          "border-4 shadow-xl overflow-hidden",
-          isCenter ? "h-20 w-20 sm:h-24 sm:w-24 mt-3 border-[hsl(var(--leaderboard-gold))] border-[4px]" : "h-16 w-16 sm:h-20 sm:w-20 mt-3 border-white/70 border-2"
-      )}>
-        <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="leaderboard user avatar" />
-        <AvatarFallback className="bg-gray-700 text-white text-2xl sm:text-3xl">{getInitials(user.userName)}</AvatarFallback>
-      </Avatar>
       <p className="font-semibold text-sm sm:text-base mt-2 truncate w-full px-1 text-[hsl(var(--leaderboard-text-light))]">{user.userName}</p>
-      <p className="text-xs text-[hsl(var(--leaderboard-text-light))]/70 mt-0.5 truncate w-full px-1">
-        {user.role?.replace(/_/g, ' ') || 'Member'}
-      </p>
       {isDR ? (
         <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">
           {user.designsDone?.toLocaleString()} / <span className="text-base opacity-70">{user.designsAssigned?.toLocaleString()}</span>
@@ -114,9 +129,6 @@ const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ u
 
       <div className="flex-1 min-w-0 ml-3">
         <p className="font-semibold truncate text-sm text-[hsl(var(--leaderboard-list-text))] dark:text-[hsl(var(--leaderboard-list-text-dark))]">{user.userName}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-          {user.role?.replace(/_/g, ' ') || 'Member'}
-        </p>
         {isDR ? (
           <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-500" /> Done: {user.designsDone?.toLocaleString()}
@@ -169,17 +181,8 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
   return (
     <div className="relative z-10">
       {topThree.length > 0 && (
-        <div className="px-4 pt-8 pb-12 sm:pt-10 sm:pb-16 relative">
-           <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 120 }}
-            className="relative z-20"
-          >
-            <Crown className="h-14 w-14 sm:h-20 sm:w-20 text-[hsl(var(--leaderboard-gold))] mx-auto mb-[-20px] sm:mb-[-25px] drop-shadow-lg animate-pulse" 
-              style={{ animationDuration: '2s', animationIterationCount: 'infinite', animationTimingFunction: 'ease-in-out' }}
-            />
-          </motion.div>
+        <div className="px-4 pt-16 pb-12 sm:pt-20 sm:pb-16 relative">
+
           <div className="flex justify-around items-end max-w-sm sm:max-w-md mx-auto">
             {podiumUsers.rank2 ? <PodiumItem user={podiumUsers.rank2} rank={2} /> : <div className="w-[110px] sm:w-[130px]"></div>}
             {podiumUsers.rank1 ? <PodiumItem user={podiumUsers.rank1} rank={1} isCenter /> : <div className="w-[130px] sm:w-[150px]"></div>}
