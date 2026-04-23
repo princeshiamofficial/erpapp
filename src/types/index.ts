@@ -268,7 +268,7 @@ export interface PipelineAccessSettings {
   canViewAllLeads: string[]; // Array of CRM user IDs with special access
 }
 
-export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD';
+export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD' | 'APPOINTMENT' | 'PROSPECT';
 
 export interface LeadCategoryAccessSettings {
   roles: UserRole[];

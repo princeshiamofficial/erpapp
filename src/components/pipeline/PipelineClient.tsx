@@ -50,6 +50,7 @@ import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn
 import { LeadListView } from './LeadListView';
 import { LeadReportView } from './LeadReportView';
 
+import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
   loading: () => <Skeleton className="h-20 w-full rounded-md" />
@@ -61,16 +62,18 @@ const TransferLeadsDialog = dynamic(() => import('@/components/pipeline/Transfer
 
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon: LucideIcon; headerBgClass: string }> = [
-  { title: 'POP', category: 'POP', icon: UserIcon, headerBgClass: 'bg-sky-600' },
-  { title: 'POG', category: 'POG', icon: Users, headerBgClass: 'bg-blue-600' },
-  { title: 'OC', category: 'OC', icon: BaggageClaim, headerBgClass: 'bg-purple-600' },
-  { title: 'OD', category: 'OD', icon: Briefcase, headerBgClass: 'bg-green-600' },
-  { title: 'ROD', category: 'ROD', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
+  { title: LEAD_CATEGORY_LABELS['POP'], category: 'POP', icon: UserIcon, headerBgClass: 'bg-sky-600' },
+  { title: LEAD_CATEGORY_LABELS['APPOINTMENT'], category: 'APPOINTMENT', icon: CalendarIcon, headerBgClass: 'bg-indigo-600' },
+  { title: LEAD_CATEGORY_LABELS['PROSPECT'], category: 'PROSPECT', icon: Users, headerBgClass: 'bg-pink-600' },
+  { title: LEAD_CATEGORY_LABELS['POG'], category: 'POG', icon: Users, headerBgClass: 'bg-blue-600' },
+  { title: LEAD_CATEGORY_LABELS['OC'], category: 'OC', icon: BaggageClaim, headerBgClass: 'bg-purple-600' },
+  { title: LEAD_CATEGORY_LABELS['OD'], category: 'OD', icon: Briefcase, headerBgClass: 'bg-green-600' },
+  { title: LEAD_CATEGORY_LABELS['ROD'], category: 'ROD', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
 ];
 
 const ITEMS_PER_PAGE = 25;
 
-const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
+const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'APPOINTMENT', 'PROSPECT', 'POG', 'OC', 'OD', 'ROD'];
 
 const ACTIVITY_TYPES = [
   'Follow-up Call',
@@ -289,7 +292,7 @@ export function PipelineClient() {
 
   const leadsByCategory = useMemo(() => {
     const grouped: Record<LeadCategory, Lead[]> = {
-      'POP': [], 'POG': [], 'OC': [], 'OD': [], 'ROD': []
+      'POP': [], 'APPOINTMENT': [], 'PROSPECT': [], 'POG': [], 'OC': [], 'OD': [], 'ROD': []
     };
     filteredLeads.forEach(lead => {
       if (grouped[lead.category]) {
@@ -524,7 +527,7 @@ export function PipelineClient() {
             {viewMode === 'list' && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/50 focus:border-primary h-10"><SelectValue placeholder="Filter by category..." /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All Categories</SelectItem>{LEAD_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                <SelectContent><SelectItem value="all">All Categories</SelectItem>{LEAD_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{LEAD_CATEGORY_LABELS[cat]}</SelectItem>)}</SelectContent>
               </Select>
             )}
             <div className="flex items-center bg-muted p-1 rounded-md ml-auto">

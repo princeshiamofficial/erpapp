@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
 
 interface LeadListViewProps {
     leads: Lead[];
@@ -64,7 +65,20 @@ const getStatusBadgeClass = (status: string) => {
     return 'bg-yellow-100 text-yellow-800 border-yellow-200'; // Default for New Lead
 };
 
-const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
+const getCategoryColorClass = (category: LeadCategory) => {
+    switch (category) {
+        case 'POP': return 'bg-sky-100 text-sky-800 border-sky-200';
+        case 'APPOINTMENT': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+        case 'PROSPECT': return 'bg-pink-100 text-pink-800 border-pink-200';
+        case 'POG': return 'bg-blue-100 text-blue-800 border-blue-200';
+        case 'OC': return 'bg-purple-100 text-purple-800 border-purple-200';
+        case 'OD': return 'bg-green-100 text-green-800 border-green-200';
+        case 'ROD': return 'bg-orange-100 text-orange-800 border-orange-200';
+        default: return 'bg-slate-100 text-slate-800 border-slate-200';
+    }
+};
+
+const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'APPOINTMENT', 'PROSPECT', 'POG', 'OC', 'OD', 'ROD'];
 
 export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => { }, onSelectAll = () => { } }: LeadListViewProps) {
     const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
@@ -166,7 +180,9 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                         <TableCell>{lead.phone}</TableCell>
                                         <TableCell>{lead.source}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">{lead.category}</Badge>
+                                            <Badge className={cn("hover:opacity-80 transition-opacity", getCategoryColorClass(lead.category))}>
+                                                {LEAD_CATEGORY_LABELS[lead.category]}
+                                            </Badge>
                                         </TableCell>
                                         <TableCell className="whitespace-nowrap">
                                             <div className="flex items-center gap-2">
@@ -215,7 +231,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                                                             onSelect={() => onUpdateLeadCategory(lead, category)}
                                                                             className="cursor-pointer"
                                                                         >
-                                                                            {category}
+                                                                            {LEAD_CATEGORY_LABELS[category]}
                                                                         </DropdownMenuItem>
                                                                     ))}
                                                                 </DropdownMenuSubContent>

@@ -24,6 +24,7 @@ import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
@@ -49,11 +50,13 @@ const formatDateSafe = (dateString?: string, includeTime: boolean = false) => {
 const getCategoryClass = (category: string) => {
     switch (category) {
         case 'POP': return 'text-sky-800 bg-sky-100 border-sky-200';
+        case 'APPOINTMENT': return 'text-indigo-800 bg-indigo-100 border-indigo-200';
+        case 'PROSPECT': return 'text-pink-800 bg-pink-100 border-pink-200';
         case 'POG': return 'text-blue-800 bg-blue-100 border-blue-200';
         case 'OC': return 'text-purple-800 bg-purple-100 border-purple-200';
         case 'OD': return 'text-green-800 bg-green-100 border-green-200';
         case 'ROD': return 'text-orange-800 bg-orange-100 border-orange-200';
-        default: return 'text-gray-800 bg-gray-100 border-gray-200';
+        default: return 'text-slate-800 bg-slate-100 border-slate-200';
     }
 }
 
@@ -180,7 +183,7 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
               <div className="p-4 border rounded-lg bg-card space-y-3 shadow-sm">
                   <div className="flex justify-between items-start">
                       <h3 className="font-semibold text-lg text-foreground">{lead.contactName}</h3>
-                      <Badge variant="secondary" className={cn("capitalize", getCategoryClass(lead.category))}>{lead.category}</Badge>
+                      <Badge variant="secondary" className={cn("capitalize", getCategoryClass(lead.category))}>{LEAD_CATEGORY_LABELS[lead.category]}</Badge>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2"><Building className="h-4 w-4 text-primary/80"/><span>{lead.businessName}</span></div>

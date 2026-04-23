@@ -84,6 +84,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TeamPerformanceGraph } from '@/components/dashboard/TeamPerformanceGraph';
 import { getTaskEntries, type TaskEntry, getMonthlyTargetHistory, setMonthlyTargetHistory } from '@/lib/team-performance-service'; // Import new service
 import { CANCELLED_STATUS_ID } from '@/lib/status-constants'; // Import CANCELLED_STATUS_ID
+import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
 
 
 // Lazy loading components
@@ -221,11 +222,13 @@ const ALL_PROJECT_STATUSES_CONFIG: Array<{ title: string; status: ProjectStatusT
 ];
 
 const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; color: string; gradient: string; shadow: string; }> = [
-  { title: 'POP', category: 'POP', icon: UserIcon, color: '#0ea5e9', gradient: 'linear-gradient(to right, #0ea5e9, #38bdf8)', shadow: '0 4px 15px 0 rgba(14, 165, 233, 0.4)' },
-  { title: 'POG', category: 'POG', icon: Users, color: '#1d4ed8', gradient: 'linear-gradient(to right, #1d4ed8, #3b82f6)', shadow: '0 4px 15px 0 rgba(29, 78, 216, 0.4)' },
-  { title: 'OC', category: 'OC', icon: BaggageClaim, color: '#9333ea', gradient: 'linear-gradient(to right, #9333ea, #a855f7)', shadow: '0 4px 15px 0 rgba(147, 51, 234, 0.4)' },
-  { title: 'OD', category: 'OD', icon: Briefcase, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #22c55e)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
-  { title: 'ROD', category: 'ROD', icon: ShoppingCart, color: '#ea580c', gradient: 'linear-gradient(to right, #ea580c, #f97316)', shadow: '0 4px 15px 0 rgba(234, 88, 12, 0.4)' },
+  { title: LEAD_CATEGORY_LABELS['POP'], category: 'POP', icon: UserIcon, color: '#0ea5e9', gradient: 'linear-gradient(to right, #0ea5e9, #38bdf8)', shadow: '0 4px 15px 0 rgba(14, 165, 233, 0.4)' },
+  { title: LEAD_CATEGORY_LABELS['APPOINTMENT'], category: 'APPOINTMENT', icon: CalendarDays, color: '#6366f1', gradient: 'linear-gradient(to right, #6366f1, #818cf8)', shadow: '0 4px 15px 0 rgba(99, 102, 241, 0.4)' },
+  { title: LEAD_CATEGORY_LABELS['PROSPECT'], category: 'PROSPECT', icon: Users, color: '#ec4899', gradient: 'linear-gradient(to right, #ec4899, #f472b6)', shadow: '0 4px 15px 0 rgba(236, 72, 153, 0.4)' },
+  { title: LEAD_CATEGORY_LABELS['POG'], category: 'POG', icon: Users, color: '#1d4ed8', gradient: 'linear-gradient(to right, #1d4ed8, #3b82f6)', shadow: '0 4px 15px 0 rgba(29, 78, 216, 0.4)' },
+  { title: LEAD_CATEGORY_LABELS['OC'], category: 'OC', icon: BaggageClaim, color: '#9333ea', gradient: 'linear-gradient(to right, #9333ea, #a855f7)', shadow: '0 4px 15px 0 rgba(147, 51, 234, 0.4)' },
+  { title: LEAD_CATEGORY_LABELS['OD'], category: 'OD', icon: Briefcase, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #22c55e)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
+  { title: LEAD_CATEGORY_LABELS['ROD'], category: 'ROD', icon: ShoppingCart, color: '#ea580c', gradient: 'linear-gradient(to right, #ea580c, #f97316)', shadow: '0 4px 15px 0 rgba(234, 88, 12, 0.4)' },
 ];
 
 const queryClient = new QueryClient();
@@ -561,7 +564,7 @@ function DashboardContent() {
 
   const leadCategoryCounts = useMemo(() => {
     const counts: Record<LeadCategory, number> = {
-      'POP': 0, 'POG': 0, 'OC': 0, 'OD': 0, 'ROD': 0
+      'POP': 0, 'APPOINTMENT': 0, 'PROSPECT': 0, 'POG': 0, 'OC': 0, 'OD': 0, 'ROD': 0
     };
     let leadsToCount = filteredLeads;
     leadsToCount.forEach(l => {
