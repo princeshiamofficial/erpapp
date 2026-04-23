@@ -20,6 +20,8 @@ interface LeadCalendarViewProps {
 const getCategoryClass = (category: string) => {
     switch (category) {
         case 'POP': return 'bg-sky-500';
+        case 'APPOINTMENT': return 'bg-indigo-500';
+        case 'PROSPECT': return 'bg-pink-500';
         case 'POG': return 'bg-blue-500';
         case 'OC': return 'bg-purple-500';
         case 'OD': return 'bg-green-500';
