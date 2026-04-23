@@ -32,6 +32,8 @@ const DEFAULT_LEAD_CATEGORY_ACCESS: Record<LeadCategory, LeadCategoryAccessSetti
   'OC': { roles: ['SYSTEM_ADMIN', 'ADMIN', 'CRM'], specialAccess: [] },
   'OD': { roles: ['SYSTEM_ADMIN', 'ADMIN', 'CRM'], specialAccess: [] },
   'ROD': { roles: ['SYSTEM_ADMIN', 'ADMIN', 'CRM'], specialAccess: [] },
+  'APPOINTMENT': { roles: ['SYSTEM_ADMIN', 'ADMIN', 'CRM'], specialAccess: [] },
+  'PROSPECT': { roles: ['SYSTEM_ADMIN', 'ADMIN', 'CRM'], specialAccess: [] },
 };
 
 const DEFAULT_ROLE_BASED_TARGETS: RoleBasedTarget = {
