@@ -126,47 +126,12 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                             <TableHead>Phone</TableHead>
                             <TableHead>Source</TableHead>
                             <TableHead>Category</TableHead>
-"use client";
-
-import React, { useMemo } from 'react';
-import type { Lead, User, LeadCategory } from '@/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuSub,
-    DropdownMenuSubTrigger,
-    DropdownMenuPortal,
-    DropdownMenuSubContent
-} from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, Users, MoreVertical, Briefcase, FolderEdit, Eye, Check } from 'lucide-react';
-import { format, parseISO, isBefore, startOfDay, isToday } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
-import { Checkbox } from '@/components/ui/checkbox';
-import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
-
-interface LeadListViewProps {
-    leads: Lead[];
-    isLoading: boolean;
-    currentUser: User | null;
-    onViewLead: (lead: Lead) => void;
-    onDeleteLead: (lead: Lead) => void;
-    onTransferLead: (lead: Lead) => void;
-    onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void;
-    allUsers: User[];
-    isSelectionMode?: boolean;
-    selectedLeadIds?: Set<string>;
-    onSelectionChange?: (leadId: string, isSelected: boolean) => void;
-    onSelectAll?: (isSelected: boolean) => void;
-}
-
-const formatDateSafe = (dateString?: string | null) => {
+                            <TableHead>Status</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead className="text-right pr-6">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
     if (!dateString) return null; // Return null for blank output
     try {
         return format(parseISO(dateString), 'd MMM, yyyy');
