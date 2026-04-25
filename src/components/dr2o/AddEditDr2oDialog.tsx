@@ -11,6 +11,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
@@ -38,10 +47,9 @@ const LR_DRAFT_STORAGE_KEY = 'lrDailyEntryDraft';
 export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, currentUser, team }: AddEditDr2oDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   // CR Fields
-  const [companyName, setCompanyName] = useState('');
-  const [companyNumber, setCompanyNumber] = useState('');
-  const [paymentCompanyName, setPaymentCompanyName] = useState('');
-  const [paymentNumber, setPaymentNumber] = useState('');
+  const [appointmentCount, setAppointmentCount] = useState<number | string>('');
+  const [prospectCount, setProspectCount] = useState<number | string>('');
+  const [saleCount, setSaleCount] = useState<number | string>('');
   // DR/CO Fields
   const [newCustomer1, setNewCustomer1] = useState('');
   const [newCustomer2, setNewCustomer2] = useState('');
@@ -104,10 +112,9 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2(entry.oldCustomer2 || '');
         setOldCustomer3(entry.oldCustomer3 || '');
         setOldCustomer4(entry.oldCustomer4 || '');
-        setCompanyName(entry.companyName || '');
-        setCompanyNumber(entry.companyNumber || '');
-        setPaymentCompanyName(entry.paymentCompanyName || '');
-        setPaymentNumber(entry.paymentNumber || '');
+        setAppointmentCount(entry.appointmentCount || '');
+        setProspectCount(entry.prospectCount || '');
+        setSaleCount(entry.saleCount || '');
         if (team !== 'LR') { // Only reset for non-LR or if no items exist
             setLrItems(entry.lrItems && entry.lrItems.length > 0 ? entry.lrItems : [{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
         }
@@ -115,8 +122,8 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         if (team !== 'LR') { // Non-LR teams always reset
              setDate(new Date());
              setNewCustomer1(''); setNewCustomer2(''); setNewCustomer3('');
-             setOldCustomer1(''); setOldCustomer2(''); setOldCustomer3(''); setOldCustomer4('');
-             setCompanyName(''); setCompanyNumber(''); setPaymentCompanyName(''); setPaymentNumber('');
+              setOldCustomer1(''); setOldCustomer2(''); setOldCustomer3(''); setOldCustomer4('');
+              setAppointmentCount(''); setProspectCount(''); setSaleCount('');
              setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
         }
       }
@@ -161,7 +168,9 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       crmName: isEditMode && entry ? entry.crmName : currentUser.name,
       newCustomer1, newCustomer2, newCustomer3,
       oldCustomer1, oldCustomer2, oldCustomer3, oldCustomer4,
-      companyName, companyNumber, paymentCompanyName, paymentNumber,
+      appointmentCount: Number(appointmentCount) || 0,
+      prospectCount: Number(prospectCount) || 0,
+      saleCount: Number(saleCount) || 0,
       lrItems: team === 'LR' ? lrItems.filter(item => item.companyName.trim() !== '' || item.productName.trim() !== '') : [],
     };
 
@@ -188,7 +197,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   const getDialogTitle = () => {
     const action = isEditMode ? 'Edit' : 'Add';
     switch(team) {
-      case 'CR': return `${action} CR Report`;
+      case 'CR': return `${action} Daily Performance Log`;
       case 'DR': return `${action} DR Report`;
       case 'LR': return `${action} LR Daily Entry`;
       case 'CO': return `${action} CO Report`;
@@ -199,7 +208,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   const getDialogDescription = () => {
     if (isEditMode) return `Editing report for ${format(new Date(entry!.date), 'PPP')}`;
     switch (team) {
-      case 'CR': return 'Fill in your daily customer follow-ups.';
+      case 'CR': return 'Track your daily appointments, prospects, and sales.';
       case 'DR': return 'Fill in your daily DR follow-ups.';
       case 'CO': return 'Fill in your daily CO follow-ups.';
       case 'LR': return 'Submit your daily entry for the logistics team.';
@@ -302,20 +311,41 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
     if (team === 'CR') {
       return (
         <div className="space-y-4">
-          <fieldset className="border p-4 rounded-md">
-            <legend className="text-sm font-medium px-1">Customer Info</legend>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-              <Input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Company Name" />
-              <Input value={companyNumber} onChange={e => setCompanyNumber(e.target.value)} placeholder="Number" />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="appointment">Appointment</Label>
+              <Input 
+                id="appointment" 
+                type="number" 
+                value={appointmentCount} 
+                onChange={e => setAppointmentCount(e.target.value)} 
+                placeholder="0"
+                disabled={!canEditEntry}
+              />
             </div>
-          </fieldset>
-          <fieldset className="border p-4 rounded-md">
-            <legend className="text-sm font-medium px-1">Payment Info</legend>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-              <Input value={paymentCompanyName} onChange={e => setPaymentCompanyName(e.target.value)} placeholder="Payment Company Name" />
-              <Input value={paymentNumber} onChange={e => setPaymentNumber(e.target.value)} placeholder="Payment Number" />
+            <div className="space-y-2">
+              <Label htmlFor="prospect">Prospect</Label>
+              <Input 
+                id="prospect" 
+                type="number" 
+                value={prospectCount} 
+                onChange={e => setProspectCount(e.target.value)} 
+                placeholder="0"
+                disabled={!canEditEntry}
+              />
             </div>
-          </fieldset>
+            <div className="space-y-2">
+              <Label htmlFor="sale">Sale</Label>
+              <Input 
+                id="sale" 
+                type="number" 
+                value={saleCount} 
+                onChange={e => setSaleCount(e.target.value)} 
+                placeholder="0"
+                disabled={!canEditEntry}
+              />
+            </div>
+          </div>
         </div>
       );
     }
@@ -368,6 +398,63 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   };
 
 
+  const isMobile = useIsMobile();
+
+  const formContent = (
+    <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="space-y-1">
+        <Label htmlFor="report-date">Date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+              disabled={!canSelectDate && !isEditMode}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date ? format(date, "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              initialFocus
+              disabled={!canSelectDate && !isEditMode}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      
+      {renderFormFields()}
+      
+      <div className="pt-6 flex flex-row gap-3 mt-2">
+        <Button type="button" variant="secondary" className="flex-1 h-12 rounded-2xl font-medium bg-muted/50 hover:bg-muted" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+        <Button type="submit" className="flex-1 h-12 rounded-2xl font-semibold bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 border-none" disabled={isSubmitting || !canEditEntry}>
+          {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : (isEditMode ? 'Save Changes' : 'Submit Report')}
+        </Button>
+      </div>
+    </form>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[85vh] px-6 pt-2 rounded-t-[2.5rem] border-none overflow-hidden flex flex-col bg-white [&>button]:hidden">
+          <div className="mx-auto w-12 h-1.5 rounded-full bg-gray-200 mt-2 mb-6 shrink-0" />
+          <SheetHeader className="text-left mb-2 px-1">
+            <SheetTitle className="text-2xl font-bold tracking-tight text-gray-900">{getDialogTitle()}</SheetTitle>
+            <SheetDescription className="text-base text-gray-500">{getDialogDescription()}</SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto py-2 custom-scrollbar pr-1">
+            {formContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-2xl lg:max-w-4xl">
@@ -375,41 +462,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
           <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>{getDialogDescription()}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-          <div className="space-y-1">
-            <Label htmlFor="report-date">Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-                  disabled={!canSelectDate && !isEditMode}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  initialFocus
-                  disabled={!canSelectDate && !isEditMode}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          {renderFormFields()}
-          
-          <DialogFooter className="pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || !canEditEntry}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : (isEditMode ? 'Save Changes' : 'Submit Report')}
-            </Button>
-          </DialogFooter>
-        </form>
+        {formContent}
       </DialogContent>
     </Dialog>
   );

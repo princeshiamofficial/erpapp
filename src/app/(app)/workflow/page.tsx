@@ -265,20 +265,20 @@ export default function DR2OPage() {
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Company Name</TableHead>
-                                    <TableHead>Company Number</TableHead>
-                                    <TableHead>Payment Company</TableHead>
-                                    <TableHead>Payment Number</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Appointment</TableHead>
+                                    <TableHead>Prospect</TableHead>
+                                    <TableHead>Sale</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {entries.map(row => (
                                       <TableRow key={row.id}>
-                                        <TableCell>{row.companyName || 'N/A'}</TableCell>
-                                        <TableCell>{row.companyNumber || 'N/A'}</TableCell>
-                                        <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
-                                        <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
+                                        <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                                        <TableCell>{row.appointmentCount || 0}</TableCell>
+                                        <TableCell>{row.prospectCount || 0}</TableCell>
+                                        <TableCell>{row.saleCount || 0}</TableCell>
                                         <TableCell className="text-right">
                                            <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
@@ -313,10 +313,9 @@ export default function DR2OPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Date</TableHead>
-                        <TableHead>Company Name</TableHead>
-                        <TableHead>Company Number</TableHead>
-                        <TableHead>Payment Company</TableHead>
-                        <TableHead>Payment Number</TableHead>
+                        <TableHead>Appointment</TableHead>
+                        <TableHead>Prospect</TableHead>
+                        <TableHead>Sale</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -324,10 +323,9 @@ export default function DR2OPage() {
                       {userEntries.map(row => (
                           <TableRow key={row.id}>
                             <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                            <TableCell>{row.companyName || 'N/A'}</TableCell>
-                            <TableCell>{row.companyNumber || 'N/A'}</TableCell>
-                            <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
-                            <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
+                            <TableCell>{row.appointmentCount || 0}</TableCell>
+                            <TableCell>{row.prospectCount || 0}</TableCell>
+                            <TableCell>{row.saleCount || 0}</TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>
                                   <DropdownMenuTrigger asChild>

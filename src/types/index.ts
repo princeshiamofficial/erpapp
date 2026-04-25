@@ -632,10 +632,9 @@ export interface Dr2oEntry {
   crmId: string;
   crmName: string;
   // CR Fields
-  companyName?: string;
-  companyNumber?: string;
-  paymentCompanyName?: string;
-  paymentNumber?: string;
+  appointmentCount?: number;
+  prospectCount?: number;
+  saleCount?: number;
   // DR/CO Fields
   newCustomer1?: string;
   newCustomer2?: string;
