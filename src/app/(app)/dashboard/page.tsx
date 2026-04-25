@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays, subMonths } from "date-fns";
+import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays, subMonths, isValid } from "date-fns";
 import {
   Hand,
   ShoppingCart,
@@ -295,7 +295,7 @@ function DashboardContent() {
   });
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("This Month");
   const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("thisMonth");
-  const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly'>('daily');
+  const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly' | 'monthly'>('daily');
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
   const [feedbackToDelete, setFeedbackToDelete] = useState<Feedback | null>(null);
   const [isDeletingFeedback, setIsDeletingFeedback] = useState(false);
@@ -690,28 +690,55 @@ function DashboardContent() {
         .map(([hour, data]) => ({ date: hour.toString(), sales: data.sales, orders: data.orders }))
         .sort((a, b) => parseInt(a.date) - parseInt(b.date));
     } else if (selectedDateRange?.from && selectedDateRange?.to) {
-      const dailyData = new Map<string, { sales: number; orders: number }>();
-      let tempDate = new Date(selectedDateRange.from);
-      while (tempDate <= selectedDateRange.to) {
-        dailyData.set(format(tempDate, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
-        tempDate = addDays(tempDate, 1);
-      }
-
-      filteredOrders.forEach(order => {
-        if (order.createdAt) {
-          try {
-            const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
-            if (dailyData.has(orderDateStr)) {
-              const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
-              const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
-              dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
-            }
-          } catch (e) { /* ignore */ }
+      if (chartGranularity === 'monthly') {
+        const monthlyData = new Map<string, { sales: number; orders: number }>();
+        let tempDate = startOfMonth(new Date(selectedDateRange.from));
+        const endRangeDate = endOfMonth(new Date(selectedDateRange.to));
+        
+        while (tempDate <= endRangeDate) {
+          monthlyData.set(format(tempDate, 'yyyy-MM'), { sales: 0, orders: 0 });
+          tempDate = addDays(endOfMonth(tempDate), 1);
         }
-      });
-      chartData = Array.from(dailyData.entries())
-        .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        filteredOrders.forEach(order => {
+          if (order.createdAt) {
+            try {
+              const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM');
+              if (monthlyData.has(orderDateStr)) {
+                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
+                const existing = monthlyData.get(orderDateStr) || { sales: 0, orders: 0 };
+                monthlyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
+              }
+            } catch (e) { /* ignore */ }
+          }
+        });
+        chartData = Array.from(monthlyData.entries())
+          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+      } else {
+        const dailyData = new Map<string, { sales: number; orders: number }>();
+        let tempDate = new Date(selectedDateRange.from);
+        while (tempDate <= selectedDateRange.to) {
+          dailyData.set(format(tempDate, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
+          tempDate = addDays(tempDate, 1);
+        }
+
+        filteredOrders.forEach(order => {
+          if (order.createdAt) {
+            try {
+              const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
+              if (dailyData.has(orderDateStr)) {
+                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
+                const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
+                dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
+              }
+            } catch (e) { /* ignore */ }
+          }
+        });
+        chartData = Array.from(dailyData.entries())
+          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      }
     }
 
     return {
@@ -729,7 +756,7 @@ function DashboardContent() {
       invoiceCodPaidCount: currentInvoiceCodPaidCount,
       salesCount: filteredOrders.length,
     };
-  }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
+  }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity]);
 
   const [teamPerformanceDateRange, setTeamPerformanceDateRange] = useState<DateRange | undefined>(() => {
     const now = new Date();
@@ -854,10 +881,20 @@ function DashboardContent() {
   useEffect(() => {
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
       setChartGranularity('hourly');
+    } else if (selectedPredefinedValue === 'thisYear' || selectedPredefinedValue === 'lastYear') {
+      setChartGranularity('monthly');
+    } else if (selectedPredefinedValue === 'custom' && selectedDateRange?.from && selectedDateRange?.to) {
+      const days = differenceInDays(selectedDateRange.to, selectedDateRange.from);
+      if (days > 31) {
+        setChartGranularity('monthly');
+      } else {
+        setChartGranularity('daily');
+      }
     } else {
+      // For thisMonth, lastMonth, last7Days, last30Days
       setChartGranularity('daily');
     }
-  }, [selectedPredefinedValue]);
+  }, [selectedPredefinedValue, selectedDateRange]);
 
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -1004,7 +1041,17 @@ function DashboardContent() {
                       if (hour < 12) return `${hour} AM`;
                       return `${hour - 12} PM`;
                     })()
-                    : format(parseISO(label), 'd MMM, yyyy')
+                    : (() => {
+                        try {
+                          // Handle yyyy-MM or yyyy-MM-dd
+                          const dateStr = (chartGranularity === 'monthly' && label.length === 7) ? `${label}-01` : label;
+                          const date = parseISO(dateStr);
+                          if (!isValid(date)) return label;
+                          return format(date, chartGranularity === 'monthly' ? 'MMMM yyyy' : 'd MMM, yyyy');
+                        } catch (e) {
+                          return label;
+                        }
+                      })()
                 ) : 'N/A'}
               </span>
             </div>
@@ -1208,8 +1255,8 @@ function DashboardContent() {
             </div>
 
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
-              <Card className="shadow-xl bg-card lg:col-span-3 rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
+            <div className="flex flex-col gap-6 print:hidden">
+              <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden w-full">
                 <CardHeader className="border-b bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
                   <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
                     <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
@@ -1253,8 +1300,18 @@ function DashboardContent() {
                               if (hour < 12) return `${hour} AM`;
                               return `${hour - 12} PM`;
                             }
+                            if (chartGranularity === 'monthly') {
+                              try {
+                                const dateStr = value.length === 7 ? `${value}-01` : value;
+                                const date = parseISO(dateStr);
+                                if (!isValid(date)) return value;
+                                return format(date, 'MMM');
+                              } catch (e) { return value; }
+                            }
                             try {
-                              return format(parseISO(value), 'd MMM');
+                              const date = parseISO(value);
+                              if (!isValid(date)) return value;
+                              return format(date, 'd MMM');
                             } catch (e) { return value; }
                           }}
                           className="text-xs"
@@ -1296,7 +1353,7 @@ function DashboardContent() {
                 </CardContent>
               </Card>
 
-              <div className="lg:col-span-2 grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
                   <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
                     <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
@@ -1335,6 +1392,7 @@ function DashboardContent() {
                     )}
                   </CardContent>
                 </Card>
+
                 {canSeeSystemAdminCharts && (
                   <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
                     <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">

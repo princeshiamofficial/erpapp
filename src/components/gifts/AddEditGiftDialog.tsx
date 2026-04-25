@@ -168,8 +168,8 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
               <Label>Gift Items</Label>
               {selectedGiftItems.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/50 min-h-[40px]">
-                  {selectedGiftItems.map(item => (
-                    <Badge key={item} variant="secondary" className="gap-1.5 py-1">
+                  {selectedGiftItems.map((item, idx) => (
+                    <Badge key={`${item}-${idx}`} variant="secondary" className="gap-1.5 py-1">
                       {item}
                       <button type="button" onClick={() => handleGiftSelect(item)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
                         <X className="h-3 w-3 text-destructive" />
@@ -191,8 +191,8 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
                     <CommandList>
                       <CommandEmpty>No gift option found.</CommandEmpty>
                       <CommandGroup>
-                        {giftOptions.map((option) => (
-                          <CommandItem key={option.id} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
+                        {giftOptions.map((option, idx) => (
+                          <CommandItem key={`${option.id}-${idx}`} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
                             <Check className={cn("mr-2 h-4 w-4", selectedGiftItems.includes(option.name) ? "opacity-100" : "opacity-0")} />
                             {option.name}
                           </CommandItem>

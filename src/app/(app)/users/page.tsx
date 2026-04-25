@@ -379,30 +379,27 @@ export default function UsersPage() {
                   <TableHead className="pr-6 text-right min-w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {isLoadingUsers ? (
-                  [...Array(3)].map((_, i) => (
+                <TableBody>
+                  {isLoadingUsers && [...Array(10)].map((_, i) => (
                     <TableRow key={`skel-user-${i}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-5 w-8" /></TableCell>
-                      <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                      <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                      {showBanStatusColumn && <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>}
+                      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell className="pr-6 text-right space-x-1.5">
-                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
-                      </TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      {showBanStatusColumn && <TableCell><Skeleton className="h-5 w-24" /></TableCell>}
+                      <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-9 inline-block rounded-md" /></TableCell>
                     </TableRow>
-                  ))
-                ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map((user, index) => {
+                  ))}
+
+                  {!isLoadingUsers && filteredUsers.length > 0 && filteredUsers.map((user, index) => {
                     const roleDef = roleDefinitionsMap.get(user.role);
                     const badgeColor = roleDef?.color || '#6b7280';
                     const textColor = getContrastTextColor(badgeColor);
 
                     return (
-                      <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
+                      <TableRow key={user.id || `user-${index}`} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-mono text-muted-foreground">{index + 1}</TableCell>
                         <TableCell>
                           <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
@@ -422,9 +419,11 @@ export default function UsersPage() {
                         </TableCell>
                         {showBanStatusColumn && (
                           <TableCell>
-                            <Badge variant={user.isBanned ? "destructive" : "default"} className={user.isBanned ? "bg-red-500/20 text-red-700 border-red-500/30" : "bg-green-500/20 text-green-700 border-green-500/30"}>
-                              {user.isBanned ? "Banned" : "Active"}
-                            </Badge>
+                            {user.isBanned ? (
+                              <Badge variant="destructive" className="bg-red-500/20 text-red-700 border-red-500/30">Banned</Badge>
+                            ) : (
+                              <Badge variant="default" className="bg-green-500/20 text-green-700 border-green-500/30">Active</Badge>
+                            )}
                           </TableCell>
                         )}
                         <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
@@ -508,50 +507,51 @@ export default function UsersPage() {
                         </TableCell>
                       </TableRow>
                     );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
-                      <svg
-                        width="64"
-                        height="64"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mx-auto mb-6 opacity-50", "h-16 w-16")}
-                      >
-                        <path
-                          d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M17 4.5L7 9.5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <p className="text-lg text-muted-foreground font-medium">
-                        {searchTerm ? "No users match your search." : "No users found in database."}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {searchTerm ? "Try a different search term." : (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') ? "Add users to manage them here." : "User data could not be loaded."}
-                      </p>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
+                  })}
+
+                  {!isLoadingUsers && filteredUsers.length === 0 && (
+                    <TableRow key="empty-users">
+                      <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
+                        <svg
+                          width="64"
+                          height="64"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mx-auto mb-6 opacity-50", "h-16 w-16")}
+                        >
+                          <path
+                            d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M17 4.5L7 9.5"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <p className="text-lg text-muted-foreground font-medium">
+                          {searchTerm ? "No users match your search." : "No users found in database."}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {searchTerm ? "Try a different search term." : (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') ? "Add users to manage them here." : "User data could not be loaded."}
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
             </Table>
           </div>
         </CardContent>

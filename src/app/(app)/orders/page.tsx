@@ -563,94 +563,94 @@ export default function OrdersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  [...Array(10)].map((_, i) => (
-                    <TableRow key={`skel-${i}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell className="pr-6 text-right space-x-2">
-                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
+                {isLoading && [...Array(10)].map((_, i) => (
+                  <TableRow key={`skel-order-${i}`}>
+                    <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className="pr-6 text-right space-x-2">
+                      <Skeleton className="h-9 w-9 inline-block rounded-md" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {!isLoading && paginatedOrders.length > 0 && paginatedOrders.map((order, index) => {
+                  const statusInfo = orderStatusDisplay[order.currentStatus] || { name: order.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
+                  return (
+                    <TableRow key={order.id || `order-${index}`} className="hover:bg-muted/50 transition-colors">
+                      <TableCell className="pl-6">
+                        <Link href={`/track/${order.id}`} className="font-medium text-primary hover:underline">
+                          {order.id}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-card-foreground">
+                        <div>{order.companyName}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
+                          {statusInfo.name}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
+                      <TableCell className="text-card-foreground">{order.designerRepresentativeName || 'N/A'}</TableCell>
+                      <TableCell className="text-muted-foreground">{isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
+                      <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" title="Order Actions">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canEditOrder && (
+                              <DropdownMenuItem
+                                onSelect={() => handleOpenEditOrderDialog(order)}
+                                disabled={!currentUser || !currentUser.role}
+                                className="cursor-pointer"
+                              >
+                                <Edit3 className="mr-2 h-4 w-4" /> Edit Order
+                              </DropdownMenuItem>
+                            )}
+                            {canAssignDr && (
+                              <DropdownMenuItem
+                                onSelect={() => handleOpenAssignDrDialog(order)}
+                                className="cursor-pointer"
+                              >
+                                <Users2 className="mr-2 h-4 w-4" />
+                                {order.designerRepresentativeId ? "Re-assign DR" : "Assign DR"}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem asChild className="cursor-pointer">
+                              <Link href={`/track/${order.id}`}>
+                                <Eye className="mr-2 h-4 w-4" /> View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            {canDeleteOrder && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setOrderToDelete(order);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                  className="cursor-pointer text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete Order
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : paginatedOrders.length > 0 ? (
-                  paginatedOrders.map((order) => {
-                    const statusInfo = orderStatusDisplay[order.currentStatus] || { name: order.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
-                    return (
-                      <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6">
-                          <Link href={`/track/${order.id}`} className="font-medium text-primary hover:underline">
-                            {order.id}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-card-foreground">
-                          <div>{order.companyName}</div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
-                            {statusInfo.name}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
-                        <TableCell className="text-card-foreground">{order.designerRepresentativeName || 'N/A'}</TableCell>
-                        <TableCell className="text-muted-foreground">{isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
-                        <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-9 w-9" title="Order Actions">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {canEditOrder && (
-                                <DropdownMenuItem
-                                  onSelect={() => handleOpenEditOrderDialog(order)}
-                                  disabled={!currentUser || !currentUser.role}
-                                  className="cursor-pointer"
-                                >
-                                  <Edit3 className="mr-2 h-4 w-4" /> Edit Order
-                                </DropdownMenuItem>
-                              )}
-                              {canAssignDr && (
-                                <DropdownMenuItem
-                                  onSelect={() => handleOpenAssignDrDialog(order)}
-                                  className="cursor-pointer"
-                                >
-                                  <Users2 className="mr-2 h-4 w-4" />
-                                  {order.designerRepresentativeId ? "Re-assign DR" : "Assign DR"}
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem asChild className="cursor-pointer">
-                                <Link href={`/track/${order.id}`}>
-                                  <Eye className="mr-2 h-4 w-4" /> View Details
-                                </Link>
-                              </DropdownMenuItem>
-                              {canDeleteOrder && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onSelect={() => {
-                                      setOrderToDelete(order);
-                                      setIsDeleteDialogOpen(true);
-                                    }}
-                                    className="cursor-pointer text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Order
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
+                  );
+                })}
+
+                {!isLoading && paginatedOrders.length === 0 && (
+                  <TableRow key="empty-orders">
                     <TableCell colSpan={7} className="text-center py-12 h-[300px]">
                       <PackageIcon className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                       <p className="text-lg text-muted-foreground font-medium">

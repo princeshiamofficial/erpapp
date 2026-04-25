@@ -335,7 +335,7 @@ export default function PurchaseRequestPage() {
                       })}
                     </TooltipProvider>
                   ) : (
-                    <TableRow>
+                    <TableRow key="empty-requests">
                       <TableCell colSpan={10} className="text-center py-12 h-[300px]">
                         <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                         <p className="text-lg text-muted-foreground font-medium">No purchase requests found.</p>

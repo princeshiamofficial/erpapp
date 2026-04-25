@@ -32,6 +32,7 @@ import {
   isSameDay,
   startOfDay, // Added
   endOfDay,   // Added
+  getYear,    // Added
 } from "date-fns";
 import type { DateRange as RDPDateRange } from "react-day-picker";
 export type DateRange = RDPDateRange;
@@ -75,6 +76,9 @@ const getDisplayLabel = (
       if (range.to) {
         if (isSameDay(range.from, range.to)) {
           return format(range.from, "MMM d, yyyy");
+        }
+        if (getYear(range.from) !== getYear(range.to)) {
+          return `${format(range.from, "MMM d, yyyy")} - ${format(range.to, "MMM d, yyyy")}`;
         }
         return `${format(range.from, "MMM d")} - ${format(range.to, "MMM d, yyyy")}`;
       }

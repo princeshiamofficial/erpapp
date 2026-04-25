@@ -183,34 +183,53 @@ export default function GiftsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? ([...Array(10)].map((_, i) => (
-                    <TableRow key={`skel-gift-${i}`}><TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
-                  ))) : paginatedGifts.length > 0 ? (
-                    paginatedGifts.map((gift) => (
-                      <TableRow key={gift.id} className="hover:bg-muted/50">
-                        <TableCell className="pl-6 font-mono text-primary">{gift.giftIdDisplay}</TableCell>
-                        <TableCell className="font-medium">
-                          {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
-                        </TableCell>
-                        <TableCell>
-                          <div>{gift.recipientName}</div>
-                        </TableCell>
-                        <TableCell>{gift.recipientPhone}</TableCell>
-                        <TableCell>{formatDate(gift.dateGiven)}</TableCell>
-                        <TableCell className="pr-6 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(gift)} className="cursor-pointer"><Edit3 className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleDeleteRequest(gift)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={6} className="h-48 text-center"><GiftIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />No gift records found.</TableCell></TableRow>
-                  )}
+                   {isLoading && [...Array(10)].map((_, i) => (
+                     <TableRow key={`skel-gift-${i}`}>
+                       <TableCell colSpan={6}>
+                         <Skeleton className="h-8 w-full" />
+                       </TableCell>
+                     </TableRow>
+                   ))}
+
+                   {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
+                     <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
+                       <TableCell className="pl-6 font-mono text-primary">{gift.giftIdDisplay}</TableCell>
+                       <TableCell className="font-medium">
+                         {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
+                       </TableCell>
+                       <TableCell>
+                         <div>{gift.recipientName}</div>
+                       </TableCell>
+                       <TableCell>{gift.recipientPhone}</TableCell>
+                       <TableCell>{formatDate(gift.dateGiven)}</TableCell>
+                       <TableCell className="pr-6 text-right">
+                         <DropdownMenu>
+                           <DropdownMenuTrigger asChild>
+                             <Button variant="ghost" size="icon" className="h-8 w-8">
+                               <MoreVertical className="h-4 w-4" />
+                             </Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="end">
+                             <DropdownMenuItem onSelect={() => handleOpenEditDialog(gift)} className="cursor-pointer">
+                               <Edit3 className="mr-2 h-4 w-4" />Edit
+                             </DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => handleDeleteRequest(gift)} className="cursor-pointer text-destructive focus:text-destructive">
+                               <Trash2 className="mr-2 h-4 w-4" />Delete
+                             </DropdownMenuItem>
+                           </DropdownMenuContent>
+                         </DropdownMenu>
+                       </TableCell>
+                     </TableRow>
+                   ))}
+
+                   {!isLoading && paginatedGifts.length === 0 && (
+                     <TableRow key="empty-gifts">
+                       <TableCell colSpan={6} className="h-48 text-center">
+                         <GiftIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />
+                         No gift records found.
+                       </TableCell>
+                     </TableRow>
+                   )}
                 </TableBody>
               </Table>
             </div>
