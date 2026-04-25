@@ -729,13 +729,13 @@ function SortableRoleRow({
             backgroundColor: role.color || '#6b7280',
             color: getContrastTextColor(role.color || '#6b7280')
           }}
-          className="border-none px-3 py-1 text-sm"
+          className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
         >
           {role.name}
         </Badge>
       </TableCell>
       <TableCell>
-        <Badge variant={role.isDefault ? "secondary" : "outline"}>
+        <Badge variant={role.isDefault ? "secondary" : "outline"} className="text-[10px] h-5.5 px-2 uppercase tracking-wide">
           {role.isDefault ? "System Default" : "Custom"}
         </Badge>
       </TableCell>

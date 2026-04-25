@@ -17,7 +17,37 @@ const DEFAULT_ROLES: Omit<UserRoleDefinition, 'createdAt' | 'priority'>[] = [
 
 export const getRoles = async (): Promise<UserRoleDefinition[]> => {
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ROLES_TABLE} ORDER BY priority ASC, created_at ASC`);
+    let results = await query<any[]>(`SELECT * FROM ${ROLES_TABLE} ORDER BY priority ASC, created_at ASC`);
+
+    // Check for missing default roles even if some roles exist
+    const existingIds = new Set(results.map(r => r.id));
+    const missingDefaults = DEFAULT_ROLES.filter(dr => !existingIds.has(dr.id));
+
+    if (missingDefaults.length > 0) {
+      console.log(`Found ${missingDefaults.length} missing default roles, syncing...`);
+      const maxPriority = results.length > 0 ? Math.max(...results.map(r => r.priority)) : -1;
+      
+      for (let i = 0; i < missingDefaults.length; i++) {
+        const role = missingDefaults[i];
+        const priority = maxPriority + 1 + i;
+        const createdAt = new Date().toISOString();
+        await query(
+          `INSERT INTO ${ROLES_TABLE} (id, name, color, is_default, priority, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [role.id, role.name, role.color, role.isDefault, priority, createdAt]
+        );
+        // Add to local results to avoid second DB call
+        results.push({
+          id: role.id,
+          name: role.name,
+          color: role.color,
+          is_default: 1,
+          priority,
+          created_at: createdAt
+        });
+      }
+      // Re-sort results to maintain order if necessary (though they are added to the end)
+      results.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+    }
 
     if (results.length > 0) {
       return results.map(row => ({
@@ -29,19 +59,7 @@ export const getRoles = async (): Promise<UserRoleDefinition[]> => {
         createdAt: row.created_at ? (row.created_at instanceof Date ? row.created_at : new Date(row.created_at)).toISOString() : new Date().toISOString(),
       } as UserRoleDefinition));
     } else {
-      // Seed default roles
-      console.log("No roles found in MySQL, seeding defaults...");
-      const roles: UserRoleDefinition[] = [];
-      for (let i = 0; i < DEFAULT_ROLES.length; i++) {
-        const role = DEFAULT_ROLES[i];
-        const createdAt = new Date().toISOString();
-        await query(
-          `INSERT INTO ${ROLES_TABLE} (id, name, color, is_default, priority, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-          [role.id, role.name, role.color, role.isDefault, i, createdAt]
-        );
-        roles.push({ ...role, priority: i, createdAt } as UserRoleDefinition);
-      }
-      return roles;
+      return []; // Should not happen now due to sync logic above
     }
   } catch (error) {
     console.error("Error fetching user roles from MySQL:", error);

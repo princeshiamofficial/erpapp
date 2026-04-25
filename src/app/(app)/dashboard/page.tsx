@@ -575,7 +575,7 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
 
-  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
       return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0 };
@@ -589,6 +589,16 @@ function DashboardContent() {
     let currentInvoiceCodPaid = 0;
     let currentInvoiceCodPaidCount = 0;
     let currentInvoicePaidCount = 0;
+    let currentRepeatSalesCount = 0;
+    let currentRepeatSalesAmount = 0;
+
+    const customerOrderCounts = new Map<string, number>();
+    allOrders.forEach(o => {
+      const jobId = (o.companyName || '').split(' • ')[0].trim();
+      if (jobId) {
+        customerOrderCounts.set(jobId, (customerOrderCounts.get(jobId) || 0) + 1);
+      }
+    });
 
     let ordersForCalcs = allOrders;
     if (currentUser?.role === 'CRM') {
@@ -625,6 +635,12 @@ function DashboardContent() {
 
         if (orderDue > 0.01) {
           currentOrdersWithDueCount++;
+        }
+
+        const jobId = (order.companyName || '').split(' • ')[0].trim();
+        if (jobId && (customerOrderCounts.get(jobId) || 0) > 1) {
+          currentRepeatSalesCount++;
+          currentRepeatSalesAmount += netPayable;
         }
       }
 
@@ -755,6 +771,8 @@ function DashboardContent() {
       invoiceCodPaid: currentInvoiceCodPaid,
       invoiceCodPaidCount: currentInvoiceCodPaidCount,
       salesCount: filteredOrders.length,
+      repeatSalesCount: currentRepeatSalesCount,
+      repeatSalesAmount: currentRepeatSalesAmount,
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity]);
 
@@ -967,8 +985,8 @@ function DashboardContent() {
         icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
-        title: "Total Sell Return", 
-        value: showAmount ? formatCurrency(0) : "0", 
+        title: "Repeat Sales", 
+        value: showAmount ? formatCurrency(repeatSalesAmount) : repeatSalesCount.toString(), 
         icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
