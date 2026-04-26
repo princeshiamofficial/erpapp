@@ -592,11 +592,22 @@ function DashboardContent() {
     let currentRepeatSalesCount = 0;
     let currentRepeatSalesAmount = 0;
 
-    const customerOrderCounts = new Map<string, number>();
-    allOrders.forEach(o => {
-      const jobId = (o.companyName || '').split(' • ')[0].trim();
+    const customerOrderHistory = new Set<string>();
+    const repeatOrderIds = new Set<string>();
+    
+    // Sort all non-cancelled orders by date to identify the first order for each customer
+    const sortedValidOrders = [...allOrders]
+      .filter(o => o.currentStatus !== CANCELLED_STATUS_ID)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    sortedValidOrders.forEach(o => {
+      const jobId = (o.companyName || '').split('•')[0].trim();
       if (jobId) {
-        customerOrderCounts.set(jobId, (customerOrderCounts.get(jobId) || 0) + 1);
+        if (customerOrderHistory.has(jobId)) {
+          repeatOrderIds.add(o.id);
+        } else {
+          customerOrderHistory.add(jobId);
+        }
       }
     });
 
@@ -637,8 +648,7 @@ function DashboardContent() {
           currentOrdersWithDueCount++;
         }
 
-        const jobId = (order.companyName || '').split(' • ')[0].trim();
-        if (jobId && (customerOrderCounts.get(jobId) || 0) > 1) {
+        if (repeatOrderIds.has(order.id)) {
           currentRepeatSalesCount++;
           currentRepeatSalesAmount += netPayable;
         }

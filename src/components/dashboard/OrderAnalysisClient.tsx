@@ -11,6 +11,7 @@ import { parseISO, format, getYear, getMonth } from 'date-fns';
 import type { TrackingLink } from '@/types';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CANCELLED_STATUS_ID } from '@/lib/status-constants';
 
 interface OrderAnalysisClientProps {
   allOrders: TrackingLink[];
@@ -67,15 +68,17 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
       reorders: 0,
     }));
 
-    const sortedOrders = [...allOrders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    // Filter out cancelled orders and sort by date
+    const sortedOrders = [...allOrders]
+      .filter(order => order.currentStatus !== CANCELLED_STATUS_ID)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     sortedOrders.forEach(order => {
       try {
         const orderDate = parseISO(order.createdAt);
         const orderYear = getYear(orderDate);
 
-        const companyNameParts = (order.companyName || '').split('•');
-        const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim() : null;
+        const jobId = (order.companyName || '').split('•')[0].trim();
 
         let isReorder = false;
         if (jobId) {
