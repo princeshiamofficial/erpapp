@@ -29,7 +29,6 @@ interface AddEditTaskDialogProps {
 
 export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser }: AddEditTaskDialogProps) {
   const [taskCount, setTaskCount] = useState('');
-  const [likelihood, setLikelihood] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -38,10 +37,8 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
   useEffect(() => {
     if (isOpen && task) {
       setTaskCount(task.taskCount.toString());
-      setLikelihood(task.likelihood?.toString() || '');
     } else if (!isOpen) {
       setTaskCount('');
-      setLikelihood('');
     }
   }, [isOpen, task]);
   
@@ -50,14 +47,10 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
     if (!task) return;
 
     const numericTaskCount = parseInt(taskCount, 10);
-    const numericLikelihood = task.role === 'CRM' ? parseInt(likelihood, 10) : undefined;
     
     if (isNaN(numericTaskCount) || numericTaskCount < 0) {
-      toast({ title: "Invalid Input", description: "Task count must be a non-negative number.", variant: "destructive" });
-      return;
-    }
-    if (task.role === 'CRM' && (numericLikelihood === undefined || isNaN(numericLikelihood) || numericLikelihood < 0)) {
-       toast({ title: "Invalid Input", description: "Likely customers must be a non-negative number for CRM tasks.", variant: "destructive" });
+      const typeLabel = task.role === 'CRM' ? 'Sales' : task.role === 'DESIGNER_REPRESENTATIVE' ? 'Design' : 'Task';
+      toast({ title: "Invalid Input", description: `${typeLabel} count must be a non-negative number.`, variant: "destructive" });
       return;
     }
     
@@ -65,14 +58,14 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
     
     const updates: Partial<Omit<TaskEntry, 'id'>> = {
       taskCount: numericTaskCount,
-      likelihood: numericLikelihood,
     };
 
     const result = await updateTaskEntryAction(task.id, updates);
     setIsSubmitting(false);
 
     if (result.success) {
-      toast({ title: "Task Entry Updated", description: "The task entry has been successfully updated." });
+      const typeLabel = task.role === 'CRM' ? 'Sales' : task.role === 'DESIGNER_REPRESENTATIVE' ? 'Design' : 'Task';
+      toast({ title: `${typeLabel} Entry Updated`, description: `The ${typeLabel.toLowerCase()} entry has been successfully updated.` });
       onTaskSaved();
     } else {
       toast({ title: "Update Failed", description: result.error, variant: "destructive" });
@@ -84,22 +77,16 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Task Entry</DialogTitle>
+          <DialogTitle>Edit {task?.role === 'CRM' ? 'Sales' : task?.role === 'DESIGNER_REPRESENTATIVE' ? 'Design' : 'Task'} Entry</DialogTitle>
           <DialogDescription>
             Editing entry for <span className="font-semibold">{task?.userName}</span> on <span className="font-semibold">{task ? format(parseISO(task.date), 'PPP') : ''}</span>.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="task-count">Task Count</Label>
+            <Label htmlFor="task-count">{task?.role === 'CRM' ? 'Sales Done' : task?.role === 'DESIGNER_REPRESENTATIVE' ? 'Designs Done' : 'Task Count'}</Label>
             <Input id="task-count" type="number" value={taskCount} onChange={e => setTaskCount(e.target.value)} required />
           </div>
-          {task?.role === 'CRM' && (
-            <div className="space-y-1">
-              <Label htmlFor="likelihood">Likely Customers</Label>
-              <Input id="likelihood" type="number" value={likelihood} onChange={e => setLikelihood(e.target.value)} required />
-            </div>
-          )}
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>

@@ -793,7 +793,7 @@ function DashboardContent() {
       to: endOfMonth(now),
     };
   });
-  const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
+  const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('CRM');
   const [specificUserId, setSpecificUserId] = useState<string | 'all'>('all'); // New state for specific user filter
 
   const isAdminView = useMemo(() => {
@@ -802,8 +802,14 @@ function DashboardContent() {
   }, [currentUser]);
 
   const specificUserOptions = useMemo(() => {
-    return allUsers.filter(u => u.role === 'CRM' || u.role === 'DESIGNER_REPRESENTATIVE');
-  }, [allUsers]);
+    let filtered = allUsers.filter(u => !u.isBanned);
+    if (selectedTeam !== 'all') {
+      filtered = filtered.filter(u => u.role === selectedTeam);
+    } else {
+      filtered = filtered.filter(u => u.role === 'CRM' || u.role === 'DESIGNER_REPRESENTATIVE' || u.role === 'LR' || u.role === 'CO');
+    }
+    return filtered;
+  }, [allUsers, selectedTeam]);
 
   const { teamPerformanceData, totalPerformanceTarget } = useMemo(() => {
     if (!teamPerformanceDateRange?.from || !globalSettings?.roleBasedTargets) {
@@ -814,7 +820,7 @@ function DashboardContent() {
     const endDate = endOfDay(teamPerformanceDateRange.to || teamPerformanceDateRange.from);
     const roleBasedTargets = globalSettings.roleBasedTargets;
 
-    let usersToInclude = allUsers;
+    let usersToInclude = allUsers.filter(u => !u.isBanned);
     if (isAdminView) {
       if (specificUserId !== 'all') {
         usersToInclude = allUsers.filter(u => u.id === specificUserId);
@@ -822,7 +828,7 @@ function DashboardContent() {
         usersToInclude = allUsers.filter(u => u.role === selectedTeam);
       }
     } else if (currentUser) {
-      usersToInclude = allUsers.filter(u => u.role === currentUser.role);
+      usersToInclude = allUsers.filter(u => u.role === currentUser.role && !u.isBanned);
     }
 
     const numDaysInRange = differenceInDays(endDate, startDate) + 1;
@@ -849,8 +855,8 @@ function DashboardContent() {
           totalTarget = (monthlyTarget / getDaysInMonth(startDate)) * numDaysInRange;
         }
       } else if (selectedTeam === 'all') {
-        totalTarget = (allUsers.filter(u => u.role === 'CRM').length * roleBasedTargets.CRM) +
-          (allUsers.filter(u => u.role === 'DESIGNER_REPRESENTATIVE').length * roleBasedTargets.DESIGNER_REPRESENTATIVE) +
+        totalTarget = (allUsers.filter(u => u.role === 'CRM' && !u.isBanned).length * roleBasedTargets.CRM) +
+          (allUsers.filter(u => u.role === 'DESIGNER_REPRESENTATIVE' && !u.isBanned).length * roleBasedTargets.DESIGNER_REPRESENTATIVE) +
           roleBasedTargets.LR;
       } else if (selectedTeam === 'LR') {
         totalTarget = roleBasedTargets.LR;
@@ -868,11 +874,11 @@ function DashboardContent() {
     const monthlyTotalTarget = totalTarget;
     totalTarget = Math.round((monthlyTotalTarget / getDaysInMonth(startDate)) * numDaysInRange);
 
-    const dateMap = new Map<string, { totalDone: number; totalLikelihood: number; userData: { [userId: string]: { done: number; likelihood: number; role: UserRole } } }>();
+    const dateMap = new Map<string, { totalDone: number; userData: { [userId: string]: { done: number; role: UserRole } } }>();
 
     let currentDate = startDate;
     while (currentDate <= endDate) {
-      dateMap.set(format(currentDate, 'd MMM'), { totalDone: 0, totalLikelihood: 0, userData: {} });
+      dateMap.set(format(currentDate, 'd MMM'), { totalDone: 0, userData: {} });
       currentDate = addDays(currentDate, 1);
     }
 
@@ -884,12 +890,10 @@ function DashboardContent() {
           const dayData = dateMap.get(dateKey);
           if (dayData) {
             dayData.totalDone += entry.taskCount;
-            dayData.totalLikelihood += entry.likelihood || 0;
             if (!dayData.userData[entry.userId]) {
-              dayData.userData[entry.userId] = { done: 0, likelihood: 0, role: entry.role };
+              dayData.userData[entry.userId] = { done: 0, role: entry.role };
             }
             dayData.userData[entry.userId].done += entry.taskCount;
-            dayData.userData[entry.userId].likelihood += entry.likelihood || 0;
           }
         }
       } catch (e) { /* ignore invalid dates */ }
@@ -1502,7 +1506,7 @@ function DashboardContent() {
               specificUserId={specificUserId}
               isAdminView={isAdminView}
               refetchData={refetch}
-              allUsers={allUsers}
+              allUsers={allUsers.filter(u => !u.isBanned)}
               specificUserOptions={specificUserOptions}
             />
           </div>
@@ -1734,23 +1738,22 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
   if (active && payload && payload.length) {
     const donePayload = payload.find((p: any) => p.dataKey === 'totalDone');
     const targetPayload = payload.find((p: any) => p.dataKey === 'totalTarget');
-    const likelihoodPayload = payload.find((p: any) => p.dataKey === 'totalLikelihood');
     const userData = donePayload?.payload?.userData || {};
 
-    let userBreakdown: { user: User, done: number, likelihood: number }[] = [];
+    let userBreakdown: { user: User, done: number }[] = [];
 
     if (currentUser) {
       if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') {
         userBreakdown = Object.entries(userData)
-          .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
-          .filter(item => item.user && (item.done >= 0 || item.likelihood >= 0))
-          .sort((a, b) => b.done - a.done) as { user: User, done: number, likelihood: number }[];
+          .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
+          .filter(item => item.user && item.done >= 0)
+          .sort((a, b) => b.done - a.done) as { user: User, done: number }[];
       } else {
         userBreakdown = Object.entries(userData)
-          .filter(([userId, data]: [string, any]) => data.role === currentUser.role && (data.done >= 0 || data.likelihood >= 0))
-          .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
+          .filter(([userId, data]: [string, any]) => data.role === currentUser.role && data.done >= 0)
+          .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
           .filter(item => item.user)
-          .sort((a, b) => b.done - a.done) as { user: User, done: number, likelihood: number }[];
+          .sort((a, b) => b.done - a.done) as { user: User, done: number }[];
       }
     }
 
@@ -1768,13 +1771,6 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
             <span className="text-sm text-muted-foreground">Target:</span>
             <span className="text-sm font-medium ml-auto">{targetPayload.value}</span>
           </div>}
-          {likelihoodPayload && likelihoodPayload.value > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: likelihoodPayload.color }}></div>
-              <span className="text-sm text-muted-foreground">Assets:</span>
-              <span className="text-sm font-medium ml-auto">{likelihoodPayload.value}</span>
-            </div>
-          )}
         </div>
         {userBreakdown.length > 0 && (
           <>
@@ -1782,7 +1778,7 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
             <p className="font-semibold text-xs text-muted-foreground mt-1">Contributors:</p>
             <ScrollArea className="max-h-32 pr-2 -mr-2">
               <div className="space-y-1.5 mt-1">
-                {userBreakdown.map(({ user, done, likelihood }) => (
+                {userBreakdown.map(({ user, done }) => (
                   <div key={user.id} className="flex items-center gap-2 text-xs">
                     <Avatar className="h-5 w-5 border">
                       <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
@@ -1790,7 +1786,6 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
                     </Avatar>
                     <span className="text-muted-foreground truncate flex-1">{user.name}</span>
                     <span className="font-medium text-foreground">{done} tasks</span>
-                    {likelihood > 0 && <span className="font-medium text-purple-600">({likelihood} assets)</span>}
                   </div>
                 ))}
               </div>

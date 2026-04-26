@@ -116,8 +116,7 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
 // New action to add a task entry for team performance
 export async function addTaskEntryAction(
   user: User,
-  taskCount: number,
-  likelihood?: number
+  taskCount: number
 ): Promise<{ success: boolean; error?: string }> {
   if (!user || !user.id || !user.role) {
     return { success: false, error: "Invalid user data provided." };
@@ -126,19 +125,15 @@ export async function addTaskEntryAction(
     return { success: false, error: "Task count must be a non-negative number." };
   }
 
-  if (user.role === 'CRM' && (likelihood === undefined || isNaN(likelihood) || likelihood < 0)) {
-    return { success: false, error: "Likely Customers must be a non-negative number." };
-  }
-
   try {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const now = new Date();
+    const dateTimeStr = format(now, "yyyy-MM-dd'T'HH:mm:ss");
     const entryData = {
-      date: todayStr,
+      date: dateTimeStr,
       userId: user.id,
       userName: user.name,
       role: user.role,
       taskCount: taskCount,
-      likelihood: user.role === 'CRM' ? likelihood : undefined, // Only save likelihood for CRM
     };
 
     const result = await addTaskEntry(entryData);

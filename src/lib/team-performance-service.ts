@@ -14,7 +14,6 @@ export interface TaskEntry {
   userName: string;
   role: UserRole;
   taskCount: number;
-  likelihood?: number;
   createdAt: string;
 }
 
@@ -42,7 +41,8 @@ export const getTaskEntries = async (): Promise<TaskEntry[]> => {
 
 export const addTaskEntry = async (entry: Omit<TaskEntry, 'id' | 'createdAt'>): Promise<TaskEntry | null> => {
   if (!entry.userId || !entry.date) return null;
-  const docId = `${entry.userId}-${entry.date}`;
+  const hourKey = entry.date.substring(0, 13).replace(' ', '-');
+  const docId = `${entry.userId}-${hourKey}`;
   try {
     const rows = await query<any[]>(`SELECT data_json FROM ${TASKS_TABLE} WHERE id = ?`, [docId]);
 
@@ -51,7 +51,6 @@ export const addTaskEntry = async (entry: Omit<TaskEntry, 'id' | 'createdAt'>): 
       const finalData = {
         ...existingData,
         taskCount: (existingData.taskCount || 0) + entry.taskCount,
-        likelihood: (existingData.likelihood || 0) + (entry.likelihood || 0)
       };
       await query(`UPDATE ${TASKS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), docId]);
       return { id: docId, ...finalData } as TaskEntry;

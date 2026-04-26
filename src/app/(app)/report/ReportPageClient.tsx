@@ -368,10 +368,9 @@ export function ReportPageClient() {
     return tasksToFilter.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [allTasks, selectedDateRange, selectedTeam, selectedCrmId]);
 
-  const { totalTasksCount, totalLikelihood } = useMemo(() => {
+  const { totalTasksCount } = useMemo(() => {
     const totalTasks = filteredTasksByDate.reduce((sum, task) => sum + task.taskCount, 0);
-    const totalLikely = filteredTasksByDate.reduce((sum, task) => sum + (task.likelihood || 0), 0);
-    return { totalTasksCount: totalTasks, totalLikelihood: totalLikely };
+    return { totalTasksCount: totalTasks };
   }, [filteredTasksByDate]);
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -725,10 +724,12 @@ export function ReportPageClient() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <ClipboardList className="h-5 w-5 text-primary"/>
+                                {selectedTeam === 'CRM' ? 'Sellers Report' : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? 'Designers Report' : selectedTeam === 'LR' ? 'Logistics Report' : selectedTeam === 'CO' ? 'CO Report' : 'Team Task Report'}
+                            </CardTitle>
                             <CardDescription>
-                                Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
-                                {selectedTeam === 'CRM' && `, Total Assets: ${totalLikelihood}`}
+                                Count of {selectedTeam === 'CRM' ? 'sales' : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? 'designs' : selectedTeam === 'CO' ? 'docs' : 'tasks'} submitted by team members in the selected period. Total {selectedTeam === 'CRM' ? 'Sales' : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? 'Designed' : selectedTeam === 'CO' ? 'Docs' : 'Tasks'}: <span className="font-bold text-foreground">{totalTasksCount}</span>
                             </CardDescription>
                         </div>
                         <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
@@ -749,8 +750,9 @@ export function ReportPageClient() {
                                 <TableHead>User</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Date</TableHead>
-                                {selectedTeam === 'CRM' && <TableHead className="text-right">Assets</TableHead>}
-                                <TableHead className="text-right">Task Count</TableHead>
+                                <TableHead className="text-right">
+                                    {selectedTeam === 'CRM' ? 'Sales' : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? 'Designed' : selectedTeam === 'CO' ? 'Docs' : 'Task Count'}
+                                </TableHead>
                                 {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
@@ -780,9 +782,6 @@ export function ReportPageClient() {
                                         </TableCell>
                                         <TableCell>{task.role.replace(/_/g, ' ')}</TableCell>
                                         <TableCell>{formatDateSafe(task.date)}</TableCell>
-                                        {selectedTeam === 'CRM' && (
-                                            <TableCell className="text-right font-mono text-base font-semibold">{task.likelihood || 0}</TableCell>
-                                        )}
                                         <TableCell className="text-right font-mono text-base font-semibold">{task.taskCount}</TableCell>
                                         {isAdmin && (
                                             <TableCell className="text-right">
@@ -798,20 +797,17 @@ export function ReportPageClient() {
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={isAdmin ? (selectedTeam === 'CRM' ? 6 : 5) : (selectedTeam === 'CRM' ? 5 : 4)} className="h-24 text-center">
+                                    <TableCell colSpan={isAdmin ? 5 : 4} className="h-24 text-center">
                                         <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                                        No task data for this period or team.
+                                        No {selectedTeam === 'CRM' ? 'sales' : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? 'design' : selectedTeam === 'CO' ? 'docs' : 'task'} data for this period or team.
                                     </TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
                          <TableFooter>
                             <TableRow>
-                                <TableCell colSpan={selectedTeam === 'CRM' ? 3 : 2}></TableCell>
-                                {selectedTeam === 'CRM' && (
-                                    <TableCell className="text-right font-bold">Total Assets:</TableCell>
-                                )}
-                                <TableCell className={`text-right font-bold ${selectedTeam !== 'CRM' ? 'col-span-2' : ''}`}>{selectedTeam === 'CRM' ? totalLikelihood : 'Total Tasks:'}</TableCell>
+                                <TableCell colSpan={2}></TableCell>
+                                <TableCell className="text-right font-bold col-span-2">Total {selectedTeam === 'CRM' ? 'Sales' : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? 'Designed' : selectedTeam === 'CO' ? 'Docs' : 'Tasks'}:</TableCell>
                                 <TableCell className="text-right font-bold">{totalTasksCount}</TableCell>
                                 {isAdmin && <TableCell />}
                             </TableRow>
