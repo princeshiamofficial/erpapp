@@ -659,11 +659,8 @@ export function TeamPerformanceGraph({
 
   return (
     <>
-      <Card className="bg-background/60 dark:bg-card/40 border border-border/50 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden transition-all duration-500">
-        <CardHeader className="p-6 sm:p-8 pb-4 print-hide relative overflow-hidden">
-          {/* Subtle background glow */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-          
+      <Card className="bg-card border shadow-xl rounded-2xl overflow-hidden">
+        <CardHeader className="p-6 sm:p-8 pb-4 print-hide">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
