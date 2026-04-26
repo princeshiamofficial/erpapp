@@ -3,6 +3,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer, User as UserIcon, Download, CheckCircle } from 'lucide-react';
@@ -658,15 +659,18 @@ export function TeamPerformanceGraph({
 
   return (
     <>
-      <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden">
-        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-6 print-hide bg-muted/5 sm:bg-transparent">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+      <Card className="bg-background/60 dark:bg-card/40 border border-border/50 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden transition-all duration-500">
+        <CardHeader className="p-6 sm:p-8 pb-4 print-hide relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
                 <Target className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                <CardTitle className="text-xl sm:text-2xl font-black tracking-tighter flex items-center gap-2">
                   <span className="hidden sm:inline"><Target className="h-5 w-5 text-primary" /></span>
                   {performanceTitle}
                 </CardTitle>
@@ -675,26 +679,43 @@ export function TeamPerformanceGraph({
             </div>
 
             {/* Minimal Stat Blocks for Mobile */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full sm:w-auto sm:flex sm:items-center">
-              <div className="flex flex-col items-center sm:items-center justify-center p-2.5 sm:p-3 bg-green-50/50 dark:bg-green-500/10 rounded-2xl sm:rounded-lg border border-green-100/50 dark:border-green-500/20 sm:bg-background sm:shadow-inner">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
-                  <span className="text-[10px] sm:text-xs font-bold text-green-600/80 dark:text-green-400/80 uppercase tracking-widest">{selectedTeam === 'CRM' ? "Sales" : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? "Designed" : selectedTeam === 'CO' ? "Docs" : "Done"}</span>
+            {/* Modern Stat Blocks */}
+            <div className="flex gap-4 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
+              <motion.div 
+                whileHover={{ y: -1, scale: 1.01 }}
+                className="flex flex-row items-center justify-between min-w-[110px] sm:min-w-[140px] p-2 sm:p-2.5 bg-gradient-to-br from-green-500/10 to-green-500/[0.02] dark:from-green-500/20 dark:to-transparent rounded-xl border border-green-500/20 backdrop-blur-md shadow-sm group transition-all gap-2"
+              >
+                <div className="flex flex-col items-start gap-1">
+                  <div className="p-1 bg-green-500/20 rounded-md text-green-600 dark:text-green-400 w-fit">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-green-600/70 dark:text-green-400/70 uppercase tracking-tight leading-none truncate max-w-[60px] sm:max-w-none">{selectedTeam === 'CRM' ? "Sales" : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? "Designed" : selectedTeam === 'CO' ? "Docs" : "Done"}</span>
                 </div>
-                <p className="text-sm sm:text-2xl font-bold text-foreground tabular-nums leading-none">
-                  {totals.totalDone.toLocaleString()}
-                </p>
-              </div>
+                <div className="flex flex-col items-end">
+                  <p className="text-lg sm:text-2xl font-black text-foreground tabular-nums tracking-tighter leading-none">
+                    {totals.totalDone.toLocaleString()}
+                  </p>
+                  <span className="text-[8px] text-muted-foreground font-medium uppercase tracking-tighter opacity-50">Total</span>
+                </div>
+              </motion.div>
 
-              <div className="flex flex-col items-center justify-center p-2.5 sm:p-3 bg-amber-50/50 dark:bg-amber-500/10 rounded-2xl sm:rounded-lg border border-amber-100/50 dark:border-amber-500/20 sm:bg-background sm:shadow-inner">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <Target className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500" />
-                  <span className="text-[10px] sm:text-xs font-bold text-amber-600/80 dark:text-amber-400/80 uppercase tracking-widest">Goal</span>
+              <motion.div 
+                whileHover={{ y: -1, scale: 1.01 }}
+                className="flex flex-row items-center justify-between min-w-[110px] sm:min-w-[140px] p-2 sm:p-2.5 bg-gradient-to-br from-amber-500/10 to-amber-500/[0.02] dark:from-amber-500/20 dark:to-transparent rounded-xl border border-amber-500/20 backdrop-blur-md shadow-sm group transition-all gap-2"
+              >
+                <div className="flex flex-col items-start gap-1">
+                  <div className="p-1 bg-amber-500/20 rounded-md text-amber-600 dark:text-amber-400 w-fit">
+                    <Target className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-amber-600/70 dark:text-amber-400/70 uppercase tracking-tight leading-none">Goal</span>
                 </div>
-                <p className="text-sm sm:text-2xl font-bold text-foreground tabular-nums leading-none">
-                  {totalPerformanceTarget.toLocaleString()}
-                </p>
-              </div>
+                <div className="flex flex-col items-end">
+                  <p className="text-lg sm:text-2xl font-black text-foreground tabular-nums tracking-tighter leading-none">
+                    {totalPerformanceTarget.toLocaleString()}
+                  </p>
+                  <span className="text-[8px] text-muted-foreground font-medium uppercase tracking-tighter opacity-50">Target</span>
+                </div>
+              </motion.div>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
               <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center order-2 sm:order-1">
@@ -812,7 +833,7 @@ export function TeamPerformanceGraph({
                     <Button
                       onClick={handleDoneClick}
                       disabled={isSubmitting || tasksDone.trim() === ''}
-                      className="h-10"
+                      className="h-10 px-6 shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 active:scale-95"
                     >
                       {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
                     </Button>
@@ -860,9 +881,9 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
 
     return (
-      <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
-        <div className="grid grid-cols-1 gap-1.5">
-          <p className="font-semibold text-foreground">{label}</p>
+      <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-xl p-4 shadow-2xl min-w-[240px] animate-in fade-in zoom-in duration-200">
+        <div className="grid grid-cols-1 gap-3">
+          <p className="font-bold text-base text-foreground tracking-tight border-b border-border/50 pb-2 mb-1">{label}</p>
           {donePayload && <div className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: donePayload.color }}></div>
             <span className="text-sm text-muted-foreground">{doneLabel}:</span>
