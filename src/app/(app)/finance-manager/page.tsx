@@ -680,7 +680,7 @@ export default function FinanceManagerPage() {
                       );
                     })
                   ) : (
-                    <TableRow>
+                    <TableRow key="no-transactions">
                       <TableCell colSpan={currentUser.role === 'SYSTEM_ADMIN' ? 6 : 5} className="h-48 text-center text-muted-foreground">
                         <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                         <p className="text-lg font-medium">No transactions found.</p>
@@ -705,8 +705,8 @@ export default function FinanceManagerPage() {
             <CardContent className="p-0">
               {/* Stats Section */}
               <div className="grid grid-cols-1 divide-y divide-border/40">
-                {summaryCardsToDisplay.map((card, idx) => (
-                  <div key={idx} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                {summaryCardsToDisplay.map((card) => (
+                  <div key={card.title} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className={cn("p-2 rounded-lg", card.circleBgClass)}>
                         <card.icon className={cn("h-4 w-4", card.iconColorClass)} />

@@ -47,8 +47,9 @@ export async function addTransaction(
 export async function getTransactionsForUser(userId: string): Promise<Transaction[]> {
   if (!userId) return [];
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${FINANCE_TABLE} WHERE user_id = ? ORDER BY date DESC`, [userId]);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${FINANCE_TABLE} WHERE user_id = ? ORDER BY date DESC`, [userId]);
     return rows.map(row => ({
+      id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
     } as Transaction));
   } catch (error) {
@@ -59,8 +60,9 @@ export async function getTransactionsForUser(userId: string): Promise<Transactio
 
 export async function getAllTransactions(): Promise<Transaction[]> {
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${FINANCE_TABLE} ORDER BY date DESC`);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${FINANCE_TABLE} ORDER BY date DESC`);
     return rows.map(row => ({
+      id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
     } as Transaction));
   } catch (error) {

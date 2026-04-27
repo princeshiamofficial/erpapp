@@ -233,7 +233,7 @@ export default function AttendancePage() {
             // Filter out banned users from the attendance data
             const nonBannedUserIds = new Set(allUsers.filter(u => !u.isBanned).map(u => u.id));
             return attendanceData
-                .filter(entry => entry.date === attendanceDateFilter && nonBannedUserIds.has(entry.employeeId))
+                .filter(entry => entry.date === attendanceDateFilter && nonBannedUserIds.has(entry.employeeId) && entry.status !== 'Absent')
                 .map(entry => ({
                     ...entry,
                     date: parseISO(entry.date)
