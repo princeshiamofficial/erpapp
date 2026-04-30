@@ -258,8 +258,8 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
     setIsSubmitting(true);
     
     const newLeaveRecord: Omit<LeaveRecord, 'id'> = {
-      date: selectedDates![0].toISOString(),
-      allDates: selectedDates!.map(d => d.toISOString()).sort(),
+      date: format(selectedDates![0], "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
+      allDates: selectedDates!.map(d => format(d, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")).sort(),
       days,
       reason: leaveReason.trim(),
       recordedByUserId: currentUser.id,
