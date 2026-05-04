@@ -312,14 +312,16 @@ export const FollowUpCard = React.memo(({
                                                 </span>
                                             </div>
                                             
-                                            <div className="bg-slate-50 rounded-2xl p-3.5 border border-border/40 shadow-sm">
-                                                <p className="text-[12px] font-bold text-orange-600/90 leading-snug">
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-[12px] font-bold text-orange-600/90 leading-none">
                                                     {log.outcome}
                                                 </p>
                                                 {log.notes && (
-                                                    <p className="text-[11px] text-muted-foreground/80 mt-2 italic leading-relaxed border-t border-black/5 pt-2">
-                                                        "{log.notes}"
-                                                    </p>
+                                                    <div className="bg-slate-50/80 rounded-2xl p-3 border border-border/30 shadow-sm mt-1">
+                                                        <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                                                            {log.notes}
+                                                        </p>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
