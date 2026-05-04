@@ -58,6 +58,7 @@ import Papa from 'papaparse';
 const ManageFollowUpStatusesDialog = dynamic(() => import('./ManageFollowUpStatusesDialog').then(mod => mod.ManageFollowUpStatusesDialog), { ssr: false });
 const ImportFollowUpsDialog = dynamic(() => import('./ImportFollowUpsDialog').then(mod => mod.ImportFollowUpsDialog), { ssr: false });
 const FollowUpStageChangeDialog = dynamic(() => import('./FollowUpStageChangeDialog').then(mod => mod.FollowUpStageChangeDialog), { ssr: false });
+const FollowUpUpdateDialog = dynamic(() => import('./FollowUpUpdateDialog').then(mod => mod.FollowUpUpdateDialog), { ssr: false });
 
 const iconMap: Record<string, LucideIcon> = {
     UserPlus,
@@ -91,6 +92,10 @@ export function FollowUpKanbanClient() {
     // Stage Change Dialog State
     const [isStageChangeDialogOpen, setIsStageChangeDialogOpen] = useState(false);
     const [pendingChange, setPendingChange] = useState<{ item: FollowUp, newStatus: FollowUpStatusType } | null>(null);
+
+    // Update Dialog State
+    const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+    const [updateItem, setUpdateItem] = useState<FollowUp | null>(null);
     
     const { socket } = useSocket();
 
@@ -245,6 +250,26 @@ export function FollowUpKanbanClient() {
         setPendingChange(null);
     };
 
+    const handleAddUpdate = useCallback((item: FollowUp) => {
+        setUpdateItem(item);
+        setIsUpdateDialogOpen(true);
+    }, []);
+
+    const handleConfirmUpdate = async (notes: string) => {
+        if (!updateItem || !currentUser) return;
+
+        const result = await updateFollowUpStatusAction(updateItem, updateItem.status, currentUser, notes);
+        if (result.success) {
+            toast({ title: "Update Saved", description: "The activity update has been recorded." });
+            fetchData(true);
+        } else {
+            toast({ title: "Error", description: result.error, variant: "destructive" });
+        }
+
+        setIsUpdateDialogOpen(false);
+        setUpdateItem(null);
+    };
+
     const handleDragCancel = () => setActiveItem(null);
 
     return (
@@ -342,6 +367,7 @@ export function FollowUpKanbanClient() {
                                 currentUser={currentUser}
                                 allUsers={allUsers}
                                 onViewDetails={handleViewDetails}
+                                onAddUpdate={handleAddUpdate}
                             />
                         ))}
                     </div>
@@ -373,6 +399,16 @@ export function FollowUpKanbanClient() {
                     oldStatus={pendingChange.item.status}
                     newStatus={pendingChange.newStatus}
                     businessName={pendingChange.item.businessName || pendingChange.item.contactName}
+                />
+            )}
+
+            {isUpdateDialogOpen && updateItem && (
+                <FollowUpUpdateDialog
+                    isOpen={isUpdateDialogOpen}
+                    onOpenChange={setIsUpdateDialogOpen}
+                    onConfirm={handleConfirmUpdate}
+                    status={updateItem.status}
+                    businessName={updateItem.businessName || updateItem.contactName}
                 />
             )}
 

@@ -751,3 +751,15 @@ export interface SellEntry {
   createdAt: string; // ISO string
   approvedAt?: string | null; // ISO string
 }
+
+export interface StockActivity {
+  id: string;
+  type: 'ADD' | 'UPDATE' | 'DELETE' | 'SALE' | 'RESTOCK';
+  productName: string;
+  productId?: string;
+  quantity?: number;
+  userName: string;
+  userId: string;
+  timestamp: string; // ISO string
+  details?: string;
+}

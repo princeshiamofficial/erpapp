@@ -17,9 +17,9 @@ import type { ServiceModelItem, SellEntry } from "@/types";
 
 const STOCK_REPORTS_PATH = "/(app)/admin/stock-reports";
 
-export async function addStockAction(name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number): Promise<{ success: boolean; item?: ServiceModelItem; error?: string }> {
+export async function addStockAction(name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number, userId?: string, userName?: string): Promise<{ success: boolean; item?: ServiceModelItem; error?: string }> {
     try {
-        const newItem = await addStockItem(name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCount);
+        const newItem = await addStockItem(name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCount, userId, userName);
         if (newItem) {
             revalidatePath(STOCK_REPORTS_PATH);
             return { success: true, item: newItem };
@@ -31,9 +31,9 @@ export async function addStockAction(name: string, buyingPrice?: number, selling
     }
 }
 
-export async function updateStockAction(id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number): Promise<{ success: boolean; error?: string }> {
+export async function updateStockAction(id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number, userId?: string, userName?: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const success = await updateStockItem(id, name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCountChange);
+        const success = await updateStockItem(id, name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCountChange, userId, userName);
         if (success) {
             revalidatePath(STOCK_REPORTS_PATH);
             return { success: true };
@@ -45,9 +45,9 @@ export async function updateStockAction(id: string, name: string, buyingPrice?: 
     }
 }
 
-export async function deleteStockAction(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteStockAction(id: string, userId?: string, userName?: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const success = await deleteStockItem(id);
+        const success = await deleteStockItem(id, userId, userName);
         if (success) {
             revalidatePath(STOCK_REPORTS_PATH);
             return { success: true };

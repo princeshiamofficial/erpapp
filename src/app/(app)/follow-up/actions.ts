@@ -22,7 +22,7 @@ export async function updateFollowUpStatusAction(
         const activity: FollowUpLog = {
             id: crypto.randomUUID(),
             timestamp: new Date().toISOString(),
-            outcome: `Status changed to ${newStatus}`,
+            outcome: existing.status === newStatus ? 'Activity Updated' : `Status changed to ${newStatus}`,
             notes: notes || null,
             recordedByUserId: currentUser.id,
             recordedByUserName: currentUser.name

@@ -6,9 +6,10 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, History, PlusCircle, UploadCloud, ImageIcon, Trash2, Search, PackageCheck, Edit, TrendingUp, Banknote, Tag, Layers, Loader2, Check, ChevronsUpDown } from 'lucide-react';
+import { Package, History, PlusCircle, UploadCloud, ImageIcon, Trash2, Search, PackageCheck, Edit, TrendingUp, Banknote, Tag, Layers, Loader2, Check, ChevronsUpDown, BarChart3, AlertTriangle, Activity, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -20,15 +21,18 @@ import { addStockAction, updateStockAction, deleteStockAction, addSellEntryActio
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getStockItems } from '@/lib/stock-service';
 import { getSellEntries } from '@/lib/sell-entry-service';
-import type { ServiceModelItem, SellEntry } from '@/types';
+import { getStockActivities } from '@/lib/stock-activity-service';
+import type { ServiceModelItem, SellEntry, StockActivity } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function StockReportsPage() {
     const { currentUser } = useAuth();
@@ -71,6 +75,7 @@ export default function StockReportsPage() {
     const [isDeleteSellEntryDialogOpen, setIsDeleteSellEntryDialogOpen] = useState(false);
     const [sellEntryToDelete, setSellEntryToDelete] = useState<SellEntry | null>(null);
     const [sellEntryDate, setSellEntryDate] = useState<Date>(new Date());
+    const [activities, setActivities] = useState<(StockActivity & { userAvatar?: string | null })[]>([]);
 
     // Form state
     const [itemName, setItemName] = useState('');
@@ -83,12 +88,14 @@ export default function StockReportsPage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [items, entries] = await Promise.all([
+            const [items, entries, acts] = await Promise.all([
                 getStockItems(),
-                getSellEntries()
+                getSellEntries(),
+                getStockActivities(10)
             ]);
             setModels(items);
             setSellEntries(entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setActivities(acts);
         } catch (error) {
             console.error('Error fetching data:', error);
             toast({ title: "Error", description: "Failed to load data.", variant: "destructive" });
@@ -109,6 +116,23 @@ export default function StockReportsPage() {
             model.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [models, searchTerm]);
+
+    const stats = useMemo(() => {
+        const totalProducts = models.length;
+        const totalStock = models.reduce((acc, m) => acc + (m.stockCount || 0), 0);
+        const totalSold = models.reduce((acc, m) => acc + (m.totalSold || 0), 0);
+        const lowStockItems = models.filter(m => m.isReadyMade && (m.stockCount || 0) <= 5);
+        const topSelling = [...models].sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0)).slice(0, 8);
+        
+        // Prepare data for stock distribution pie chart
+        const stockCategories = [
+            { name: 'Low Stock (<=5)', value: models.filter(m => (m.stockCount || 0) <= 5).length, color: '#ef4444' },
+            { name: 'Medium Stock (6-20)', value: models.filter(m => (m.stockCount || 0) > 5 && (m.stockCount || 0) <= 20).length, color: '#f59e0b' },
+            { name: 'Good Stock (>20)', value: models.filter(m => (m.stockCount || 0) > 20).length, color: '#10b981' },
+        ].filter(c => c.value > 0);
+
+        return { totalProducts, totalStock, totalSold, lowStockItems, topSelling, stockCategories };
+    }, [models]);
 
 
 
@@ -168,10 +192,10 @@ export default function StockReportsPage() {
         let result;
         if (isEdit && editingItem) {
             const stockDelta = parseInt(itemStockChange || "0", 10);
-            result = await updateStockAction(editingItem.id, itemName.trim(), undefined, undefined, finalImageUrl, true, stockDelta);
+            result = await updateStockAction(editingItem.id, itemName.trim(), undefined, undefined, finalImageUrl, true, stockDelta, currentUser?.id, currentUser?.name);
         } else {
             const stockCountValue = parseInt(itemStockCount || "0", 10);
-            result = await addStockAction(itemName.trim(), undefined, undefined, finalImageUrl, true, stockCountValue);
+            result = await addStockAction(itemName.trim(), undefined, undefined, finalImageUrl, true, stockCountValue, currentUser?.id, currentUser?.name);
         }
 
         if (result.success) {
@@ -188,7 +212,7 @@ export default function StockReportsPage() {
     const handleDelete = async () => {
         if (!itemToDelete) return;
         setIsSubmitting(true);
-        const result = await deleteStockAction(itemToDelete.id);
+        const result = await deleteStockAction(itemToDelete.id, currentUser?.id, currentUser?.name);
         if (result.success) {
             toast({ title: "Success", description: `Product "${itemToDelete.name}" deleted successfully.` });
             setIsDeleteDialogOpen(false);
@@ -310,6 +334,12 @@ export default function StockReportsPage() {
                         <TabsTrigger value="history" className="flex items-center gap-2">
                             <History className="h-4 w-4" />
                             Stock History
+                        </TabsTrigger>
+                    )}
+                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                        <TabsTrigger value="statistics" className="flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4" />
+                            Statics
                         </TabsTrigger>
                     )}
                 </TabsList>
@@ -746,6 +776,253 @@ export default function StockReportsPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                    </TabsContent>
+                )}
+
+                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                    <TabsContent value="statistics" className="space-y-6">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <Card className="bg-white border-none shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0">
+                                            <Package className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground/80">Total Products</p>
+                                            <h3 className="text-2xl font-bold text-foreground leading-none mt-1">{stats.totalProducts}</h3>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white border-none shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+                                            <Layers className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground/80">Current Stock</p>
+                                            <h3 className="text-2xl font-bold text-foreground leading-none mt-1">{stats.totalStock}</h3>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white border-none shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-600 shrink-0">
+                                            <TrendingUp className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground/80">Total Sold</p>
+                                            <h3 className="text-2xl font-bold text-foreground leading-none mt-1">{stats.totalSold}</h3>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-white border-none shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 bg-destructive/10 rounded-full flex items-center justify-center text-destructive shrink-0">
+                                            <AlertTriangle className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground/80">Low Stock</p>
+                                            <h3 className="text-2xl font-bold text-destructive leading-none mt-1">{stats.lowStockItems.length}</h3>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Inventory Activity Card */}
+                            <Card className="lg:col-span-1 bg-white/50 backdrop-blur-sm border-border/50 shadow-sm overflow-hidden flex flex-col">
+                                <CardHeader className="pb-3 pt-6 px-6 border-none">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-muted-foreground">Recent Activity</p>
+                                            <h3 className="text-xl font-bold mt-0.5">Inventory Log</h3>
+                                        </div>
+                                        <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                                            <History className="h-5 w-5" />
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                                    <div className="px-6 pb-2">
+                                        <div className="h-px bg-border/40 w-full mb-2" />
+                                    </div>
+                                    <ScrollArea className="flex-1 px-6 h-[400px]">
+                                        <div className="divide-y divide-border/40">
+                                            {activities.length === 0 ? (
+                                                <div className="p-12 text-center">
+                                                    <Activity className="h-8 w-8 mx-auto mb-2 text-muted-foreground/20" />
+                                                    <p className="text-sm text-muted-foreground">No recent activity</p>
+                                                </div>
+                                            ) : (
+                                                activities.map((activity) => (
+                                                    <div key={activity.id} className="py-4 hover:bg-white/40 transition-colors">
+                                                        <div className="flex gap-3">
+                                                            <div className={cn(
+                                                                "h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
+                                                                activity.type === 'ADD' ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
+                                                                activity.type === 'RESTOCK' ? "bg-blue-500/10 text-blue-600 border border-blue-500/20" :
+                                                                activity.type === 'SALE' ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" :
+                                                                activity.type === 'DELETE' ? "bg-destructive/10 text-destructive border border-destructive/20" :
+                                                                "bg-muted text-muted-foreground"
+                                                            )}>
+                                                                {activity.type === 'ADD' ? <PlusCircle className="h-4 w-4" /> :
+                                                                 activity.type === 'RESTOCK' ? <Layers className="h-4 w-4" /> :
+                                                                 activity.type === 'SALE' ? <TrendingUp className="h-4 w-4" /> :
+                                                                 <Edit className="h-4 w-4" />}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex justify-between items-start">
+                                                                    <p className="text-sm font-semibold text-foreground truncate">
+                                                                        {activity.productName}
+                                                                    </p>
+                                                                    <span className="text-[10px] font-medium text-muted-foreground/60 whitespace-nowrap ml-2">
+                                                                        {format(new Date(activity.timestamp), 'h:mm a')}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-[13px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">
+                                                                    {activity.details}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 mt-2">
+                                                                    <Avatar className="h-4 w-4 border border-border/50">
+                                                                        <AvatarImage src={activity.userAvatar || undefined} />
+                                                                        <AvatarFallback className="text-[8px] bg-primary/10 text-primary uppercase">
+                                                                            {activity.userName?.substring(0, 2)}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    <span className="text-[10px] text-primary/80 font-semibold">
+                                                                        {activity.userName}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground/40 font-normal ml-auto">
+                                                                        {format(new Date(activity.timestamp), 'MMM d, yyyy')}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </ScrollArea>
+                                    <div className="p-4 mt-auto border-t border-border/40 bg-muted/5">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="w-full text-xs h-8 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all" 
+                                            onClick={fetchData}
+                                        >
+                                            <Activity className="h-3 w-3 mr-2" />
+                                            Refresh Activity Feed
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <div className="lg:col-span-2 space-y-6">
+                                {/* Top Selling Products Chart */}
+                                <Card className="border-border/50 shadow-sm overflow-hidden">
+                                    <CardHeader className="border-b bg-muted/5 pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                                <TrendingUp className="h-4 w-4 text-primary" />
+                                                Top Selling Products
+                                            </CardTitle>
+                                        </div>
+                                        <CardDescription>By total quantity sold across all entries</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-6">
+                                        <div className="h-[300px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart
+                                                    data={stats.topSelling}
+                                                    layout="vertical"
+                                                    margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#eee" />
+                                                    <XAxis type="number" hide />
+                                                    <YAxis 
+                                                        dataKey="name" 
+                                                        type="category" 
+                                                        width={100} 
+                                                        tick={{ fontSize: 11, fill: '#666' }}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                    />
+                                                    <Tooltip 
+                                                        cursor={{ fill: '#f8fafc' }}
+                                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                                    />
+                                                    <Bar 
+                                                        dataKey="totalSold" 
+                                                        fill="hsl(var(--primary))" 
+                                                        radius={[0, 4, 4, 0]} 
+                                                        barSize={20}
+                                                    >
+                                                        {stats.topSelling.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={`hsl(var(--primary) / ${1 - index * 0.1})`} />
+                                                        ))}
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Stock Distribution Chart */}
+                                <Card className="border-border/50 shadow-sm overflow-hidden">
+                                    <CardHeader className="border-b bg-muted/5 pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                                <LayoutDashboard className="h-4 w-4 text-primary" />
+                                                Stock Level Distribution
+                                            </CardTitle>
+                                        </div>
+                                        <CardDescription>Inventory status categories</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="p-6">
+                                        <div className="h-[300px] w-full flex flex-col">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <RechartsPieChart>
+                                                    <Pie
+                                                        data={stats.stockCategories}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        innerRadius={60}
+                                                        outerRadius={100}
+                                                        paddingAngle={5}
+                                                        dataKey="value"
+                                                    >
+                                                        {stats.stockCategories.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip 
+                                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                                    />
+                                                    <Legend 
+                                                        verticalAlign="bottom" 
+                                                        height={36}
+                                                        iconType="circle"
+                                                        formatter={(value) => <span className="text-xs font-medium text-muted-foreground">{value}</span>}
+                                                    />
+                                                </RechartsPieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
                     </TabsContent>
                 )}
             </Tabs>

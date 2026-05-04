@@ -3,6 +3,7 @@
 import type { SellEntry } from '@/types';
 import { query } from './mysql';
 import { v4 as uuidv4 } from 'uuid';
+import { logStockActivity } from './stock-activity-service';
 import { updateStockQuantity } from './stock-service';
 
 const TABLE_NAME = 'sell_entries';
@@ -53,6 +54,7 @@ export const addSellEntry = async (
         if (status === 'Approved') {
             for (const item of items) {
                 await updateStockQuantity(item.productId, -1 * (item.quantity || 0));
+                await logStockActivity('SALE', item.productName, recordedByUserName, recordedByUserId, `Sale recorded & approved: ${item.quantity} units`, item.quantity, item.productId);
             }
         }
 
@@ -119,6 +121,13 @@ export const approveSellEntry = async (
         };
 
         await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ?`, [JSON.stringify(updatedData), id]);
+
+        if (updatedData.items && Array.isArray(updatedData.items)) {
+            for (const item of updatedData.items) {
+                await logStockActivity('SALE', item.productName, approvedByUserName, approvedByUserId, `Sale approved for ${item.productName}: ${item.quantity} units`, item.quantity, item.productId);
+            }
+        }
+
         return true;
     } catch (error) {
         console.error("Error approving sell entry in MySQL:", error);

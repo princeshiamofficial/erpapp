@@ -25,6 +25,7 @@ interface FollowUpKanbanColumnProps {
     currentUser: User | null;
     allUsers: User[];
     onViewDetails?: (item: FollowUp) => void;
+    onAddUpdate?: (item: FollowUp) => void;
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -42,6 +43,7 @@ export const FollowUpKanbanColumn = React.memo(({
     currentUser,
     allUsers,
     onViewDetails = () => { },
+    onAddUpdate = () => { },
 }: FollowUpKanbanColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({ id });
     const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
@@ -124,6 +126,7 @@ export const FollowUpKanbanColumn = React.memo(({
                                             allUsers={allUsers}
                                             statusColor={color}
                                             onViewDetails={onViewDetails}
+                                            onAddUpdate={onAddUpdate}
                                         />
                                     </motion.div>
                                 ))}

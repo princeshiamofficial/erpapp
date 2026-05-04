@@ -5,6 +5,7 @@ import type { ServiceModelItem } from '@/types';
 import { query } from './mysql';
 import { v4 as uuidv4 } from 'uuid';
 import { getOrders } from './order-service';
+import { logStockActivity } from './stock-activity-service';
 
 const TABLE_NAME = 'stock';
 
@@ -71,7 +72,7 @@ export const getStockItems = async (): Promise<ServiceModelItem[]> => {
   }
 };
 
-export const addStockItem = async (name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number): Promise<ServiceModelItem | null> => {
+export const addStockItem = async (name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number, userId?: string, userName?: string): Promise<ServiceModelItem | null> => {
   if (!name.trim()) {
     throw new Error("Item name cannot be empty.");
   }
@@ -93,6 +94,11 @@ export const addStockItem = async (name: string, buyingPrice?: number, sellingPr
     } as ServiceModelItem;
 
     await query(`INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItemData)]);
+    
+    if (userId && userName) {
+      await logStockActivity('ADD', name.trim(), userName, userId, `Added new product: ${name.trim()}`, finalStockCount, id);
+    }
+
     return newItemData;
   } catch (error) {
     console.error("Error adding stock item to MySQL:", error);
@@ -101,7 +107,7 @@ export const addStockItem = async (name: string, buyingPrice?: number, sellingPr
   }
 };
 
-export const updateStockItem = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number): Promise<boolean> => {
+export const updateStockItem = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number, userId?: string, userName?: string): Promise<boolean> => {
   if (!name.trim()) {
     throw new Error("Item name cannot be empty.");
   }
@@ -132,6 +138,14 @@ export const updateStockItem = async (id: string, name: string, buyingPrice?: nu
     const finalData = { ...existingData, ...updates };
 
     await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
+
+    if (userId && userName && stockCountChange !== 0 && stockCountChange !== undefined) {
+      const type = stockCountChange > 0 ? 'RESTOCK' : 'UPDATE';
+      await logStockActivity(type, name.trim(), userName, userId, `${type === 'RESTOCK' ? 'Restocked' : 'Updated'} ${name.trim()}: ${stockCountChange > 0 ? '+' : ''}${stockCountChange} units`, stockCountChange, id);
+    } else if (userId && userName) {
+      await logStockActivity('UPDATE', name.trim(), userName, userId, `Updated details for ${name.trim()}`, 0, id);
+    }
+
     return true;
   } catch (error) {
     console.error("Error updating stock item in MySQL:", error);
@@ -140,10 +154,22 @@ export const updateStockItem = async (id: string, name: string, buyingPrice?: nu
   }
 };
 
-export const deleteStockItem = async (id: string): Promise<boolean> => {
-  try {
-    await query(`DELETE FROM ${TABLE_NAME} WHERE id = ?`, [id]);
-    return true;
+export const deleteStockItem = async (id: string, userId?: string, userName?: string): Promise<boolean> => {
+    try {
+        const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+        let productName = 'Unknown Product';
+        if (rows.length > 0) {
+          const data = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+          productName = data.name;
+        }
+
+        await query(`DELETE FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+
+        if (userId && userName) {
+          await logStockActivity('DELETE', productName, userName, userId, `Deleted product: ${productName}`, 0, id);
+        }
+
+        return true;
   } catch (error) {
     console.error("Error deleting stock item from MySQL:", error);
     if (error instanceof Error) throw error;

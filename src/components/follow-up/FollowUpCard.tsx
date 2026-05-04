@@ -36,7 +36,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MapPin, StickyNote, CalendarDays, ExternalLink, Phone, Info, User as UserIcon, Trash2, Loader2 } from 'lucide-react';
+import { MapPin, StickyNote, CalendarDays, ExternalLink, Phone, Info, User as UserIcon, Trash2, Loader2, MessageSquarePlus, MoreVertical } from 'lucide-react';
 
 interface FollowUpCardProps {
     followUp: FollowUp;
@@ -45,6 +45,7 @@ interface FollowUpCardProps {
     allUsers?: User[];
     statusColor?: string;
     onViewDetails?: (item: FollowUp) => void;
+    onAddUpdate?: (item: FollowUp) => void;
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -61,9 +62,11 @@ export const FollowUpCard = React.memo(({
     allUsers = [],
     statusColor,
     onViewDetails,
+    onAddUpdate,
 }: FollowUpCardProps) => {
     const { toast } = useToast();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+    const [isTimelineDialogOpen, setIsTimelineDialogOpen] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
 
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -220,80 +223,118 @@ export const FollowUpCard = React.memo(({
                                     <p className="text-xs">Assigned to {followUp.crmName}</p>
                                 </TooltipContent>
                             </Tooltip>
-                        </TooltipProvider>
+                        </TooltipProvider>                        <div className="flex items-center gap-1">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48 rounded-2xl border-border/50 shadow-2xl bg-white/95 backdrop-blur-xl p-1.5">
+                                    <DropdownMenuItem 
+                                        className="rounded-xl gap-3 py-2.5 focus:bg-primary/10 focus:text-primary cursor-pointer"
+                                        onClick={(e) => { e.stopPropagation(); onAddUpdate?.(followUp); }}
+                                    >
+                                        <MessageSquarePlus className="h-4 w-4" />
+                                        <span className="font-semibold text-xs">Add Update</span>
+                                    </DropdownMenuItem>
+                                    
+                                    <DropdownMenuItem 
+                                        className="rounded-xl gap-3 py-2.5 focus:bg-primary/10 focus:text-primary cursor-pointer"
+                                        onClick={(e) => { e.stopPropagation(); setIsTimelineDialogOpen(true); }}
+                                    >
+                                        <StickyNote className="h-4 w-4" />
+                                        <span className="font-semibold text-xs">View Timeline</span>
+                                    </DropdownMenuItem>
 
-                        <div className="flex items-center gap-1">
-                            {followUp.history && followUp.history.length > 0 && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5">
-                                                <StickyNote className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="w-[320px] p-0 rounded-3xl border border-border/50 shadow-2xl bg-white dark:bg-slate-950 overflow-hidden" side="right" align="start" sideOffset={10}>
-                                            <div className="bg-slate-50/50 dark:bg-white/[0.02] px-5 py-4 border-b border-border/50">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                                    <h4 className="text-[11px] font-bold uppercase tracking-[0.1em] text-foreground/70">Activity Timeline</h4>
-                                                </div>
-                                            </div>
-                                            <ScrollArea className="h-[320px] w-full">
-                                                <div className="p-6 relative">
-                                                    {/* Timeline Line */}
-                                                    <div className="absolute left-[29px] top-6 bottom-6 w-[1px] bg-border/60" />
-                                                    
-                                                    <div className="space-y-6">
-                                                        {[...followUp.history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((log, idx) => (
-                                                            <div key={log.id || idx} className="relative flex gap-4 pr-2">
-                                                                {/* Timeline Dot */}
-                                                                <div className="relative z-10 mt-1">
-                                                                    <div className="h-2 w-2 rounded-full border-2 border-white dark:border-slate-950 bg-orange-500 shadow-[0_0_0_2px_rgba(249,115,22,0.1)]" />
-                                                                </div>
-
-                                                                <div className="flex-1 space-y-1.5">
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <span className="text-[10px] font-bold text-foreground/90">{log.recordedByUserName}</span>
-                                                                        <span className="text-[9px] text-muted-foreground/60 font-medium">
-                                                                            {format(parseISO(log.timestamp), 'h:mm a, MMM dd')}
-                                                                        </span>
-                                                                    </div>
-                                                                    
-                                                                    <div className="bg-slate-50 dark:bg-white/[0.03] rounded-xl p-2.5 border border-border/40">
-                                                                        <p className="text-[11px] font-semibold text-orange-600/90 dark:text-orange-400 leading-snug">
-                                                                            {log.outcome}
-                                                                        </p>
-                                                                        {log.notes && (
-                                                                            <p className="text-[10px] text-muted-foreground/80 mt-1 italic leading-relaxed">
-                                                                                "{log.notes}"
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </ScrollArea>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/5" 
-                                onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    setIsDeleteDialogOpen(true); 
-                                }}
-                            >
-                                <ExternalLink className="h-4 w-4" />
-                            </Button>
+                                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                                        <>
+                                            <div className="h-px bg-border/40 my-1 mx-1" />
+                                            <DropdownMenuItem 
+                                                className="rounded-xl gap-3 py-2.5 focus:bg-destructive/10 text-destructive focus:text-destructive cursor-pointer"
+                                                onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="font-semibold text-xs">Delete Record</span>
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Timeline Dialog */}
+            <AlertDialog open={isTimelineDialogOpen} onOpenChange={setIsTimelineDialogOpen}>
+                <AlertDialogContent className="max-w-[400px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+                    <div className="bg-slate-50/50 dark:bg-white/[0.02] px-6 py-5 border-b border-border/50">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                                <AlertDialogTitle className="text-sm font-bold uppercase tracking-widest text-foreground/70 m-0 p-0 leading-none">
+                                    Activity Timeline
+                                </AlertDialogTitle>
+                            </div>
+                            <AlertDialogDescription className="sr-only">
+                                View all past activities and updates for this lead.
+                            </AlertDialogDescription>
+                            <AlertDialogCancel className="h-8 w-8 rounded-full p-0 border-none bg-muted/50 hover:bg-muted m-0">
+                                <span className="sr-only">Close</span>
+                                <ExternalLink className="h-3.5 w-3.5 rotate-45" />
+                            </AlertDialogCancel>
+                        </div>
+                    </div>
+                    <ScrollArea className="h-[450px] w-full bg-white">
+                        <div className="p-8 relative">
+                            {/* Timeline Line */}
+                            <div className="absolute left-[37px] top-8 bottom-8 w-[1px] bg-border/60" />
+                            
+                            <div className="space-y-8">
+                                {followUp.history && [...followUp.history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).map((log, idx) => (
+                                    <div key={log.id || idx} className="relative flex gap-5">
+                                        {/* Timeline Dot */}
+                                        <div className="relative z-10 mt-1.5">
+                                            <div className="h-2.5 w-2.5 rounded-full border-2 border-white bg-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.1)]" />
+                                        </div>
+
+                                        <div className="flex-1 space-y-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-[11px] font-bold text-foreground/90">{log.recordedByUserName}</span>
+                                                <span className="text-[10px] text-muted-foreground/60 font-medium">
+                                                    {format(parseISO(log.timestamp), 'h:mm a, MMM dd')}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="bg-slate-50 rounded-2xl p-3.5 border border-border/40 shadow-sm">
+                                                <p className="text-[12px] font-bold text-orange-600/90 leading-snug">
+                                                    {log.outcome}
+                                                </p>
+                                                {log.notes && (
+                                                    <p className="text-[11px] text-muted-foreground/80 mt-2 italic leading-relaxed border-t border-black/5 pt-2">
+                                                        "{log.notes}"
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </ScrollArea>
+                    <div className="p-4 bg-slate-50/50 border-t border-border/50 flex justify-center">
+                        <AlertDialogCancel className="rounded-2xl px-8 font-bold border-none bg-white shadow-sm hover:bg-muted transition-all">
+                            Close Timeline
+                        </AlertDialogCancel>
+                    </div>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent className="rounded-3xl p-8 max-w-[400px]">
