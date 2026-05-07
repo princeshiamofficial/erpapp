@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 import { getGifts as fetchGifts, deleteGift as deleteGiftAction } from './actions';
 import { getGifts as getGiftOptions } from '@/lib/service-options-service';
+import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -44,6 +45,7 @@ export default function GiftsPage() {
   const [giftOptions, setGiftOptions] = useState<ServiceGiftItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
 
   const [giftToEdit, setGiftToEdit] = useState<Gift | null>(null);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -56,12 +58,14 @@ export default function GiftsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedGifts, fetchedGiftOptions] = await Promise.all([
+      const [fetchedGifts, fetchedGiftOptions, fetchedOrders] = await Promise.all([
         fetchGifts(),
         getGiftOptions(),
+        getOrders(),
       ]);
       setGifts(fetchedGifts);
       setGiftOptions(fetchedGiftOptions);
+      setAllOrders(fetchedOrders);
     } catch (error) {
       console.error("Failed to fetch gifts data:", error);
       toast({ title: "Error", description: "Could not load gifts data.", variant: "destructive" });
@@ -178,6 +182,7 @@ export default function GiftsPage() {
                     <TableHead>Gift Item(s)</TableHead>
                     <TableHead>Recipient</TableHead>
                     <TableHead>Phone Number</TableHead>
+                    <TableHead>Address</TableHead>
                     <TableHead>Date Given</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
@@ -185,7 +190,7 @@ export default function GiftsPage() {
                 <TableBody>
                    {isLoading && [...Array(10)].map((_, i) => (
                      <TableRow key={`skel-gift-${i}`}>
-                       <TableCell colSpan={6}>
+                       <TableCell colSpan={7}>
                          <Skeleton className="h-8 w-full" />
                        </TableCell>
                      </TableRow>
@@ -193,7 +198,7 @@ export default function GiftsPage() {
 
                    {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
                      <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
-                       <TableCell className="pl-6 font-mono text-primary">{gift.giftIdDisplay}</TableCell>
+                       <TableCell className="pl-6 font-mono text-primary font-bold">{gift.giftIdDisplay}</TableCell>
                        <TableCell className="font-medium">
                          {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
                        </TableCell>
@@ -201,6 +206,9 @@ export default function GiftsPage() {
                          <div>{gift.recipientName}</div>
                        </TableCell>
                        <TableCell>{gift.recipientPhone}</TableCell>
+                        <TableCell className="max-w-[250px] truncate text-muted-foreground text-sm" title={gift.recipientAddress}>
+                          {gift.recipientAddress}
+                        </TableCell>
                        <TableCell>{formatDate(gift.dateGiven)}</TableCell>
                        <TableCell className="pr-6 text-right">
                          <DropdownMenu>
@@ -224,7 +232,7 @@ export default function GiftsPage() {
 
                    {!isLoading && paginatedGifts.length === 0 && (
                      <TableRow key="empty-gifts">
-                       <TableCell colSpan={6} className="h-48 text-center">
+                       <TableCell colSpan={7} className="h-48 text-center">
                          <GiftIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />
                          No gift records found.
                        </TableCell>
@@ -253,7 +261,7 @@ export default function GiftsPage() {
         gift={giftToEdit}
         currentUser={currentUser}
         giftOptions={giftOptions}
-        allOrders={[]}
+        allOrders={allOrders}
       />
 
       {giftToDelete && (

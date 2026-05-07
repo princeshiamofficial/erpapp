@@ -39,6 +39,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGiftPopoverOpen, setIsGiftPopoverOpen] = useState(false);
+  const [jobIdInput, setJobIdInput] = useState('');
   const { toast } = useToast();
 
   const isEditMode = !!gift;
@@ -50,6 +51,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setRecipientPhone(gift.recipientPhone);
       setRecipientAddress(gift.recipientAddress);
       setOrderId(gift.orderId || null);
+      setJobIdInput(gift.orderId ? allOrders.find(o => o.id === gift.orderId)?.orderIdDisplay || '' : '');
       setDateGiven(gift.dateGiven ? new Date(gift.dateGiven) : new Date());
       setNotes(gift.notes || '');
     } else {
@@ -58,6 +60,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setRecipientPhone('');
       setRecipientAddress('');
       setOrderId(null);
+      setJobIdInput('');
       setDateGiven(new Date());
       setNotes('');
     }
@@ -71,10 +74,38 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
   }, [isOpen, resetForm]);
 
   useEffect(() => {
+    const handler = setTimeout(() => {
+      const trimmedJobId = jobIdInput.trim();
+      if (!trimmedJobId || !allOrders.length) {
+        setOrderId(null);
+        return;
+      }
+
+      const found = allOrders.find(order => {
+        const displayId = (order.orderIdDisplay || '').trim().toLowerCase();
+        const companyPrefix = (order.companyName || '').split(' • ')[0].trim().toLowerCase();
+        const inputLower = trimmedJobId.toLowerCase();
+        return displayId === inputLower || companyPrefix === inputLower || displayId.includes(inputLower);
+      });
+
+      if (found) {
+        setOrderId(found.id);
+      } else {
+        setOrderId(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [jobIdInput, allOrders]);
+
+  useEffect(() => {
     if (orderId) {
       const selectedOrder = allOrders.find(o => o.id === orderId);
       if (selectedOrder) {
-        setRecipientName(selectedOrder.companyName.split('•').pop()?.trim() || selectedOrder.companyName);
+        const nameParts = (selectedOrder.companyName || '').split(' • ');
+        const actualName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : selectedOrder.companyName;
+        
+        setRecipientName(actualName);
         setRecipientPhone(selectedOrder.phoneNumber);
         setRecipientAddress(selectedOrder.address);
       }
@@ -149,18 +180,28 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="recipientName">Recipient Name</Label>
-              <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required disabled={!!orderId} />
+              <Label htmlFor="orderId">Job ID (Optional)</Label>
+              <Input 
+                id="orderId" 
+                value={jobIdInput} 
+                className="border-gray-400 dark:border-gray-600 focus:border-primary"
+                onChange={e => setJobIdInput(e.target.value)}
+              />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="recipientPhone">Recipient Phone</Label>
-              <Input id="recipientPhone" value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} required disabled={!!orderId} />
+              <Label htmlFor="recipientName">Recipient Name</Label>
+              <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required className="border-gray-400 dark:border-gray-600 focus:border-primary" />
             </div>
           </div>
 
           <div className="space-y-1">
+            <Label htmlFor="recipientPhone">Recipient Phone</Label>
+            <Input id="recipientPhone" value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} required className="border-gray-400 dark:border-gray-600 focus:border-primary" />
+          </div>
+
+          <div className="space-y-1">
             <Label htmlFor="recipientAddress">Recipient Address</Label>
-            <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required disabled={!!orderId} />
+            <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required className="border-gray-400 dark:border-gray-600 focus:border-primary min-h-[80px]" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
@@ -219,7 +260,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="space-y-1">
             <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add any relevant notes..." />
+            <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add any relevant notes..." className="border-gray-400 dark:border-gray-600 focus:border-primary min-h-[100px]" />
           </div>
 
           <DialogFooter className="pt-4 border-t">

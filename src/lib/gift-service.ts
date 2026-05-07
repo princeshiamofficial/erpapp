@@ -34,7 +34,8 @@ export const getGiftById = async (id: string): Promise<Gift | null> => {
 export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'createdAt' | 'updatedAt' | 'giftItemName' | 'givenByUserId' | 'givenByUserName'> & { giftItemNames: string[] }, currentUser: User): Promise<Gift | null> => {
   try {
     const allGifts = await getGifts();
-    const giftPrefix = `GFT-`;
+    const currentYear = new Date().getFullYear();
+    const giftPrefix = `G${currentYear}0`;
     let maxId = 0;
     allGifts.forEach(gift => {
       if (gift.giftIdDisplay && gift.giftIdDisplay.startsWith(giftPrefix)) {
@@ -45,7 +46,7 @@ export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'cre
       }
     });
     const newSequence = maxId + 1;
-    const giftIdDisplay = `${giftPrefix}${String(newSequence).padStart(4, '0')}`;
+    const giftIdDisplay = `${giftPrefix}${String(newSequence).padStart(2, '0')}`;
 
     const now = new Date().toISOString();
     const newGiftData: Gift = {

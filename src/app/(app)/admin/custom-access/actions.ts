@@ -19,6 +19,7 @@ import {
   setPaymentValidationStatus,
   setTelegramSettings,
   setLeaderboardRestriction,
+  setShowAvatarsInOrders,
 } from "@/lib/settings-service";
 import { addCustomRole, updateCustomRole, deleteCustomRole, updateRolesOrder } from "@/lib/user-role-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types";
@@ -184,6 +185,22 @@ export async function updateLeaderboardRestrictionAction(restricted: boolean): P
     return { success: false, error: "Failed to update leaderboard restriction setting." };
   } catch (error) {
     console.error("Error in updateLeaderboardRestrictionAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateShowAvatarsInOrdersAction(show: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setShowAvatarsInOrders(show);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/(app)/orders");
+      revalidatePath("/(app)/all-orders");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update avatars visibility setting." };
+  } catch (error) {
+    console.error("Error in updateShowAvatarsInOrdersAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

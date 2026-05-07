@@ -52,6 +52,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   rolesAllowedToViewFinancials: ['SYSTEM_ADMIN', 'ADMIN'],
   isPaymentValidationEnabled: true,
   isLeaderboardRestrictedToAdmin: false,
+  showAvatarsInOrders: true,
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
@@ -133,6 +134,10 @@ export async function setPaymentValidationStatus(enabled: boolean): Promise<bool
 
 export async function setLeaderboardRestriction(restricted: boolean): Promise<boolean> {
   return updateSettings({ isLeaderboardRestrictedToAdmin: restricted });
+}
+
+export async function setShowAvatarsInOrders(show: boolean): Promise<boolean> {
+  return updateSettings({ showAvatarsInOrders: show });
 }
 
 export async function setPipelineAccess(permissions: PipelineAccessSettings): Promise<boolean> {

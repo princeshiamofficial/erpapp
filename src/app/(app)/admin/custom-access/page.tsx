@@ -7,10 +7,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings, UserRoleDefinition } from "@/types";
+import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings, UserRoleDefinition, CustomStatus } from "@/types";
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { getRoles } from '@/lib/user-role-service';
+import { getStatuses } from '@/lib/status-service';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
@@ -21,11 +22,11 @@ import {
   updatePipelineAccessAction,
   updateLeadCategoryAccessAction,
   updatePaymentValidationAction,
-  updateLeaderboardRestrictionAction,
   addCustomRoleAction,
   updateCustomRoleAction,
   deleteCustomRoleAction,
   reorderRolesAction,
+  updateShowAvatarsInOrdersAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,7 +38,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getContrastTextColor } from '@/lib/color-utils';
 
 import {
@@ -58,7 +61,26 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+const getInitials = (name: string | undefined): string => {
+  if (!name) return "U";
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+};
+
 const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
+
+const getStageBadgeClass = (stage: ProjectStatusType) => {
+  switch (stage) {
+    case 'CR Clearance': return 'bg-sky-600 text-sky-50 hover:bg-sky-600/80';
+    case 'CO Clearance': return 'bg-teal-600 text-teal-50 hover:bg-teal-600/80';
+    case 'On Design': return 'bg-purple-600 text-purple-50 hover:bg-purple-600/80';
+    case 'On Hold': return 'bg-yellow-500 text-yellow-950 hover:bg-yellow-500/80';
+    case 'Logistics': return 'bg-orange-600 text-orange-50 hover:bg-orange-600/80';
+    case 'Courier': return 'bg-green-600 text-green-50 hover:bg-green-600/80';
+    case 'Delivered': return 'bg-emerald-600 text-emerald-50 hover:bg-emerald-600/80';
+    case 'Cancel': return 'bg-red-600 text-red-50 hover:bg-red-600/80';
+    default: return 'bg-muted text-muted-foreground';
+  }
+};
 
 export default function CustomAccessPage() {
   const { currentUser } = useAuth();
@@ -74,8 +96,11 @@ export default function CustomAccessPage() {
   const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
   const [isPaymentValidationEnabled, setIsPaymentValidationEnabled] = useState(true);
   const [isLeaderboardRestricted, setIsLeaderboardRestricted] = useState(false);
+  const [isShowAvatarsEnabled, setIsShowAvatarsEnabled] = useState(true);
   const [crmUsers, setCrmUsers] = useState<User[]>([]);
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [crmSearchTerm, setCrmSearchTerm] = useState('');
+  const [showPipelineAccess, setShowPipelineAccess] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
@@ -83,6 +108,7 @@ export default function CustomAccessPage() {
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
   const [isSubmittingPaymentValidation, setIsSubmittingPaymentValidation] = useState(false);
   const [isSubmittingLeaderboardRestriction, setIsSubmittingLeaderboardRestriction] = useState(false);
+  const [isSubmittingShowAvatars, setIsSubmittingShowAvatars] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
@@ -106,11 +132,13 @@ export default function CustomAccessPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [globalSettings, allUsers, fetchedRoles] = await Promise.all([
+      const [globalSettings, allUsers, fetchedRoles, fetchedStatuses] = await Promise.all([
         fetchGlobalSettings(),
         getUsers(),
-        getRoles()
+        getRoles(),
+        getStatuses()
       ]);
+      setAllStatuses(fetchedStatuses);
       setAllRoles(fetchedRoles);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setRolesAllowedToDelete(new Set(globalSettings.rolesAllowedToDeleteOrders ?? ['SYSTEM_ADMIN']));
@@ -120,7 +148,8 @@ export default function CustomAccessPage() {
       setPipelineAccess(new Set(globalSettings.pipelineAccess?.canViewAllLeads ?? []));
       setIsPaymentValidationEnabled(globalSettings.isPaymentValidationEnabled ?? true);
       setIsLeaderboardRestricted(globalSettings.isLeaderboardRestrictedToAdmin ?? false);
-      setCrmUsers(allUsers.filter(u => u.role === 'CRM'));
+      setIsShowAvatarsEnabled(globalSettings.showAvatarsInOrders ?? true);
+      setCrmUsers(allUsers.filter(u => u.role === 'CRM' && !u.isBanned));
     } catch (error) {
       console.error("Error fetching settings:", error);
       toast({ title: "Error", description: "Could not load access settings.", variant: "destructive" });
@@ -192,6 +221,18 @@ export default function CustomAccessPage() {
       toast({ title: "Update Failed", description: result.error || "Could not update leaderboard restriction setting.", variant: "destructive" });
     }
     setIsSubmittingLeaderboardRestriction(false);
+  };
+
+  const handleToggleShowAvatars = async (show: boolean) => {
+    setIsSubmittingShowAvatars(true);
+    const result = await updateShowAvatarsInOrdersAction(show);
+    if (result.success) {
+      setIsShowAvatarsEnabled(show);
+      toast({ title: "Settings Updated", description: `Avatars in orders are now ${show ? 'visible' : 'hidden'}.` });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not update avatar visibility setting.", variant: "destructive" });
+    }
+    setIsSubmittingShowAvatars(false);
   };
 
   const handleProjectStageAccessChange = (stage: ProjectStatusType, role: UserRole, checked: boolean | "indeterminate") => {
@@ -313,141 +354,86 @@ export default function CustomAccessPage() {
   }
 
   const manageableRoles = allRoles.filter(r => r.id !== 'SYSTEM_ADMIN');
+  const defaultManageableRoles = manageableRoles.filter(r => r.isDefault && r.id !== 'VENDOR');
 
   return (
     <div className="space-y-8 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3"><Shield className="h-8 w-8 text-primary" />Custom Access Control</h1>
-          <p className="text-base text-muted-foreground mt-1">Manage role-based permissions for orders, projects, and pipeline visibility.</p>
-        </div>
-        <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10">
-          <RefreshCw className={cn("h-5 w-5", isLoading ? 'animate-spin' : '')} />
+
+
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-2xl font-bold text-card-foreground">Custom Access Control</h1>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowPipelineAccess(!showPipelineAccess)}
+          className="flex items-center gap-2"
+        >
+          {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+          {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
         </Button>
       </div>
 
-      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Drag rows to change role priority. System roles cannot be deleted.</CardDescription>
-            </div>
-            <Button onClick={handleOpenAddRole} size="sm">
-              <Plus className="h-4 w-4 mr-2" /> Add Custom Role
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead className="pl-2">Role ID</TableHead>
-                  <TableHead>Role Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right pr-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(3)].map((_, i) => (
-                    <TableRow key={`role-skel-${i}`}>
-                      <TableCell></TableCell>
-                      <TableCell className="pl-2"><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <SortableContext
-                    items={allRoles.map(r => r.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {allRoles.map(role => (
-                      <SortableRoleRow
-                        key={role.id}
-                        role={role}
-                        onEdit={handleOpenEditRole}
-                        onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
-                      />
-                    ))}
-                  </SortableContext>
-                )}
-              </TableBody>
-            </Table>
-          </DndContext>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
+          <CardHeader className="border-b p-4">
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Editing Permissions</CardTitle>
             <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can edit order details. System Admins always have permission.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-              : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                {manageableRoles.map((role) => (<div key={role.id} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+          <CardContent className="p-4">
+            {isLoading ? <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
+              : <div className="flex flex-wrap gap-3">
+                {defaultManageableRoles.map((role) => (<div key={role.id} className="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
                   <Checkbox id={`role-edit-perm-${role.id}`} checked={rolesAllowedToEdit.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)} disabled={isSubmittingOrderEditing} />
-                  <Label htmlFor={`role-edit-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
+                  <Label htmlFor={`role-edit-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap">{role.name}</Label></div>))}
               </div>}
           </CardContent>
-          <CardFooter className="border-t p-5 flex justify-end">
+          <CardFooter className="border-t p-4 flex justify-end">
             <Button onClick={handleSaveOrderEditingPermissions} disabled={isLoading || isSubmittingOrderEditing}>{isSubmittingOrderEditing ? "Saving..." : "Save Editing Permissions"}</Button>
           </CardFooter>
         </Card>
 
         <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
+          <CardHeader className="border-b p-4">
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Trash2 className="h-6 w-6 text-destructive" /> Order Deletion Permissions</CardTitle>
             <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can delete orders. This is a destructive action.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-              : <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                {manageableRoles.map((role) => (<div key={`role-delete-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+          <CardContent className="p-4">
+            {isLoading ? <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
+              : <div className="flex flex-wrap gap-3">
+                {defaultManageableRoles.map((role) => (<div key={`role-delete-perm-${role.id}`} className="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
                   <Checkbox id={`role-delete-perm-${role.id}`} checked={rolesAllowedToDelete.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)} disabled={isSubmittingOrderDeletion} />
-                  <Label htmlFor={`role-delete-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
+                  <Label htmlFor={`role-delete-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap">{role.name}</Label></div>))}
               </div>}
           </CardContent>
-          <CardFooter className="border-t p-5 flex justify-end">
+          <CardFooter className="border-t p-4 flex justify-end">
             <Button onClick={handleSaveOrderDeletionPermissions} disabled={isLoading || isSubmittingOrderDeletion} variant="destructive">
               {isSubmittingOrderDeletion ? "Saving..." : "Save Deletion Permissions"}
             </Button>
           </CardFooter>
         </Card>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
+          <CardHeader className="border-b p-4">
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" /> Financial Visibility</CardTitle>
             <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can see price and payment details on tracking pages.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-              : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-x-6 gap-y-4">
-                {manageableRoles.map((role) => (<div key={`role-financial-perm-${role.id}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+          <CardContent className="p-4">
+            {isLoading ? <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
+              : <div className="flex flex-wrap gap-3">
+                {defaultManageableRoles.map((role) => (<div key={`role-financial-perm-${role.id}`} className="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
                   <Checkbox id={`role-financial-perm-${role.id}`} checked={rolesAllowedToViewFinancials.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)} disabled={isSubmittingFinancialVisibility} />
-                  <Label htmlFor={`role-financial-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer">{role.name}</Label></div>))}
+                  <Label htmlFor={`role-financial-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap">{role.name}</Label></div>))}
               </div>}
           </CardContent>
-          <CardFooter className="border-t p-5 flex justify-end">
+          <CardFooter className="border-t p-4 flex justify-end">
             <Button onClick={handleSaveFinancialVisibilityPermissions} disabled={isLoading || isSubmittingFinancialVisibility}>
               {isSubmittingFinancialVisibility ? "Saving..." : "Save Financial Permissions"}
             </Button>
           </CardFooter>
         </Card>
+      </div>
 
-        <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
               <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Payment Validation</CardTitle>
@@ -499,66 +485,165 @@ export default function CustomAccessPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+
+          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Avatars</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Show or hide user avatars in the CRM Contact and DR columns of orders tables.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isLoading ? (
+                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
+              ) : (
+                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                  <Label htmlFor="showAvatarsSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                    <span>Show Avatars in Orders</span>
+                    <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, avatars will be displayed next to user names.</span>
+                  </Label>
+                  <Switch
+                    id="showAvatarsSwitch"
+                    checked={isShowAvatarsEnabled}
+                    onCheckedChange={handleToggleShowAvatars}
+                    disabled={isSubmittingShowAvatars}
+                    aria-label="Toggle avatars in orders"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
       </div>
 
+
+
+<div className={cn("grid grid-cols-1 gap-8", showPipelineAccess ? "xl:grid-cols-3" : "xl:grid-cols-2")}>
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex-1">
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Drag rows to change role priority. System roles cannot be deleted.</CardDescription>
             </div>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search CRM users..."
-                value={crmSearchTerm}
-                onChange={(e) => setCrmSearchTerm(e.target.value)}
-                className="pl-10 h-9"
-              />
-            </div>
+            <Button onClick={handleOpenAddRole} size="sm">
+              <Plus className="h-4 w-4 mr-2" /> Add Custom Role
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-auto max-h-80">
-            <Table>
-              <TableHeader>
-                <TableRow><TableHead className="pl-6 w-12">Allow</TableHead><TableHead>CRM User</TableHead><TableHead>Email</TableHead></TableRow>
-              </TableHeader>
+          <div className="max-h-[500px] overflow-y-auto custom-scrollbar relative">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-20 shadow-sm">
+                  <TableRow className="border-b border-border/50">
+                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead className="pl-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role Name</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role ID</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
-                {isLoading ? [...Array(3)].map((_, i) => (
-                  <TableRow key={`pipe-skel-${i}`}>
-                    <TableCell className="pl-6"><Skeleton className="h-5 w-5 rounded" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40 rounded" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-52 rounded" /></TableCell>
-                  </TableRow>
-                )) : filteredCrmUsers.length > 0 ? filteredCrmUsers.map(user => (
-                  <TableRow key={user.id} className="hover:bg-muted/30">
-                    <TableCell className="pl-6">
-                      <Checkbox
-                        id={`pipeline-perm-${user.id}`}
-                        checked={pipelineAccess.has(user.id)}
-                        onCheckedChange={(checked) => handlePipelineAccessChange(user.id, checked)}
-                        disabled={isSubmittingPipelineAccess}
+                {isLoading ? (
+                  [...Array(3)].map((_, i) => (
+                    <TableRow key={`role-skel-${i}`}>
+                      <TableCell className="w-[50px]"></TableCell>
+                      <TableCell className="pl-2"><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <SortableContext
+                    items={allRoles.map(r => r.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {allRoles.map(role => (
+                      <SortableRoleRow
+                        key={role.id}
+                        role={role}
+                        onEdit={handleOpenEditRole}
+                        onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
                       />
-                    </TableCell>
-                    <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="font-medium cursor-pointer">{user.name}</Label></TableCell>
-                    <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="text-muted-foreground cursor-pointer">{user.email}</Label></TableCell>
-                  </TableRow>
-                )) : (
-                  <TableRow><TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No users with the CRM role were found.</TableCell></TableRow>
+                    ))}
+                  </SortableContext>
                 )}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </DndContext>
+          </div>
         </CardContent>
-        <CardFooter className="border-t p-5 flex justify-end">
-          <Button onClick={handleSavePipelineAccess} disabled={isLoading || isSubmittingPipelineAccess}>
-            {isSubmittingPipelineAccess ? "Saving..." : "Save Global Access"}
-          </Button>
-        </CardFooter>
       </Card>
+      {showPipelineAccess && (
+        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="border-b p-5">
+            <div className="flex flex-col gap-4">
+              <div className="flex-1">
+                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
+              </div>
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search CRM users..."
+                  value={crmSearchTerm}
+                  onChange={(e) => setCrmSearchTerm(e.target.value)}
+                  className="pl-10 h-9"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-auto max-h-80">
+              <Table>
+                <TableHeader>
+                  <TableRow><TableHead className="pl-6 w-12">Allow</TableHead><TableHead>CRM User</TableHead></TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? [...Array(3)].map((_, i) => (
+                    <TableRow key={`pipe-skel-${i}`}>
+                      <TableCell className="pl-6"><Skeleton className="h-5 w-5 rounded" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-40 rounded" /></TableCell>
+                    </TableRow>
+                  )) : filteredCrmUsers.length > 0 ? filteredCrmUsers.map(user => (
+                    <TableRow key={user.id} className="hover:bg-muted/30">
+                      <TableCell className="pl-6">
+                        <Checkbox
+                          id={`pipeline-perm-${user.id}`}
+                          checked={pipelineAccess.has(user.id)}
+                          onCheckedChange={(checked) => handlePipelineAccessChange(user.id, checked)}
+                          disabled={isSubmittingPipelineAccess}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={user.avatarUrl || undefined} />
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                              {getInitials(user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <Label htmlFor={`pipeline-perm-${user.id}`} className="font-medium cursor-pointer">{user.name}</Label>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24 text-muted-foreground">No users with the CRM role were found.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+          <CardFooter className="border-t p-5 flex justify-end">
+            <Button onClick={handleSavePipelineAccess} disabled={isLoading || isSubmittingPipelineAccess}>
+              {isSubmittingPipelineAccess ? "Saving..." : "Save Global Access"}
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
@@ -571,7 +656,7 @@ export default function CustomAccessPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6 font-semibold">Stage</TableHead>
-                  {manageableRoles.map(role => (
+                  {defaultManageableRoles.map(role => (
                     <TableHead key={role.id} className="text-center">{role.name}</TableHead>
                   ))}
                 </TableRow>
@@ -581,16 +666,21 @@ export default function CustomAccessPage() {
                   PROJECT_STAGES.map(stage => (
                     <TableRow key={`skel-stage-${stage}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-32" /></TableCell>
-                      {manageableRoles.map(role => (
+                      {defaultManageableRoles.map(role => (
                         <TableCell key={`skel-cell-${stage}-${role.id}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : (
-                  PROJECT_STAGES.map(stage => (
+                  PROJECT_STAGES.map(stage => {
+                    return (
                     <TableRow key={stage} className="hover:bg-muted/30">
-                      <TableCell className="pl-6 font-medium">{stage}</TableCell>
-                      {manageableRoles.map(role => (
+                      <TableCell className="pl-6 font-medium">
+                        <Badge className={cn("border-transparent font-medium rounded", getStageBadgeClass(stage))}>
+                          {stage}
+                        </Badge>
+                      </TableCell>
+                      {defaultManageableRoles.map(role => (
                         <TableCell key={`${stage}-${role.id}`} className="text-center">
                           <Checkbox
                             id={`perm-${stage}-${role.id}`}
@@ -602,7 +692,8 @@ export default function CustomAccessPage() {
                         </TableCell>
                       ))}
                     </TableRow>
-                  ))
+                  );
+                })
                 )}
               </TableBody>
             </Table>
@@ -614,6 +705,7 @@ export default function CustomAccessPage() {
           </Button>
         </CardFooter>
       </Card>
+      </div>
 
       {/* Role Management Dialog */}
       <Dialog open={isAddEditRoleDialogOpen} onOpenChange={setIsAddEditRoleDialogOpen}>
@@ -722,8 +814,7 @@ function SortableRoleRow({
           <GripVertical className="h-4 w-4" />
         </button>
       </TableCell>
-      <TableCell className="pl-2 font-mono text-sm">{role.id}</TableCell>
-      <TableCell>
+      <TableCell className="pl-2">
         <Badge
           style={{
             backgroundColor: role.color || '#6b7280',
@@ -734,22 +825,32 @@ function SortableRoleRow({
           {role.name}
         </Badge>
       </TableCell>
+      <TableCell className="font-mono text-sm">{role.id}</TableCell>
       <TableCell>
         <Badge variant={role.isDefault ? "secondary" : "outline"} className="text-[10px] h-5.5 px-2 uppercase tracking-wide">
           {role.isDefault ? "System Default" : "Custom"}
         </Badge>
       </TableCell>
       <TableCell className="text-right pr-6">
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(role)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-          {!role.isDefault && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(role)}>
-              <Trash2 className="h-4 w-4" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+              <MoreVertical className="h-4 w-4" />
             </Button>
-          )}
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onClick={() => onEdit(role)} className="cursor-pointer">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Role
+            </DropdownMenuItem>
+            {!role.isDefault && (
+              <DropdownMenuItem className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => onDelete(role)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Role
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </TableCell>
     </TableRow>
   );

@@ -6,17 +6,23 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical } from "lucide-react";
+import { Package as PackageIcon, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical, Calendar as CalendarIcon, X } from "lucide-react";
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
-import type { TrackingLink, User, CustomStatus } from '@/types';
+import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getOrders } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
+import { getUsers } from '@/lib/user-service';
+import { getGlobalSettings } from '@/lib/settings-service';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getContrastTextColor } from '@/lib/color-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { DateRangePicker3, type PredefinedRange } from '@/components/dashboard/date-range-picker3';
+import type { DateRange } from "react-day-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +49,13 @@ export default function AllOrdersPage() {
   const { toast } = useToast();
   const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
+  const [usersMap, setUsersMap] = useState<Record<string, User>>({});
+  const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
@@ -51,18 +63,29 @@ export default function AllOrdersPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
+    setSelectedDateRange(range);
+  };
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedLinks, fetchedStatuses] = await Promise.all([
+      const [fetchedLinks, fetchedStatuses, fetchedUsers, fetchedSettings] = await Promise.all([
         getOrders(),
-        getStatuses()
+        getStatuses(),
+        getUsers(),
+        getGlobalSettings()
       ]);
       setTrackingLinks(fetchedLinks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setAllStatuses(fetchedStatuses);
+      setGlobalAppSettings(fetchedSettings);
+      
+      const uMap: Record<string, User> = {};
+      fetchedUsers.forEach(u => uMap[u.id] = u);
+      setUsersMap(uMap);
     } catch (error) {
-      console.error("Failed to fetch tracking links or statuses:", error);
-      toast({ title: "Error", description: "Could not load tracking links or statuses.", variant: "destructive" });
+      console.error("Failed to fetch data:", error);
+      toast({ title: "Error", description: "Could not load data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +104,13 @@ export default function AllOrdersPage() {
     }
     return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+  };
 
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
@@ -122,15 +152,34 @@ export default function AllOrdersPage() {
 
 
   const filteredTrackingLinks = useMemo(() => {
-    if (!searchTerm) return trackingLinks;
-    return trackingLinks.filter(link =>
-      link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (link.designerRepresentativeName && link.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [trackingLinks, searchTerm]);
+    let result = trackingLinks;
+
+    if (selectedDateRange?.from) {
+      const startDate = startOfDay(selectedDateRange.from);
+      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
+      result = result.filter(link => {
+        try {
+          if (!link.createdAt) return false;
+          const linkDate = parseISO(link.createdAt);
+          return isWithinInterval(linkDate, { start: startDate, end: endDate });
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    if (searchTerm) {
+      result = result.filter(link =>
+        link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (link.designerRepresentativeName && link.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return result;
+  }, [trackingLinks, searchTerm, selectedDateRange]);
 
   const totalPages = Math.ceil(filteredTrackingLinks.length / ITEMS_PER_PAGE);
 
@@ -141,7 +190,7 @@ export default function AllOrdersPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, selectedDateRange]);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
@@ -217,10 +266,16 @@ export default function AllOrdersPage() {
               <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of all orders and their current status.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
+              <DateRangePicker3
+                initialRange={selectedDateRange}
+                onDateRangeChange={handleDateRangeChange}
+                className="h-10"
+              />
+
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search links..."
+                  placeholder="Search orders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 bg-background h-10 rounded-md w-full"
@@ -235,6 +290,7 @@ export default function AllOrdersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Order ID</TableHead>
+                  <TableHead>Date Created</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Order Status</TableHead>
                   <TableHead>CRM Contact</TableHead>
@@ -247,6 +303,7 @@ export default function AllOrdersPage() {
                   [...Array(5)].map((_, i) => (
                     <TableRow key={`skel-link-${i}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -266,14 +323,53 @@ export default function AllOrdersPage() {
                             {link.id}
                           </Link>
                         </TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                          {link.createdAt ? new Date(link.createdAt).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          }) : 'N/A'}
+                        </TableCell>
                         <TableCell className="text-card-foreground">{link.companyName}</TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                             {statusInfo.name}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
-                        <TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell>
+                        <TableCell className="text-card-foreground">
+                          <div className="flex items-center gap-2">
+                            {(globalAppSettings?.showAvatarsInOrders ?? true) && (
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage 
+                                  src={usersMap[link.crmUserId]?.avatarUrl || undefined} 
+                                />
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                  {getInitials(link.crmUserName)}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <span>{link.crmUserName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-card-foreground">
+                          {link.designerRepresentativeId ? (
+                            <div className="flex items-center gap-2">
+                              {(globalAppSettings?.showAvatarsInOrders ?? true) && (
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage 
+                                    src={usersMap[link.designerRepresentativeId]?.avatarUrl || undefined} 
+                                  />
+                                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                    {getInitials(link.designerRepresentativeName || 'N/A')}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                              <span>{link.designerRepresentativeName}</span>
+                            </div>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
                         <TableCell className="pr-6 text-right whitespace-nowrap">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -310,10 +406,10 @@ export default function AllOrdersPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 h-[300px]">
-                      <Link2 className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                      <PackageIcon className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                       <p className="text-lg text-muted-foreground font-medium">
-                        {searchTerm ? "No tracking links match your search." : "No tracking links found."}
+                        {searchTerm ? "No orders match your search." : "No orders found."}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {searchTerm ? "Try a different search term." : "Orders will appear here once created."}

@@ -18,6 +18,8 @@ import { getStatuses } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
+import { getUsers } from '@/lib/user-service';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from '@/components/ui/skeleton';
 import { deleteOrderAction, updateOrderAction, getDeletedOrdersAction, restoreOrderAction, permanentlyDeleteOrderAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -80,6 +82,7 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
+  const [usersMap, setUsersMap] = useState<Record<string, User>>({});
 
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null);
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
@@ -114,17 +117,22 @@ export default function OrdersPage() {
       setIsLoading(true);
     }
     try {
-      const [fetchedOrders, fetchedStatuses, fetchedSettings] = await Promise.all([
+      const [fetchedOrders, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([
         getOrders(),
         getStatuses(),
-        getGlobalSettings()
+        getGlobalSettings(),
+        getUsers()
       ]);
       setOrders(fetchedOrders);
       setAllStatuses(fetchedStatuses);
       setGlobalAppSettings(fetchedSettings);
+      
+      const uMap: Record<string, User> = {};
+      fetchedUsers.forEach(u => uMap[u.id] = u);
+      setUsersMap(uMap);
     } catch (error) {
-      console.error("Failed to fetch orders, statuses, or settings:", error);
-      toast({ title: "Error", description: "Could not load order data or settings.", variant: "destructive" });
+      console.error("Failed to fetch orders, statuses, settings, or users:", error);
+      toast({ title: "Error", description: "Could not load data.", variant: "destructive" });
       setOrders([]);
       setAllStatuses([]);
       setGlobalAppSettings(null);
@@ -231,6 +239,13 @@ export default function OrdersPage() {
   }, [searchTerm, viewType, selectedDateRange]);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+  };
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
@@ -594,8 +609,40 @@ export default function OrdersPage() {
                           {statusInfo.name}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
-                      <TableCell className="text-card-foreground">{order.designerRepresentativeName || 'N/A'}</TableCell>
+                      <TableCell className="text-card-foreground">
+                        <div className="flex items-center gap-2">
+                          {(globalAppSettings?.showAvatarsInOrders ?? true) && (
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage 
+                                src={usersMap[order.crmUserId]?.avatarUrl || undefined} 
+                              />
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {getInitials(order.crmUserName)}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          <span>{order.crmUserName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-card-foreground">
+                        {order.designerRepresentativeId ? (
+                          <div className="flex items-center gap-2">
+                            {(globalAppSettings?.showAvatarsInOrders ?? true) && (
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage 
+                                  src={usersMap[order.designerRepresentativeId]?.avatarUrl || undefined} 
+                                />
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                  {getInitials(order.designerRepresentativeName || 'N/A')}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <span>{order.designerRepresentativeName}</span>
+                          </div>
+                        ) : (
+                          'N/A'
+                        )}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
                       <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
                         <DropdownMenu>

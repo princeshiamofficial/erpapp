@@ -285,6 +285,7 @@ export interface GlobalSettings {
   rolesAllowedToViewFinancials?: UserRole[];
   isPaymentValidationEnabled?: boolean; // New setting
   isLeaderboardRestrictedToAdmin?: boolean; // New setting
+  showAvatarsInOrders?: boolean; // New setting to toggle avatars in orders
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
