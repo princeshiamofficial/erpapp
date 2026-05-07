@@ -27,6 +27,7 @@ import {
   deleteCustomRoleAction,
   reorderRolesAction,
   updateShowAvatarsInOrdersAction,
+  updateLeaderboardRestrictionAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
