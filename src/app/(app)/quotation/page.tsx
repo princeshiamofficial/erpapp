@@ -466,8 +466,8 @@ export default function QuotationsPage() {
                     const statusInfo = quotationStatusDisplay[quotation.currentStatus] || { name: quotation.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
                     return (
                       <TableRow key={quotation.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6">
-                          <Link href={`/quotation/${quotation.id}`} className="font-medium text-primary hover:underline">
+                        <TableCell className="pl-6 font-mono text-primary font-bold">
+                          <Link href={`/quotation/${quotation.id}`} className="hover:underline">
                             {quotation.id}
                           </Link>
                         </TableCell>

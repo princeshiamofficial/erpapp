@@ -58,7 +58,11 @@ export const addQuotation = async (quotationData: {
       finalCreatedAt = new Date().toISOString();
     }
 
-    const quotationPrefix = 'QTN-';
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const quotationPrefix = `Q${currentYear}${currentMonth}`;
+
     const allQuotations = await getQuotations();
     let newSequence = 1;
     if (allQuotations.length > 0) {
@@ -70,7 +74,7 @@ export const addQuotation = async (quotationData: {
         .reduce((max, current) => (current > max ? current : max), 0);
       newSequence = maxId + 1;
     }
-    const quotationId = `${quotationPrefix}${String(newSequence).padStart(4, '0')}`;
+    const quotationId = `${quotationPrefix}${String(newSequence).padStart(2, '0')}`;
 
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(), timestamp: finalCreatedAt, status: quotationData.initialStatusId,
