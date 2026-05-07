@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import type { FollowUp, FollowUpStatusType, CustomerType, FollowUpStatus } from '@/types';
+import { DateRangePicker, type DateRange } from '@/components/dashboard/date-range-picker';
+import { isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 import {
     Select,
     SelectContent,
@@ -41,6 +43,7 @@ export default function FollowUpPage() {
     const [searchField, setSearchField] = useState<'all' | 'phone' | 'jobId' | 'name'>('all');
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>();
 
     const fetchData = useCallback(async () => {
         if (!currentUser) return;
@@ -67,12 +70,24 @@ export default function FollowUpPage() {
     }, [fetchData]);
 
     const filteredFollowUps = useMemo(() => {
+        let filtered = followUps;
+
+        if (selectedDateRange?.from && selectedDateRange?.to) {
+            const start = startOfDay(selectedDateRange.from);
+            const end = endOfDay(selectedDateRange.to);
+            filtered = filtered.filter(item => {
+                if (!item.date) return false;
+                const itemDate = parseISO(item.date);
+                return isWithinInterval(itemDate, { start, end });
+            });
+        }
+
         if (!searchTerm) {
-            return followUps;
+            return filtered;
         }
 
         const lowerSearchTerm = searchTerm.toLowerCase();
-        return followUps.filter(item => {
+        return filtered.filter(item => {
             if (searchField === 'phone') {
                 return item.phone && item.phone.toLowerCase().includes(lowerSearchTerm);
             }
@@ -91,7 +106,7 @@ export default function FollowUpPage() {
                 (item.address && item.address.toLowerCase().includes(lowerSearchTerm)) ||
                 (item.jobId && item.jobId.toLowerCase().includes(lowerSearchTerm));
         });
-    }, [followUps, searchTerm, searchField]);
+    }, [followUps, searchTerm, searchField, selectedDateRange]);
 
     const totalPages = Math.ceil(filteredFollowUps.length / ITEMS_PER_PAGE);
 
@@ -102,7 +117,7 @@ export default function FollowUpPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, selectedDateRange]);
 
     const getStatusBadge = (statusName: string) => {
         const foundStatus = statuses.find(s => s.name === statusName);
@@ -190,7 +205,10 @@ export default function FollowUpPage() {
             {/* Main Content */}
             {viewMode === 'kanban' ? (
                 <div className="flex-1 overflow-hidden">
-                    <FollowUpKanbanClient />
+                    <FollowUpKanbanClient 
+                        selectedDateRange={selectedDateRange} 
+                        onDateRangeChange={(range) => setSelectedDateRange(range)}
+                    />
                 </div>
             ) : (
                 <Card className="flex-1 overflow-hidden border-none bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 dark:ring-white/5 flex flex-col">
@@ -224,6 +242,11 @@ export default function FollowUpPage() {
                                     <SelectItem value="jobId" className="rounded-lg focus:bg-primary/10 focus:text-primary">Job ID</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <DateRangePicker 
+                                onDateRangeChange={(range) => setSelectedDateRange(range)}
+                                align="start"
+                                className="rounded-xl bg-white/50 dark:bg-slate-900/50 border-none shadow-sm ring-1 ring-slate-100 dark:ring-white/5 focus:ring-2 focus:ring-primary/50 font-medium text-xs"
+                            />
                         </div>
                     </CardHeader>
                     <CardContent className="p-0 flex-1 overflow-auto">

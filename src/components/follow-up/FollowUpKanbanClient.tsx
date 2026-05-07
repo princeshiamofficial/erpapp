@@ -59,6 +59,8 @@ const ManageFollowUpStatusesDialog = dynamic(() => import('./ManageFollowUpStatu
 const ImportFollowUpsDialog = dynamic(() => import('./ImportFollowUpsDialog').then(mod => mod.ImportFollowUpsDialog), { ssr: false });
 const FollowUpStageChangeDialog = dynamic(() => import('./FollowUpStageChangeDialog').then(mod => mod.FollowUpStageChangeDialog), { ssr: false });
 const FollowUpUpdateDialog = dynamic(() => import('./FollowUpUpdateDialog').then(mod => mod.FollowUpUpdateDialog), { ssr: false });
+import { isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { DateRangePicker, type DateRange } from '@/components/dashboard/date-range-picker';
 
 const iconMap: Record<string, LucideIcon> = {
     UserPlus,
@@ -76,7 +78,13 @@ const getIcon = (name: string | undefined): LucideIcon => {
     return iconMap[name] || HelpCircle;
 };
 
-export function FollowUpKanbanClient() {
+export function FollowUpKanbanClient({ 
+    selectedDateRange, 
+    onDateRangeChange 
+}: { 
+    selectedDateRange?: DateRange, 
+    onDateRangeChange?: (range: DateRange | undefined) => void 
+}) {
     const { currentUser } = useAuth();
     const { toast } = useToast();
     const [followUps, setFollowUps] = useState<FollowUp[]>([]);
@@ -147,7 +155,19 @@ export function FollowUpKanbanClient() {
     }, [socket, fetchData]);
 
     const filteredItems = useMemo(() => {
-        return followUps.filter(item => {
+        let filtered = followUps;
+
+        if (selectedDateRange?.from && selectedDateRange?.to) {
+            const start = startOfDay(selectedDateRange.from);
+            const end = endOfDay(selectedDateRange.to);
+            filtered = filtered.filter(item => {
+                if (!item.date) return false;
+                const itemDate = parseISO(item.date);
+                return isWithinInterval(itemDate, { start, end });
+            });
+        }
+
+        return filtered.filter(item => {
             if (!searchTerm) return true;
             const lowerSearchTerm = searchTerm.toLowerCase();
 
@@ -168,7 +188,7 @@ export function FollowUpKanbanClient() {
                 (item.jobId || "").toLowerCase().includes(lowerSearchTerm) ||
                 (item.phone || "").includes(searchTerm);
         });
-    }, [followUps, searchTerm, searchField]);
+    }, [followUps, searchTerm, searchField, selectedDateRange]);
 
     const itemsByStatus = useMemo(() => {
         const grouped: Record<string, FollowUp[]> = {};
@@ -316,6 +336,12 @@ export function FollowUpKanbanClient() {
                                 <SelectItem value="jobId" className="rounded-lg focus:bg-primary/10 focus:text-primary">Job ID</SelectItem>
                             </SelectContent>
                         </Select>
+                        <DateRangePicker 
+                            onDateRangeChange={(range) => onDateRangeChange?.(range)}
+                            initialRange={selectedDateRange}
+                            align="start"
+                            className="rounded-xl bg-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] border-border/40 focus:border-primary/50 font-medium text-xs h-10"
+                        />
                     </div>
                     <div className="flex items-center gap-2">
                         {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
