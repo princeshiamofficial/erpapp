@@ -273,6 +273,7 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
   const amountDue = total - totalAdvancePaid;
   const showPaidBadge = total > 0 && amountDue <= 0.01;
   const showApprovedStamp = quotation.currentStatus === 'Approved';
+  const showCanceledStamp = quotation.currentStatus === 'Canceled' || quotation.currentStatus === 'Cancelled';
 
   const formatDateFull = (dateStr: string) => {
     try {
@@ -365,10 +366,12 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
           {/* Summary Section */}
           <View style={styles.summarySection}>
             <View style={{ position: 'relative', width: 200 }}>
-              {showApprovedStamp ? (
-                <Image src="https://colorhutbd.xyz/image/approved-stamp.png" style={styles.stamp} />
+              {showCanceledStamp ? (
+                <Image src="/cancelled-stamp.png" style={styles.stamp} />
+              ) : showApprovedStamp ? (
+                <Image src="/approved-stamp.png" style={styles.stamp} />
               ) : showPaidBadge ? (
-                <Image src="https://colorhutbd.xyz/image/paid-stamp.webp" style={styles.stamp} />
+                <Image src="/paid-stamp.png" style={styles.stamp} />
               ) : null}
               
               <View style={styles.summaryRow}>
