@@ -51,7 +51,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setRecipientPhone(gift.recipientPhone);
       setRecipientAddress(gift.recipientAddress);
       setOrderId(gift.orderId || null);
-      setJobIdInput(gift.orderId ? allOrders.find(o => o.id === gift.orderId)?.orderIdDisplay || '' : '');
+      setJobIdInput(gift.orderId ? allOrders.find(o => o.id === gift.orderId)?.id || '' : '');
       setDateGiven(gift.dateGiven ? new Date(gift.dateGiven) : new Date());
       setNotes(gift.notes || '');
     } else {
@@ -82,7 +82,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       }
 
       const found = allOrders.find(order => {
-        const displayId = (order.orderIdDisplay || '').trim().toLowerCase();
+        const displayId = (order.id || '').trim().toLowerCase();
         const companyPrefix = (order.companyName || '').split(' • ')[0].trim().toLowerCase();
         const inputLower = trimmedJobId.toLowerCase();
         return displayId === inputLower || companyPrefix === inputLower || displayId.includes(inputLower);
