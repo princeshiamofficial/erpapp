@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, FileText, CheckCircle, Ban, Hourglass } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, FileText, CheckCircle, Ban, Hourglass, Download } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
@@ -91,6 +91,7 @@ export default function QuotationsPage() {
   const [isTrashDialogOpen, setIsTrashDialogOpen] = useState(false);
   const [deletedQuotations, setDeletedQuotations] = useState<TrackingLink[]>([]);
   const [isTrashLoading, setIsTrashLoading] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState<string | null>(null);
 
 
 
@@ -309,6 +310,28 @@ export default function QuotationsPage() {
     setQuotationToEdit(null);
   }, [toast]);
 
+  const handleDownloadPDF = async (quotation: TrackingLink) => {
+    setIsGeneratingPDF(quotation.id);
+    try {
+      const { pdf } = await import('@react-pdf/renderer');
+      const { QuotationPDF } = await import('@/components/quotations/QuotationPDF');
+      
+      const blob = await pdf(<QuotationPDF quotation={quotation} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Quotation_${quotation.id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Success", description: "Quotation PDF downloaded successfully." });
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast({ title: "Error", description: "Failed to generate PDF.", variant: "destructive" });
+    } finally {
+      setIsGeneratingPDF(null);
+    }
+  };
+
   const handleChangeStatus = async (quotation: TrackingLink, newStatus: string) => {
     if (!currentUser) return;
     const result = await updateQuotationStatusAction(quotation.id, newStatus, currentUser);
@@ -467,9 +490,7 @@ export default function QuotationsPage() {
                     return (
                       <TableRow key={quotation.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-mono text-primary font-bold">
-                          <Link href={`/quotation/${quotation.id}`} className="hover:underline">
-                            {quotation.id}
-                          </Link>
+                          {quotation.id}
                         </TableCell>
                         <TableCell className="text-card-foreground font-medium">{contactPerson}</TableCell>
                         <TableCell className="text-card-foreground">{companyName}</TableCell>
@@ -503,12 +524,19 @@ export default function QuotationsPage() {
                                   </DropdownMenuSubContent>
                                 </DropdownMenuPortal>
                               </DropdownMenuSub>
-                              <DropdownMenuItem asChild className="cursor-pointer">
-                                <Link href={`/quotation/${quotation.id}`}>
-                                  <Eye className="mr-2 h-4 w-4" /> View Details
-                                </Link>
+                              <DropdownMenuItem 
+                                onSelect={() => handleDownloadPDF(quotation)} 
+                                className="cursor-pointer"
+                                disabled={isGeneratingPDF === quotation.id}
+                              >
+                                {isGeneratingPDF === quotation.id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Download className="mr-2 h-4 w-4" />
+                                )}
+                                {isGeneratingPDF === quotation.id ? 'Preparing PDF...' : 'Download PDF'}
                               </DropdownMenuItem>
-                              {canDeleteQuotation && (
+                                {canDeleteQuotation && (
                                 <>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem

@@ -106,7 +106,6 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
     <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl print:shadow-none print:border-none print:p-4">
       <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-4 print:pb-4">
         <div>
-          <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> QUOTATION</h2>
           <div className="mb-2">
             <Image
               src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
