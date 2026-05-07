@@ -83,6 +83,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TeamPerformanceGraph } from '@/components/dashboard/TeamPerformanceGraph';
 import { getTaskEntries, type TaskEntry, getMonthlyTargetHistory, setMonthlyTargetHistory } from '@/lib/team-performance-service'; // Import new service
+import { getDr2oEntries } from '@/lib/dr2o-service';
 import { CANCELLED_STATUS_ID } from '@/lib/status-constants'; // Import CANCELLED_STATUS_ID
 import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
 
@@ -334,12 +335,30 @@ function DashboardContent() {
       return null;
     }
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback] = await Promise.all([
-        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(),
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries] = await Promise.all([
+        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'),
       ]);
+
+      // Merge CR workflow sale counts into allTasks for CRM users
+      const crmWorkflowTasks: TaskEntry[] = fetchedCrWorkflowEntries.map(entry => ({
+        id: entry.id,
+        date: entry.date,
+        userId: entry.crmId,
+        userName: entry.crmName,
+        role: 'CRM',
+        taskCount: entry.saleCount || 0,
+        createdAt: entry.date,
+      }));
+
+      // For CRM users, we might want to prioritize workflow tasks or merge them.
+      // The user asked to "get Sales Performance task count from crworkflow sale input",
+      // implying this should be the source for Sales Performance.
+      
       return {
         allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers,
-        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, allTasks: fetchedTasks, allFeedback: fetchedFeedback
+        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
+        allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
+        allFeedback: fetchedFeedback
       };
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);

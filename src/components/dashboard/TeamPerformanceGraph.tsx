@@ -718,7 +718,7 @@ export function TeamPerformanceGraph({
               <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center order-2 sm:order-1">
                 {isInputVisible && (
                   <div className="contents">
-                    {hasCompletedDailySubmissions &&
+                    {(currentUser?.role === 'CRM' || hasCompletedDailySubmissions) &&
                       <Button asChild className="h-10 w-full sm:w-auto">
                         <Link href="/workflow">
                           Open Desk
@@ -816,7 +816,7 @@ export function TeamPerformanceGraph({
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end order-1 sm:order-3">
-                {isInputVisible && canSubmitTasks && (
+                {isInputVisible && canSubmitTasks && currentUser?.role !== 'CRM' && (
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Input
                       id="tasks-done-input"
