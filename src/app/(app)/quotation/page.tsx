@@ -15,7 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { getContrastTextColor } from '@/lib/color-utils';
 import { getQuotations } from '@/lib/quotation-service';
+import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
+import { getStatuses } from '@/lib/status-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { deleteQuotationAction, updateQuotationStatusAction, getDeletedQuotationsAction, restoreQuotationAction, permanentlyDeleteQuotationAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +56,7 @@ import {
 
 const CreateQuotationDialog = dynamic(() => import('@/components/quotations/create-quotation-dialog').then(mod => mod.CreateQuotationDialog));
 const EditQuotationDialog = dynamic(() => import('@/components/quotations/edit-quotation-dialog').then(mod => mod.EditQuotationDialog));
+const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog), { ssr: false });
 import { TrashDialog } from '@/components/shared/trash-dialog';
 
 
@@ -93,6 +96,11 @@ export default function QuotationsPage() {
   const [isTrashLoading, setIsTrashLoading] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState<string | null>(null);
 
+  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+  const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
+  const [quotationForOrder, setQuotationForOrder] = useState<TrackingLink | null>(null);
+  const [availableOrderStatuses, setAvailableOrderStatuses] = useState<CustomStatus[]>([]);
+
 
 
   const fetchQuotationData = useCallback(async () => {
@@ -107,7 +115,7 @@ export default function QuotationsPage() {
       setIsLoading(true);
     }
     try {
-      const [fetchedQuotations, fetchedStatuses, fetchedSettings] = await Promise.all([
+      const [fetchedQuotations, fetchedStatuses, fetchedSettings, fetchedOrders, fetchedOrderStatuses] = await Promise.all([
         getQuotations(),
         // Mocking statuses for quotation page
         Promise.resolve([
@@ -115,11 +123,15 @@ export default function QuotationsPage() {
           { id: 'Approved', name: 'Approved', color: '#10B981', xid: 'approved' },
           { id: 'Canceled', name: 'Canceled', color: '#EF4444', xid: 'canceled' },
         ]),
-        getGlobalSettings()
+        getGlobalSettings(),
+        getOrders(),
+        getStatuses()
       ]);
       setQuotations(fetchedQuotations);
       setAllStatuses(fetchedStatuses);
       setGlobalAppSettings(fetchedSettings);
+      setAllOrders(fetchedOrders);
+      setAvailableOrderStatuses(fetchedOrderStatuses.filter(s => s.isVisible !== false));
     } catch (error) {
       console.error("Failed to fetch quotations, statuses, or settings:", error);
       toast({ title: "Error", description: "Could not load quotation data or settings.", variant: "destructive" });
@@ -338,6 +350,11 @@ export default function QuotationsPage() {
     if (result.success && result.quotation) {
       toast({ title: "Status Updated", description: `Quotation status changed to ${newStatus}.` });
       setQuotations(prev => prev.map(q => q.id === result.quotation?.id ? result.quotation : q));
+      
+      if (newStatus === 'Approved') {
+        setQuotationForOrder(result.quotation);
+        setIsCreateOrderDialogOpen(true);
+      }
     } else {
       toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     }
@@ -671,6 +688,22 @@ export default function QuotationsPage() {
         onRestore={handleRestoreQuotation}
         onDeletePermanently={handlePermanentlyDeleteQuotation}
       />
+
+      {isCreateOrderDialogOpen && quotationForOrder && (
+        <CreateOrderDialog
+          currentUser={currentUser}
+          availableStatuses={availableOrderStatuses}
+          onOrderCreated={() => {
+            fetchData();
+          }}
+          allOrders={allOrders}
+          isOpen={isCreateOrderDialogOpen}
+          onOpenChange={setIsCreateOrderDialogOpen}
+          initialData={quotationForOrder}
+        >
+          <div className="hidden" />
+        </CreateOrderDialog>
+      )}
     </div>
   );
 }

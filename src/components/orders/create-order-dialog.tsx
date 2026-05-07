@@ -30,6 +30,7 @@ interface CreateOrderDialogProps {
   allOrders: TrackingLink[];
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: Partial<TrackingLink>;
 }
 
 interface DialogOrderItem {
@@ -55,7 +56,7 @@ const initialOrderItemState: DialogOrderItem = {
   lineItemTotalPrice: null,
 };
 
-export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children, allOrders, isOpen, onOpenChange }: CreateOrderDialogProps) {
+export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children, allOrders, isOpen, onOpenChange, initialData }: CreateOrderDialogProps) {
   const [jobId, setJobId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
@@ -165,13 +166,41 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           setJobId('1'); // Start with 1 if no orders exist
         }
       }
+
+      if (initialData) {
+        const nameParts = (initialData.companyName || '').split(' • ');
+        const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : initialData.companyName || '';
+        
+        setCompanyName(actualCompanyName);
+        setAddress(initialData.address || '');
+        setPhoneNumber(initialData.phoneNumber || '');
+        setOrderNotes(initialData.orderNotes || '');
+        
+        if (initialData.orderItems && initialData.orderItems.length > 0) {
+          setOrderItems(initialData.orderItems.map(item => ({
+            id: uuidv4(),
+            model: item.model,
+            quantity: item.quantity.toString(),
+            lamination: item.lamination,
+            unitPrice: item.unitPrice,
+            lineItemTotalPrice: item.lineItemTotalPrice,
+          })));
+        }
+
+        if (initialData.specialClientDiscount) {
+          setSpecialClientDiscount(initialData.specialClientDiscount.toString());
+        }
+
+        setIsAutoFilled(true);
+      }
+
       setTimeout(() => {
         jobIdInputRef.current?.focus();
       }, 100);
     } else {
       resetForm();
     }
-  }, [isOpen, fetchOptions, allOrders, resetForm, jobId]);
+  }, [isOpen, fetchOptions, allOrders, resetForm]); // Removed jobId from dependencies
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
@@ -276,9 +305,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   useEffect(() => {
     const handler = setTimeout(() => {
       const trimmedJobId = jobId.trim();
+
       if (!trimmedJobId || !allOrders.length) {
-        if (isAutoFilled) {
-          // Clear fields if Job ID is cleared
+        if (isAutoFilled && !initialData) {
+          // Clear fields if Job ID is cleared and we're not in quotation mode
           setCompanyName('');
           setAddress('');
           setPhoneNumber('');
@@ -293,7 +323,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       });
 
       if (existingOrder) {
-        if (!isAutoFilled) {
+        if (!isAutoFilled || (isAutoFilled && initialData)) {
+          // If we find an existing order, we ALWAYS want to suggest its details
+          // even if we are in quotation mode (user might be linking them)
           const nameParts = (existingOrder.companyName || '').split(' • ');
           const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
 
@@ -304,10 +336,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
           toast({
             title: "Existing Job ID Found",
-            description: `Details for "${trimmedJobId}" have been auto-filled.`,
+            description: `Details for "${trimmedJobId}" have been auto-filled from existing orders.`,
           });
         }
-      } else if (isAutoFilled) {
+      } else if (isAutoFilled && !initialData) {
+        // ONLY clear if we are NOT in quotation mode.
+        // In quotation mode, we want to keep the quotation details even for a new Job ID.
         setCompanyName('');
         setAddress('');
         setPhoneNumber('');
@@ -316,7 +350,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [jobId, allOrders, toast, isAutoFilled]);
+  }, [jobId, allOrders, toast, isAutoFilled, initialData]);
 
   const handleAddItem = () => {
     setOrderItems([...orderItems, { ...initialOrderItemState, id: uuidv4() }]);
