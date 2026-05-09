@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit3, Trash2, MoreVertical, Gift as GiftIcon, Loader2 } from "lucide-react";
+import { PlusCircle, Search, Edit3, Trash2, MoreVertical, Gift as GiftIcon, Loader2, Truck } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { Gift, User, ServiceGiftItem, TrackingLink } from '@/types';
@@ -24,6 +24,7 @@ import { format, parseISO } from 'date-fns';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 
 const AddEditGiftDialog = dynamic(() => import('@/components/gifts/AddEditGiftDialog').then(mod => mod.AddEditGiftDialog));
+const GiftCourierDialog = dynamic(() => import('@/components/gifts/GiftCourierDialog').then(mod => mod.GiftCourierDialog));
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -54,6 +55,9 @@ export default function GiftsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [giftForCourier, setGiftForCourier] = useState<Gift | null>(null);
+  const [isCourierDialogOpen, setIsCourierDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -126,6 +130,11 @@ export default function GiftsPage() {
 
   const handleDeleteRequest = (gift: Gift) => {
     setGiftToDelete(gift);
+  };
+
+  const handleOpenCourierDialog = (gift: Gift) => {
+    setGiftForCourier(gift);
+    setIsCourierDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -217,14 +226,17 @@ export default function GiftsPage() {
                                <MoreVertical className="h-4 w-4" />
                              </Button>
                            </DropdownMenuTrigger>
-                           <DropdownMenuContent align="end">
-                             <DropdownMenuItem onSelect={() => handleOpenEditDialog(gift)} className="cursor-pointer">
-                               <Edit3 className="mr-2 h-4 w-4" />Edit
-                             </DropdownMenuItem>
-                             <DropdownMenuItem onSelect={() => handleDeleteRequest(gift)} className="cursor-pointer text-destructive focus:text-destructive">
-                               <Trash2 className="mr-2 h-4 w-4" />Delete
-                             </DropdownMenuItem>
-                           </DropdownMenuContent>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(gift)} className="cursor-pointer">
+                                <Edit3 className="mr-2 h-4 w-4" />Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleOpenCourierDialog(gift)} className="cursor-pointer">
+                                <Truck className="mr-2 h-4 w-4" />Transfer to Courier
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleDeleteRequest(gift)} className="cursor-pointer text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
                          </DropdownMenu>
                        </TableCell>
                      </TableRow>
@@ -262,6 +274,14 @@ export default function GiftsPage() {
         currentUser={currentUser}
         giftOptions={giftOptions}
         allOrders={allOrders}
+      />
+
+      <GiftCourierDialog
+        isOpen={isCourierDialogOpen}
+        onOpenChange={setIsCourierDialogOpen}
+        gift={giftForCourier}
+        currentUser={currentUser}
+        onSuccess={fetchData}
       />
 
       {giftToDelete && (

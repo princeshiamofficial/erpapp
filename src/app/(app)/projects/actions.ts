@@ -273,7 +273,7 @@ export async function transferToCourierAction(
         [
           {
             text: "📦 Track Order",
-            url: `https://steadfast.com.bd/t/${consignment.tracking_code}`
+            url: `https://steadfast.com.bd/tl/${consignment.tracking_code}`
           },
           {
             text: "📄 View Order",

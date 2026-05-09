@@ -547,6 +547,11 @@ export interface Gift {
   orderId?: string | null; // Optional link to an order
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
+  courierStatus?: string | null;
+  packzyConsignmentId?: string | null;
+  packzyTrackingCode?: string | null;
+  shippingArea?: string | null;
+  shippingCharge?: number | null;
 }
 
 export interface VendorProduct {
