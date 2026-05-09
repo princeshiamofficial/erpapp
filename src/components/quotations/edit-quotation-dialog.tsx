@@ -99,6 +99,12 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState('');
+  const [editingMethod, setEditingMethod] = useState('');
+  const [editingNotes, setEditingNotes] = useState('');
+  const amountInputRef = React.useRef<HTMLInputElement>(null);
+
   const fetchDialogOptions = useCallback(async () => {
     setIsLoadingOptions(true);
     try {
@@ -154,6 +160,10 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
     setShowNewCustomPaymentInput(false); setNewCustomPaymentMethodText('');
     setPopoverOpenStates({}); setIsPaymentMethodPopoverOpen(false);
     setIsSubmitting(false);
+    setEditingPaymentId(null);
+    setEditingAmount('');
+    setEditingMethod('');
+    setEditingNotes('');
   }, [quotation]);
 
   useEffect(() => {
@@ -191,6 +201,33 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
 
     setAmountDue(Math.max(0, grandTotal - currentTotalExistingAdvance - newAdvanceNum));
   }, [orderItems, specialClientDiscount, newAdvanceAmount, existingAdvancePayments]);
+
+  const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
+
+  const handleStartEditPayment = (payment: AdvancePaymentRecord) => {
+    if (!isAdmin) return;
+    setEditingPaymentId(payment.id);
+    setEditingAmount(payment.amount.toString());
+    setEditingMethod(payment.paymentMethod || '');
+    setEditingNotes(payment.notes || '');
+  };
+
+  const handleSavePaymentEdit = (paymentId: string) => {
+    const newAmount = parseFloat(editingAmount);
+    if (isNaN(newAmount) || newAmount < 0) {
+      toast({ title: "Invalid Amount", description: "Please enter a valid positive number for the payment.", variant: "destructive" });
+      setEditingAmount(existingAdvancePayments.find(p => p.id === paymentId)?.amount.toString() || '0');
+      return;
+    }
+    setExistingAdvancePayments(prev =>
+      prev.map(p => p.id === paymentId ? { ...p, amount: newAmount, paymentMethod: editingMethod, notes: editingNotes } : p)
+    );
+    setEditingPaymentId(null);
+  };
+
+  const handleCancelPaymentEdit = () => {
+    setEditingPaymentId(null);
+  };
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
     if (unitPrice === null) return null;
@@ -450,10 +487,65 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
               <div className="mt-4 space-y-2">
                 <Label className="text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payment History</Label>
                 <div className="max-h-40 overflow-y-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
-                  <Table><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead></TableRow></TableHeader>
+                  <Table><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead>
+                    {isAdmin && <TableHead className="h-8 text-right text-xs">Actions</TableHead>}
+                  </TableRow></TableHeader>
                     <TableBody>
                       {existingAdvancePayments.map(record => (
-                        <TableRow key={record.id}><TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell><TableCell className="text-xs py-1.5">{formatCurrencyBdt(record.amount)}</TableCell><TableCell className="text-xs py-1.5">{record.paymentMethod || 'N/A'}</TableCell><TableCell className="text-xs py-1.5">{record.notes || 'N/A'}</TableCell></TableRow>
+                        <TableRow key={record.id} className="group" onDoubleClick={() => { if (!editingPaymentId) handleStartEditPayment(record); }}>
+                          <TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell>
+                          <TableCell className="text-xs py-1.5">
+                            {editingPaymentId === record.id ? (
+                              <Input
+                                ref={amountInputRef}
+                                type="number"
+                                value={editingAmount}
+                                onChange={(e) => setEditingAmount(e.target.value)}
+                                className="h-7 text-xs"
+                              />
+                            ) : (
+                              formatCurrencyBdt(record.amount)
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs py-1.5">
+                            {editingPaymentId === record.id ? (
+                              <Select value={editingMethod} onValueChange={(value) => setEditingMethod(value)}>
+                                <SelectTrigger className="h-7 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {paymentMethodOptions.map(pm => <SelectItem key={pm.id} value={pm.name}>{pm.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              record.paymentMethod || 'N/A'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground py-1.5">
+                            {editingPaymentId === record.id ? (
+                              <Input
+                                value={editingNotes}
+                                onChange={(e) => setEditingNotes(e.target.value)}
+                                className="h-7 text-xs"
+                                placeholder="Notes/Ref"
+                              />
+                            ) : (
+                              record.notes || 'N/A'
+                            )}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-right py-1.5">
+                              {editingPaymentId === record.id ? (
+                                <div className="flex gap-1 justify-end">
+                                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:bg-green-100" onClick={() => handleSavePaymentEdit(record.id)}><Check className="h-4 w-4" /></Button>
+                                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-muted" onClick={handleCancelPaymentEdit}><XCircle className="h-4 w-4" /></Button>
+                                </div>
+                              ) : (
+                                <Edit className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-pointer" onClick={() => handleStartEditPayment(record)} />
+                              )}
+                            </TableCell>
+                          )}
+                        </TableRow>
                       ))}
                     </TableBody>
                   </Table>

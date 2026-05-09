@@ -34,6 +34,13 @@ export default function RootLayout({
           src="https://unpkg.com/spoilerjs/dist/components/spoiler-span.js"
           strategy="lazyOnload"
         />
+        <script dangerouslySetInnerHTML={{ __html: `
+          document.addEventListener('wheel', function(event) {
+            if (document.activeElement.type === 'number') {
+              event.preventDefault();
+            }
+          }, { passive: false });
+        ` }} />
       </body>
     </html>
   );

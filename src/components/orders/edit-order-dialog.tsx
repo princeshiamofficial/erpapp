@@ -113,6 +113,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [editingAmount, setEditingAmount] = useState('');
   const [editingMethod, setEditingMethod] = useState('');
+  const [editingNotes, setEditingNotes] = useState('');
   const amountInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -178,6 +179,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setEditingPaymentId(null);
     setEditingAmount('');
     setEditingMethod('');
+    setEditingNotes('');
   }, [order]);
 
   useEffect(() => {
@@ -231,6 +233,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setEditingPaymentId(payment.id);
     setEditingAmount(payment.amount.toString());
     setEditingMethod(payment.paymentMethod || '');
+    setEditingNotes(payment.notes || '');
   };
 
   const handleSavePaymentEdit = (paymentId: string) => {
@@ -241,7 +244,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       return;
     }
     setExistingAdvancePayments(prev =>
-      prev.map(p => p.id === paymentId ? { ...p, amount: newAmount, paymentMethod: editingMethod } : p)
+      prev.map(p => p.id === paymentId ? { ...p, amount: newAmount, paymentMethod: editingMethod, notes: editingNotes } : p)
     );
     setEditingPaymentId(null);
   };
@@ -607,7 +610,18 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                 record.paymentMethod || 'N/A'
                               )}
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground py-1.5">{record.notes || 'N/A'}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground py-1.5">
+                              {editingPaymentId === record.id ? (
+                                <Input
+                                  value={editingNotes}
+                                  onChange={(e) => setEditingNotes(e.target.value)}
+                                  className="h-7 text-xs"
+                                  placeholder="Notes/Ref"
+                                />
+                              ) : (
+                                record.notes || 'N/A'
+                              )}
+                            </TableCell>
                             {isAdmin && (
                               <TableCell className="text-right py-1.5">
                                 {editingPaymentId === record.id ? (
