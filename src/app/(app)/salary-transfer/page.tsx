@@ -11,7 +11,14 @@ import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import type { Employee, Payslip, AttendanceRecord } from '@/types';
 import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth, isAfter, startOfMonth } from 'date-fns';
-import { Printer, Download } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { SalaryTransferPDF } from '@/components/payroll/SalaryTransferPDF';
+
+const PDFDownloadLink = dynamic(() => import('@react-pdf/renderer').then(mod => mod.PDFDownloadLink), {
+  ssr: false,
+  loading: () => <Button variant="outline" disabled><FileText className="mr-2 h-4 w-4" /> Preparing PDF...</Button>
+});
 import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
@@ -123,9 +130,6 @@ export default function SalaryTransferPage() {
     return unpaidEmployeesData.reduce((total, data) => total + (data.payableAmount || 0), 0);
   }, [unpaidEmployeesData]);
 
-  const handlePrint = () => {
-    window.print();
-  };
   
   const handleExport = () => {
     if (unpaidEmployeesData.length === 0) {
@@ -157,25 +161,35 @@ export default function SalaryTransferPage() {
   };
 
   return (
-    <div className="space-y-6 printable-area bg-transparent p-4 sm:p-6 lg:p-8">
-      <div className="flex justify-end gap-2 no-print">
-        <Button onClick={handleExport} variant="outline" disabled={isLoading}>
+    <div className="space-y-2 bg-transparent">
+      <div className="flex justify-end gap-2">
+        <Button onClick={handleExport} className="bg-orange-600 hover:bg-orange-700 text-white border-none" disabled={isLoading}>
           <Download className="mr-2 h-4 w-4" /> Export as CSV
         </Button>
-        <Button onClick={handlePrint}>
-          <Printer className="mr-2 h-4 w-4" /> Print
-        </Button>
+        
+        {!isLoading && unpaidEmployeesData.length > 0 && (
+          <PDFDownloadLink
+            document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} />}
+            fileName={`salary_transfer_${format(selectedDate, 'MMM_yyyy')}.pdf`}
+          >
+            {({ loading }) => (
+              <Button className="bg-red-600 hover:bg-red-700 text-white border-none" disabled={loading}>
+                <FileText className="mr-2 h-4 w-4" /> {loading ? 'Generating PDF...' : 'Download PDF'}
+              </Button>
+            )}
+          </PDFDownloadLink>
+        )}
       </div>
-      <Card className="print:border-0 print:shadow-none print:bg-transparent">
-        <CardHeader className="text-center print:text-black">
-          <CardTitle className="text-xl font-bold pt-2">COMPANY NAME: COLOR HUT</CardTitle>
-          <CardDescription className="text-red-500 font-semibold">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</CardDescription>
+      <Card className="shadow-none">
+        <CardHeader className="text-center pb-2">
+          <CardTitle className="text-lg sm:text-xl font-bold">COMPANY NAME: COLOR HUT</CardTitle>
+          <CardDescription className="text-red-500 font-semibold text-xs sm:text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</CardDescription>
         </CardHeader>
         <CardContent className="px-2 sm:px-6">
            <div className="border-y border-gray-300 py-2 my-4">
               <div className="flex justify-between items-center px-2">
                 <h3 className="font-bold">Salary Transfer To Bank</h3>
-                <p>Salary Month : <span className="text-red-600 font-semibold">{format(selectedDate, 'MMM-yy')}</span></p>
+                <p>Salary Month : <span className="text-red-600 font-semibold">{format(selectedDate, 'MMMM yyyy')}</span></p>
               </div>
               <div className="px-2 mt-1">
                 <p>Bank Name : <span className="text-red-600 font-semibold">UNITED COMM. BANK (A/C 0872101000007053)</span></p>
@@ -185,7 +199,7 @@ export default function SalaryTransferPage() {
            <div className="overflow-x-auto">
             <Table className="w-full border-collapse border border-gray-300">
               <TableHeader>
-                <TableRow className="bg-green-200/50 print:bg-green-200">
+                <TableRow className="bg-orange-100 hover:bg-orange-100 border-b border-gray-300">
                   <TableHead className="border border-gray-300 text-black font-semibold p-2">Sl. No.</TableHead>
                   <TableHead className="border border-gray-300 text-black font-semibold p-2">ID No.</TableHead>
                   <TableHead className="border border-gray-300 text-black font-semibold p-2">Name of the Employees</TableHead>
@@ -245,31 +259,6 @@ export default function SalaryTransferPage() {
             </div>
         </CardContent>
       </Card>
-      <style jsx global>{`
-        @media print {
-          @page {
-            margin-top: 1in;
-            margin-bottom: 1in;
-          }
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .printable-area {
-            padding: 0 !important;
-            margin: 0 !important;
-            border: none;
-            box-shadow: none;
-            background-color: transparent !important;
-          }
-          .no-print {
-            display: none;
-          }
-          th, td {
-            white-space: nowrap;
-          }
-        }
-      `}</style>
     </div>
   );
 }
