@@ -20,7 +20,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateQuotationAction } from '@/app/(app)/quotation/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, XCircle, Edit } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
