@@ -214,7 +214,20 @@ const chunkArray = <T,>(arr: T[], size: number): T[][] => {
 };
 
 export const SalaryTransferPDF = ({ data, selectedDate, totalAmount, version = 'v1' }: SalaryTransferPDFProps) => {
-  const chunks = chunkArray(data, 20);
+  const getChunks = (arr: any[]) => {
+    const chunks = [];
+    if (arr.length > 0) {
+      chunks.push(arr.slice(0, 20)); // First page: 20 items
+      let remaining = arr.slice(20);
+      while (remaining.length > 0) {
+        chunks.push(remaining.slice(0, 25)); // Subsequent pages: 25 items
+        remaining = remaining.slice(25);
+      }
+    }
+    return chunks;
+  };
+
+  const chunks = getChunks(data);
 
   return (
     <Document>
@@ -263,7 +276,9 @@ export const SalaryTransferPDF = ({ data, selectedDate, totalAmount, version = '
 
             {chunk.map((employee, index) => (
               <View key={employee.id} style={styles.tableRow}>
-                <View style={[styles.tableCell, styles.cellSl]}><Text>{(pageIndex * 20) + index + 1}</Text></View>
+                <View style={[styles.tableCell, styles.cellSl]}>
+                  <Text>{pageIndex === 0 ? index + 1 : 20 + ((pageIndex - 1) * 25) + index + 1}</Text>
+                </View>
                 <View style={[styles.tableCell, styles.cellId]}><Text>{employee.nationalId || 'N/A'}</Text></View>
                 <View style={[styles.tableCell, styles.cellName]}><Text>{employee.name}</Text></View>
                 <View style={[styles.tableCell, styles.cellDesignation]}><Text>{employee.designation}</Text></View>
