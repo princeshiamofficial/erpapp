@@ -6,16 +6,14 @@ import { format, parseISO } from 'date-fns';
 
 // Create a simple barcode component using SVG/Views
 const Barcode = ({ value }: { value: string }) => {
-  // Very simplified 1D barcode representation using rectangles
-  // In a real app, you'd use a barcode generation library to get the exact pattern
   return (
-    <View style={{ flexDirection: 'row', height: 40, alignItems: 'flex-end' }}>
+    <View style={{ flexDirection: 'row', height: 30, alignItems: 'flex-end' }}>
       {[...Array(40)].map((_, i) => (
         <View 
           key={i} 
           style={{ 
-            width: i % 3 === 0 ? 1 : 2, 
-            height: (i % 5 === 0 ? 35 : 30), 
+            width: 1.8, 
+            height: 30, 
             backgroundColor: 'black',
             marginLeft: 1 
           }} 

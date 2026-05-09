@@ -204,88 +204,106 @@ interface SalaryTransferPDFProps {
   totalAmount: number;
 }
 
-export const SalaryTransferPDF = ({ data, selectedDate, totalAmount }: SalaryTransferPDFProps) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      <View style={styles.pdfHeader} fixed>
-        <View style={styles.headerBlackBox} />
-        <View style={styles.headerLogoSection}>
-          <Image src="/logo.png" style={styles.logoImage} />
-        </View>
-        <View style={styles.headerRedBar} />
-      </View>
+const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+};
 
-      <View style={styles.header}>
-        <Text style={styles.companyName}>COMPANY NAME: COLOR HUT</Text>
-        <Text style={styles.companyAddress}>
-          House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236
-        </Text>
-      </View>
+export const SalaryTransferPDF = ({ data, selectedDate, totalAmount }: SalaryTransferPDFProps) => {
+  const chunks = chunkArray(data, 20);
 
-      <View style={styles.titleSection}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>Salary Transfer To Bank</Text>
-          <Text>Salary Month : <Text style={styles.month}>{format(selectedDate, 'MMMM yyyy')}</Text></Text>
-        </View>
-        <View style={{ marginTop: 2 }}>
-          <Text>Bank Name : <Text style={styles.bankInfo}>UNITED COMM. BANK (A/C 0872101000007053)</Text></Text>
-        </View>
-      </View>
+  return (
+    <Document>
+      {chunks.map((chunk, pageIndex) => (
+        <Page key={pageIndex} size="A4" style={styles.page}>
+          <View style={styles.pdfHeader} fixed>
+            <View style={styles.headerBlackBox} />
+            <View style={styles.headerLogoSection}>
+              <Image src="/logo.png" style={styles.logoImage} />
+            </View>
+            <View style={styles.headerRedBar} />
+          </View>
 
-      <View style={styles.table}>
-        <View style={styles.tableHeader}>
-          <View style={[styles.tableCell, styles.cellSl]}><Text style={styles.headerText}>Sl. No.</Text></View>
-          <View style={[styles.tableCell, styles.cellId]}><Text style={styles.headerText}>ID No.</Text></View>
-          <View style={[styles.tableCell, styles.cellName]}><Text style={styles.headerText}>Name of the Employees</Text></View>
-          <View style={[styles.tableCell, styles.cellDesignation]}><Text style={styles.headerText}>Designation</Text></View>
-          <View style={[styles.tableCell, styles.cellAccount]}><Text style={styles.headerText}>Accounts No.</Text></View>
-          <View style={[styles.tableCellLast, styles.cellAmount]}><Text style={styles.headerText}>Amount</Text></View>
-        </View>
+          {pageIndex === 0 && (
+            <>
+              <View style={styles.header}>
+                <Text style={styles.companyName}>COMPANY NAME: COLOR HUT</Text>
+                <Text style={styles.companyAddress}>
+                  House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236
+                </Text>
+              </View>
 
-        {data.map((employee, index) => (
-          <View key={employee.id} style={styles.tableRow}>
-            <View style={[styles.tableCell, styles.cellSl]}><Text>{index + 1}</Text></View>
-            <View style={[styles.tableCell, styles.cellId]}><Text>{employee.nationalId || 'N/A'}</Text></View>
-            <View style={[styles.tableCell, styles.cellName]}><Text>{employee.name}</Text></View>
-            <View style={[styles.tableCell, styles.cellDesignation]}><Text>{employee.designation}</Text></View>
-            <View style={[styles.tableCell, styles.cellAccount]}><Text>{employee.accountNo || 'N/A'}</Text></View>
-            <View style={[styles.tableCellLast, styles.cellAmount]}><Text>{Math.floor(employee.payableAmount).toLocaleString()}</Text></View>
-          </View>
-        ))}
+              <View style={styles.titleSection}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.title}>Salary Transfer To Bank</Text>
+                  <Text>Salary Month : <Text style={styles.month}>{format(selectedDate, 'MMMM yyyy')}</Text></Text>
+                </View>
+                <View style={{ marginTop: 2 }}>
+                  <Text>Bank Name : <Text style={styles.bankInfo}>UNITED COMM. BANK (A/C 0872101000007053)</Text></Text>
+                </View>
+              </View>
+            </>
+          )}
 
-        {/* Empty rows to maintain 10 rows minimum if needed, though usually PDF only shows real data */}
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <View style={[styles.tableCell, styles.cellSl]}><Text style={styles.headerText}>Sl. No.</Text></View>
+              <View style={[styles.tableCell, styles.cellId]}><Text style={styles.headerText}>ID No.</Text></View>
+              <View style={[styles.tableCell, styles.cellName]}><Text style={styles.headerText}>Name of the Employees</Text></View>
+              <View style={[styles.tableCell, styles.cellDesignation]}><Text style={styles.headerText}>Designation</Text></View>
+              <View style={[styles.tableCell, styles.cellAccount]}><Text style={styles.headerText}>Accounts No.</Text></View>
+              <View style={[styles.tableCellLast, styles.cellAmount]}><Text style={styles.headerText}>Amount</Text></View>
+            </View>
 
-        <View style={styles.footerRow}>
-          <View style={styles.footerLabelCell}>
-            <Text style={styles.headerText}>Grand Total:</Text>
-          </View>
-          <View style={styles.footerValueCell}>
-            <Text style={styles.headerText}>{Math.floor(totalAmount).toLocaleString()}</Text>
-          </View>
-        </View>
-      </View>
+            {chunk.map((employee, index) => (
+              <View key={employee.id} style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.cellSl]}><Text>{(pageIndex * 20) + index + 1}</Text></View>
+                <View style={[styles.tableCell, styles.cellId]}><Text>{employee.nationalId || 'N/A'}</Text></View>
+                <View style={[styles.tableCell, styles.cellName]}><Text>{employee.name}</Text></View>
+                <View style={[styles.tableCell, styles.cellDesignation]}><Text>{employee.designation}</Text></View>
+                <View style={[styles.tableCell, styles.cellAccount]}><Text>{employee.accountNo || 'N/A'}</Text></View>
+                <View style={[styles.tableCellLast, styles.cellAmount]}><Text>{Math.floor(employee.payableAmount).toLocaleString()}</Text></View>
+              </View>
+            ))}
 
-      <View style={styles.pdfFooter} fixed>
-        <View style={styles.footerBlackBar}>
-          <View style={styles.footerInfoItem}>
-            <PhoneIcon />
-            <Text style={styles.footerInfoText}>01919-760626</Text>
+            {pageIndex === chunks.length - 1 && (
+              <View style={styles.footerRow}>
+                <View style={styles.footerLabelCell}>
+                  <Text style={styles.headerText}>Grand Total:</Text>
+                </View>
+                <View style={styles.footerValueCell}>
+                  <Text style={styles.headerText}>{Math.floor(totalAmount).toLocaleString()}</Text>
+                </View>
+              </View>
+            )}
           </View>
-          <View style={styles.footerInfoItem}>
-            <EmailIcon />
-            <Text style={styles.footerInfoText}>colorhut.official@gmail.com</Text>
+
+          <View style={styles.pdfFooter} fixed>
+            <View style={styles.footerBlackBar}>
+              <View style={styles.footerInfoItem}>
+                <PhoneIcon />
+                <Text style={styles.footerInfoText}>01919-760626</Text>
+              </View>
+              <View style={styles.footerInfoItem}>
+                <EmailIcon />
+                <Text style={styles.footerInfoText}>colorhut.official@gmail.com</Text>
+              </View>
+              <View style={styles.footerInfoItem}>
+                <FacebookIcon />
+                <Text style={styles.footerInfoText}>colorhut</Text>
+              </View>
+              <View style={styles.footerInfoItem}>
+                <GlobeIcon />
+                <Text style={styles.footerInfoText}>colorhut.xyz</Text>
+              </View>
+            </View>
+            <View style={styles.footerRedBar} />
           </View>
-          <View style={styles.footerInfoItem}>
-            <FacebookIcon />
-            <Text style={styles.footerInfoText}>colorhut</Text>
-          </View>
-          <View style={styles.footerInfoItem}>
-            <GlobeIcon />
-            <Text style={styles.footerInfoText}>colorhut.xyz</Text>
-          </View>
-        </View>
-        <View style={styles.footerRedBar} />
-      </View>
-    </Page>
-  </Document>
-);
+        </Page>
+      ))}
+    </Document>
+  );
+};
