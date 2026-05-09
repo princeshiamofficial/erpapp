@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { getFinanceColorClasses } from '@/lib/finance-colors';
 
 interface TransactionListItemProps {
   transaction: Transaction;
@@ -85,7 +86,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     }
     amountPrefix = '-';
     amountColorClass = categoryDetails.colorClass;
-    iconColorClass = categoryDetails.colorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20');
+    iconColorClass = cn(getFinanceColorClasses(categoryDetails.colorClass).bgLight, "dark:bg-opacity-20");
   }
 
 

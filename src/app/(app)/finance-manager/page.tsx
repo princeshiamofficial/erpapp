@@ -11,7 +11,8 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIcon, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Banknote, Briefcase, Megaphone, Braces, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Check } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIcon, User as UserIcon, ChevronsUpDown, PieChart, Landmark, ChevronDown, TrendingUp, TrendingDown, ShoppingBag, SendHorizonal, Banknote, Briefcase, Megaphone, Braces, Paperclip, MoreVertical, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Check, Settings2 } from 'lucide-react';
+import * as Lucide from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,7 @@ import {
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
+  updateTransactionCategoriesAction,
 } from './actions';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -71,9 +73,11 @@ import NextLink from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { motion } from 'framer-motion';
+import { getFinanceColorClasses } from '@/lib/finance-colors';
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
+const ManageCategoriesDialog = dynamic(() => import('@/components/finance-manager/manage-categories-dialog').then(mod => mod.ManageCategoriesDialog));
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -84,7 +88,6 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'income', label: 'Income' },
   { value: 'expense_only', label: 'Expenses' },
   { value: 'purchase', label: 'Purchases' },
-  { value: 'send_money', label: 'Sent Money' },
 ];
 
 const COLORS = [
@@ -102,26 +105,8 @@ const COLORS = [
   "#a855f7", // purple-500
 ];
 
-const expenseCategories = [
-  { value: "Office Rent", label: "Office Rent", icon: Home, colorClass: "text-green-600" },
-  { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb, colorClass: "text-yellow-600" },
-  { value: "Transportation", label: "Transportation", icon: Car, colorClass: "text-blue-600" },
-  { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon, colorClass: "text-indigo-600" },
-  { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils, colorClass: "text-orange-600" },
-  { value: "Marketing", label: "Marketing", icon: Megaphone, colorClass: "text-pink-600" },
-  { value: "Purchase", label: "Purchase", icon: ShoppingBag, colorClass: "text-sky-600" },
-  { value: "Sent Money", label: "Sent Money", icon: SendHorizonal, colorClass: "text-teal-600" },
-  { value: "Withdraw", label: "Withdraw", icon: Banknote, colorClass: "text-rose-600" },
-  { value: "Official Expend", label: "Official Expend", icon: Briefcase, colorClass: "text-gray-600" },
-  { value: "Miscellaneous", label: "Miscellaneous", icon: Braces, colorClass: "text-purple-600" },
-];
-
-const getCategoryDetails = (category: string) => {
-  const matchedCategory = expenseCategories.find(c => c.value === category);
-  return {
-    icon: matchedCategory?.icon || TrendingDown,
-    colorClass: matchedCategory?.colorClass || "text-red-600"
-  };
+const getIconComponent = (iconName: string) => {
+  return (Lucide as any)[iconName] || Lucide.HelpCircle;
 };
 
 
@@ -158,6 +143,23 @@ export default function FinanceManagerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [isCategoryManageOpen, setIsCategoryManageOpen] = useState(false);
+
+  const expenseCategories = useMemo(() => {
+    return globalAppSettings?.transactionCategories || [];
+  }, [globalAppSettings]);
+
+  const getCategoryDetails = useCallback((category: string) => {
+    const matchedCategory = expenseCategories.find(c => c.value === category);
+    const colorClasses = getFinanceColorClasses(matchedCategory?.colorClass);
+    return {
+      icon: matchedCategory ? getIconComponent(matchedCategory.icon) : Lucide.TrendingDown,
+      colorClass: colorClasses.text,
+      bgLightClass: colorClasses.bgLight
+    };
+  }, [expenseCategories]);
+  
+
 
 
   const fetchFinancialData = useCallback(async (isBackgroundRefresh = false) => {
@@ -235,21 +237,6 @@ export default function FinanceManagerPage() {
     }
   }, [currentUser, fetchFinancialData]);
 
-  const displayableTransactionTypeFilters = useMemo(() => {
-    if (currentUser?.role === 'SYSTEM_ADMIN') {
-      return TRANSACTION_TYPES_FOR_FILTER;
-    }
-    return TRANSACTION_TYPES_FOR_FILTER.filter(
-      (type) => type.value !== 'send_money'
-    );
-  }, [currentUser?.role]);
-
-  useEffect(() => {
-    if (currentUser?.role !== 'SYSTEM_ADMIN' && transactionTypeFilter === 'send_money') {
-      setTransactionTypeFilter('all');
-    }
-  }, [currentUser?.role, transactionTypeFilter]);
-
 
   const handleDeleteRequest = (transaction: Transaction) => {
     setTransactionToDelete(transaction);
@@ -318,12 +305,13 @@ export default function FinanceManagerPage() {
     if (transactionTypeFilter !== 'all') {
       results = results.filter(t => {
         if (transactionTypeFilter === 'income') return t.type === 'income';
-        if (transactionTypeFilter === 'expense_only') return t.type === 'expense' && !t.sentToUserId;
+        if (transactionTypeFilter === 'expense_only') return t.type === 'expense';
         if (transactionTypeFilter === 'purchase') return t.type === 'purchase';
-        if (transactionTypeFilter === 'send_money') return t.type === 'expense' && !!t.sentToUserId;
         return true;
       });
     }
+
+
 
     if (transactionSearchTerm.trim()) {
       const lowerSearchTerm = transactionSearchTerm.toLowerCase();
@@ -447,10 +435,7 @@ export default function FinanceManagerPage() {
 
   const getAmountColor = (t: Transaction) => {
     if (t.type === 'income') return "text-green-600";
-    if (t.type === 'expense') {
-      if (t.category.startsWith('Sent Money')) return "text-blue-600";
-      return "text-red-600";
-    }
+    if (t.type === 'expense') return "text-red-600";
     return "text-sky-600";
   }
 
@@ -509,7 +494,7 @@ export default function FinanceManagerPage() {
               </div>
             </SelectTrigger>
             <SelectContent>
-              {displayableTransactionTypeFilters.map((filterType) => (
+              {TRANSACTION_TYPES_FOR_FILTER.map((filterType) => (
                 <SelectItem key={filterType.value} value={filterType.value}>
                   {filterType.label}
                 </SelectItem>
@@ -527,15 +512,22 @@ export default function FinanceManagerPage() {
             <Skeleton className="h-10 w-full sm:w-[260px]" />
           )}
         </div>
-        <div className="relative w-full sm:w-auto grow sm:flex-1 order-5 sm:order-none sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search transactions..."
-            value={transactionSearchTerm}
-            onChange={(e) => setTransactionSearchTerm(e.target.value)}
-            className="pl-10 bg-background h-10 shadow-sm border-border/50 transition-all focus:ring-2"
-          />
+        <div className="relative w-full sm:w-auto grow sm:flex-1 order-5 sm:order-none sm:max-w-xs flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search transactions..."
+              value={transactionSearchTerm}
+              onChange={(e) => setTransactionSearchTerm(e.target.value)}
+              className="pl-10 bg-background h-10 shadow-sm border-border/50 transition-all focus:ring-2"
+            />
+          </div>
+          {currentUser.role === 'SYSTEM_ADMIN' && (
+            <Button variant="outline" size="icon" onClick={() => setIsCategoryManageOpen(true)} title="Manage Categories">
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -552,19 +544,29 @@ export default function FinanceManagerPage() {
                   {currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter === 'all' ? "Latest transactions from all users." :
                     currentUser.role === 'SYSTEM_ADMIN' && selectedUserIdFilter !== 'all' ? `Latest transactions for selected user.` :
                       "Your latest income, expense and purchase entries."}
-                  {transactionTypeFilter !== 'all' && ` (Filtered by: ${displayableTransactionTypeFilters.find(f => f.value === transactionTypeFilter)?.label})`}
+                  {transactionTypeFilter !== 'all' && ` (Filtered by: ${TRANSACTION_TYPES_FOR_FILTER.find(f => f.value === transactionTypeFilter)?.label})`}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                 {currentUser.role === 'SYSTEM_ADMIN' && (
-                  <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addIncome">
+                  <AddTransactionDialog 
+                    currentUser={currentUser} 
+                    onTransactionAdded={fetchFinancialData} 
+                    dialogMode="addIncome"
+                    categories={expenseCategories}
+                  >
                     <Button size="sm" variant="outline">
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Income
                     </Button>
                   </AddTransactionDialog>
                 )}
                 {canUserAddExpense && (
-                  <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
+                  <AddTransactionDialog 
+                    currentUser={currentUser} 
+                    onTransactionAdded={fetchFinancialData} 
+                    dialogMode="addExpenseOrPurchase"
+                    categories={expenseCategories}
+                  >
                     <Button size="sm">
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Entry
                     </Button>
@@ -598,7 +600,7 @@ export default function FinanceManagerPage() {
                   ) : filteredTransactions.length > 0 ? (
                     filteredTransactions.map(t => {
                       const user = currentUser.role === 'SYSTEM_ADMIN' ? allUsers.find(u => u.id === t.userId) : null;
-                      const { icon: IconComponent, colorClass } = getCategoryDetails(t.category);
+                      const { icon: IconComponent, colorClass, bgLightClass } = getCategoryDetails(t.category);
                       return (
                         <TableRow key={t.id} className="hover:bg-muted/30">
                           <TableCell className="pl-6">
@@ -613,7 +615,8 @@ export default function FinanceManagerPage() {
                                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
                                 className={cn(
                                   "p-2 rounded-full transition-transform",
-                                  colorClass.replace('text-', 'bg-').replace('-600', '-100 dark:bg-opacity-20')
+                                  bgLightClass,
+                                  "dark:bg-opacity-20"
                                 )}
                               >
                                 <IconComponent className={cn("h-5 w-5", colorClass)} />
@@ -840,8 +843,15 @@ export default function FinanceManagerPage() {
           transaction={transactionToEdit}
           currentUser={currentUser}
           onTransactionUpdated={handleTransactionUpdated}
+          categories={expenseCategories}
         />
       )}
+      <ManageCategoriesDialog
+        isOpen={isCategoryManageOpen}
+        onClose={() => setIsCategoryManageOpen(false)}
+        categories={expenseCategories}
+        onCategoriesUpdated={fetchFinancialData}
+      />
     </div>
   );
 }

@@ -301,6 +301,17 @@ export interface GlobalSettings {
   pipelineAccess?: PipelineAccessSettings; // New setting
   telegramBotToken?: string | null;
   telegramChatIds?: string[] | null;
+  transactionCategories?: TransactionCategory[]; // New field
+}
+
+export interface TransactionCategory {
+  id: string;
+  value: string;
+  label: string;
+  icon: string; // Lucide icon name
+  colorClass: string;
+  type: 'expense' | 'purchase';
+  isSystem?: boolean;
 }
 
 export interface LeaderboardThemeSettings {

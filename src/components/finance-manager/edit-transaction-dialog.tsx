@@ -19,10 +19,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { Transaction, TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Paperclip, UploadCloud, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces, ShoppingBag, SendHorizonal, Banknote, Briefcase } from 'lucide-react';
+import { Loader2, CalendarIcon, Paperclip, UploadCloud, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Check, ChevronsUpDown } from 'lucide-react';
+import * as Lucide from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import NextLink from 'next/link';
 import { cn } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 interface EditTransactionDialogProps {
   currentUser: User;
@@ -30,23 +32,14 @@ interface EditTransactionDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onTransactionUpdated: () => void;
+  categories?: any[];
 }
 
-const expenseCategories = [
-  { value: "Office Rent", label: "Office Rent", icon: Home },
-  { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
-  { value: "Transportation", label: "Transportation", icon: Car },
-  { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
-  { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
-  { value: "Marketing", label: "Marketing", icon: Megaphone },
-  { value: "Purchase", label: "Purchase", icon: ShoppingBag },
-  { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
-  { value: "Withdraw", label: "Withdraw", icon: Banknote },
-  { value: "Official Expend", label: "Official Expend", icon: Briefcase },
-  { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
-];
+const getIconComponent = (iconName: string) => {
+  return (Lucide as any)[iconName] || Lucide.HelpCircle;
+};
 
-export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpenChange, onTransactionUpdated }: EditTransactionDialogProps) {
+export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpenChange, onTransactionUpdated, categories = [] }: EditTransactionDialogProps) {
   const [type, setType] = useState<TransactionType>(transaction.type);
   const [amount, setAmount] = useState(transaction.amount.toString());
   const [category, setCategory] = useState(transaction.category);
@@ -58,6 +51,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
   const documentFileRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -76,6 +70,21 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       setIsDraggingOver(false);
     }
   }, [isOpen, transaction]);
+  
+  const filteredCategories = React.useMemo(() => {
+    if (type === 'income') return categories;
+    return categories.filter(cat => cat.type === type);
+  }, [categories, type]);
+
+  // Reset category if it's not in the filtered list when type changes
+  useEffect(() => {
+    if (isOpen && category && type !== 'income') {
+      const isValid = filteredCategories.some(c => c.value === category);
+      if (!isValid && !(type === 'expense' && !!transaction.sentToUserId)) {
+        setCategory('');
+      }
+    }
+  }, [type, filteredCategories, isOpen, transaction.sentToUserId]);
 
   const processFile = useCallback((file: File | null) => {
     if (file) {
@@ -127,7 +136,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
   };
 
   useEffect(() => {
-    const isDocRequired = (type === 'expense' || type === 'purchase') && !(type === 'expense' && !!transaction.sentToUserId);
+    const isDocRequired = (type === 'expense' || type === 'purchase');
     const handlePaste = (event: ClipboardEvent) => {
       if (!isOpen || !isDocRequired) return;
       const items = event.clipboardData?.items;
@@ -151,8 +160,9 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !category || !date) {
-      toast({ title: "Validation Error", description: "Amount, Category, and Date are required.", variant: "destructive" });
+    const isCategoryRequired = type !== 'income';
+    if (!amount || (isCategoryRequired && !category) || !date) {
+      toast({ title: "Validation Error", description: `Amount, ${isCategoryRequired ? "Category, " : ""}and Date are required.`, variant: "destructive" });
       return;
     }
     const numericAmount = parseFloat(amount);
@@ -194,8 +204,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       }
     }
 
-    const isSendMoneyTypeExpense = type === 'expense' && !!transaction.sentToUserId;
-    if ((type === 'expense' || type === 'purchase') && !newUploadedDocumentUrl && !isSendMoneyTypeExpense) {
+    if ((type === 'expense' || type === 'purchase') && !newUploadedDocumentUrl) {
       toast({ title: "Validation Error", description: "Document is required for expenses and purchases.", variant: "destructive" });
       return;
     }
@@ -204,7 +213,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     const updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>> = {
       type,
       amount: numericAmount,
-      category: category.trim(),
+      category: type === 'income' ? (category.trim() || 'Income') : category.trim(),
       description: description.trim() || null,
       date: date.toISOString(),
       documentUrl: newUploadedDocumentUrl,
@@ -226,7 +235,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     return "e.g., Utilities, Rent";
   };
 
-  const isDocumentNowRequired = (type === 'expense' || type === 'purchase') && !(type === 'expense' && !!transaction.sentToUserId);
+  const isDocumentNowRequired = (type === 'expense' || type === 'purchase');
   const isDocumentMissingForRequiredType = isDocumentNowRequired && !currentDocumentUrl && !selectedDocumentFile;
 
 
@@ -241,7 +250,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-type">Type *</Label>
-              <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId)}>
+              <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required disabled={isSubmitting || isUploadingDocument}>
                 <SelectTrigger id="edit-transaction-type">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
@@ -251,35 +260,68 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                   <SelectItem value="purchase">Purchase</SelectItem>
                 </SelectContent>
               </Select>
-              {((type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId)) &&
-                <p className="text-xs text-muted-foreground">Type cannot be changed for system-generated transfer records.</p>
-              }
             </div>
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-amount">Amount (BDT) *</Label>
               <Input id="edit-transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required disabled={isSubmitting || isUploadingDocument} />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="transaction-category">Category *</Label>
-              <Select value={category} onValueChange={setCategory} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId)}>
-                <SelectTrigger id="transaction-category">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {expenseCategories.map(cat => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      <div className="flex items-center gap-2">
-                        <cat.icon className="h-4 w-4 text-muted-foreground" />
-                        <span>{cat.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {(type === 'expense' && !!transaction.sentToUserId) &&
-                <p className="text-xs text-muted-foreground">Category is auto-set for 'Sent Money' transactions.</p>
-              }
-            </div>
+            {type !== 'income' && (
+              <div className="space-y-1">
+                <Label htmlFor="transaction-category">Category *</Label>
+                <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isCategoryPopoverOpen}
+                      className="w-full justify-between font-normal"
+                      disabled={isSubmitting || isUploadingDocument}
+                    >
+                      {category ? (
+                        <div className="flex items-center gap-2 truncate">
+                          {React.createElement(getIconComponent(filteredCategories.find(c => c.value === category)?.icon || "Tag"), { className: cn("h-4 w-4", filteredCategories.find(c => c.value === category)?.colorClass) })}
+                          <span>{filteredCategories.find(c => c.value === category)?.label || category}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Select a category...</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search category..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No category found.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredCategories.map((cat) => (
+                            <CommandItem
+                              key={cat.id || cat.value}
+                              value={cat.value}
+                              onSelect={(currentValue) => {
+                                setCategory(currentValue === category ? "" : currentValue);
+                                setIsCategoryPopoverOpen(false);
+                              }}
+                            >
+                              <div className="flex items-center gap-2 flex-1">
+                                {React.createElement(getIconComponent(cat.icon), { className: cn("h-4 w-4", cat.colorClass) })}
+                                <span>{cat.label}</span>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  category === cat.value ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-date">Date *</Label>
               <Popover>

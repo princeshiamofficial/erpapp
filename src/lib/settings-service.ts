@@ -1,7 +1,7 @@
 "use server";
 
 import { query } from './mysql';
-import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from '@/types';
+import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings, TransactionCategory } from '@/types';
 
 const GLOBAL_SETTINGS_TABLE = 'global_settings';
 const MAIN_SETTINGS_ID = 'main';
@@ -42,6 +42,19 @@ const DEFAULT_ROLE_BASED_TARGETS: RoleBasedTarget = {
   LR: 100,
 };
 
+const DEFAULT_TRANSACTION_CATEGORIES: TransactionCategory[] = [
+  { id: "office-rent", value: "Office Rent", label: "Office Rent", icon: "Home", colorClass: "text-green-600", type: "expense", isSystem: true },
+  { id: "utilities", value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: "Lightbulb", colorClass: "text-yellow-600", type: "expense", isSystem: true },
+  { id: "transportation", value: "Transportation", label: "Transportation", icon: "Car", colorClass: "text-blue-600", type: "expense", isSystem: true },
+  { id: "office-supplies", value: "Office Supplies", label: "Office Supplies", icon: "ClipboardIcon", colorClass: "text-indigo-600", type: "expense", isSystem: true },
+  { id: "food-drinks", value: "Food & Drinks", label: "Food & Drinks", icon: "Utensils", colorClass: "text-orange-600", type: "expense", isSystem: true },
+  { id: "marketing", value: "Marketing", label: "Marketing", icon: "Megaphone", colorClass: "text-pink-600", type: "expense", isSystem: true },
+  { id: "purchase", value: "Purchase", label: "Purchase", icon: "ShoppingBag", colorClass: "text-sky-600", type: "purchase", isSystem: true },
+  { id: "withdraw", value: "Withdraw", label: "Withdraw", icon: "Banknote", colorClass: "text-rose-600", type: "expense", isSystem: true },
+  { id: "official-expend", value: "Official Expend", label: "Official Expend", icon: "Briefcase", colorClass: "text-gray-600", type: "expense", isSystem: true },
+  { id: "miscellaneous", value: "Miscellaneous", label: "Miscellaneous", icon: "Braces", colorClass: "text-purple-600", type: "expense", isSystem: true },
+];
+
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
@@ -65,6 +78,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   reportProductFilters: ['Design Charge', 'Menu Book', 'Menu Card', 'Pizza Box', 'X-Banner', 'Business Card', 'Visiting Card'],
   roleBasedTargets: DEFAULT_ROLE_BASED_TARGETS,
   pipelineAccess: { canViewAllLeads: [] },
+  transactionCategories: DEFAULT_TRANSACTION_CATEGORIES,
 };
 
 export async function getGlobalSettings(): Promise<GlobalSettings> {
@@ -185,4 +199,8 @@ export async function setRoleBasedTargets(targets: RoleBasedTarget): Promise<boo
 
 export async function setTelegramSettings(botToken: string | null, chatIds: string[] | null): Promise<boolean> {
   return updateSettings({ telegramBotToken: botToken, telegramChatIds: chatIds ?? [] });
+}
+
+export async function setTransactionCategories(categories: any[]): Promise<boolean> {
+  return updateSettings({ transactionCategories: categories });
 }

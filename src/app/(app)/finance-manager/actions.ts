@@ -3,7 +3,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Transaction, TransactionType, User, UserRole, PersonalNote } from "@/types";
+import type { Transaction, TransactionType, User, UserRole, PersonalNote, TransactionCategory } from "@/types";
 import {
   addTransaction as addTransactionService,
   deleteTransaction as deleteTransactionService,
@@ -17,7 +17,16 @@ import {
   deletePersonalNote as deletePersonalNoteService,
 } from "@/lib/personal-finance-service";
 import { getUserById } from '@/lib/user-service';
-import { getGlobalSettings } from '@/lib/settings-service';
+import { getGlobalSettings, setTransactionCategories } from '@/lib/settings-service';
+
+export async function updateTransactionCategoriesAction(categories: TransactionCategory[]): Promise<{ success: boolean; error?: string }> {
+  const success = await setTransactionCategories(categories);
+  if (success) {
+    revalidatePath("/(app)/finance-manager");
+    return { success: true };
+  }
+  return { success: false, error: "Failed to update categories." };
+}
 
 const formatAmountForNotification = (amount: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(amount);

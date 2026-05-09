@@ -21,41 +21,32 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check, UploadCloud, Paperclip, XCircle, ImagePlus, Utensils, Car, Lightbulb, Clipboard as ClipboardIcon, Home, Landmark, Megaphone, Braces, ShoppingBag, SendHorizonal, Banknote, Briefcase } from 'lucide-react';
+import { Loader2, CalendarIcon, UploadCloud, Paperclip, XCircle, Check, ChevronsUpDown } from 'lucide-react';
+import * as Lucide from 'lucide-react';
 import { format } from 'date-fns';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
-type DialogMode = 'addIncome' | 'addExpenseOrPurchase' | 'sendMoney';
+type DialogMode = 'addIncome' | 'addExpenseOrPurchase';
 
 interface AddTransactionDialogProps {
   currentUser: User;
   onTransactionAdded: () => void;
   children: React.ReactNode;
   dialogMode: DialogMode;
-  allUsersForDropdown?: User[];
+  categories?: any[];
 }
 
-export const expenseCategories = [
-  { value: "Office Rent", label: "Office Rent", icon: Home },
-  { value: "Utilities", label: "Utilities (Gas, Water, Electric)", icon: Lightbulb },
-  { value: "Transportation", label: "Transportation", icon: Car },
-  { value: "Office Supplies", label: "Office Supplies", icon: ClipboardIcon },
-  { value: "Food & Drinks", label: "Food & Drinks", icon: Utensils },
-  { value: "Marketing", label: "Marketing", icon: Megaphone },
-  { value: "Purchase", label: "Purchase", icon: ShoppingBag },
-  { value: "Sent Money", label: "Sent Money", icon: SendHorizonal },
-  { value: "Withdraw", label: "Withdraw", icon: Banknote },
-  { value: "Official Expend", label: "Official Expend", icon: Briefcase },
-  { value: "Miscellaneous", label: "Miscellaneous", icon: Braces },
-];
+const getIconComponent = (iconName: string) => {
+  return (Lucide as any)[iconName] || Lucide.HelpCircle;
+};
 
 export function AddTransactionDialog({
   currentUser,
   onTransactionAdded,
   children,
   dialogMode,
-  allUsersForDropdown = []
+  categories = []
 }: AddTransactionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [type, setType] = useState<TransactionType>('expense');
@@ -68,11 +59,9 @@ export function AddTransactionDialog({
   const documentFileRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
 
 
-  const [selectedSentToUserId, setSelectedSentToUserId] = useState<string | undefined>(undefined);
-  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
-  const [userSearchQuery, setUserSearchQuery] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -80,9 +69,6 @@ export function AddTransactionDialog({
   const availableTransactionTypes = useMemo(() => {
     if (dialogMode === 'addIncome') {
       return [{ value: 'income', label: 'Income' }];
-    }
-    if (dialogMode === 'sendMoney') {
-      return [{ value: 'expense', label: 'Expense (Sent Money)' }];
     }
     // For addExpenseOrPurchase
     return [
@@ -97,9 +83,7 @@ export function AddTransactionDialog({
 
     if (dialogMode === 'addIncome') {
       defaultType = 'income';
-    } else if (dialogMode === 'sendMoney') {
-      defaultType = 'expense';
-      defaultCategory = "Sent Money";
+      defaultCategory = 'Income';
     } else { // addExpenseOrPurchase
       defaultType = 'expense';
     }
@@ -108,9 +92,6 @@ export function AddTransactionDialog({
     setAmount('');
     setDescription('');
     setDate(new Date());
-    setSelectedSentToUserId(undefined);
-    setIsUserPopoverOpen(false);
-    setUserSearchQuery("");
     setCategory(defaultCategory);
     setSelectedDocumentFile(null);
     if (documentFileRef.current) documentFileRef.current.value = "";
@@ -126,22 +107,7 @@ export function AddTransactionDialog({
   }, [isOpen, resetForm]);
 
 
-  useEffect(() => {
-    if (isOpen && dialogMode === 'sendMoney') {
-      if (selectedSentToUserId) {
-        const recipient = allUsersForDropdown.find(u => u.id === selectedSentToUserId);
-        if (recipient) {
-          setCategory(`Sent Money to ${recipient.name}`);
-        } else {
-          setCategory("Sent Money");
-        }
-      } else {
-        setCategory("Sent Money");
-      }
-    } else if (isOpen && dialogMode === 'addExpenseOrPurchase') {
-      if (category === "Sent Money") setCategory("");
-    }
-  }, [isOpen, dialogMode, selectedSentToUserId, allUsersForDropdown, category]);
+
 
 
   useEffect(() => {
@@ -150,12 +116,17 @@ export function AddTransactionDialog({
       setType((availableTransactionTypes[0]?.value as TransactionType) || 'expense');
     }
   }, [availableTransactionTypes, type]);
+  
+  const filteredCategories = useMemo(() => {
+    if (type === 'income') return categories;
+    return categories.filter(cat => cat.type === type);
+  }, [categories, type]);
 
   const isDocumentRequired = useMemo(() => {
-    if (currentUser?.role === 'SYSTEM_ADMIN' && dialogMode !== 'sendMoney') {
+    if (currentUser?.role === 'SYSTEM_ADMIN') {
       return false;
     }
-    return (type === 'expense' || type === 'purchase') && dialogMode !== 'sendMoney' && dialogMode !== 'addIncome';
+    return (type === 'expense' || type === 'purchase') && dialogMode !== 'addIncome';
   }, [type, dialogMode, currentUser]);
 
   const processFile = useCallback((file: File | null) => {
@@ -240,12 +211,9 @@ export function AddTransactionDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !date) {
-      toast({ title: "Validation Error", description: "Amount and Date are required.", variant: "destructive" });
-      return;
-    }
-    if (dialogMode === 'sendMoney' && !selectedSentToUserId) {
-      toast({ title: "Validation Error", description: "Recipient is required for sending money.", variant: "destructive" });
+    const isCategoryRequired = type !== 'income';
+    if (!amount || (isCategoryRequired && !category) || !date) {
+      toast({ title: "Validation Error", description: `Amount, ${isCategoryRequired ? "Category, " : ""}and Date are required.`, variant: "destructive" });
       return;
     }
     const numericAmount = parseFloat(amount);
@@ -290,7 +258,7 @@ export function AddTransactionDialog({
     }
 
     setIsSubmitting(true);
-    const finalCategory = category.trim();
+    const finalCategory = type === 'income' ? (category.trim() || 'Income') : category.trim();
 
     const transactionPayload = {
       type: type, // Type is now set based on dialogMode
@@ -298,8 +266,8 @@ export function AddTransactionDialog({
       category: finalCategory,
       description: description.trim() || null,
       date: date.toISOString(),
-      sentToUserId: dialogMode === 'sendMoney' ? selectedSentToUserId : null,
-      sentToUserName: dialogMode === 'sendMoney' && selectedSentToUserId ? allUsersForDropdown.find(u => u.id === selectedSentToUserId)?.name || null : null,
+      sentToUserId: null,
+      sentToUserName: null,
       documentUrl: uploadedDocumentUrl,
     };
 
@@ -307,7 +275,7 @@ export function AddTransactionDialog({
     setIsSubmitting(false);
 
     if (result.success && result.transaction) {
-      const successType = dialogMode === 'sendMoney' ? 'Payment' : (type.charAt(0).toUpperCase() + type.slice(1));
+      const successType = type.charAt(0).toUpperCase() + type.slice(1);
       toast({ title: `${successType} Recorded`, description: `${finalCategory} of ${numericAmount} recorded.` });
       if (result.error) {
         toast({ title: "Notice", description: result.error, variant: "default", duration: 7000 });
@@ -320,31 +288,14 @@ export function AddTransactionDialog({
   };
 
   const dialogTitleText = useMemo(() => {
-    if (dialogMode === 'sendMoney') return "Record Payment to User";
     if (dialogMode === 'addIncome') return "Add New Income";
     return "Add New Expense/Purchase";
   }, [dialogMode]);
 
   const dialogDescriptionText = useMemo(() => {
-    if (dialogMode === 'sendMoney') return "Log an expense for money sent to another user. An income transaction will also be recorded for the recipient.";
     if (dialogMode === 'addIncome') return "Log a new income entry.";
     return "Log a new expense or purchase entry.";
   }, [dialogMode]);
-
-  const availableUsers = useMemo(() => {
-    return allUsersForDropdown.filter(u => {
-      if (u.id === currentUser.id) return false; // Can't send to self
-      return true; // The parent component now handles all filtering logic
-    });
-  }, [allUsersForDropdown, currentUser.id]);
-
-  const filteredUsersForDropdown = useMemo(() => {
-    if (!userSearchQuery) return availableUsers;
-    return availableUsers.filter(user =>
-      user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-      (user.email && user.email.toLowerCase().includes(userSearchQuery.toLowerCase()))
-    );
-  }, [availableUsers, userSearchQuery]);
 
 
   const canSubmit = useMemo(() => {
@@ -357,12 +308,8 @@ export function AddTransactionDialog({
       docValid = !!selectedDocumentFile;
     }
 
-    if (dialogMode === 'sendMoney') {
-      return baseValid && selectedSentToUserId;
-    } else {
-      return baseValid && category.trim() && docValid;
-    }
-  }, [isSubmitting, isUploadingDocument, amount, category, date, dialogMode, selectedSentToUserId, isDocumentRequired, selectedDocumentFile]);
+    return baseValid && category.trim() && docValid;
+  }, [isSubmitting, isUploadingDocument, amount, category, date, isDocumentRequired, selectedDocumentFile]);
 
 
   return (
@@ -390,10 +337,10 @@ export function AddTransactionDialog({
                 </Select>
               </div>
             )}
-            {(dialogMode === 'addIncome' || dialogMode === 'sendMoney') && (
+            {dialogMode === 'addIncome' && (
               <div className="space-y-1">
                 <Label>Type</Label>
-                <Input value={type === 'income' ? 'Income' : 'Expense (Sent Money)'} readOnly disabled className="bg-muted/50" />
+                <Input value="Income" readOnly disabled className="bg-muted/50" />
               </div>
             )}
             <div className="space-y-1">
@@ -401,80 +348,53 @@ export function AddTransactionDialog({
               <Input id="transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required />
             </div>
 
-            {dialogMode !== 'sendMoney' ? (
+            {dialogMode !== 'addIncome' && (
               <div className="space-y-1">
                 <Label htmlFor="transaction-category">Category *</Label>
-                <Select value={category} onValueChange={setCategory} required>
-                  <SelectTrigger id="transaction-category">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {expenseCategories.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        <div className="flex items-center gap-2">
-                          <cat.icon className="h-4 w-4 text-muted-foreground" />
-                          <span>{cat.label}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <Label htmlFor="transaction-category-disabled">Category *</Label>
-                <Input id="transaction-category-disabled" value={category} disabled readOnly />
-              </div>
-            )}
-
-            {dialogMode === 'sendMoney' && (
-              <div className="space-y-1">
-                <Label htmlFor="send-to-user">Send To User *</Label>
-                <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
-                      aria-expanded={isUserPopoverOpen}
-                      className="w-full justify-between"
+                      aria-expanded={isCategoryPopoverOpen}
+                      className="w-full justify-between font-normal"
                     >
-                      {selectedSentToUserId
-                        ? availableUsers.find((user) => user.id === selectedSentToUserId)?.name
-                        : ("Select recipient *")}
+                      {category ? (
+                        <div className="flex items-center gap-2 truncate">
+                          {React.createElement(getIconComponent(filteredCategories.find(c => c.value === category)?.icon || "Tag"), { className: cn("h-4 w-4", filteredCategories.find(c => c.value === category)?.colorClass) })}
+                          <span>{filteredCategories.find(c => c.value === category)?.label || category}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Select a category...</span>
+                      )}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command filter={() => 1}>
-                      <CommandInput
-                        placeholder="Search user..."
-                        value={userSearchQuery}
-                        onValueChange={setUserSearchQuery}
-                      />
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search category..." className="h-9" />
                       <CommandList>
-                        <CommandEmpty>No user found.</CommandEmpty>
+                        <CommandEmpty>No category found.</CommandEmpty>
                         <CommandGroup>
-                          {availableUsers.length === 0 && !userSearchQuery && (
-                            <CommandItem disabled>No other users available.</CommandItem>
-                          )}
-                          {filteredUsersForDropdown.map((user) => (
-                            user.id &&
+                          {filteredCategories.map((cat) => (
                             <CommandItem
-                              key={user.id}
-                              value={user.id}
-                              onSelect={() => {
-                                setSelectedSentToUserId(user.id);
-                                setIsUserPopoverOpen(false);
-                                setUserSearchQuery("");
+                              key={cat.id || cat.value}
+                              value={cat.value}
+                              onSelect={(currentValue) => {
+                                setCategory(currentValue === category ? "" : currentValue);
+                                setIsCategoryPopoverOpen(false);
                               }}
                             >
+                              <div className="flex items-center gap-2 flex-1">
+                                {React.createElement(getIconComponent(cat.icon), { className: cn("h-4 w-4", cat.colorClass) })}
+                                <span>{cat.label}</span>
+                              </div>
                               <Check
                                 className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedSentToUserId === user.id ? "opacity-100" : "opacity-0"
+                                  "ml-auto h-4 w-4",
+                                  category === cat.value ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {user.name}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -508,7 +428,7 @@ export function AddTransactionDialog({
             </div>
             <div className="space-y-1">
               <Label htmlFor="transaction-description">Description / Notes (Optional)</Label>
-              <Input id="transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={dialogMode === 'sendMoney' ? "e.g., Advance salary payment" : "e.g., Weekly supermarket run"} />
+              <Input id="transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Weekly supermarket run" />
             </div>
 
             {(type === 'expense' || type === 'purchase') && dialogMode !== 'addIncome' && (
@@ -560,7 +480,7 @@ export function AddTransactionDialog({
             <Button type="submit" disabled={!canSubmit || isUploadingDocument}>
               {isUploadingDocument ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> :
                 isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> :
-                  (dialogMode === 'sendMoney' ? "Record Payment" : "Add Transaction")}
+                  (dialogMode === 'addIncome' ? "Add Income" : "Add Transaction")}
             </Button>
           </DialogFooter>
         </form>
