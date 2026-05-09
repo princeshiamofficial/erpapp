@@ -73,6 +73,7 @@ const navItems: NavItem[] = [
       { href: "/crm/sow", label: "SOW", icon: FolderHeart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/follow-up", label: "Follow-UP", icon: Phone, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/order-pulse", label: "OrderPulse", icon: Activity, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "/library", label: "Library", icon: Archive, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "CO"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
