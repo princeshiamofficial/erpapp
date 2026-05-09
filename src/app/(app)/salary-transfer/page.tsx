@@ -23,6 +23,12 @@ import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import Papa from 'papaparse';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
@@ -168,16 +174,41 @@ export default function SalaryTransferPage() {
         </Button>
         
         {!isLoading && unpaidEmployeesData.length > 0 && (
-          <PDFDownloadLink
-            document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} />}
-            fileName={`salary_transfer_${format(selectedDate, 'MMM_yyyy')}.pdf`}
-          >
-            {({ loading }) => (
-              <Button className="bg-red-600 hover:bg-red-700 text-white border-none" disabled={loading}>
-                <FileText className="mr-2 h-4 w-4" /> {loading ? 'Generating PDF...' : 'Download PDF'}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="bg-red-600 hover:bg-red-700 text-white border-none shadow-sm">
+                <FileText className="mr-2 h-4 w-4" /> Download PDF
               </Button>
-            )}
-          </PDFDownloadLink>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <PDFDownloadLink
+                  document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} version="v1" />}
+                  fileName={`salary_transfer_v1_${format(selectedDate, 'MMM_yyyy')}.pdf`}
+                >
+                  {({ loading }) => (
+                    <div className="flex items-center w-full">
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>{loading ? 'Preparing V1...' : 'Download V1'}</span>
+                    </div>
+                  )}
+                </PDFDownloadLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <PDFDownloadLink
+                  document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} version="v2" />}
+                  fileName={`salary_transfer_v2_${format(selectedDate, 'MMM_yyyy')}.pdf`}
+                >
+                  {({ loading }) => (
+                    <div className="flex items-center w-full">
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>{loading ? 'Preparing V2...' : 'Download V2'}</span>
+                    </div>
+                  )}
+                </PDFDownloadLink>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
       <Card className="shadow-none">

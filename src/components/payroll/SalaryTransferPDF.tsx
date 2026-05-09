@@ -202,6 +202,7 @@ interface SalaryTransferPDFProps {
   data: (Employee & { payableAmount: number })[];
   selectedDate: Date;
   totalAmount: number;
+  version?: 'v1' | 'v2';
 }
 
 const chunkArray = <T,>(arr: T[], size: number): T[][] => {
@@ -212,20 +213,22 @@ const chunkArray = <T,>(arr: T[], size: number): T[][] => {
   return chunks;
 };
 
-export const SalaryTransferPDF = ({ data, selectedDate, totalAmount }: SalaryTransferPDFProps) => {
+export const SalaryTransferPDF = ({ data, selectedDate, totalAmount, version = 'v1' }: SalaryTransferPDFProps) => {
   const chunks = chunkArray(data, 20);
 
   return (
     <Document>
       {chunks.map((chunk, pageIndex) => (
         <Page key={pageIndex} size="A4" style={styles.page}>
-          <View style={styles.pdfHeader} fixed>
-            <View style={styles.headerBlackBox} />
-            <View style={styles.headerLogoSection}>
-              <Image src="/logo.png" style={styles.logoImage} />
+          {version === 'v2' && (
+            <View style={styles.pdfHeader} fixed>
+              <View style={styles.headerBlackBox} />
+              <View style={styles.headerLogoSection}>
+                <Image src="/logo.png" style={styles.logoImage} />
+              </View>
+              <View style={styles.headerRedBar} />
             </View>
-            <View style={styles.headerRedBar} />
-          </View>
+          )}
 
           {pageIndex === 0 && (
             <>
@@ -281,27 +284,29 @@ export const SalaryTransferPDF = ({ data, selectedDate, totalAmount }: SalaryTra
             )}
           </View>
 
-          <View style={styles.pdfFooter} fixed>
-            <View style={styles.footerBlackBar}>
-              <View style={styles.footerInfoItem}>
-                <PhoneIcon />
-                <Text style={styles.footerInfoText}>01919-760626</Text>
+          {version === 'v2' && (
+            <View style={styles.pdfFooter} fixed>
+              <View style={styles.footerBlackBar}>
+                <View style={styles.footerInfoItem}>
+                  <PhoneIcon />
+                  <Text style={styles.footerInfoText}>01919-760626</Text>
+                </View>
+                <View style={styles.footerInfoItem}>
+                  <EmailIcon />
+                  <Text style={styles.footerInfoText}>colorhut.official@gmail.com</Text>
+                </View>
+                <View style={styles.footerInfoItem}>
+                  <FacebookIcon />
+                  <Text style={styles.footerInfoText}>colorhut</Text>
+                </View>
+                <View style={styles.footerInfoItem}>
+                  <GlobeIcon />
+                  <Text style={styles.footerInfoText}>colorhut.xyz</Text>
+                </View>
               </View>
-              <View style={styles.footerInfoItem}>
-                <EmailIcon />
-                <Text style={styles.footerInfoText}>colorhut.official@gmail.com</Text>
-              </View>
-              <View style={styles.footerInfoItem}>
-                <FacebookIcon />
-                <Text style={styles.footerInfoText}>colorhut</Text>
-              </View>
-              <View style={styles.footerInfoItem}>
-                <GlobeIcon />
-                <Text style={styles.footerInfoText}>colorhut.xyz</Text>
-              </View>
+              <View style={styles.footerRedBar} />
             </View>
-            <View style={styles.footerRedBar} />
-          </View>
+          )}
         </Page>
       ))}
     </Document>
