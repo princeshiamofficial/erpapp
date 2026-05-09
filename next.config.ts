@@ -3,6 +3,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  transpilePackages: ['@react-pdf/renderer'],
   poweredByHeader: false,
   compress: true,
   images: {
