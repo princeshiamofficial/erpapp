@@ -57,7 +57,9 @@ Font.register({
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
+    paddingHorizontal: 30,
+    paddingTop: 18,
+    paddingBottom: 10,
     fontSize: 9,
     color: '#444',
     fontFamily: 'Hind Siliguri',
@@ -67,13 +69,15 @@ const styles = StyleSheet.create({
   container: {
     border: '1pt solid #E2E8F0',
     borderRadius: 8,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 6,
     height: '100%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   headerLeft: {
     flexDirection: 'column',
@@ -108,7 +112,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   headerRightTop: {
-    marginBottom: 15,
+    marginBottom: 7,
   },
   quotationNo: {
     fontSize: 13,
@@ -125,7 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
     padding: 15,
-    marginTop: 20,
+    marginTop: 10,
     width: '50%',
   },
   billToLabel: {
@@ -156,8 +160,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#0F172A',
-    marginTop: 30,
-    marginBottom: 15,
+    marginTop: 15,
+    marginBottom: 7,
   },
   table: {
     width: '100%',
@@ -424,7 +428,7 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
           </View>
 
           {/* Footer Note */}
-          <View style={{ marginTop: 'auto', paddingTop: 20 }}>
+          <View style={{ marginTop: 'auto', paddingTop: 6 }}>
              <Text style={{ fontSize: 7, color: '#94A3B8', textAlign: 'center' }}>
                This is a system generated quotation by Color Hut ERP.
              </Text>
