@@ -93,12 +93,19 @@ export default function GiftsPage() {
     }
     if (!searchTerm) return result;
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return result.filter(gift =>
-      gift.giftIdDisplay.toLowerCase().includes(lowerSearchTerm) ||
-      gift.recipientName.toLowerCase().includes(lowerSearchTerm) ||
-      gift.recipientPhone.toLowerCase().includes(lowerSearchTerm) ||
-      (Array.isArray(gift.giftItemNames) && gift.giftItemNames.some(name => name.toLowerCase().includes(lowerSearchTerm)))
-    );
+    return result.filter(gift => {
+      const linkedOrder = gift.orderId ? allOrders.find(o => o.id === gift.orderId) : null;
+      const jobDisplayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim().toLowerCase() : '';
+      
+      return (
+        gift.giftIdDisplay.toLowerCase().includes(lowerSearchTerm) ||
+        (gift.orderId && gift.orderId.toLowerCase().includes(lowerSearchTerm)) ||
+        jobDisplayId.includes(lowerSearchTerm) ||
+        gift.recipientName.toLowerCase().includes(lowerSearchTerm) ||
+        gift.recipientPhone.toLowerCase().includes(lowerSearchTerm) ||
+        (Array.isArray(gift.giftItemNames) && gift.giftItemNames.some(name => name.toLowerCase().includes(lowerSearchTerm)))
+      );
+    });
   }, [gifts, searchTerm, currentUser]);
 
   const totalPages = Math.ceil(filteredGifts.length / ITEMS_PER_PAGE);
@@ -178,7 +185,7 @@ export default function GiftsPage() {
               <CardTitle className="text-card-foreground text-xl">All Gift Records</CardTitle>
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search gifts..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-background h-10 rounded-md w-full" />
+                <Input placeholder="Search gifts, Job ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-background h-10 rounded-md w-full" />
               </div>
             </div>
           </CardHeader>
@@ -188,6 +195,7 @@ export default function GiftsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-6">Gift ID</TableHead>
+                    <TableHead>Job ID</TableHead>
                     <TableHead>Gift Item(s)</TableHead>
                     <TableHead>Recipient</TableHead>
                     <TableHead>Phone Number</TableHead>
@@ -199,7 +207,7 @@ export default function GiftsPage() {
                 <TableBody>
                    {isLoading && [...Array(10)].map((_, i) => (
                      <TableRow key={`skel-gift-${i}`}>
-                       <TableCell colSpan={7}>
+                       <TableCell colSpan={8}>
                          <Skeleton className="h-8 w-full" />
                        </TableCell>
                      </TableRow>
@@ -208,6 +216,17 @@ export default function GiftsPage() {
                    {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
                      <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
                        <TableCell className="pl-6 font-mono text-primary font-bold">{gift.giftIdDisplay}</TableCell>
+                       <TableCell className="font-mono text-muted-foreground">
+                         {gift.orderId ? (() => {
+                           const linkedOrder = allOrders.find(o => o.id === gift.orderId);
+                           const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : gift.orderId;
+                           return (
+                             <span className="text-muted-foreground">
+                               {displayId}
+                             </span>
+                           );
+                         })() : '—'}
+                       </TableCell>
                        <TableCell className="font-medium">
                          {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
                        </TableCell>
@@ -244,7 +263,7 @@ export default function GiftsPage() {
 
                    {!isLoading && paginatedGifts.length === 0 && (
                      <TableRow key="empty-gifts">
-                       <TableCell colSpan={7} className="h-48 text-center">
+                       <TableCell colSpan={8} className="h-48 text-center">
                          <GiftIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />
                          No gift records found.
                        </TableCell>

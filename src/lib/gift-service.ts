@@ -8,10 +8,17 @@ const GIFTS_TABLE = 'client_gifts';
 
 export const getGifts = async (): Promise<Gift[]> => {
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${GIFTS_TABLE} ORDER BY id DESC`);
-    return rows.map(row => ({
+    const rows = await query<any[]>(`SELECT data_json FROM ${GIFTS_TABLE}`);
+    const gifts = rows.map(row => ({
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
     } as Gift));
+
+    // Sort by createdAt DESC to show latest data on top
+    return gifts.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   } catch (error) {
     console.error("Error fetching gifts from MySQL:", error);
     return [];

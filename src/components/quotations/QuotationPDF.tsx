@@ -6,19 +6,18 @@ import { format, parseISO } from 'date-fns';
 
 // Create a simple barcode component using SVG/Views
 const Barcode = ({ value }: { value: string }) => {
+  if (!value) return null;
+  
+  // Using bwip-js API to generate a real Code-128 barcode
+  // This ensures a valid, scannable barcode is rendered in the PDF
+  const barcodeUrl = `https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(value)}&scale=2&rotate=N&includetext=false`;
+
   return (
-    <View style={{ flexDirection: 'row', height: 30, alignItems: 'flex-end' }}>
-      {[...Array(40)].map((_, i) => (
-        <View 
-          key={i} 
-          style={{ 
-            width: 1.8, 
-            height: 30, 
-            backgroundColor: 'black',
-            marginLeft: 1 
-          }} 
-        />
-      ))}
+    <View style={{ height: 40, width: 120, alignItems: 'center', justifyContent: 'center' }}>
+      <Image 
+        src={barcodeUrl} 
+        style={{ width: 100, height: 30 }} 
+      />
     </View>
   );
 };
@@ -47,12 +46,21 @@ const PhoneIcon = () => (
   </Svg>
 );
 
+// Register Bangla font support
+Font.register({
+  family: 'Hind Siliguri',
+  fonts: [
+    { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/hindsiliguri/HindSiliguri-Regular.ttf' },
+    { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/hindsiliguri/HindSiliguri-Bold.ttf', fontWeight: 'bold' },
+  ],
+});
+
 const styles = StyleSheet.create({
   page: {
     padding: 30,
     fontSize: 9,
     color: '#444',
-    fontFamily: 'Helvetica',
+    fontFamily: 'Hind Siliguri',
     backgroundColor: '#FFFFFF',
   },
   // Main Container with Shadow-like border
