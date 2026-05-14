@@ -661,7 +661,7 @@ export function PipelineClient() {
         )}
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => { }} onDeleteLead={() => { }} onTransferLead={() => { }} allUsers={allUsers} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => { }} onDeleteLead={() => { }} onTransferLead={() => { }} onHistoryView={() => { }} allUsers={allUsers} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
