@@ -444,6 +444,7 @@ export interface Lead {
   customerType?: CustomerType | null;
   activityHistory?: LeadActivity[];
   updatedAt?: string; // New field for last update timestamp
+  categoryUpdatedAt?: string; // Specific field for last category update
 }
 
 

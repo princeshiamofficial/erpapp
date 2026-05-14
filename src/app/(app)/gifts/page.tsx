@@ -160,8 +160,65 @@ export default function GiftsPage() {
   };
 
   const renderPagination = () => {
-    // Pagination logic remains the same
-    return null; // Placeholder
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis1');
+      
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i);
+      }
+      
+      if (currentPage < totalPages - 2) pages.push('ellipsis2');
+      if (!pages.includes(totalPages)) pages.push(totalPages);
+    }
+
+    return (
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious 
+              href="#" 
+              onClick={(e) => { e.preventDefault(); if (currentPage > 1) setCurrentPage(currentPage - 1); }}
+              className={cn(currentPage === 1 && "pointer-events-none opacity-50")}
+            />
+          </PaginationItem>
+          
+          {pages.map((page, idx) => (
+            <PaginationItem key={idx}>
+              {page === 'ellipsis1' || page === 'ellipsis2' ? (
+                <PaginationEllipsis />
+              ) : (
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }}
+                  isActive={currentPage === page}
+                >
+                  {page}
+                </PaginationLink>
+              )}
+            </PaginationItem>
+          ))}
+
+          <PaginationItem>
+            <PaginationNext 
+              href="#" 
+              onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) setCurrentPage(currentPage + 1); }}
+              className={cn(currentPage === totalPages && "pointer-events-none opacity-50")}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
   };
 
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN', 'CRM'].includes(currentUser.role)) {
@@ -205,13 +262,18 @@ export default function GiftsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                   {isLoading && [...Array(10)].map((_, i) => (
-                     <TableRow key={`skel-gift-${i}`}>
-                       <TableCell colSpan={8}>
-                         <Skeleton className="h-8 w-full" />
-                       </TableCell>
-                     </TableRow>
-                   ))}
+                    {isLoading && [...Array(10)].map((_, i) => (
+                      <TableRow key={`skel-gift-${i}`}>
+                        <TableCell className="pl-6"><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="pr-6 text-right"><Skeleton className="h-8 w-8 ml-auto rounded-full" /></TableCell>
+                      </TableRow>
+                    ))}
 
                    {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
                      <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
@@ -273,14 +335,8 @@ export default function GiftsPage() {
               </Table>
             </div>
           </CardContent>
-          <CardFooter className="py-4 border-t">
-            {totalPages > 1 && (
-              <Pagination>
-                <PaginationContent>
-                  {/* Pagination logic here */}
-                </PaginationContent>
-              </Pagination>
-            )}
+          <CardFooter className="py-4 border-t flex justify-center">
+            {renderPagination()}
           </CardFooter>
         </Card>
       </div>

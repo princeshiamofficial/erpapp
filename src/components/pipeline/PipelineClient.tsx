@@ -49,6 +49,7 @@ import Papa from 'papaparse';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadListView } from './LeadListView';
 import { LeadReportView } from './LeadReportView';
+import { LeadHistoryDialog } from './LeadHistoryDialog';
 
 import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
@@ -117,6 +118,9 @@ export function PipelineClient() {
   const [leadToView, setLeadToView] = useState<Lead | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
+  const [leadForHistory, setLeadForHistory] = useState<Lead | null>(null);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'calendar' | 'report'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
@@ -150,7 +154,7 @@ export function PipelineClient() {
         getUsers(),
         getGlobalSettings()
       ]);
-      setLeads(fetchedLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setLeads(fetchedLeads.sort((a, b) => new Date(b.categoryUpdatedAt || b.date).getTime() - new Date(a.categoryUpdatedAt || a.date).getTime()));
       setAllUsers(fetchedUsers);
       setGlobalSettings(fetchedSettings);
     } catch (error) {
@@ -205,31 +209,16 @@ export function PipelineClient() {
       const startDate = startOfDay(selectedDateRange.from);
       const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
 
-      const dateKey: 'date' | 'schedule' = viewMode === 'calendar' ? 'schedule' : 'date';
-
-      if (viewMode === 'report') {
-        baseLeads = baseLeads.filter(lead => {
-          const dateToFilter = lead.updatedAt;
-          if (!dateToFilter) return false;
-          try {
-            const leadDate = parseISO(dateToFilter);
-            return isWithinInterval(leadDate, { start: startDate, end: endDate });
-          } catch {
-            return false;
-          }
-        });
-      } else {
-        baseLeads = baseLeads.filter(lead => {
-          const dateToFilter = lead[dateKey];
-          if (!dateToFilter) return false;
-          try {
-            const leadDate = parseISO(dateToFilter);
-            return isWithinInterval(leadDate, { start: startDate, end: endDate });
-          } catch {
-            return false;
-          }
-        });
-      }
+      baseLeads = baseLeads.filter(lead => {
+        const dateToFilter = viewMode === 'calendar' ? lead.schedule : (lead.categoryUpdatedAt || lead.date);
+        if (!dateToFilter) return false;
+        try {
+          const leadDate = parseISO(dateToFilter);
+          return isWithinInterval(leadDate, { start: startDate, end: endDate });
+        } catch {
+          return false;
+        }
+      });
     }
 
     // Activity filter
@@ -256,12 +245,7 @@ export function PipelineClient() {
       );
     }
 
-    // Sorting logic
-    if (viewMode === 'report') {
-      return baseLeads.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
-    }
-
-    return baseLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return baseLeads.sort((a, b) => new Date(b.categoryUpdatedAt || b.date).getTime() - new Date(a.categoryUpdatedAt || a.date).getTime());
 
   }, [leads, searchTerm, selectedCrmId, selectedDateRange, categoryFilter, viewMode, activityFilter]);
 
@@ -357,8 +341,30 @@ export function PipelineClient() {
   const handleUpdateLeadCategory = async (lead: Lead, newCategory: LeadCategory) => {
     const originalCategory = lead.category;
     if (newCategory === originalCategory) return;
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: newCategory, updatedAt: new Date().toISOString() } : l));
-    const result = await updateLeadAction(lead.id, { category: newCategory });
+    
+    const now = new Date().toISOString();
+    const newActivity = {
+      id: Math.random().toString(36).substr(2, 9), // Simple ID for optimistic update
+      timestamp: now,
+      activity: `Category: ${LEAD_CATEGORY_LABELS[newCategory]}`,
+      notes: `Moved from ${LEAD_CATEGORY_LABELS[originalCategory]}`,
+      changedByUserId: currentUser?.id || '',
+      changedByUserName: currentUser?.name || 'System',
+    };
+
+    setLeads(prev => prev.map(l => l.id === lead.id ? { 
+      ...l, 
+      category: newCategory, 
+      categoryUpdatedAt: now, 
+      updatedAt: now,
+      activityHistory: [newActivity, ...(l.activityHistory || [])]
+    } : l));
+
+    const result = await updateLeadAction(lead.id, { 
+      category: newCategory,
+      activityHistory: [newActivity, ...(lead.activityHistory || [])]
+    });
+
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || "Could not update lead category.", variant: "destructive" });
       setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: originalCategory } : l));
@@ -467,6 +473,11 @@ export function PipelineClient() {
   const openViewDialog = (lead: Lead) => {
     setLeadToView(lead);
     setIsViewDialogOpen(true);
+  };
+
+  const openHistoryDialog = (lead: Lead) => {
+    setLeadForHistory(lead);
+    setIsHistoryDialogOpen(true);
   };
 
   const openEditDialogFromView = (lead: Lead) => {
@@ -578,7 +589,9 @@ export function PipelineClient() {
                   key={col.category} id={col.category} title={col.title} icon={col.icon}
                   leads={leadsByCategory[col.category] || []} headerBgClass={col.headerBgClass}
                   isLoading={isLoading} currentUser={currentUser}
-                  onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allUsers={allUsers}
+                  onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} 
+                  onHistoryView={openHistoryDialog}
+                  allUsers={allUsers}
                 />
               ))}
             </div>
@@ -589,6 +602,7 @@ export function PipelineClient() {
               leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
               onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
               onUpdateLeadCategory={handleUpdateLeadCategory} allUsers={allUsers}
+              onHistoryView={openHistoryDialog}
               isSelectionMode={isSelectionMode}
               selectedLeadIds={selectedLeadIds}
               onSelectionChange={handleSelectionChange}
@@ -655,6 +669,7 @@ export function PipelineClient() {
       {currentUser.role !== 'CRM' && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={() => fetchLeadsAndUsers(true)} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser} />)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
+      {leadForHistory && (<LeadHistoryDialog isOpen={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen} lead={leadForHistory} allUsers={allUsers} />)}
       {leadToDelete && (
         <AlertDialog open={!!leadToDelete} onOpenChange={() => setLeadToDelete(null)}>
           <AlertDialogContent><AlertDialogHeader><AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead for "<span className="font-semibold">{leadToDelete.contactName}</span>".</AlertDialogDescription></AlertDialogHeader>

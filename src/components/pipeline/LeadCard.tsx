@@ -5,7 +5,7 @@ import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, CalendarDays, MapPin, StickyNote, Bot, Trash2, Users, Eye, User as CrmIcon } from 'lucide-react';
+import { Edit, CalendarDays, MapPin, StickyNote, Bot, Trash2, Users, Eye, User as CrmIcon, History } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ interface LeadCardProps {
   onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
   onTransferLead: (lead: Lead) => void; 
+  onHistoryView: (lead: Lead) => void;
   allUsers: User[];
   headerBgClass: string; 
 }
@@ -52,7 +53,7 @@ const formatDateSafe = (dateString?: string) => {
 };
 
 
-export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onDeleteLead, onTransferLead, allUsers, headerBgClass }: LeadCardProps) {
+export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onDeleteLead, onTransferLead, onHistoryView, allUsers, headerBgClass }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
@@ -112,6 +113,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onD
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuItem onSelect={() => onViewLead(lead)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4"/> View Details</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => onHistoryView(lead)} className="cursor-pointer"><History className="mr-2 h-4 w-4"/> History</DropdownMenuItem>
                         
                         {canDelete && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete Lead</DropdownMenuItem>}
                         {!canDelete && <DropdownMenuItem disabled>No actions available</DropdownMenuItem>}
@@ -127,7 +129,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onD
               headerBgClass ? `${headerBgClass} text-white/90 border-transparent` : "border-muted-foreground/30 bg-muted/50"
             )}>
               <CalendarDays className="mr-1.5 h-3 w-3" />
-              <span>{formatDateSafe(lead.date)}</span>
+              <span>{formatDateSafe(lead.categoryUpdatedAt || lead.date)}</span>
             </div>
           </div>
            

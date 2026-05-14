@@ -412,7 +412,10 @@ function DashboardContent() {
     const interval = getDateRangeInterval();
     if (!interval) return [];
 
-    let leadsToFilter = allLeads.filter(lead => lead.date && isWithinInterval(parseISO(lead.date), interval));
+    let leadsToFilter = allLeads.filter(lead => {
+      const dateToFilter = lead.categoryUpdatedAt || lead.date;
+      return dateToFilter && isWithinInterval(parseISO(dateToFilter), interval);
+    });
 
     if (currentUser?.role === 'CRM') {
       leadsToFilter = leadsToFilter.filter(l => l.crmId === currentUser.id);
@@ -820,6 +823,12 @@ function DashboardContent() {
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
+  useEffect(() => {
+    if (currentUser && !isAdminView && (currentUser.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR' || currentUser.role === 'CO')) {
+      setSelectedTeam(currentUser.role);
+    }
+  }, [currentUser, isAdminView]);
+
   const specificUserOptions = useMemo(() => {
     let filtered = allUsers.filter(u => !u.isBanned);
     if (selectedTeam !== 'all') {
@@ -976,6 +985,7 @@ function DashboardContent() {
 
   const isSystemAdmin = useMemo(() => currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
   const isCrm = useMemo(() => currentUser?.role === 'CRM', [currentUser]);
+  const isDr = useMemo(() => currentUser?.role === 'DESIGNER_REPRESENTATIVE', [currentUser]);
 
   const hideFinancials = useMemo(() => {
     if (!currentUser || !globalSettings) return false;
@@ -988,7 +998,7 @@ function DashboardContent() {
 
     return [
       { 
-        title: isCrm ? "Sales" : "Total Sales", 
+        title: isDr ? "Designed" : (isCrm ? "Sales" : "Total Sales"), 
         value: showAmount ? formatCurrency(totalSales) : salesCount.toString(), 
         icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, currentUser, hideValue: hideFinancials 
       },

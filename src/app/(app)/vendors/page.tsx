@@ -45,6 +45,7 @@ import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -481,22 +482,36 @@ export default function VendorsPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <ScrollArea className="h-[calc(100vh-280px)]">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="pl-6">Vendor Name</TableHead>
-                      <TableHead>Business Name</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Address</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="pr-6 text-right">Actions</TableHead>
+                  <TableHeader className="sticky top-0 z-20">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="pl-6 sticky top-0 bg-background z-20">Vendor Name</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Business Name</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Phone</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Address</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Category</TableHead>
+                      <TableHead className="pr-6 text-right sticky top-0 bg-background z-20">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      [...Array(5)].map((_, i) => (
-                        <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                      [...Array(10)].map((_, i) => (
+                        <TableRow key={`skel-vendor-${i}`}>
+                          <TableCell className="pl-6 font-medium">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-9 w-9 rounded-full" />
+                              <Skeleton className="h-4 w-32" />
+                            </div>
+                          </TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                          <TableCell className="pr-6 text-right">
+                            <Skeleton className="h-8 w-8 ml-auto rounded-full" />
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : paginatedData.length > 0 ? (
                       (paginatedData as User[]).map(vendor => (
@@ -529,7 +544,7 @@ export default function VendorsPage() {
                     )}
                   </TableBody>
                 </Table>
-              </div>
+              </ScrollArea>
             </CardContent>
             {totalPages > 1 && (
               <CardFooter className="py-4 border-t">
@@ -563,16 +578,39 @@ export default function VendorsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              {isLoading ? <Skeleton className="h-48 w-full" /> :
-                filteredProducts.length > 0 ? (
+            <CardContent className="p-0">
+              <ScrollArea className="h-[calc(100vh-280px)]">
+                {isLoading ? (
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-background z-10">
                       <TableRow>
                         <TableHead>Product Name</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Unit Price</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...Array(8)].map((_, i) => (
+                        <TableRow key={`skel-prod-${i}`}>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell className="text-right">
+                            <Skeleton className="h-8 w-8 ml-auto rounded-full" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : filteredProducts.length > 0 ? (
+                  <Table>
+                    <TableHeader className="sticky top-0 z-20">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="sticky top-0 bg-background z-20">Product Name</TableHead>
+                        <TableHead className="sticky top-0 bg-background z-20">Category</TableHead>
+                        <TableHead className="sticky top-0 bg-background z-20">Unit Price</TableHead>
+                        <TableHead className="text-right sticky top-0 bg-background z-20">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -601,6 +639,7 @@ export default function VendorsPage() {
                     <p className="text-sm">Click "Add New Product" to get started.</p>
                   </div>
                 )}
+              </ScrollArea>
             </CardContent>
           </Card>
         );
@@ -618,7 +657,15 @@ export default function VendorsPage() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <Skeleton className="h-48 w-full" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <Card key={`skel-cat-${i}`}>
+                      <CardContent className="p-4 flex items-center justify-center">
+                        <Skeleton className="h-4 w-24" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               ) : categories.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {categories.map(cat => (
@@ -673,18 +720,58 @@ export default function VendorsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              {isLoading ? <Skeleton className="h-64 w-full" /> : paginatedData.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Bill ID</TableHead>
-                      <TableHead>Bill Date</TableHead>
-                      <TableHead>Vendor</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Due</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <ScrollArea className="h-[calc(100vh-280px)]">
+                  <Table>
+                  <TableHeader className="sticky top-0 z-20">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="sticky top-0 bg-background z-20">Bill ID</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Bill Date</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Vendor</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Total</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Due</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Status</TableHead>
+                      <TableHead className="text-right sticky top-0 bg-background z-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...Array(8)].map((_, i) => (
+                      <TableRow key={`skel-bill-${i}`}>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-9 w-9 rounded-full" />
+                            <div className="space-y-1">
+                              <Skeleton className="h-3 w-20" />
+                              <Skeleton className="h-2 w-16" />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-8 w-8 ml-auto rounded-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+              ) : paginatedData.length > 0 ? (
+                <ScrollArea className="h-[calc(100vh-280px)]">
+                  <Table>
+                  <TableHeader className="sticky top-0 z-20">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="sticky top-0 bg-background z-20">Bill ID</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Bill Date</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Vendor</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Total</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Due</TableHead>
+                      <TableHead className="sticky top-0 bg-background z-20">Status</TableHead>
+                      <TableHead className="text-right sticky top-0 bg-background z-20">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -721,6 +808,7 @@ export default function VendorsPage() {
                     })}
                   </TableBody>
                 </Table>
+              </ScrollArea>
               ) : (
                 <div className="text-center text-gray-500 py-16">
                   <Receipt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
@@ -759,7 +847,22 @@ export default function VendorsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByVendor.length > 0 ? (
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={`skel-report-${i}`} className="bg-muted/30 rounded-lg shadow-sm border p-4">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-9 w-9 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : reportsByVendor.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-3">
                   {reportsByVendor.map(([vendorId, reports], index) => {
                     const vendor = allUsers.find(u => u.id === vendorId);
@@ -817,66 +920,70 @@ export default function VendorsPage() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 mt-4">
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-sm border-b pb-1">Billing</h4>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Date</TableHead>
-                                      <TableHead>Invoice ID</TableHead>
-                                      <TableHead className="text-right">Amount</TableHead>
-                                      <TableHead className="text-right">Action</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {reports.filter(r => r.amount > 0).map(report => (
-                                      <TableRow key={`${report.id}-billing`}>
-                                        <TableCell>{formatDate(report.date)}</TableCell>
-                                        <TableCell>{report.invoiceId}</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(report.amount)}</TableCell>
-                                        <TableCell className="text-right">
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                              <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                              <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                        </TableCell>
+                                <ScrollArea className="h-[400px] pr-4">
+                                  <Table>
+                                    <TableHeader className="sticky top-0 z-20">
+                                      <TableRow className="hover:bg-transparent">
+                                        <TableHead className="sticky top-0 bg-background z-20">Date</TableHead>
+                                        <TableHead className="sticky top-0 bg-background z-20">Invoice ID</TableHead>
+                                        <TableHead className="text-right sticky top-0 bg-background z-20">Amount</TableHead>
+                                        <TableHead className="text-right sticky top-0 bg-background z-20">Action</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {reports.filter(r => r.amount > 0).map(report => (
+                                        <TableRow key={`${report.id}-billing`}>
+                                          <TableCell>{formatDate(report.date)}</TableCell>
+                                          <TableCell>{report.invoiceId}</TableCell>
+                                          <TableCell className="text-right">{formatCurrency(report.amount)}</TableCell>
+                                          <TableCell className="text-right">
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </ScrollArea>
                               </div>
 
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-sm border-b pb-1">Payment</h4>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Date</TableHead>
-                                      <TableHead>Method</TableHead>
-                                      <TableHead className="text-right">Payment</TableHead>
-                                      <TableHead className="text-right">Action</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {reports.filter(r => r.payment > 0).map(report => (
-                                      <TableRow key={`${report.id}-payment`}>
-                                        <TableCell>{formatDate(report.date)}</TableCell>
-                                        <TableCell>{report.method}</TableCell>
-                                        <TableCell className="text-right">{formatCurrency(report.payment)}</TableCell>
-                                        <TableCell className="text-right">
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                              <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                              <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                        </TableCell>
+                                <ScrollArea className="h-[400px] pr-4">
+                                  <Table>
+                                    <TableHeader className="sticky top-0 z-20">
+                                      <TableRow className="hover:bg-transparent">
+                                        <TableHead className="sticky top-0 bg-background z-20">Date</TableHead>
+                                        <TableHead className="sticky top-0 bg-background z-20">Method</TableHead>
+                                        <TableHead className="text-right sticky top-0 bg-background z-20">Payment</TableHead>
+                                        <TableHead className="text-right sticky top-0 bg-background z-20">Action</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {reports.filter(r => r.payment > 0).map(report => (
+                                        <TableRow key={`${report.id}-payment`}>
+                                          <TableCell>{formatDate(report.date)}</TableCell>
+                                          <TableCell>{report.method}</TableCell>
+                                          <TableCell className="text-right">{formatCurrency(report.payment)}</TableCell>
+                                          <TableCell className="text-right">
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </ScrollArea>
                               </div>
                             </div>
                           </AccordionContent>

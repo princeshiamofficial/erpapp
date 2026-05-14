@@ -33,6 +33,7 @@ interface PipelineKanbanColumnProps {
   onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
   onTransferLead: (lead: Lead) => void;
+  onHistoryView: (lead: Lead) => void;
   allUsers: User[];
 }
 
@@ -51,6 +52,7 @@ export function PipelineKanbanColumn({
   onViewLead,
   onDeleteLead,
   onTransferLead,
+  onHistoryView,
   allUsers,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -126,6 +128,7 @@ export function PipelineKanbanColumn({
                     onViewLead={onViewLead}
                     onDeleteLead={onDeleteLead}
                     onTransferLead={onTransferLead}
+                    onHistoryView={onHistoryView}
                     allUsers={allUsers}
                     headerBgClass={headerBgClass}
                   />

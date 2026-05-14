@@ -16,7 +16,7 @@ import {
     DropdownMenuPortal,
     DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, Users, MoreVertical, Briefcase, FolderEdit, Eye, Check } from 'lucide-react';
+import { Edit, Trash2, Users, MoreVertical, Briefcase, FolderEdit, Eye, Check, History } from 'lucide-react';
 import { format, parseISO, isBefore, startOfDay, isToday } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,6 +32,7 @@ interface LeadListViewProps {
     onDeleteLead: (lead: Lead) => void;
     onTransferLead: (lead: Lead) => void;
     onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void;
+    onHistoryView: (lead: Lead) => void;
     allUsers: User[];
     isSelectionMode?: boolean;
     selectedLeadIds?: Set<string>;
@@ -80,7 +81,7 @@ const getCategoryColorClass = (category: LeadCategory) => {
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'APPOINTMENT', 'PROSPECT', 'POG', 'OC', 'OD', 'ROD'];
 
-export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => { }, onSelectAll = () => { } }: LeadListViewProps) {
+export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, onHistoryView, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => { }, onSelectAll = () => { } }: LeadListViewProps) {
     const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
     const canDelete = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
     const canTransfer = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
@@ -127,7 +128,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                             <TableHead>Source</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead>Assigned CRM</TableHead>
-                            <TableHead>Date</TableHead>
+                            <TableHead>Last Modified</TableHead>
                             <TableHead>Schedule</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -192,7 +193,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                             <span>{lead.crmName}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{formatDateSafe(lead.date)}</TableCell>
+                                    <TableCell>{formatDateSafe(lead.categoryUpdatedAt || lead.date)}</TableCell>
                                     <TableCell>
                                         {scheduleDate ? (
                                             <Badge variant="outline" className={cn(
@@ -215,6 +216,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onSelect={() => onViewLead(lead)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => onHistoryView(lead)} className="cursor-pointer"><History className="mr-2 h-4 w-4" /> History</DropdownMenuItem>
 
                                                 {canEdit(lead) && (
                                                     <DropdownMenuSub>

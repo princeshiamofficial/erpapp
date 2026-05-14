@@ -91,7 +91,9 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
   const { toast } = useToast();
 
   const activityHistory = useMemo(() => {
-    return [...(lead?.activityHistory || [])].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return [...(lead?.activityHistory || [])]
+      .filter(item => !item.activity.startsWith('Category:'))
+      .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [lead?.activityHistory]);
 
   useEffect(() => {

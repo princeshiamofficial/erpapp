@@ -50,7 +50,7 @@ export async function addLeadAction(
       id: uuidv4(),
       timestamp: new Date().toISOString(),
       activity: "Lead Created",
-      notes: "Initial lead entry created.",
+      notes: `Lead initially entered in ${LEAD_CATEGORY_LABELS[leadData.category || 'POP']}`,
       changedByUserId: currentUser.id,
       changedByUserName: currentUser.name,
     };
@@ -63,6 +63,7 @@ export async function addLeadAction(
       status: leadData.status || 'New Lead',
       activityHistory: [initialActivity],
       updatedAt: new Date().toISOString(),
+      categoryUpdatedAt: new Date().toISOString(),
     };
     const newLead = await addLead(leadDataWithUser);
     if (newLead) {
@@ -228,7 +229,10 @@ export async function updateLeadAction(
       }
     }
 
-    const finalUpdates = { ...updates, updatedAt: new Date().toISOString() };
+    const finalUpdates: any = { ...updates, updatedAt: new Date().toISOString() };
+    if (updates.category) {
+      finalUpdates.categoryUpdatedAt = new Date().toISOString();
+    }
 
     const success = await updateLead(leadId, finalUpdates);
     if (success) {

@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
+  turbopack: {
+    resolveAlias: {
+      handlebars: 'handlebars/dist/handlebars.js',
+    },
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '4mb',
@@ -46,7 +56,9 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-tooltip',
       'recharts',
       'date-fns',
-      'framer-motion'
+      'framer-motion',
+      'clsx',
+      'tailwind-merge'
     ],
   },
   async headers() {
