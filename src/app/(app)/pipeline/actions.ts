@@ -15,6 +15,7 @@ import {
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { v4 as uuidv4 } from 'uuid';
 import { getIO } from "@/lib/socket-io";
+import { LEAD_CATEGORY_LABELS } from "@/lib/pipeline-constants";
 
 
 export async function getLeads(): Promise<Lead[]> {
