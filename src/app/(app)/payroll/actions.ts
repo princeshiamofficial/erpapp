@@ -347,3 +347,15 @@ export async function getLastAttendanceDatesAction(): Promise<Record<string, str
     return {};
   }
 }
+
+export async function getUnpaidMonthsAction(): Promise<string[]> {
+    try {
+        const results = await query<any[]>(
+            `SELECT DISTINCT month FROM salary_records WHERE JSON_EXTRACT(data_json, '$.paymentStatus') = 'Unpaid'`
+        );
+        return results.map(row => row.month);
+    } catch (error) {
+        console.error("Error fetching unpaid months:", error);
+        return [];
+    }
+}

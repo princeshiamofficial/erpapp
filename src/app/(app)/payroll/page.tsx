@@ -195,14 +195,19 @@ export default function PayrollPage() {
       const onTimeDays = presentDays - lateDays;
       const absentDays = (30 - presentDays);
 
+      const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
+      const effectiveSalary = firstFutureIncrement ? firstFutureIncrement.previousSalary : (employee.salary || 0);
+
       if (payslip) {
         return {
           ...employee,
+          salary: effectiveSalary,
           presentDays: payslip.presentDays,
           absentDays: payslip.absentDays,
           lateDays: payslip.lateDays,
           onTimeDays,
-          providentFund: payslip.providentFund ?? ((employee.providentFundStatus === 'Active') ? ((employee.salary || 0) * 0.07) : 0),
+          providentFund: payslip.providentFund ?? ((employee.providentFundStatus === 'Active') ? (effectiveSalary * 0.07) : 0),
           fine: payslip.fine,
           incentive: payslip.incentive,
           payableAmount: payslip.payableAmount,
@@ -212,11 +217,6 @@ export default function PayrollPage() {
         };
       }
 
-      const relevantHistory = (employee.salaryHistory || [])
-        .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
-
       const perDaySalaryForFine = effectiveSalary / 30;
       const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
       const salaryForDaysWorked = (effectiveSalary / 30) * presentDays;
@@ -225,6 +225,7 @@ export default function PayrollPage() {
 
       return {
         ...employee,
+        salary: effectiveSalary,
         presentDays,
         absentDays: Math.max(0, absentDays),
         lateDays,
@@ -244,8 +245,15 @@ export default function PayrollPage() {
     const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0) + (data.advance || 0), 0);
     const payableTotal = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
 
+    const processedEmployees = results.map(employee => {
+      const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
+      const effectiveSalary = firstFutureIncrement ? firstFutureIncrement.previousSalary : (employee.salary || 0);
+      return { ...employee, salary: effectiveSalary };
+    });
+
     return {
-      filteredEmployees: results,
+      filteredEmployees: processedEmployees,
       salarySheetCalculatedData: calculatedData,
       totalUnpaidAmount: unpaid,
       totalProvidentFund: providentFundTotal,
@@ -693,10 +701,10 @@ export default function PayrollPage() {
           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-md h-10 w-full" />
             </div>
             <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
+              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-md border-gray-200 bg-white">
                 <SelectValue placeholder="Select Month" />
               </SelectTrigger>
               <SelectContent>
@@ -706,7 +714,7 @@ export default function PayrollPage() {
               </SelectContent>
             </Select>
             <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-md border-gray-200 bg-white">
                 <SelectValue placeholder="Select Year" />
               </SelectTrigger>
               <SelectContent>
@@ -839,11 +847,11 @@ export default function PayrollPage() {
                 placeholder="Search employee..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full sm:w-[200px] focus-visible:ring-primary/20"
+                className="pl-10 bg-gray-50 border-gray-200 rounded-md h-10 w-full sm:w-[200px] focus-visible:ring-primary/20"
               />
             </div>
             <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-md border-gray-200 bg-white">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>

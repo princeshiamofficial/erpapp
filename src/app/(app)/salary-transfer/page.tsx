@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getEmployees } from '@/lib/employee-service';
-import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
+import { getSalarySheetForMonth, getUnpaidMonthsAction } from '@/app/(app)/payroll/actions';
 import type { Employee, Payslip, AttendanceRecord } from '@/types';
 import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth, isAfter, startOfMonth } from 'date-fns';
 import { Download, FileText } from 'lucide-react';
@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
@@ -45,6 +46,7 @@ export default function SalaryTransferPage() {
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
+  const [unpaidMonths, setUnpaidMonths] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -60,6 +62,9 @@ export default function SalaryTransferPage() {
       setSalarySheetData(fetchedSalarySheet);
       setAttendanceData(fetchedAttendance);
       setWeekendDays(fetchedWeekendSettings.days);
+      
+      const fetchedUnpaidMonths = await getUnpaidMonthsAction();
+      setUnpaidMonths(fetchedUnpaidMonths);
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast({ title: "Error", description: "Could not load data for salary transfer.", variant: "destructive" });
@@ -71,6 +76,44 @@ export default function SalaryTransferPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleMonthChange = (monthIndex: string) => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(parseInt(monthIndex, 10));
+    setSelectedDate(newDate);
+  };
+
+  const handleYearChange = (year: string) => {
+    const newDate = new Date(selectedDate);
+    newDate.setFullYear(parseInt(year, 10));
+    setSelectedDate(newDate);
+  };
+
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+      years.push(i);
+    }
+    return years.reverse();
+  }, []);
+
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
+    value: i.toString(),
+    label: format(new Date(0, i), 'MMM'),
+  })), []);
+
+  const filteredMonths = useMemo(() => {
+    const selectedYear = selectedDate.getFullYear();
+    const selectedMonthStr = format(selectedDate, 'yyyy-MM');
+    
+    // We want to show months that have unpaid salaries in the selected year
+    // OR the currently selected month (so it doesn't disappear if it becomes paid)
+    return months.filter(m => {
+        const monthStr = `${selectedYear}-${String(parseInt(m.value) + 1).padStart(2, '0')}`;
+        return unpaidMonths.includes(monthStr) || monthStr === selectedMonthStr;
+    });
+  }, [months, unpaidMonths, selectedDate]);
   
   const unpaidEmployeesData = useMemo(() => {
     const activeEmployees = employees.filter(e => e.status === 'Active');
@@ -105,10 +148,9 @@ export default function SalaryTransferPage() {
             const presentDays = userAttendanceInRange.length;
             const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
             
-            const relevantHistory = (employee.salaryHistory || [])
-                .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+            const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
+            const effectiveSalary = firstFutureIncrement ? firstFutureIncrement.previousSalary : (employee.salary || 0);
             
             const perDaySalaryForFine = effectiveSalary / 30;
             const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
@@ -168,7 +210,30 @@ export default function SalaryTransferPage() {
 
   return (
     <div className="space-y-2 bg-transparent">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-end gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
+            <SelectTrigger className="w-[120px] h-9 rounded-md border-gray-200 bg-white">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredMonths.map(month => (
+                <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+            <SelectTrigger className="w-[100px] h-9 rounded-md border-gray-200 bg-white">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.map(year => (
+                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex justify-end gap-2 w-full sm:w-auto">
         <Button onClick={handleExport} className="bg-orange-600 hover:bg-orange-700 text-white border-none" disabled={isLoading}>
           <Download className="mr-2 h-4 w-4" /> Export as CSV
         </Button>
@@ -211,6 +276,7 @@ export default function SalaryTransferPage() {
           </DropdownMenu>
         )}
       </div>
+    </div>
       <Card className="shadow-none">
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-lg sm:text-xl font-bold">COMPANY NAME: COLOR HUT</CardTitle>

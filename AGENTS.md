@@ -31,6 +31,7 @@ Specific knowledge bases:
 - **Premium UI**: Always prioritize high-end design. Use Radix UI components, Framer Motion for transitions, and curated Color palettes.
 - **AI-First**: When building features, consider how Genkit AI can enhance the user experience (e.g., smart summaries, automated forms).
 - **Banglish Summary**: Provide a concise summary of the work performed in **Banglish** (Bengali written in Latin/English script) after completing each task. **NEVER use direct Bengali Unicode characters (e.g., বাংলা)** — always write Bengali phonetically in English letters only (e.g., "Ami kaj shesh korlam").
+- **Summary of Actions**: After the Banglish summary, provide a clear, bulleted "Summary of Actions" in English to detail the specific technical steps taken.
 - **Safety**: Ensure all database operations are sanitized and follow the established Zod validation patterns.
 
 ## Commit Messages & PR Descriptions
