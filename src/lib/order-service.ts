@@ -583,9 +583,21 @@ export const restoreOrder = async (orderId: string): Promise<boolean> => {
 
 export const permanentlyDeleteOrder = async (orderId: string): Promise<boolean> => {
   try {
+    const orderRows = await query<any[]>(`SELECT client_id FROM ${ORDERS_TABLE} WHERE id = ?`, [orderId]);
+    const clientId = orderRows.length > 0 ? orderRows[0].client_id : null;
+
     await query(`DELETE FROM ${ORDERS_TABLE} WHERE id = ?`, [orderId]);
     await query(`DELETE FROM ${PROJECTS_TABLE} WHERE id = ?`, [orderId]);
     await query(`DELETE FROM ${SHIPPED_ORDERS_TABLE} WHERE order_id = ?`, [orderId]);
+
+    if (clientId) {
+      const remainingOrders = await query<any[]>(`SELECT id FROM ${ORDERS_TABLE} WHERE client_id = ?`, [clientId]);
+      if (remainingOrders.length === 0) {
+        await query(`DELETE FROM clients WHERE id = ?`, [clientId]);
+        console.log(`[DeleteClient] Deleted orphan client ${clientId} after permanently deleting its last order.`);
+      }
+    }
+
     return true;
   } catch (error) {
     console.error(`Error permanently deleting order ${orderId} from MySQL:`, error);
