@@ -149,24 +149,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       fetchOptions();
       setCurrentOrderDate(new Date());
 
-      // Suggest next available Job ID only if the field is currently empty
-      if (jobId.trim() === '') {
-        if (allOrders && allOrders.length > 0) {
-          let maxJobId = 0;
-          allOrders.forEach(order => {
-            const orderJobIdStr = (order.companyName || '').split(' • ')[0].trim();
-            const orderJobIdNum = parseInt(orderJobIdStr, 10);
-            if (!isNaN(orderJobIdNum) && orderJobIdNum > maxJobId) {
-              maxJobId = orderJobIdNum;
-            }
-          });
-          const newSuggestedId = (maxJobId + 1).toString();
-          setJobId(newSuggestedId);
-        } else {
-          setJobId('1'); // Start with 1 if no orders exist
-        }
-      }
-
       if (initialData) {
         const nameParts = (initialData.companyName || '').split(' • ');
         const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : initialData.companyName || '';
@@ -200,7 +182,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     } else {
       resetForm();
     }
-  }, [isOpen, fetchOptions, allOrders, resetForm]); // Removed jobId from dependencies
+  }, [isOpen, fetchOptions, resetForm, initialData]);
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
@@ -544,7 +526,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="jobId">Job ID *</Label>
-                <Input id="jobId" ref={jobIdInputRef} value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101, J123" />
+                <Input id="jobId" ref={jobIdInputRef} value={jobId} onChange={handleJobIdChange} required placeholder="" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>
