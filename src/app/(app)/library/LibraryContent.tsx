@@ -193,7 +193,7 @@ export function LibraryContent() {
       </div>
 
       {searchQuery && totalResults === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 shadow-sm max-w-md mx-auto">
+        <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 shadow-sm w-full">
           <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-gray-800 mb-1">No results found</h3>
           <p className="text-sm text-gray-500 px-4">
