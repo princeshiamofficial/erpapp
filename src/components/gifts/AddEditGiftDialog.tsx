@@ -216,7 +216,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="orderId">Client ID / Job ID (Optional)</Label>
+              <Label htmlFor="orderId">Job ID (Optional)</Label>
               <Input 
                 id="orderId" 
                 value={jobIdInput} 
