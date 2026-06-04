@@ -65,7 +65,7 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-12 text-base bg-background/80 focus:bg-background border-border/50 dark:border-border/70 focus:border-primary focus:ring-primary/50 rounded-lg shadow-sm"
+              className="h-12 text-base bg-background/80 focus:bg-background border-border/50 dark:border-border/70 rounded-lg shadow-sm"
             />
           </div>
           <div className="space-y-2">
@@ -78,7 +78,7 @@ export function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 text-base bg-background/80 focus:bg-background border-border/50 dark:border-border/70 focus:border-primary focus:ring-primary/50 rounded-lg shadow-sm pr-10"
+                className="h-12 text-base bg-background/80 focus:bg-background border-border/50 dark:border-border/70 rounded-lg shadow-sm pr-10"
               />
               <Button
                 type="button"

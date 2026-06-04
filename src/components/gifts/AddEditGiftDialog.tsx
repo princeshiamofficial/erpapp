@@ -184,24 +184,24 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
               <Input 
                 id="orderId" 
                 value={jobIdInput} 
-                className="border-gray-400 dark:border-gray-600 focus:border-primary"
+                className="border-gray-400 dark:border-gray-600"
                 onChange={e => setJobIdInput(e.target.value)}
               />
             </div>
             <div className="space-y-1">
               <Label htmlFor="recipientName">Recipient Name</Label>
-              <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required className="border-gray-400 dark:border-gray-600 focus:border-primary" />
+              <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required className="border-gray-400 dark:border-gray-600" />
             </div>
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="recipientPhone">Recipient Phone</Label>
-            <Input id="recipientPhone" value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} required className="border-gray-400 dark:border-gray-600 focus:border-primary" />
+            <Input id="recipientPhone" value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} required className="border-gray-400 dark:border-gray-600" />
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="recipientAddress">Recipient Address</Label>
-            <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required className="border-gray-400 dark:border-gray-600 focus:border-primary min-h-[80px]" />
+            <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required className="border-gray-400 dark:border-gray-600 min-h-[80px]" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
@@ -260,7 +260,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="space-y-1">
             <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add any relevant notes..." className="border-gray-400 dark:border-gray-600 focus:border-primary min-h-[100px]" />
+            <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add any relevant notes..." className="border-gray-400 dark:border-gray-600 min-h-[100px]" />
           </div>
 
           <DialogFooter className="pt-4 border-t">
