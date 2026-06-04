@@ -52,9 +52,15 @@ const mapRowToOrder = (row: any): TrackingLink => ({
 export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
     const results = await query<any[]>(`
-      SELECT o.*, c.company_name, c.phone_number, c.address 
+      SELECT o.*, c.company_name, c.phone_number, c.address,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name
       FROM ${ORDERS_TABLE} o 
       JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
       WHERE o.is_deleted = FALSE 
       ORDER BY o.created_at DESC
     `);
@@ -112,9 +118,15 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
     const total = countResults[0].total;
 
     const queryStr = `
-      SELECT o.*, c.company_name, c.phone_number, c.address 
+      SELECT o.*, c.company_name, c.phone_number, c.address,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name
       FROM ${ORDERS_TABLE} o 
       JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
       ${whereClause} 
       ORDER BY o.created_at DESC 
       LIMIT ? OFFSET ?
@@ -138,9 +150,15 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
   if (!id) return undefined;
   try {
     const results = await query<any[]>(`
-      SELECT o.*, c.company_name, c.phone_number, c.address 
+      SELECT o.*, c.company_name, c.phone_number, c.address,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name
       FROM ${ORDERS_TABLE} o 
       JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
       WHERE o.id = ? AND o.is_deleted = FALSE
     `, [id]);
     if (results.length > 0) {
@@ -157,9 +175,15 @@ export const getOrderByTrackingCode = async (trackingCode: string): Promise<Trac
   if (!trackingCode) return null;
   try {
     const results = await query<any[]>(`
-      SELECT o.*, c.company_name, c.phone_number, c.address 
+      SELECT o.*, c.company_name, c.phone_number, c.address,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name
       FROM ${ORDERS_TABLE} o 
       JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
       WHERE o.packzy_tracking_code = ? AND o.is_deleted = FALSE
     `, [trackingCode]);
     if (results.length > 0) {
@@ -175,9 +199,15 @@ export const getOrderByTrackingCode = async (trackingCode: string): Promise<Trac
 export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue: boolean = false): Promise<TrackingLink[]> => {
   try {
     const results = await query<any[]>(`
-      SELECT o.*, c.company_name, c.phone_number, c.address 
+      SELECT o.*, c.company_name, c.phone_number, c.address,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name
       FROM ${ORDERS_TABLE} o 
       JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
       WHERE o.current_status = ?
     `, [statusId]);
     const orders = results.map(mapRowToOrder);
@@ -336,16 +366,16 @@ export const addOrder = async (orderData: {
     await query(
       `INSERT INTO ${ORDERS_TABLE} (
         id, client_id, order_items, special_client_discount, shipping_charge, 
-        order_notes, crm_user_id, crm_user_name, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
-        updated_by_user_name, is_public, current_status, status_history, comments, view_count, advance_payments
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        order_notes, crm_user_id, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
+        is_public, current_status, status_history, comments, view_count, advance_payments
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         orderId, clientId, JSON.stringify(orderData.orderItems),
         orderData.specialClientDiscount ?? null, orderData.shippingCharge ?? null, orderData.orderNotes || null,
-        orderData.crmUserId, orderData.crmUserName, mysqlCreatedAt, 
+        orderData.crmUserId, mysqlCreatedAt, 
         orderData.acceptedDeliveryDate ? format(parseISO(orderData.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null,
         mysqlUpdatedAt, orderData.crmUserId,
-        orderData.crmUserName, false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
+        false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
         JSON.stringify([]), 0, JSON.stringify(initialAdvancePayments)
       ]
     );
@@ -415,13 +445,8 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     if (updates.shippingCharge !== undefined) { fields.push('shipping_charge = ?'); params.push(updates.shippingCharge); }
     if (updates.orderNotes !== undefined) { fields.push('order_notes = ?'); params.push(updates.orderNotes); }
     if (updates.crmUserId !== undefined) { fields.push('crm_user_id = ?'); params.push(updates.crmUserId); }
-    if (updates.crmUserName !== undefined) { fields.push('crm_user_name = ?'); params.push(updates.crmUserName); }
     if (updates.designerRepresentativeId !== undefined) { fields.push('designer_representative_id = ?'); params.push(updates.designerRepresentativeId); }
-    if (updates.designerRepresentativeName !== undefined) { fields.push('designer_representative_name = ?'); params.push(updates.designerRepresentativeName); }
-    if (updates.assigneeAvatarUrl !== undefined) { fields.push('assignee_avatar_url = ?'); params.push(updates.assigneeAvatarUrl); }
-    if (updates.designerRepresentativeAvatarUrl !== undefined) { fields.push('designer_representative_avatar_url = ?'); params.push(updates.designerRepresentativeAvatarUrl); }
     if (updates.updatedByUserId !== undefined) { fields.push('updated_by_user_id = ?'); params.push(updates.updatedByUserId); }
-    if (updates.updatedByUserName !== undefined) { fields.push('updated_by_user_name = ?'); params.push(updates.updatedByUserName); }
     if (updates.isPublic !== undefined) { fields.push('is_public = ?'); params.push(updates.isPublic); }
     if (updates.currentStatus !== undefined) { fields.push('current_status = ?'); params.push(updates.currentStatus); }
     if (updates.statusHistory !== undefined) { fields.push('status_history = ?'); params.push(JSON.stringify(updates.statusHistory)); }
@@ -553,10 +578,17 @@ export const deleteOrder = async (orderId: string, userId: string): Promise<bool
 export const getDeletedOrders = async (): Promise<TrackingLink[]> => {
   try {
     const results = await query<any[]>(`
-      SELECT o.*, c.company_name, c.phone_number, c.address, u.name as deleted_by_name, u.avatar_url as deleted_by_avatar_url 
+      SELECT o.*, c.company_name, c.phone_number, c.address, 
+             u.name as deleted_by_name, u.avatar_url as deleted_by_avatar_url,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name
       FROM ${ORDERS_TABLE} o
       JOIN clients c ON o.client_id = c.id
       LEFT JOIN users u ON o.deleted_by_id = u.id
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
       WHERE o.is_deleted = TRUE 
       ORDER BY o.deleted_at DESC
     `);
