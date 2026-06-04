@@ -219,11 +219,11 @@ export default function OrdersPage() {
 
     const lowerSearchTerm = searchTerm.toLowerCase();
     return result.filter(order =>
-      order.id.toLowerCase().includes(lowerSearchTerm) ||
-      (order.companyName && order.companyName.toLowerCase().includes(lowerSearchTerm)) ||
-      (order.phoneNumber && order.phoneNumber.toLowerCase().includes(lowerSearchTerm)) ||
-      order.crmUserName.toLowerCase().includes(lowerSearchTerm) ||
-      (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(lowerSearchTerm))
+      (order.id || '').toLowerCase().includes(lowerSearchTerm) ||
+      (order.companyName || '').toLowerCase().includes(lowerSearchTerm) ||
+      (order.phoneNumber || '').toLowerCase().includes(lowerSearchTerm) ||
+      (order.crmUserName || '').toLowerCase().includes(lowerSearchTerm) ||
+      (order.designerRepresentativeName || '').toLowerCase().includes(lowerSearchTerm)
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, searchTerm, currentUser, viewType, selectedDateRange]);
 

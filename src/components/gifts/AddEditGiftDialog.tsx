@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Gift, User, ServiceGiftItem, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addGiftAction, updateGiftAction } from '@/app/(app)/gifts/actions';
+import { getClientDetailsAction } from '@/app/(app)/orders/actions';
 import { Loader2, ChevronsUpDown, Check, Calendar as CalendarIcon, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -41,6 +42,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
   const [isGiftPopoverOpen, setIsGiftPopoverOpen] = useState(false);
   const [jobIdInput, setJobIdInput] = useState('');
   const { toast } = useToast();
+  const initialJobId = useRef('');
 
   const isEditMode = !!gift;
 
@@ -51,7 +53,9 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setRecipientPhone(gift.recipientPhone);
       setRecipientAddress(gift.recipientAddress);
       setOrderId(gift.orderId || null);
-      setJobIdInput(gift.orderId ? allOrders.find(o => o.id === gift.orderId)?.id || '' : '');
+      const initialVal = gift.orderId ? allOrders.find(o => o.id === gift.orderId)?.id || '' : '';
+      setJobIdInput(initialVal);
+      initialJobId.current = initialVal.trim();
       setDateGiven(gift.dateGiven ? new Date(gift.dateGiven) : new Date());
       setNotes(gift.notes || '');
     } else {
@@ -61,11 +65,12 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setRecipientAddress('');
       setOrderId(null);
       setJobIdInput('');
+      initialJobId.current = '';
       setDateGiven(new Date());
       setNotes('');
     }
     setIsSubmitting(false);
-  }, [gift, isEditMode]);
+  }, [gift, isEditMode, allOrders]);
 
   useEffect(() => {
     if (isOpen) {
@@ -74,43 +79,74 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
   }, [isOpen, resetForm]);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
+    const handler = setTimeout(async () => {
       const trimmedJobId = jobIdInput.trim();
-      if (!trimmedJobId || !allOrders.length) {
+      if (!trimmedJobId) {
         setOrderId(null);
         return;
       }
 
-      const found = allOrders.find(order => {
-        const displayId = (order.id || '').trim().toLowerCase();
-        const companyPrefix = (order.companyName || '').split(' • ')[0].trim().toLowerCase();
-        const inputLower = trimmedJobId.toLowerCase();
-        return displayId === inputLower || companyPrefix === inputLower || displayId.includes(inputLower);
-      });
+      if (trimmedJobId.toLowerCase() === initialJobId.current.toLowerCase()) {
+        return;
+      }
 
-      if (found) {
-        setOrderId(found.id);
-      } else {
-        setOrderId(null);
+      try {
+        // 1. Try to fetch from clients database
+        const res = await getClientDetailsAction(trimmedJobId);
+        if (res && res.success && res.client) {
+          const client = res.client;
+          setRecipientName(client.company_name);
+          setRecipientPhone(client.phone_number);
+          setRecipientAddress(client.address);
+
+          // Find if there is an order for this client in allOrders
+          const matchingOrder = allOrders.find(order => {
+            const orderJobId = (order.companyName || '').split(' • ')[0].trim().toLowerCase();
+            return orderJobId === client.id.toLowerCase() || (order.id || '').toLowerCase() === client.id.toLowerCase();
+          });
+          
+          setOrderId(matchingOrder ? matchingOrder.id : null);
+
+          toast({
+            title: "Existing Client Found",
+            description: `Details for "${trimmedJobId}" have been auto-filled from clients database.`,
+          });
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching client details in Gift Dialog:", err);
+      }
+
+      // 2. Fallback: search in allOrders list
+      if (allOrders.length > 0) {
+        const found = allOrders.find(order => {
+          const displayId = (order.id || '').trim().toLowerCase();
+          const companyPrefix = (order.companyName || '').split(' • ')[0].trim().toLowerCase();
+          const inputLower = trimmedJobId.toLowerCase();
+          return displayId === inputLower || companyPrefix === inputLower || displayId.includes(inputLower);
+        });
+
+        if (found) {
+          setOrderId(found.id);
+          const nameParts = (found.companyName || '').split(' • ');
+          const actualName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : found.companyName;
+          
+          setRecipientName(actualName);
+          setRecipientPhone(found.phoneNumber);
+          setRecipientAddress(found.address);
+
+          toast({
+            title: "Active Job Found",
+            description: `Details for "${trimmedJobId}" have been auto-filled from active jobs.`,
+          });
+        } else {
+          setOrderId(null);
+        }
       }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [jobIdInput, allOrders]);
-
-  useEffect(() => {
-    if (orderId) {
-      const selectedOrder = allOrders.find(o => o.id === orderId);
-      if (selectedOrder) {
-        const nameParts = (selectedOrder.companyName || '').split(' • ');
-        const actualName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : selectedOrder.companyName;
-        
-        setRecipientName(actualName);
-        setRecipientPhone(selectedOrder.phoneNumber);
-        setRecipientAddress(selectedOrder.address);
-      }
-    }
-  }, [orderId, allOrders]);
+  }, [jobIdInput, allOrders, toast]);
 
   const canSubmit = useMemo(() => {
     if (isSubmitting) return false;
@@ -180,7 +216,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="orderId">Job ID (Optional)</Label>
+              <Label htmlFor="orderId">Client ID / Job ID (Optional)</Label>
               <Input 
                 id="orderId" 
                 value={jobIdInput} 
