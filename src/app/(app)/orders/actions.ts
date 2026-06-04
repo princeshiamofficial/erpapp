@@ -10,7 +10,8 @@ import {
   updateOrder as updateOrderService,
   getDeletedOrders,
   restoreOrder as restoreOrderFromDb,
-  permanentlyDeleteOrder as permanentlyDeleteOrderFromDb
+  permanentlyDeleteOrder as permanentlyDeleteOrderFromDb,
+  getClientById
 } from "@/lib/order-service";
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
@@ -671,4 +672,17 @@ export async function permanentlyDeleteOrderAction(orderId: string): Promise<{ s
     return { success: true };
   }
   return { success: false, error: "Failed to permanently delete order." };
+}
+
+export async function getClientDetailsAction(clientId: string) {
+  try {
+    const client = await getClientById(clientId);
+    if (client) {
+      return { success: true, client };
+    }
+    return { success: false };
+  } catch (error) {
+    console.error("Error in getClientDetailsAction server action:", error);
+    return { success: false };
+  }
 }

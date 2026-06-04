@@ -886,3 +886,20 @@ export const getShippedOrders = async (): Promise<{ orderId: string; packzyTrack
 
 
 
+export const getClientById = async (id: string): Promise<any | null> => {
+  if (!id) return null;
+  try {
+    const results = await query<any[]>(`SELECT * FROM clients WHERE id = ?`, [id]);
+    if (results.length > 0) {
+      return results[0];
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching client by ID from MySQL:", error);
+    return null;
+  }
+};
+
+
+
+

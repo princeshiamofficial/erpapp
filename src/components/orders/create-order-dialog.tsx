@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem, ServicePaymentMethodItem, AdvancePaymentRecord, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { createOrderAction } from '@/app/(app)/orders/actions';
+import { createOrderAction, getClientDetailsAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, UploadCloud, Paperclip, XCircle } from 'lucide-react';
@@ -285,10 +285,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   };
 
   useEffect(() => {
-    const handler = setTimeout(() => {
+    const handler = setTimeout(async () => {
       const trimmedJobId = jobId.trim();
 
-      if (!trimmedJobId || !allOrders.length) {
+      if (!trimmedJobId) {
         if (isAutoFilled && !initialData) {
           // Clear fields if Job ID is cleared and we're not in quotation mode
           setCompanyName('');
@@ -299,29 +299,54 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         return;
       }
 
-      const existingOrder = allOrders.find(order => {
-        const orderJobId = (order.companyName || '').split(' • ')[0].trim();
-        return orderJobId.toLowerCase() === trimmedJobId.toLowerCase();
-      });
+      try {
+        const res = await getClientDetailsAction(trimmedJobId);
+        if (res && res.success && res.client) {
+          if (!isAutoFilled || (isAutoFilled && initialData)) {
+            const client = res.client;
+            setCompanyName(client.company_name);
+            setAddress(client.address);
+            setPhoneNumber(client.phone_number);
+            setIsAutoFilled(true);
 
-      if (existingOrder) {
-        if (!isAutoFilled || (isAutoFilled && initialData)) {
-          // If we find an existing order, we ALWAYS want to suggest its details
-          // even if we are in quotation mode (user might be linking them)
-          const nameParts = (existingOrder.companyName || '').split(' • ');
-          const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
-
-          setCompanyName(actualCompanyName);
-          setAddress(existingOrder.address);
-          setPhoneNumber(existingOrder.phoneNumber);
-          setIsAutoFilled(true);
-
-          toast({
-            title: "Existing Job ID Found",
-            description: `Details for "${trimmedJobId}" have been auto-filled from existing orders.`,
-          });
+            toast({
+              title: "Existing Client Found",
+              description: `Details for "${trimmedJobId}" have been auto-filled from clients database.`,
+            });
+          }
+          return;
         }
-      } else if (isAutoFilled && !initialData) {
+      } catch (err) {
+        console.error("Error fetching client details:", err);
+      }
+
+      // Fallback: search in allOrders list
+      if (allOrders && allOrders.length > 0) {
+        const existingOrder = allOrders.find(order => {
+          const orderJobId = (order.companyName || '').split(' • ')[0].trim();
+          return orderJobId.toLowerCase() === trimmedJobId.toLowerCase();
+        });
+
+        if (existingOrder) {
+          if (!isAutoFilled || (isAutoFilled && initialData)) {
+            const nameParts = (existingOrder.companyName || '').split(' • ');
+            const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
+
+            setCompanyName(actualCompanyName);
+            setAddress(existingOrder.address);
+            setPhoneNumber(existingOrder.phoneNumber);
+            setIsAutoFilled(true);
+
+            toast({
+              title: "Existing Job ID Found",
+              description: `Details for "${trimmedJobId}" have been auto-filled from existing orders.`,
+            });
+          }
+          return;
+        }
+      }
+
+      if (isAutoFilled && !initialData) {
         // ONLY clear if we are NOT in quotation mode.
         // In quotation mode, we want to keep the quotation details even for a new Job ID.
         setCompanyName('');
