@@ -13,15 +13,17 @@ async function main() {
   console.log('Connected to MySQL database.');
 
   try {
-    // 1. Add client_id column to orders table
-    console.log('Adding client_id column to orders table...');
+    // 1. Add client_id column to orders table after the id column
+    console.log('Adding client_id column to orders table after id...');
     // We check if it already exists first
     const [columns] = await connection.execute('SHOW COLUMNS FROM orders LIKE "client_id"');
     if (columns.length === 0) {
-      await connection.execute('ALTER TABLE orders ADD COLUMN client_id VARCHAR(50)');
-      console.log('client_id column added.');
+      await connection.execute('ALTER TABLE orders ADD COLUMN client_id VARCHAR(50) AFTER id');
+      console.log('client_id column added after id.');
     } else {
-      console.log('client_id column already exists.');
+      // If it exists but is in a different position, modify position to be after id
+      await connection.execute('ALTER TABLE orders MODIFY COLUMN client_id VARCHAR(50) AFTER id');
+      console.log('client_id column position modified to be after id.');
     }
 
     // 2. Populate client_id for all orders based on existing company_name prefix
