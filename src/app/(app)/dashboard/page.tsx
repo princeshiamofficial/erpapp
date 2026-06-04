@@ -597,10 +597,10 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
 
-  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount, invoicePayment, invoicePaymentCount } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0 };
+      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0, invoicePayment: 0, invoicePaymentCount: 0 };
     }
 
     let currentTotalSales = 0;
@@ -613,6 +613,8 @@ function DashboardContent() {
     let currentInvoicePaidCount = 0;
     let currentRepeatSalesCount = 0;
     let currentRepeatSalesAmount = 0;
+    let currentInvoicePayment = 0;
+    let currentInvoicePaymentCount = 0;
 
     const customerOrderHistory = new Set<string>();
     const repeatOrderIds = new Set<string>();
@@ -680,6 +682,9 @@ function DashboardContent() {
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
           if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
+            currentInvoicePayment += payment.amount;
+            currentInvoicePaymentCount++;
+
             const methodName = payment.paymentMethod?.toLowerCase() || '';
             const isCod = methodName === 'cod' || methodName === 'system auto-settled' || methodName === 'courier';
             if (isCod) {
@@ -805,6 +810,8 @@ function DashboardContent() {
       salesCount: filteredOrders.length,
       repeatSalesCount: currentRepeatSalesCount,
       repeatSalesAmount: currentRepeatSalesAmount,
+      invoicePayment: currentInvoicePayment,
+      invoicePaymentCount: currentInvoicePaymentCount,
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity]);
 
@@ -1018,6 +1025,11 @@ function DashboardContent() {
         icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
+        title: "Invoice Payment", 
+        value: showAmount ? formatCurrency(invoicePayment) : invoicePaymentCount.toString(), 
+        icon: Receipt, iconColorClass: "text-indigo-600", circleBgClass: "bg-indigo-100 dark:bg-indigo-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
+      { 
         title: "Delivered", 
         value: deliveredCount, 
         icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'], currentUser 
@@ -1052,7 +1064,7 @@ function DashboardContent() {
         icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
     ];
-  }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials]);
+  }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials, invoicePayment, invoicePaymentCount]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
