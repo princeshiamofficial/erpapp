@@ -290,6 +290,7 @@ export function SidebarNavigation() {
           <SidebarMenuButton
             asChild
             isActive={isActive}
+            onClick={() => setOpenMenus({})}
             tooltip={{
               children: item.label,
               side: 'right',
