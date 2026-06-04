@@ -165,6 +165,7 @@ export interface Feedback {
 
 export interface TrackingLink {
   id: string;
+  clientId?: string | null;
   projectIdDisplay?: string; // New field for TD-XXX or ORD-XXX
   companyName: string;
   address: string;

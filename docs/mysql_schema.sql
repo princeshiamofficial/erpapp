@@ -40,11 +40,18 @@ CREATE TABLE order_statuses (
     is_visible BOOLEAN DEFAULT TRUE
 );
 
+CREATE TABLE clients (
+    id VARCHAR(50) PRIMARY KEY, -- e.g., Job ID
+    company_name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    address TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 CREATE TABLE orders (
     id VARCHAR(50) PRIMARY KEY, -- e.g., ORD-20240101-001
-    company_name VARCHAR(255) NOT NULL,
-    address TEXT NOT NULL,
-    phone_number VARCHAR(20) NOT NULL,
+    client_id VARCHAR(50) NOT NULL,
     crm_user_id VARCHAR(50),
     designer_representative_id VARCHAR(50),
     current_status_id VARCHAR(50),
@@ -57,6 +64,7 @@ CREATE TABLE orders (
     view_count INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES clients(id),
     FOREIGN KEY (crm_user_id) REFERENCES users(id),
     FOREIGN KEY (designer_representative_id) REFERENCES users(id),
     FOREIGN KEY (current_status_id) REFERENCES order_statuses(id)

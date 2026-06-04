@@ -17,7 +17,8 @@ const SHIPPED_ORDERS_TABLE = 'shipped_orders';
 
 const mapRowToOrder = (row: any): TrackingLink => ({
   id: row.id,
-  companyName: row.company_name,
+  clientId: row.client_id,
+  companyName: row.company_name ? `${row.client_id} • ${row.company_name}` : row.client_id,
   address: row.address,
   phoneNumber: row.phone_number,
   orderItems: typeof row.order_items === 'string' ? JSON.parse(row.order_items) : row.order_items,
@@ -50,7 +51,13 @@ const mapRowToOrder = (row: any): TrackingLink => ({
 
 export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE is_deleted = FALSE ORDER BY created_at DESC`);
+    const results = await query<any[]>(`
+      SELECT o.*, c.company_name, c.phone_number, c.address 
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      WHERE o.is_deleted = FALSE 
+      ORDER BY o.created_at DESC
+    `);
     return results.map(mapRowToOrder);
   } catch (error) {
     console.error("Error fetching orders from MySQL:", error);
@@ -60,11 +67,11 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
 
 export const getOrdersPaginated = async (limit: number, offset: number, searchTerm: string = '', statusId: string = ''): Promise<{ orders: TrackingLink[], total: number }> => {
   try {
-    let whereClauseParts = ['is_deleted = FALSE'];
+    let whereClauseParts = ['o.is_deleted = FALSE'];
     const params: any[] = [];
 
     if (searchTerm) {
-      whereClauseParts.push(`(id LIKE ? OR company_name LIKE ? OR phone_number LIKE ? OR crm_user_name LIKE ?)`);
+      whereClauseParts.push(`(o.id LIKE ? OR c.company_name LIKE ? OR c.phone_number LIKE ? OR o.crm_user_name LIKE ?)`);
       const searchParam = `%${searchTerm}%`;
       params.push(searchParam, searchParam, searchParam, searchParam);
     }
@@ -72,23 +79,23 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
 
     if (statusId) {
       if (statusId === 'CR Clearance') {
-        whereClauseParts.push(`current_status NOT IN ('cancelled', 'delivered', 'shipped', 'on-hold', 'logistics', 'co-clearance', 'ready-for-design') AND current_status NOT LIKE '%design%'`);
+        whereClauseParts.push(`o.current_status NOT IN ('cancelled', 'delivered', 'shipped', 'on-hold', 'logistics', 'co-clearance', 'ready-for-design') AND o.current_status NOT LIKE '%design%'`);
       } else if (statusId === 'CO Clearance') {
-        whereClauseParts.push(`current_status = 'co-clearance'`);
+        whereClauseParts.push(`o.current_status = 'co-clearance'`);
       } else if (statusId === 'On Design') {
-        whereClauseParts.push(`(current_status = 'ready-for-design' OR current_status LIKE '%design%')`);
+        whereClauseParts.push(`(o.current_status = 'ready-for-design' OR o.current_status LIKE '%design%')`);
       } else if (statusId === 'On Hold') {
-        whereClauseParts.push(`current_status = 'on-hold'`);
+        whereClauseParts.push(`o.current_status = 'on-hold'`);
       } else if (statusId === 'Logistics') {
-        whereClauseParts.push(`current_status = 'logistics'`);
+        whereClauseParts.push(`o.current_status = 'logistics'`);
       } else if (statusId === 'Courier') {
-        whereClauseParts.push(`current_status = 'shipped'`);
+        whereClauseParts.push(`o.current_status = 'shipped'`);
       } else if (statusId === 'Delivered') {
-        whereClauseParts.push(`current_status = 'delivered'`);
+        whereClauseParts.push(`o.current_status = 'delivered'`);
       } else if (statusId === 'Cancel') {
-        whereClauseParts.push(`current_status = 'cancelled'`);
+        whereClauseParts.push(`o.current_status = 'cancelled'`);
       } else {
-        whereClauseParts.push(`current_status = ?`);
+        whereClauseParts.push(`o.current_status = ?`);
         params.push(statusId);
       }
     }
@@ -96,10 +103,22 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
 
     const whereClause = whereClauseParts.length > 0 ? `WHERE ${whereClauseParts.join(' AND ')}` : '';
 
-    const countResults = await query<any[]>(`SELECT COUNT(*) as total FROM ${ORDERS_TABLE} ${whereClause}`, params);
+    const countResults = await query<any[]>(`
+      SELECT COUNT(*) as total 
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      ${whereClause}
+    `, params);
     const total = countResults[0].total;
 
-    const queryStr = `SELECT * FROM ${ORDERS_TABLE} ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    const queryStr = `
+      SELECT o.*, c.company_name, c.phone_number, c.address 
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      ${whereClause} 
+      ORDER BY o.created_at DESC 
+      LIMIT ? OFFSET ?
+    `;
     const results = await query<any[]>(queryStr, [...params, limit, offset]);
 
     return {
@@ -118,7 +137,12 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
 export const getOrderById = async (id: string): Promise<TrackingLink | undefined> => {
   if (!id) return undefined;
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE id = ? AND is_deleted = FALSE`, [id]);
+    const results = await query<any[]>(`
+      SELECT o.*, c.company_name, c.phone_number, c.address 
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      WHERE o.id = ? AND o.is_deleted = FALSE
+    `, [id]);
     if (results.length > 0) {
       return mapRowToOrder(results[0]);
     }
@@ -132,7 +156,12 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
 export const getOrderByTrackingCode = async (trackingCode: string): Promise<TrackingLink | null> => {
   if (!trackingCode) return null;
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE packzy_tracking_code = ? AND is_deleted = FALSE`, [trackingCode]);
+    const results = await query<any[]>(`
+      SELECT o.*, c.company_name, c.phone_number, c.address 
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      WHERE o.packzy_tracking_code = ? AND o.is_deleted = FALSE
+    `, [trackingCode]);
     if (results.length > 0) {
       return mapRowToOrder(results[0]);
     }
@@ -145,7 +174,12 @@ export const getOrderByTrackingCode = async (trackingCode: string): Promise<Trac
 
 export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue: boolean = false): Promise<TrackingLink[]> => {
   try {
-    const results = await query<any[]>(`SELECT * FROM ${ORDERS_TABLE} WHERE current_status = ?`, [statusId]);
+    const results = await query<any[]>(`
+      SELECT o.*, c.company_name, c.phone_number, c.address 
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      WHERE o.current_status = ?
+    `, [statusId]);
     const orders = results.map(mapRowToOrder);
 
     if (onlyWithDue) {
@@ -187,51 +221,48 @@ export const addOrder = async (orderData: {
   acceptedDeliveryDate?: string | null;
 }): Promise<TrackingLink | null> => {
   const transactionTime = new Date().toISOString();
-  let attempts = 0;
-  const maxAttempts = 5;
 
-  while (attempts < maxAttempts) {
+  try {
+    let finalCreatedAt = orderData.createdAt;
     try {
-      let finalCreatedAt = orderData.createdAt;
-      try {
-        finalCreatedAt = parseISO(orderData.createdAt).toISOString();
-      } catch (e) {
-        finalCreatedAt = new Date().toISOString();
-      }
+      finalCreatedAt = parseISO(orderData.createdAt).toISOString();
+    } catch (e) {
+      finalCreatedAt = new Date().toISOString();
+    }
 
-      const currentDate = parseISO(finalCreatedAt);
-      const datePrefix = `ORD-${format(currentDate, 'yyyyMMdd')}`;
+    const currentDate = parseISO(finalCreatedAt);
+    const datePrefix = `ORD-${format(currentDate, 'yyyyMMdd')}`;
 
-      const sameDayResults = await query<any[]>(`SELECT id FROM ${ORDERS_TABLE} WHERE id LIKE ?`, [`${datePrefix}%`]);
-      let newSequence = 1;
-      if (sameDayResults.length > 0) {
-        const lastSequence = Math.max(...sameDayResults.map(row => {
-          const numPart = parseInt(row.id.split('-').pop() || '0', 10);
-          return isNaN(numPart) ? 0 : numPart;
-        }));
-        newSequence = lastSequence + 1;
-      }
+    const sameDayResults = await query<any[]>(`SELECT id FROM ${ORDERS_TABLE} WHERE id LIKE ?`, [`${datePrefix}%`]);
+    let newSequence = 1;
+    if (sameDayResults.length > 0) {
+      const lastSequence = Math.max(...sameDayResults.map(row => {
+        const numPart = parseInt(row.id.split('-').pop() || '0', 10);
+        return isNaN(numPart) ? 0 : numPart;
+      }));
+      newSequence = lastSequence + 1;
+    }
 
-      const orderId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
+    const orderId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
 
-      const initialLogEntry: OrderLogEntry = {
-        id: uuidv4(), timestamp: finalCreatedAt, status: orderData.initialStatusId,
-        changedByUserId: orderData.crmUserId, changedByUserName: orderData.crmUserName, notes: "Order created.",
+    const initialLogEntry: OrderLogEntry = {
+      id: uuidv4(), timestamp: finalCreatedAt, status: orderData.initialStatusId,
+      changedByUserId: orderData.crmUserId, changedByUserName: orderData.crmUserName, notes: "Order created.",
+    };
+
+    const initialAdvancePayments: AdvancePaymentRecord[] = [];
+    if (orderData.advancePaymentAmount && orderData.advancePaymentAmount > 0) {
+      const newPayment: AdvancePaymentRecord = {
+        id: uuidv4(), amount: orderData.advancePaymentAmount, date: finalCreatedAt,
+        paymentMethod: orderData.advancePaymentMethod || "Unknown",
+        notes: orderData.newAdvancePaymentNotes || "Initial advance payment.",
+        documentUrl: orderData.advancePaymentDocumentUrl || null,
+        recordedByUserId: orderData.crmUserId, recordedByUserName: orderData.crmUserName,
+        status: 'Pending',
       };
+      initialAdvancePayments.push(newPayment);
 
-      const initialAdvancePayments: AdvancePaymentRecord[] = [];
-      if (orderData.advancePaymentAmount && orderData.advancePaymentAmount > 0) {
-        const newPayment: AdvancePaymentRecord = {
-          id: uuidv4(), amount: orderData.advancePaymentAmount, date: finalCreatedAt,
-          paymentMethod: orderData.advancePaymentMethod || "Unknown",
-          notes: orderData.newAdvancePaymentNotes || "Initial advance payment.",
-          documentUrl: orderData.advancePaymentDocumentUrl || null,
-          recordedByUserId: orderData.crmUserId, recordedByUserName: orderData.crmUserName,
-          status: 'Pending',
-        };
-        initialAdvancePayments.push(newPayment);
-
-        const message = `
+      const message = `
 <b>🎉 New Advance Payment Received!</b>
 
 <b>Order ID:</b> <code>${orderId}</code>
@@ -239,77 +270,87 @@ export const addOrder = async (orderData: {
 <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
 <b>Method:</b> ${newPayment.paymentMethod}
 <b>Recorded By:</b> ${orderData.crmUserName}
-        `;
+      `;
 
-        const appUrl = await getAppUrl();
-        const paymentReplyMarkup = {
-          inline_keyboard: [
-            [
-              {
-                text: "📄 View Order",
-                url: `${appUrl}/track/${orderId}`
-              },
-              {
-                text: "💰 Payment History",
-                url: `${appUrl}/admin/payment-history`
-              }
-            ]
+      const appUrl = await getAppUrl();
+      const paymentReplyMarkup = {
+        inline_keyboard: [
+          [
+            {
+              text: "📄 View Order",
+              url: `${appUrl}/track/${orderId}`
+            },
+            {
+              text: "💰 Payment History",
+              url: `${appUrl}/admin/payment-history`
+            }
           ]
-        };
-
-        await sendTelegramMessage(message, paymentReplyMarkup);
-      }
-
-      const mysqlCreatedAt = format(parseISO(finalCreatedAt), 'yyyy-MM-dd HH:mm:ss');
-      const mysqlUpdatedAt = format(parseISO(transactionTime), 'yyyy-MM-dd HH:mm:ss');
-
-      await query(
-        `INSERT INTO ${ORDERS_TABLE} (
-          id, company_name, address, phone_number, order_items, special_client_discount, shipping_charge, 
-          order_notes, crm_user_id, crm_user_name, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
-          updated_by_user_name, is_public, current_status, status_history, comments, view_count, advance_payments
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          orderId, orderData.companyName, orderData.address, orderData.phoneNumber, JSON.stringify(orderData.orderItems),
-          orderData.specialClientDiscount ?? null, orderData.shippingCharge ?? null, orderData.orderNotes || null,
-          orderData.crmUserId, orderData.crmUserName, mysqlCreatedAt, 
-          orderData.acceptedDeliveryDate ? format(parseISO(orderData.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null,
-          mysqlUpdatedAt, orderData.crmUserId,
-          orderData.crmUserName, false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
-          JSON.stringify([]), 0, JSON.stringify(initialAdvancePayments)
         ]
-      );
-
-      return {
-        id: orderId,
-        companyName: orderData.companyName, address: orderData.address, phoneNumber: orderData.phoneNumber,
-        orderItems: orderData.orderItems, specialClientDiscount: orderData.specialClientDiscount ?? null,
-        shippingCharge: orderData.shippingCharge ?? null, orderNotes: orderData.orderNotes || null,
-        crmUserId: orderData.crmUserId, crmUserName: orderData.crmUserName,
-        designerRepresentativeId: null, designerRepresentativeName: null,
-        assigneeAvatarUrl: null, designerRepresentativeAvatarUrl: null,
-        createdAt: finalCreatedAt, 
-        acceptedDeliveryDate: orderData.acceptedDeliveryDate || null,
-        updatedAt: transactionTime,
-        updatedByUserId: orderData.crmUserId, updatedByUserName: orderData.crmUserName,
-        isPublic: false, currentStatus: orderData.initialStatusId,
-        statusHistory: [initialLogEntry], comments: [], viewCount: 0,
-        advancePayments: initialAdvancePayments,
-        packzyConsignmentId: null, packzyTrackingCode: null,
       };
 
-    } catch (error: any) {
-      if (error.code === 'ER_DUP_ENTRY' && attempts < maxAttempts - 1) {
-        attempts++;
-        console.warn(`[addOrder] Duplicate order ID detected. Retrying attempt ${attempts}/${maxAttempts}...`);
-        continue;
-      }
-      console.error("Error adding order to MySQL:", error);
-      if (error instanceof Error) throw error;
-      throw new Error("An unknown error occurred while creating the order.");
+      await sendTelegramMessage(message, paymentReplyMarkup);
     }
+
+    const mysqlCreatedAt = format(parseISO(finalCreatedAt), 'yyyy-MM-dd HH:mm:ss');
+    const mysqlUpdatedAt = format(parseISO(transactionTime), 'yyyy-MM-dd HH:mm:ss');
+
+    const nameParts = orderData.companyName.split(' • ');
+    const clientId = nameParts.length > 1 ? nameParts[0].trim() : `LEGACY-${orderId}`;
+    const cleanCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : orderData.companyName.trim();
+
+    // 1. Upsert client info into clients table
+    await query(
+      `INSERT INTO clients (id, company_name, phone_number, address) 
+       VALUES (?, ?, ?, ?) 
+       ON DUPLICATE KEY UPDATE 
+         company_name = VALUES(company_name), 
+         phone_number = VALUES(phone_number), 
+         address = VALUES(address)`,
+      [clientId, cleanCompanyName, orderData.phoneNumber, orderData.address]
+    );
+
+    // 2. Insert order with client_id
+    await query(
+      `INSERT INTO ${ORDERS_TABLE} (
+        id, client_id, order_items, special_client_discount, shipping_charge, 
+        order_notes, crm_user_id, crm_user_name, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
+        updated_by_user_name, is_public, current_status, status_history, comments, view_count, advance_payments
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId, clientId, JSON.stringify(orderData.orderItems),
+        orderData.specialClientDiscount ?? null, orderData.shippingCharge ?? null, orderData.orderNotes || null,
+        orderData.crmUserId, orderData.crmUserName, mysqlCreatedAt, 
+        orderData.acceptedDeliveryDate ? format(parseISO(orderData.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null,
+        mysqlUpdatedAt, orderData.crmUserId,
+        orderData.crmUserName, false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
+        JSON.stringify([]), 0, JSON.stringify(initialAdvancePayments)
+      ]
+    );
+
+    return {
+      id: orderId,
+      clientId: clientId,
+      companyName: orderData.companyName, address: orderData.address, phoneNumber: orderData.phoneNumber,
+      orderItems: orderData.orderItems, specialClientDiscount: orderData.specialClientDiscount ?? null,
+      shippingCharge: orderData.shippingCharge ?? null, orderNotes: orderData.orderNotes || null,
+      crmUserId: orderData.crmUserId, crmUserName: orderData.crmUserName,
+      designerRepresentativeId: null, designerRepresentativeName: null,
+      assigneeAvatarUrl: null, designerRepresentativeAvatarUrl: null,
+      createdAt: finalCreatedAt, 
+      acceptedDeliveryDate: orderData.acceptedDeliveryDate || null,
+      updatedAt: transactionTime,
+      updatedByUserId: orderData.crmUserId, updatedByUserName: orderData.crmUserName,
+      isPublic: false, currentStatus: orderData.initialStatusId,
+      statusHistory: [initialLogEntry], comments: [], viewCount: 0,
+      advancePayments: initialAdvancePayments,
+      packzyConsignmentId: null, packzyTrackingCode: null,
+    };
+
+  } catch (error: any) {
+    console.error("Error adding order to MySQL:", error);
+    if (error instanceof Error) throw error;
+    throw new Error("An unknown error occurred while creating the order.");
   }
-  return null;
 };
 
 
@@ -324,9 +365,28 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     const fields: string[] = [];
     const params: any[] = [];
 
-    if (updates.companyName !== undefined) { fields.push('company_name = ?'); params.push(updates.companyName); }
-    if (updates.address !== undefined) { fields.push('address = ?'); params.push(updates.address); }
-    if (updates.phoneNumber !== undefined) { fields.push('phone_number = ?'); params.push(updates.phoneNumber); }
+    const clientId = existingOrder.clientId;
+    if (clientId) {
+      if (updates.companyName !== undefined || updates.address !== undefined || updates.phoneNumber !== undefined) {
+        const companyNameRaw = updates.companyName !== undefined ? updates.companyName : existingOrder.companyName;
+        const addressVal = updates.address !== undefined ? updates.address : existingOrder.address;
+        const phoneVal = updates.phoneNumber !== undefined ? updates.phoneNumber : existingOrder.phoneNumber;
+
+        const nameParts = companyNameRaw.split(' • ');
+        const cleanCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : companyNameRaw.trim();
+
+        await query(
+          `INSERT INTO clients (id, company_name, phone_number, address) 
+           VALUES (?, ?, ?, ?) 
+           ON DUPLICATE KEY UPDATE 
+             company_name = VALUES(company_name), 
+             phone_number = VALUES(phone_number), 
+             address = VALUES(address)`,
+          [clientId, cleanCompanyName, phoneVal, addressVal]
+        );
+      }
+    }
+
     if (updates.orderItems !== undefined) { fields.push('order_items = ?'); params.push(JSON.stringify(updates.orderItems)); }
     if (updates.specialClientDiscount !== undefined) { fields.push('special_client_discount = ?'); params.push(updates.specialClientDiscount); }
     if (updates.shippingCharge !== undefined) { fields.push('shipping_charge = ?'); params.push(updates.shippingCharge); }
@@ -470,8 +530,9 @@ export const deleteOrder = async (orderId: string, userId: string): Promise<bool
 export const getDeletedOrders = async (): Promise<TrackingLink[]> => {
   try {
     const results = await query<any[]>(`
-      SELECT o.*, u.name as deleted_by_name, u.avatar_url as deleted_by_avatar_url 
+      SELECT o.*, c.company_name, c.phone_number, c.address, u.name as deleted_by_name, u.avatar_url as deleted_by_avatar_url 
       FROM ${ORDERS_TABLE} o
+      JOIN clients c ON o.client_id = c.id
       LEFT JOIN users u ON o.deleted_by_id = u.id
       WHERE o.is_deleted = TRUE 
       ORDER BY o.deleted_at DESC
