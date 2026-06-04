@@ -203,6 +203,7 @@ export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue
 
 
 export const addOrder = async (orderData: {
+  clientId?: string | null;
   companyName: string;
   address: string;
   phoneNumber: string;
@@ -245,6 +246,32 @@ export const addOrder = async (orderData: {
 
     const orderId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
 
+    // Determine or generate client ID
+    let clientId = orderData.clientId?.trim();
+    let cleanCompanyName = orderData.companyName.trim();
+    const nameParts = cleanCompanyName.split(' • ');
+    if (nameParts.length > 1) {
+      if (!clientId) {
+        clientId = nameParts[0].trim();
+      }
+      cleanCompanyName = nameParts.slice(1).join(' • ').trim();
+    }
+
+    if (!clientId) {
+      // Query the database to find the maximum numeric ID in the clients table
+      const clientRows = await query<any[]>(`SELECT id FROM clients WHERE id REGEXP '^[0-9]+$'`);
+      let maxClientId = 0;
+      for (const row of clientRows) {
+        const idNum = parseInt(row.id, 10);
+        if (!isNaN(idNum) && idNum > maxClientId) {
+          maxClientId = idNum;
+        }
+      }
+      clientId = (maxClientId + 1).toString();
+    }
+
+    const combinedCompanyName = `${clientId} • ${cleanCompanyName}`;
+
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(), timestamp: finalCreatedAt, status: orderData.initialStatusId,
       changedByUserId: orderData.crmUserId, changedByUserName: orderData.crmUserName, notes: "Order created.",
@@ -266,7 +293,7 @@ export const addOrder = async (orderData: {
 <b>🎉 New Advance Payment Received!</b>
 
 <b>Order ID:</b> <code>${orderId}</code>
-<b>Company:</b> ${orderData.companyName}
+<b>Company:</b> ${combinedCompanyName}
 <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
 <b>Method:</b> ${newPayment.paymentMethod}
 <b>Recorded By:</b> ${orderData.crmUserName}
@@ -293,10 +320,6 @@ export const addOrder = async (orderData: {
 
     const mysqlCreatedAt = format(parseISO(finalCreatedAt), 'yyyy-MM-dd HH:mm:ss');
     const mysqlUpdatedAt = format(parseISO(transactionTime), 'yyyy-MM-dd HH:mm:ss');
-
-    const nameParts = orderData.companyName.split(' • ');
-    const clientId = nameParts.length > 1 ? nameParts[0].trim() : `LEGACY-${orderId}`;
-    const cleanCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : orderData.companyName.trim();
 
     // 1. Upsert client info into clients table
     await query(
@@ -330,7 +353,7 @@ export const addOrder = async (orderData: {
     return {
       id: orderId,
       clientId: clientId,
-      companyName: orderData.companyName, address: orderData.address, phoneNumber: orderData.phoneNumber,
+      companyName: combinedCompanyName, address: orderData.address, phoneNumber: orderData.phoneNumber,
       orderItems: orderData.orderItems, specialClientDiscount: orderData.specialClientDiscount ?? null,
       shippingCharge: orderData.shippingCharge ?? null, orderNotes: orderData.orderNotes || null,
       crmUserId: orderData.crmUserId, crmUserName: orderData.crmUserName,

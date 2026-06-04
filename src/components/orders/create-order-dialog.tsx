@@ -456,25 +456,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
 
     setIsSubmitting(true);
-
-    let finalJobId = jobId.trim();
-    if (!finalJobId) {
-      // Suggest/generate next available Job ID for a new client
-      if (allOrders && allOrders.length > 0) {
-        let maxJobId = 0;
-        allOrders.forEach(order => {
-          const orderJobIdStr = (order.companyName || '').split(' • ')[0].trim();
-          const orderJobIdNum = parseInt(orderJobIdStr, 10);
-          if (!isNaN(orderJobIdNum) && orderJobIdNum > maxJobId) {
-            maxJobId = orderJobIdNum;
-          }
-        });
-        finalJobId = (maxJobId + 1).toString();
-      } else {
-        finalJobId = '1'; // Start with 1 if no orders exist
-      }
-    }
-
     let uploadedProofUrl: string | null = null;
 
     if (isAdvancePaymentEntered && selectedPaymentProof) {
@@ -499,7 +480,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
 
     const orderDataForAction = {
-      jobId: finalJobId,
+      jobId: jobId.trim(),
       companyName: companyName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
