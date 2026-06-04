@@ -1025,7 +1025,7 @@ function DashboardContent() {
         icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
-        title: "Invoice Payment", 
+        title: "Cash Collection", 
         value: showAmount ? formatCurrency(invoicePayment) : invoicePaymentCount.toString(), 
         icon: Receipt, iconColorClass: "text-indigo-600", circleBgClass: "bg-indigo-100 dark:bg-indigo-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
