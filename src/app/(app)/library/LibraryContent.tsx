@@ -120,7 +120,7 @@ export function LibraryContent() {
                   )}
                 >
                   <Download className="w-4 h-4" />
-                  {loading ? "Preparing PDF..." : "Download Full PDF"}
+                  {loading ? "Preparing PDF..." : "Download"}
                 </button>
               )}
             </PDFDownloadLink>
