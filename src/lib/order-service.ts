@@ -209,7 +209,7 @@ export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue
       LEFT JOIN users uc ON o.crm_user_id = uc.id
       LEFT JOIN users ud ON o.designer_representative_id = ud.id
       LEFT JOIN users uu ON o.updated_by_user_id = uu.id
-      WHERE o.current_status = ?
+      WHERE o.current_status = ? AND o.is_deleted = FALSE
     `, [statusId]);
     const orders = results.map(mapRowToOrder);
 
