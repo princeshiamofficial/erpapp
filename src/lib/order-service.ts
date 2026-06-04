@@ -77,7 +77,7 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
     const params: any[] = [];
 
     if (searchTerm) {
-      whereClauseParts.push(`(o.id LIKE ? OR c.company_name LIKE ? OR c.phone_number LIKE ? OR o.crm_user_name LIKE ?)`);
+      whereClauseParts.push(`(o.id LIKE ? OR c.company_name LIKE ? OR c.phone_number LIKE ? OR uc.name LIKE ?)`);
       const searchParam = `%${searchTerm}%`;
       params.push(searchParam, searchParam, searchParam, searchParam);
     }
@@ -113,6 +113,7 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
       SELECT COUNT(*) as total 
       FROM ${ORDERS_TABLE} o 
       JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
       ${whereClause}
     `, params);
     const total = countResults[0].total;
@@ -122,15 +123,15 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
              uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
              ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
              uu.name as updated_by_user_name
-      FROM ${ORDERS_TABLE} o 
-      JOIN clients c ON o.client_id = c.id 
-      LEFT JOIN users uc ON o.crm_user_id = uc.id
-      LEFT JOIN users ud ON o.designer_representative_id = ud.id
-      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
-      ${whereClause} 
-      ORDER BY o.created_at DESC 
-      LIMIT ? OFFSET ?
-    `;
+       FROM ${ORDERS_TABLE} o 
+       JOIN clients c ON o.client_id = c.id 
+       LEFT JOIN users uc ON o.crm_user_id = uc.id
+       LEFT JOIN users ud ON o.designer_representative_id = ud.id
+       LEFT JOIN users uu ON o.updated_by_user_id = uu.id
+       ${whereClause} 
+       ORDER BY o.created_at DESC 
+       LIMIT ? OFFSET ?
+     `;
     const results = await query<any[]>(queryStr, [...params, limit, offset]);
 
     return {

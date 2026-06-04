@@ -1,6 +1,8 @@
 import * as mysql from 'mysql2/promise';
 
-const pool = mysql.createPool({
+const globalForMysql = global as unknown as { pool: mysql.Pool };
+
+const pool = globalForMysql.pool || mysql.createPool({
     host: process.env.DATABASE_HOST || 'localhost',
     user: process.env.DATABASE_USER || 'root',
     password: process.env.DATABASE_PASSWORD || '',
@@ -11,6 +13,10 @@ const pool = mysql.createPool({
     queueLimit: 0,
     charset: 'utf8mb4',
 });
+
+if (process.env.NODE_ENV !== 'production') {
+    globalForMysql.pool = pool;
+}
 
 export async function query<T>(sql: string, params?: any[]): Promise<T> {
     const [results] = await pool.execute(sql, params);
