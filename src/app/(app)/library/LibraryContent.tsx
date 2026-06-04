@@ -127,7 +127,7 @@ export function LibraryContent() {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-gray-50/80 backdrop-blur-md sticky top-0 z-20 py-4 px-4 border border-gray-150 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-gray-50/80 backdrop-blur-md sticky top-[4.5rem] z-20 py-4 px-4 border border-gray-150 rounded-2xl shadow-sm">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
