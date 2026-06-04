@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: 'Color Hut',
   description: 'Seamless Order Tracking and Management',
   icons: {
-    icon: 'https://colorhutbd.xyz/favicon.ico',
+    icon: '/favicon.ico',
   },
 };
 

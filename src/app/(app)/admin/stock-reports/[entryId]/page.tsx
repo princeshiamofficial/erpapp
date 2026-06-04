@@ -303,7 +303,7 @@ export default function SellEntryInvoicePage() {
                             {showApprovedStamp && (
                                 <div className="transform -rotate-[15deg] scale-90 opacity-40 grayscale-[0.2]">
                                     <NextImage
-                                        src="https://colorhutbd.xyz/image/approved-stamp.png"
+                                        src="/approved-stamp.png"
                                         alt="Approved Stamp"
                                         width={140}
                                         height={140}

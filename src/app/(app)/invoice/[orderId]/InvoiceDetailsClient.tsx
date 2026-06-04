@@ -225,7 +225,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           {showPaidBadge ? (
             <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
               <Image
-                src="https://colorhutbd.xyz/image/paid-stamp.webp"
+                src="/paid-stamp.png"
                 alt="Paid Stamp"
                 width={150}
                 height={150}

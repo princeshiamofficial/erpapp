@@ -92,7 +92,7 @@ export function AppHeader() {
             )}
           >
             <Image
-              src="https://colorhutbd.xyz/image/logo.png"
+              src="/logo.png"
               alt="Color Hut Logo"
               width={200}
               height={60}

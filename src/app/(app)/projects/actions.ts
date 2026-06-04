@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { sendTelegramMessage } from "@/lib/notification-utils";
 import { getIO } from "@/lib/socket-io";
+import { getAppUrl } from "@/lib/server-utils";
 
 const sanitizeForPackzy = (input: string | null | undefined): string => {
   if (!input) return '';
@@ -268,6 +269,7 @@ export async function transferToCourierAction(
 <b>COD Amount:</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
     `;
 
+    const appUrl = await getAppUrl();
     const courierReplyMarkup = {
       inline_keyboard: [
         [
@@ -277,7 +279,7 @@ export async function transferToCourierAction(
           },
           {
             text: "📄 View Order",
-            url: `https://app.colorhutbd.xyz/track/${order.id}`
+            url: `${appUrl}/track/${order.id}`
           }
         ]
       ]

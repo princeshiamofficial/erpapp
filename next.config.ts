@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'http',
@@ -29,6 +30,7 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
+    turbopackFileSystemCacheForDev: true,
     serverActions: {
       bodySizeLimit: '4mb',
     },

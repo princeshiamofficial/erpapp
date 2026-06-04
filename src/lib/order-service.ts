@@ -9,6 +9,7 @@ import { getStatusById } from './status-service';
 import { READY_FOR_DESIGN_STATUS_ID, DELIVERED_STATUS_ID } from './status-constants';
 import { format, parseISO } from 'date-fns';
 import { sendTelegramMessage } from './notification-utils';
+import { getAppUrl } from './server-utils';
 
 const ORDERS_TABLE = 'orders';
 const PROJECTS_TABLE = 'projects';
@@ -237,16 +238,17 @@ export const addOrder = async (orderData: {
 <b>Recorded By:</b> ${orderData.crmUserName}
       `;
 
+      const appUrl = await getAppUrl();
       const paymentReplyMarkup = {
         inline_keyboard: [
           [
             {
               text: "📄 View Order",
-              url: `https://app.colorhutbd.xyz/track/${orderId}`
+              url: `${appUrl}/track/${orderId}`
             },
             {
               text: "💰 Payment History",
-              url: `https://app.colorhutbd.xyz/admin/payment-history`
+              url: `${appUrl}/admin/payment-history`
             }
           ]
         ]
@@ -403,12 +405,13 @@ export async function updateAdvancePaymentStatus(
 <b>Recorded By:</b> ${payment.recordedByUserName}
           `;
 
+          const appUrl = await getAppUrl();
           const paymentReplyMarkup = {
             inline_keyboard: [
               [
                 {
                   text: "📄 View Order",
-                  url: `https://app.colorhutbd.xyz/track/${orderId}`
+                  url: `${appUrl}/track/${orderId}`
                 }
               ]
             ]

@@ -22,6 +22,7 @@ import { getProjectById, updateProject } from '@/lib/project-service';
 import { addPaymentToHistory } from '@/lib/payment-history-service';
 import { sendTelegramMessage } from "@/lib/notification-utils"; // Import the telegram helper
 import { getIO } from "@/lib/socket-io";
+import { getAppUrl } from "@/lib/server-utils";
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -389,16 +390,17 @@ export async function updateOrderAction(
 <b>Recorded By:</b> ${currentUser.name}
       `;
 
+      const appUrl = await getAppUrl();
       const paymentReplyMarkup = {
         inline_keyboard: [
           [
             {
               text: "📄 View Order",
-              url: `https://app.colorhutbd.xyz/track/${orderId}`
+              url: `${appUrl}/track/${orderId}`
             },
             {
               text: "💰 Payment History",
-              url: `https://app.colorhutbd.xyz/admin/payment-history`
+              url: `${appUrl}/admin/payment-history`
             }
           ]
         ]
