@@ -187,48 +187,51 @@ export const addOrder = async (orderData: {
   acceptedDeliveryDate?: string | null;
 }): Promise<TrackingLink | null> => {
   const transactionTime = new Date().toISOString();
+  let attempts = 0;
+  const maxAttempts = 5;
 
-  try {
-    let finalCreatedAt = orderData.createdAt;
+  while (attempts < maxAttempts) {
     try {
-      finalCreatedAt = parseISO(orderData.createdAt).toISOString();
-    } catch (e) {
-      finalCreatedAt = new Date().toISOString();
-    }
+      let finalCreatedAt = orderData.createdAt;
+      try {
+        finalCreatedAt = parseISO(orderData.createdAt).toISOString();
+      } catch (e) {
+        finalCreatedAt = new Date().toISOString();
+      }
 
-    const currentDate = parseISO(finalCreatedAt);
-    const datePrefix = `ORD-${format(currentDate, 'yyyyMMdd')}`;
+      const currentDate = parseISO(finalCreatedAt);
+      const datePrefix = `ORD-${format(currentDate, 'yyyyMMdd')}`;
 
-    const sameDayResults = await query<any[]>(`SELECT id FROM ${ORDERS_TABLE} WHERE id LIKE ?`, [`${datePrefix}%`]);
-    let newSequence = 1;
-    if (sameDayResults.length > 0) {
-      const lastSequence = Math.max(...sameDayResults.map(row => {
-        const numPart = parseInt(row.id.split('-').pop() || '0', 10);
-        return isNaN(numPart) ? 0 : numPart;
-      }));
-      newSequence = lastSequence + 1;
-    }
+      const sameDayResults = await query<any[]>(`SELECT id FROM ${ORDERS_TABLE} WHERE id LIKE ?`, [`${datePrefix}%`]);
+      let newSequence = 1;
+      if (sameDayResults.length > 0) {
+        const lastSequence = Math.max(...sameDayResults.map(row => {
+          const numPart = parseInt(row.id.split('-').pop() || '0', 10);
+          return isNaN(numPart) ? 0 : numPart;
+        }));
+        newSequence = lastSequence + 1;
+      }
 
-    const orderId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
+      const orderId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
 
-    const initialLogEntry: OrderLogEntry = {
-      id: uuidv4(), timestamp: finalCreatedAt, status: orderData.initialStatusId,
-      changedByUserId: orderData.crmUserId, changedByUserName: orderData.crmUserName, notes: "Order created.",
-    };
-
-    const initialAdvancePayments: AdvancePaymentRecord[] = [];
-    if (orderData.advancePaymentAmount && orderData.advancePaymentAmount > 0) {
-      const newPayment: AdvancePaymentRecord = {
-        id: uuidv4(), amount: orderData.advancePaymentAmount, date: finalCreatedAt,
-        paymentMethod: orderData.advancePaymentMethod || "Unknown",
-        notes: orderData.newAdvancePaymentNotes || "Initial advance payment.",
-        documentUrl: orderData.advancePaymentDocumentUrl || null,
-        recordedByUserId: orderData.crmUserId, recordedByUserName: orderData.crmUserName,
-        status: 'Pending',
+      const initialLogEntry: OrderLogEntry = {
+        id: uuidv4(), timestamp: finalCreatedAt, status: orderData.initialStatusId,
+        changedByUserId: orderData.crmUserId, changedByUserName: orderData.crmUserName, notes: "Order created.",
       };
-      initialAdvancePayments.push(newPayment);
 
-      const message = `
+      const initialAdvancePayments: AdvancePaymentRecord[] = [];
+      if (orderData.advancePaymentAmount && orderData.advancePaymentAmount > 0) {
+        const newPayment: AdvancePaymentRecord = {
+          id: uuidv4(), amount: orderData.advancePaymentAmount, date: finalCreatedAt,
+          paymentMethod: orderData.advancePaymentMethod || "Unknown",
+          notes: orderData.newAdvancePaymentNotes || "Initial advance payment.",
+          documentUrl: orderData.advancePaymentDocumentUrl || null,
+          recordedByUserId: orderData.crmUserId, recordedByUserName: orderData.crmUserName,
+          status: 'Pending',
+        };
+        initialAdvancePayments.push(newPayment);
+
+        const message = `
 <b>🎉 New Advance Payment Received!</b>
 
 <b>Order ID:</b> <code>${orderId}</code>
@@ -236,70 +239,77 @@ export const addOrder = async (orderData: {
 <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
 <b>Method:</b> ${newPayment.paymentMethod}
 <b>Recorded By:</b> ${orderData.crmUserName}
-      `;
+        `;
 
-      const appUrl = await getAppUrl();
-      const paymentReplyMarkup = {
-        inline_keyboard: [
-          [
-            {
-              text: "📄 View Order",
-              url: `${appUrl}/track/${orderId}`
-            },
-            {
-              text: "💰 Payment History",
-              url: `${appUrl}/admin/payment-history`
-            }
+        const appUrl = await getAppUrl();
+        const paymentReplyMarkup = {
+          inline_keyboard: [
+            [
+              {
+                text: "📄 View Order",
+                url: `${appUrl}/track/${orderId}`
+              },
+              {
+                text: "💰 Payment History",
+                url: `${appUrl}/admin/payment-history`
+              }
+            ]
           ]
+        };
+
+        await sendTelegramMessage(message, paymentReplyMarkup);
+      }
+
+      const mysqlCreatedAt = format(parseISO(finalCreatedAt), 'yyyy-MM-dd HH:mm:ss');
+      const mysqlUpdatedAt = format(parseISO(transactionTime), 'yyyy-MM-dd HH:mm:ss');
+
+      await query(
+        `INSERT INTO ${ORDERS_TABLE} (
+          id, company_name, address, phone_number, order_items, special_client_discount, shipping_charge, 
+          order_notes, crm_user_id, crm_user_name, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
+          updated_by_user_name, is_public, current_status, status_history, comments, view_count, advance_payments
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId, orderData.companyName, orderData.address, orderData.phoneNumber, JSON.stringify(orderData.orderItems),
+          orderData.specialClientDiscount ?? null, orderData.shippingCharge ?? null, orderData.orderNotes || null,
+          orderData.crmUserId, orderData.crmUserName, mysqlCreatedAt, 
+          orderData.acceptedDeliveryDate ? format(parseISO(orderData.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null,
+          mysqlUpdatedAt, orderData.crmUserId,
+          orderData.crmUserName, false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
+          JSON.stringify([]), 0, JSON.stringify(initialAdvancePayments)
         ]
+      );
+
+      return {
+        id: orderId,
+        companyName: orderData.companyName, address: orderData.address, phoneNumber: orderData.phoneNumber,
+        orderItems: orderData.orderItems, specialClientDiscount: orderData.specialClientDiscount ?? null,
+        shippingCharge: orderData.shippingCharge ?? null, orderNotes: orderData.orderNotes || null,
+        crmUserId: orderData.crmUserId, crmUserName: orderData.crmUserName,
+        designerRepresentativeId: null, designerRepresentativeName: null,
+        assigneeAvatarUrl: null, designerRepresentativeAvatarUrl: null,
+        createdAt: finalCreatedAt, 
+        acceptedDeliveryDate: orderData.acceptedDeliveryDate || null,
+        updatedAt: transactionTime,
+        updatedByUserId: orderData.crmUserId, updatedByUserName: orderData.crmUserName,
+        isPublic: false, currentStatus: orderData.initialStatusId,
+        statusHistory: [initialLogEntry], comments: [], viewCount: 0,
+        advancePayments: initialAdvancePayments,
+        packzyConsignmentId: null, packzyTrackingCode: null,
       };
 
-      await sendTelegramMessage(message, paymentReplyMarkup);
+    } catch (error: any) {
+      if (error.code === 'ER_DUP_ENTRY' && attempts < maxAttempts - 1) {
+        attempts++;
+        console.warn(`[addOrder] Duplicate order ID detected. Retrying attempt ${attempts}/${maxAttempts}...`);
+        continue;
+      }
+      console.error("Error adding order to MySQL:", error);
+      if (error instanceof Error) throw error;
+      throw new Error("An unknown error occurred while creating the order.");
     }
-
-    const mysqlCreatedAt = format(parseISO(finalCreatedAt), 'yyyy-MM-dd HH:mm:ss');
-    const mysqlUpdatedAt = format(parseISO(transactionTime), 'yyyy-MM-dd HH:mm:ss');
-
-    await query(
-      `INSERT INTO ${ORDERS_TABLE} (
-        id, company_name, address, phone_number, order_items, special_client_discount, shipping_charge, 
-        order_notes, crm_user_id, crm_user_name, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
-        updated_by_user_name, is_public, current_status, status_history, comments, view_count, advance_payments
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        orderId, orderData.companyName, orderData.address, orderData.phoneNumber, JSON.stringify(orderData.orderItems),
-        orderData.specialClientDiscount ?? null, orderData.shippingCharge ?? null, orderData.orderNotes || null,
-        orderData.crmUserId, orderData.crmUserName, mysqlCreatedAt, 
-        orderData.acceptedDeliveryDate ? format(parseISO(orderData.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null,
-        mysqlUpdatedAt, orderData.crmUserId,
-        orderData.crmUserName, false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
-        JSON.stringify([]), 0, JSON.stringify(initialAdvancePayments)
-      ]
-    );
-
-    return {
-      id: orderId,
-      companyName: orderData.companyName, address: orderData.address, phoneNumber: orderData.phoneNumber,
-      orderItems: orderData.orderItems, specialClientDiscount: orderData.specialClientDiscount ?? null,
-      shippingCharge: orderData.shippingCharge ?? null, orderNotes: orderData.orderNotes || null,
-      crmUserId: orderData.crmUserId, crmUserName: orderData.crmUserName,
-      designerRepresentativeId: null, designerRepresentativeName: null,
-      assigneeAvatarUrl: null, designerRepresentativeAvatarUrl: null,
-      createdAt: finalCreatedAt, 
-      acceptedDeliveryDate: orderData.acceptedDeliveryDate || null,
-      updatedAt: transactionTime,
-      updatedByUserId: orderData.crmUserId, updatedByUserName: orderData.crmUserName,
-      isPublic: false, currentStatus: orderData.initialStatusId,
-      statusHistory: [initialLogEntry], comments: [], viewCount: 0,
-      advancePayments: initialAdvancePayments,
-      packzyConsignmentId: null, packzyTrackingCode: null,
-    };
-
-  } catch (error: any) {
-    console.error("Error adding order to MySQL:", error);
-    if (error instanceof Error) throw error;
-    throw new Error("An unknown error occurred while creating the order.");
   }
+  return null;
 };
 
 
