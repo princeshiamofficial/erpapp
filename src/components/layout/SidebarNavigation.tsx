@@ -139,16 +139,18 @@ export function SidebarNavigation() {
   }, [currentUser]);
 
   useEffect(() => {
-    navItems.forEach(item => {
-      if (item.isHeader && item.subItems?.some(sub => sub.href && pathname?.startsWith(sub.href))) {
-        setOpenMenus(prev => ({ ...prev, [item.label]: true }));
-      }
-    });
+    const activeHeader = navItems.find(
+      item => item.isHeader && item.subItems?.some(sub => sub.href && pathname?.startsWith(sub.href))
+    );
+    setOpenMenus(activeHeader ? { [activeHeader.label]: true } : {});
   }, [pathname]);
 
 
   const toggleMenu = (label: string) => {
-    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
+    setOpenMenus(prev => {
+      const isCurrentlyOpen = !!prev[label];
+      return { [label]: !isCurrentlyOpen };
+    });
   };
 
   const canUserLogExpense = useMemo(() => {
