@@ -405,7 +405,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
     return !isSubmitting &&
       !isUploadingProof &&
-      jobId.trim() &&
       companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId && currentOrderDate &&
       (availableStatuses.length > 0 || !!initialStatusId) &&
       modelOptions.length > 0 &&
@@ -424,7 +423,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       !(isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       !(isAdvancePaymentEntered && newAdvancePaymentNotes.trim().length < 4) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, newAdvancePaymentNotes, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal]);
+  }, [isSubmitting, isUploadingProof, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, newAdvancePaymentNotes, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal]);
 
 
   const handleProofFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -457,6 +456,25 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
 
     setIsSubmitting(true);
+
+    let finalJobId = jobId.trim();
+    if (!finalJobId) {
+      // Suggest/generate next available Job ID for a new client
+      if (allOrders && allOrders.length > 0) {
+        let maxJobId = 0;
+        allOrders.forEach(order => {
+          const orderJobIdStr = (order.companyName || '').split(' • ')[0].trim();
+          const orderJobIdNum = parseInt(orderJobIdStr, 10);
+          if (!isNaN(orderJobIdNum) && orderJobIdNum > maxJobId) {
+            maxJobId = orderJobIdNum;
+          }
+        });
+        finalJobId = (maxJobId + 1).toString();
+      } else {
+        finalJobId = '1'; // Start with 1 if no orders exist
+      }
+    }
+
     let uploadedProofUrl: string | null = null;
 
     if (isAdvancePaymentEntered && selectedPaymentProof) {
@@ -481,7 +499,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
 
     const orderDataForAction = {
-      jobId: jobId.trim(),
+      jobId: finalJobId,
       companyName: companyName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
@@ -525,8 +543,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="jobId">Job ID *</Label>
-                <Input id="jobId" ref={jobIdInputRef} value={jobId} onChange={handleJobIdChange} required placeholder="" />
+                <Label htmlFor="jobId">Job ID</Label>
+                <Input id="jobId" ref={jobIdInputRef} value={jobId} onChange={handleJobIdChange} placeholder="Leave blank for new client" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>
