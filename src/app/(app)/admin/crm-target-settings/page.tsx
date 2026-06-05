@@ -424,9 +424,6 @@ export default function CrmTargetSettingsPage() {
               placeholder="e.g., https://app.colorhutbd.xyz"
               disabled={isSubmittingTelegram || isLoading}
             />
-            <p className="text-xs text-muted-foreground">
-              The public domain used to replace localhost/127.0.0.1 link references in Telegram notifications.
-            </p>
           </div>
         </CardContent>
         <CardFooter className="border-t p-5 flex justify-end">
