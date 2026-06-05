@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAllPaymentHistory } from '@/lib/payment-history-service';
 import { updateAdvancePaymentStatus } from '@/lib/order-service'; // Corrected import
 import type { BillReport, AdvancePaymentRecord, TrackingLink } from '@/types';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, isAfter } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, isAfter, startOfMonth, endOfMonth } from 'date-fns';
 import { DateRangePicker, type DateRange } from '@/components/dashboard/date-range-picker';
 import Papa from 'papaparse';
 import {
@@ -81,9 +81,9 @@ export default function PaymentHistoryPage() {
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
     const today = new Date();
     return {
-      from: startOfDay(new Date(today.getFullYear(), today.getMonth(), 1)),
-      to: endOfDay(today),
-    }
+      from: startOfMonth(today),
+      to: endOfMonth(today),
+    };
   });
   const [paymentToUpdate, setPaymentToUpdate] = useState<PaymentHistoryEntry | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
