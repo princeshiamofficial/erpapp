@@ -7,8 +7,15 @@ import { getGlobalSettings } from './settings-service';
 export async function sendTelegramMessage(message: string, replyMarkup?: any): Promise<boolean> {
   try {
     const settings = await getGlobalSettings();
-    const token = settings.telegramBotToken;
-    const chatIds = settings.telegramChatIds;
+    const token = settings.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN || process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
+    
+    let chatIds = settings.telegramChatIds;
+    if (!chatIds || chatIds.length === 0) {
+      const envChatIds = process.env.TELEGRAM_CHAT_IDS || process.env.NEXT_PUBLIC_TELEGRAM_CHAT_IDS;
+      if (envChatIds) {
+        chatIds = envChatIds.split(',').map(id => id.trim()).filter(id => id);
+      }
+    }
 
     if (!token || !chatIds || chatIds.length === 0) {
       console.warn("Telegram settings (bot token or chat IDs) are not configured. Skipping notification.");
@@ -17,7 +24,7 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
-    const redirectDomain = settings.telegramRedirectDomain || 'https://app.colorhutbd.xyz';
+    const redirectDomain = settings.telegramRedirectDomain || process.env.TELEGRAM_REDIRECT_DOMAIN || process.env.NEXT_PUBLIC_TELEGRAM_REDIRECT_DOMAIN || 'https://app.colorhutbd.xyz';
 
     // Sanitize localhost/127.0.0.1 URLs since Telegram API rejects non-public URLs
     let sanitizedMessage = message;
@@ -56,6 +63,7 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
             parse_mode: 'HTML',
             reply_markup: sanitizedReplyMarkup,
           }),
+          cache: 'no-store'
         });
 
         const responseData = await response.json();
