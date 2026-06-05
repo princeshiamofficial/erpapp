@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import type { BillReport, AdvancePaymentRecord } from '@/types';
 import { getOrders } from './order-service';
 import { getBillReports } from './bill-report-service';
+import { CANCELLED_STATUS_ID } from './status-constants';
 
 // This type alias is for clarity within this service
 type PaymentHistoryEntry = BillReport & { orderId?: string };
@@ -17,6 +18,9 @@ export async function getAllPaymentHistory(): Promise<PaymentHistoryEntry[]> {
         const allOrders = await getOrders();
 
         allOrders.forEach(order => {
+            if (order.currentStatus === CANCELLED_STATUS_ID) {
+                return;
+            }
             const processPayment = (payment: AdvancePaymentRecord) => {
                 let displayNotes = payment.notes || null;
                 if (displayNotes && displayNotes.toLowerCase().includes('steadfast webhook')) {
