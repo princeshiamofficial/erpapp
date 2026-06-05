@@ -81,7 +81,7 @@ export default function PaymentHistoryPage() {
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
     const today = new Date();
     return {
-      from: startOfDay(subDays(today, 29)),
+      from: startOfDay(new Date(today.getFullYear(), today.getMonth(), 1)),
       to: endOfDay(today),
     }
   });
