@@ -3,6 +3,21 @@
 
 import { toast } from '@/hooks/use-toast';
 import { getGlobalSettings } from './settings-service';
+import fs from 'fs';
+import path from 'path';
+
+function writeTelegramLog(message: string) {
+  try {
+    const logDir = path.join(process.cwd(), 'storage');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    const logPath = path.join(logDir, 'telegram-error.log');
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}\n`);
+  } catch (e) {
+    console.error("Failed to write to telegram log:", e);
+  }
+}
 
 export async function sendTelegramMessage(message: string, replyMarkup?: any): Promise<boolean> {
   try {
@@ -11,7 +26,9 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
     const chatIds = settings.telegramChatIds;
 
     if (!token || !chatIds || chatIds.length === 0) {
-      console.warn("Telegram settings (bot token or chat IDs) are not configured. Skipping notification.");
+      const warningMsg = `Telegram settings are not configured. Bot Token: ${token ? 'Configured' : 'Missing'}, Chat IDs: ${chatIds ? chatIds.length : 0}`;
+      console.warn(warningMsg);
+      writeTelegramLog(warningMsg);
       return false;
     }
 
@@ -64,16 +81,22 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
           console.log(`Telegram message sent successfully to chat ID: ${chatId}.`);
         } else {
           allSuccessful = false;
-          console.error(`Failed to send Telegram message to chat ID: ${chatId}:`, responseData.description);
+          const errorMsg = `Failed to send Telegram message to chat ID: ${chatId}: ${responseData.description}`;
+          console.error(errorMsg);
+          writeTelegramLog(errorMsg);
         }
       } catch (error) {
         allSuccessful = false;
-        console.error(`Error sending Telegram message to chat ID: ${chatId}:`, error);
+        const errorMsg = `Error sending Telegram message to chat ID: ${chatId}: ${error instanceof Error ? error.stack : error}`;
+        console.error(errorMsg);
+        writeTelegramLog(errorMsg);
       }
     }
     return allSuccessful;
   } catch (error) {
-    console.error("Error sending Telegram messages:", error);
+    const errorMsg = `Error sending Telegram messages: ${error instanceof Error ? error.stack : error}`;
+    console.error(errorMsg);
+    writeTelegramLog(errorMsg);
     return false;
   }
 }
