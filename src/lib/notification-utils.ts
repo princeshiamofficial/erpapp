@@ -17,6 +17,29 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
+    // Sanitize localhost/127.0.0.1 URLs since Telegram API rejects non-public URLs
+    let sanitizedMessage = message;
+    if (message) {
+      sanitizedMessage = message.replace(
+        /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g,
+        'https://app.colorhutbd.xyz'
+      );
+    }
+
+    let sanitizedReplyMarkup = replyMarkup;
+    if (replyMarkup) {
+      try {
+        const jsonStr = JSON.stringify(replyMarkup);
+        const sanitizedJsonStr = jsonStr.replace(
+          /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g,
+          'https://app.colorhutbd.xyz'
+        );
+        sanitizedReplyMarkup = JSON.parse(sanitizedJsonStr);
+      } catch (e) {
+        console.error("Error sanitizing Telegram reply markup:", e);
+      }
+    }
+
     let allSuccessful = true;
     for (const chatId of chatIds) {
       try {
@@ -27,9 +50,9 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
           },
           body: JSON.stringify({
             chat_id: chatId,
-            text: message,
+            text: sanitizedMessage,
             parse_mode: 'HTML',
-            reply_markup: replyMarkup,
+            reply_markup: sanitizedReplyMarkup,
           }),
         });
 

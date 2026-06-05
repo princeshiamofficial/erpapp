@@ -644,6 +644,7 @@ export default function OrderPulsePage() {
           order={orderToEdit}
           currentUser={currentUser}
           onOrderUpdated={handleOrderUpdated}
+          allOrders={orders}
         />
       )}
 

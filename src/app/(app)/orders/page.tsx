@@ -795,6 +795,7 @@ export default function OrdersPage() {
           order={orderToEdit}
           currentUser={currentUser}
           onOrderUpdated={handleOrderUpdated}
+          allOrders={orders}
         />
       )}
 

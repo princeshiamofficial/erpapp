@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceModelItem, ServiceLaminationItem, AdvancePaymentRecord } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { updateOrderAction } from '@/app/(app)/orders/actions';
+import { updateOrderAction, getClientDetailsAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -39,6 +39,7 @@ interface EditOrderDialogProps {
   order: TrackingLink;
   currentUser: User;
   onOrderUpdated: (updatedOrder: TrackingLink) => void;
+  allOrders?: TrackingLink[];
 }
 
 interface DialogOrderItem {
@@ -66,7 +67,7 @@ const formatDateForDialogInput = (dateString: string | Date | undefined): string
 };
 
 
-export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOrderUpdated }: EditOrderDialogProps) {
+export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOrderUpdated, allOrders }: EditOrderDialogProps) {
   const [jobIdInput, setJobIdInput] = useState('');
   const [companyNameInput, setCompanyNameInput] = useState('');
   const [address, setAddress] = useState('');
@@ -75,6 +76,12 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [acceptedDeliveryDate, setAcceptedDeliveryDate] = useState<Date | undefined>(undefined);
   const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [isAutoFilled, setIsAutoFilled] = useState(false);
+
+  const initialJobIdRef = useRef('');
+  const initialCompanyNameRef = useRef('');
+  const initialAddressRef = useRef('');
+  const initialPhoneNumberRef = useRef('');
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([]);
   const [orderItemsTotal, setOrderItemsTotal] = useState<number>(0);
@@ -139,14 +146,25 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       const companyNameString = order.companyName || "";
       const separator = " • ";
       const firstSeparatorIndex = companyNameString.indexOf(separator);
+      let parsedJobId = '';
+      let parsedCompanyName = '';
       if (firstSeparatorIndex !== -1) {
-        setJobIdInput(companyNameString.substring(0, firstSeparatorIndex).trim());
-        setCompanyNameInput(companyNameString.substring(firstSeparatorIndex + separator.length).trim());
+        parsedJobId = companyNameString.substring(0, firstSeparatorIndex).trim();
+        parsedCompanyName = companyNameString.substring(firstSeparatorIndex + separator.length).trim();
       } else {
-        setJobIdInput(''); setCompanyNameInput(companyNameString.trim());
+        parsedCompanyName = companyNameString.trim();
       }
-       setAddress(order.address);
-      setPhoneNumber(order.phoneNumber);
+
+      setJobIdInput(parsedJobId);
+      setCompanyNameInput(parsedCompanyName);
+      setAddress(order.address || '');
+      setPhoneNumber(order.phoneNumber || '');
+
+      initialJobIdRef.current = parsedJobId;
+      initialCompanyNameRef.current = parsedCompanyName;
+      initialAddressRef.current = order.address || '';
+      initialPhoneNumberRef.current = order.phoneNumber || '';
+
       setCreatedAt(order.createdAt ? parseISO(order.createdAt) : undefined);
       setAcceptedDeliveryDate(order.acceptedDeliveryDate ? parseISO(order.acceptedDeliveryDate) : undefined);
       setSpecialClientDiscount(order.specialClientDiscount && Number(order.specialClientDiscount) !== 0 ? order.specialClientDiscount.toString() : '');
@@ -180,6 +198,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setEditingAmount('');
     setEditingMethod('');
     setEditingNotes('');
+    setIsAutoFilled(false);
   }, [order]);
 
   useEffect(() => {
@@ -189,6 +208,83 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   useEffect(() => {
     if (isOpen && order && !isLoadingOptions) resetForm();
   }, [isOpen, order, isLoadingOptions, resetForm]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const trimmedJobId = jobIdInput.trim();
+
+    if (!trimmedJobId) {
+      if (isAutoFilled) {
+        setCompanyNameInput('');
+        setAddress('');
+        setPhoneNumber('');
+        setIsAutoFilled(false);
+      }
+      return;
+    }
+
+    if (trimmedJobId === initialJobIdRef.current) {
+      setCompanyNameInput(initialCompanyNameRef.current);
+      setAddress(initialAddressRef.current);
+      setPhoneNumber(initialPhoneNumberRef.current);
+      setIsAutoFilled(false);
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      try {
+        const res = await getClientDetailsAction(trimmedJobId);
+        if (res && res.success && res.client) {
+          const client = res.client;
+          setCompanyNameInput(client.company_name);
+          setAddress(client.address);
+          setPhoneNumber(client.phone_number);
+          setIsAutoFilled(true);
+
+          toast({
+            title: "Existing Client Found",
+            description: `Details for "${trimmedJobId}" have been auto-filled from clients database.`,
+          });
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching client details:", err);
+      }
+
+      if (allOrders && allOrders.length > 0) {
+        const existingOrder = allOrders.find(o => {
+          const orderJobId = (o.companyName || '').split(' • ')[0].trim();
+          return orderJobId.toLowerCase() === trimmedJobId.toLowerCase();
+        });
+
+        if (existingOrder) {
+          const nameParts = (existingOrder.companyName || '').split(' • ');
+          const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
+
+          setCompanyNameInput(actualCompanyName);
+          setAddress(existingOrder.address);
+          setPhoneNumber(existingOrder.phoneNumber);
+          setIsAutoFilled(true);
+
+          toast({
+            title: "Existing Job ID Found",
+            description: `Details for "${trimmedJobId}" have been auto-filled from existing orders.`,
+          });
+          return;
+        }
+      }
+
+      if (isAutoFilled) {
+        setCompanyNameInput('');
+        setAddress('');
+        setPhoneNumber('');
+        setIsAutoFilled(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [jobIdInput, allOrders, toast, isOpen, isAutoFilled]);
 
   useEffect(() => {
     const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
@@ -405,6 +501,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       newAdvancePaymentNotes?: string | null;
       newAdvancePaymentDocumentUrl?: string | null;
     } = {
+      clientId: jobIdInput.trim(),
       companyName: `${jobIdInput.trim()} • ${companyNameInput.trim()}`,
       address: address.trim(),
        phoneNumber: phoneNumber.trim(),
@@ -453,9 +550,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
             : (<form onSubmit={handleSubmit}><div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1"><Label htmlFor="edit-jobId">Job ID *</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} /></div>
-                <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => setCompanyNameInput(e.target.value)} required disabled={isSubmitting} /></div>
+                <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => { setCompanyNameInput(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} /></div>
               </div>
-              <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} /></div>
+              <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => { setAddress(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} /></div>
               <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-4", order.currentStatus === 'delivered' ? "lg:grid-cols-2" : "lg:grid-cols-3")}>
                 <div className="space-y-1">
                   <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
@@ -467,6 +564,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                       const numericValue = e.target.value.replace(/[^0-9]/g, '');
                       if (numericValue.length <= 11) {
                         setPhoneNumber(numericValue);
+                        setIsAutoFilled(false);
                       }
                     }}
                     required

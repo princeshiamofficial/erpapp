@@ -419,9 +419,9 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     const fields: string[] = [];
     const params: any[] = [];
 
-    const clientId = existingOrder.clientId;
+    const clientId = updates.clientId !== undefined ? updates.clientId : existingOrder.clientId;
     if (clientId) {
-      if (updates.companyName !== undefined || updates.address !== undefined || updates.phoneNumber !== undefined) {
+      if (updates.clientId !== undefined || updates.companyName !== undefined || updates.address !== undefined || updates.phoneNumber !== undefined) {
         const companyNameRaw = updates.companyName !== undefined ? updates.companyName : existingOrder.companyName;
         const addressVal = updates.address !== undefined ? updates.address : existingOrder.address;
         const phoneVal = updates.phoneNumber !== undefined ? updates.phoneNumber : existingOrder.phoneNumber;
@@ -441,6 +441,7 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
       }
     }
 
+    if (updates.clientId !== undefined) { fields.push('client_id = ?'); params.push(updates.clientId); }
     if (updates.orderItems !== undefined) { fields.push('order_items = ?'); params.push(JSON.stringify(updates.orderItems)); }
     if (updates.specialClientDiscount !== undefined) { fields.push('special_client_discount = ?'); params.push(updates.specialClientDiscount); }
     if (updates.shippingCharge !== undefined) { fields.push('shipping_charge = ?'); params.push(updates.shippingCharge); }
@@ -473,6 +474,17 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     params.push(id);
 
     await query(`UPDATE ${ORDERS_TABLE} SET ${fields.join(', ')} WHERE id = ?`, params);
+
+    // Clean up old client if client_id changed and old client has no more orders
+    if (updates.clientId !== undefined && existingOrder.clientId && updates.clientId !== existingOrder.clientId) {
+      const oldClientId = existingOrder.clientId;
+      const remainingOrders = await query<any[]>(`SELECT id FROM ${ORDERS_TABLE} WHERE client_id = ?`, [oldClientId]);
+      if (remainingOrders.length === 0) {
+        await query(`DELETE FROM clients WHERE id = ?`, [oldClientId]);
+        console.log(`[UpdateClient] Deleted orphan client ${oldClientId} since its last order was moved to a new client ID.`);
+      }
+    }
+
     return true;
   } catch (error) {
     console.error(`Error updating order ${id} in MySQL:`, error);
