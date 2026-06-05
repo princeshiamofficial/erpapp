@@ -17,12 +17,14 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
+    const redirectDomain = settings.telegramRedirectDomain || 'https://app.colorhutbd.xyz';
+
     // Sanitize localhost/127.0.0.1 URLs since Telegram API rejects non-public URLs
     let sanitizedMessage = message;
     if (message) {
       sanitizedMessage = message.replace(
         /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g,
-        'https://app.colorhutbd.xyz'
+        redirectDomain
       );
     }
 
@@ -32,7 +34,7 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
         const jsonStr = JSON.stringify(replyMarkup);
         const sanitizedJsonStr = jsonStr.replace(
           /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g,
-          'https://app.colorhutbd.xyz'
+          redirectDomain
         );
         sanitizedReplyMarkup = JSON.parse(sanitizedJsonStr);
       } catch (e) {

@@ -66,6 +66,7 @@ export default function CrmTargetSettingsPage() {
   const [roleBasedTargets, setRoleBasedTargets] = useState<RoleBasedTarget>({ CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
   const [telegramBotToken, setTelegramBotToken] = useState('');
   const [telegramChatIds, setTelegramChatIds] = useState('');
+  const [telegramRedirectDomain, setTelegramRedirectDomain] = useState('');
 
 
   const [allTargetableUsersForExpensePerms, setAllTargetableUsersForExpensePerms] = useState<User[]>([]); // For expense perm user picker
@@ -106,6 +107,7 @@ export default function CrmTargetSettingsPage() {
       setRoleBasedTargets(globalSettings.roleBasedTargets || { CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
       setTelegramBotToken(globalSettings.telegramBotToken || '');
       setTelegramChatIds(Array.isArray(globalSettings.telegramChatIds) ? globalSettings.telegramChatIds.join(', ') : '');
+      setTelegramRedirectDomain(globalSettings.telegramRedirectDomain || '');
 
       setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
     } catch (error) {
@@ -238,7 +240,11 @@ export default function CrmTargetSettingsPage() {
   const handleSaveTelegramSettings = async () => {
     setIsSubmittingTelegram(true);
     const chatIdsArray = telegramChatIds.split(',').map(id => id.trim()).filter(id => id);
-    const result = await updateTelegramSettingsAction(telegramBotToken.trim() || null, chatIdsArray.length > 0 ? chatIdsArray : null);
+    const result = await updateTelegramSettingsAction(
+      telegramBotToken.trim() || null, 
+      chatIdsArray.length > 0 ? chatIdsArray : null,
+      telegramRedirectDomain.trim() || null
+    );
     if (result.success) {
       toast({ title: "Settings Updated", description: "Telegram settings have been saved." });
     } else {
@@ -407,6 +413,19 @@ export default function CrmTargetSettingsPage() {
             />
             <p className="text-xs text-muted-foreground">
               To send to multiple chats, separate each ID with a comma (e.g., -100123...,-100456...).
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="telegram-redirect-domain">Redirect Domain</Label>
+            <Input
+              id="telegram-redirect-domain"
+              value={telegramRedirectDomain}
+              onChange={(e) => setTelegramRedirectDomain(e.target.value)}
+              placeholder="e.g., https://app.colorhutbd.xyz"
+              disabled={isSubmittingTelegram || isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              The public domain used to replace localhost/127.0.0.1 link references in Telegram notifications.
             </p>
           </div>
         </CardContent>

@@ -281,10 +281,11 @@ export async function updateDrAssignmentNotificationTemplatesAction(
 
 export async function updateTelegramSettingsAction(
   botToken: string | null,
-  chatIds: string[] | null
+  chatIds: string[] | null,
+  redirectDomain: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await setTelegramSettings(botToken, chatIds);
+    const success = await setTelegramSettings(botToken, chatIds, redirectDomain);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
       return { success: true };
