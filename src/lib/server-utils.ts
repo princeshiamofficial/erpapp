@@ -5,7 +5,12 @@ export async function getAppUrl(): Promise<string> {
     const headersList = await headers();
     const host = headersList.get('host');
     if (host) {
-      const proto = headersList.get('x-forwarded-proto') || 'https';
+      let proto = headersList.get('x-forwarded-proto') || 'https';
+      // Handle multi-proxy forwarded proto header (e.g. "https, https")
+      proto = proto.split(',')[0].trim();
+      if (proto !== 'http' && proto !== 'https') {
+        proto = 'https';
+      }
       return `${proto}://${host}`;
     }
   } catch (e) {
