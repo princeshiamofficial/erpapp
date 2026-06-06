@@ -95,11 +95,16 @@ const STAGE_WEIGHTS: Record<string, number> = {
 const TOTAL_WEIGHT = 5.25;
 
 const formatSlaHours = (hours: number): string => {
-  if (hours % 24 === 0) {
-    const d = hours / 24;
-    return `${d}d SLA`;
+  const d = Math.floor(hours / 24);
+  const h = hours % 24;
+
+  if (h === 0) {
+    if (d === 1) return `1 Day SLA`;
+    return `${d} Days SLA`;
+  } else {
+    if (d === 0) return `${h}H SLA`;
+    return `${d}d ${h}H SLA`;
   }
-  return `${hours}H SLA`;
 };
 
 const calculateProgressInfo = (
