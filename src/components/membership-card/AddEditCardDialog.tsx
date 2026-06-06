@@ -10,13 +10,11 @@ import type { Gift, User, ServiceGiftItem, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addGiftAction, updateGiftAction } from '@/app/(app)/membership-card/actions';
 import { getClientDetailsAction } from '@/app/(app)/orders/actions';
-import { Loader2, ChevronsUpDown, Check, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Badge } from '@/components/ui/badge';
 
 interface AddEditCardDialogProps {
   isOpen: boolean;
@@ -29,7 +27,7 @@ interface AddEditCardDialogProps {
 }
 
 export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, currentUser, giftOptions, allOrders }: AddEditCardDialogProps) {
-  const [selectedGiftItems, setSelectedGiftItems] = useState<string[]>([]);
+  const [cardNo, setCardNo] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -46,7 +44,8 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
   const resetForm = useCallback(() => {
     if (gift && isEditMode) {
-      setSelectedGiftItems(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : (gift.giftItemName ? [gift.giftItemName] : []));
+      const names = Array.isArray(gift.giftItemNames) ? gift.giftItemNames : (gift.giftItemName ? [gift.giftItemName] : []);
+      setCardNo(names[0] || '');
       setRecipientName(gift.recipientName);
       setRecipientPhone(gift.recipientPhone);
       setRecipientAddress(gift.recipientAddress);
@@ -58,7 +57,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setDateGiven(gift.dateGiven ? new Date(gift.dateGiven) : new Date());
       setNotes(gift.notes || '');
     } else {
-      setSelectedGiftItems([]);
+      setCardNo('');
       setRecipientName('');
       setRecipientPhone('');
       setRecipientAddress('');
@@ -146,25 +145,13 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
   const canSubmit = useMemo(() => {
     if (isSubmitting) return false;
-    if (selectedGiftItems.length === 0) return false;
+    if (!cardNo.trim()) return false;
     if (!recipientName.trim()) return false;
     if (!recipientPhone.trim()) return false;
     if (!recipientAddress.trim()) return false;
     if (!dateGiven) return false;
     return true;
-  }, [isSubmitting, selectedGiftItems, recipientName, recipientPhone, recipientAddress, dateGiven]);
-
-  const handleGiftSelect = (itemName: string) => {
-    setSelectedGiftItems(prev => {
-      const newSelection = new Set(prev);
-      if (newSelection.has(itemName)) {
-        newSelection.delete(itemName);
-      } else {
-        newSelection.add(itemName);
-      }
-      return Array.from(newSelection);
-    });
-  };
+  }, [isSubmitting, cardNo, recipientName, recipientPhone, recipientAddress, dateGiven]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +163,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
     setIsSubmitting(true);
 
     const giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'givenByUserId' | 'givenByUserName' | 'createdAt' | 'updatedAt' | 'giftItemName'> & { giftItemNames: string[] } = {
-      giftItemNames: selectedGiftItems,
+      giftItemNames: [cardNo.trim()],
       recipientName, recipientPhone, recipientAddress, orderId,
       dateGiven: dateGiven!.toISOString(),
       notes: notes.trim() || null,
@@ -238,43 +225,14 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div className="space-y-1">
-              <Label>Card No.</Label>
-              {selectedGiftItems.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/50 min-h-[40px]">
-                  {selectedGiftItems.map((item, idx) => (
-                    <Badge key={`${item}-${idx}`} variant="secondary" className="gap-1.5 py-1">
-                      {item}
-                      <button type="button" onClick={() => handleGiftSelect(item)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
-                        <X className="h-3 w-3 text-destructive" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              <Popover open={isGiftPopoverOpen} onOpenChange={setIsGiftPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={isGiftPopoverOpen} className="w-full justify-between">
-                    <span className="truncate">{selectedGiftItems.length > 0 ? "Add/Remove Card No..." : "Select Card No..."}</span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search Card No..." />
-                    <CommandList>
-                      <CommandEmpty>No cards found.</CommandEmpty>
-                      <CommandGroup>
-                        {giftOptions.map((option, idx) => (
-                          <CommandItem key={`${option.id}-${idx}`} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
-                            <Check className={cn("mr-2 h-4 w-4", selectedGiftItems.includes(option.name) ? "opacity-100" : "opacity-0")} />
-                            {option.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Label htmlFor="cardNo">Card No.</Label>
+              <Input
+                id="cardNo"
+                value={cardNo}
+                onChange={e => setCardNo(e.target.value)}
+                required
+                className="border-gray-400 dark:border-gray-600"
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="dateGiven">Date Issued</Label>
