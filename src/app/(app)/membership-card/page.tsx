@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO } from 'date-fns';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 
-const AddEditGiftDialog = dynamic(() => import('@/components/gifts/AddEditGiftDialog').then(mod => mod.AddEditGiftDialog));
+const AddEditCardDialog = dynamic(() => import('@/components/membership-card/AddEditCardDialog').then(mod => mod.AddEditCardDialog));
 const GiftCourierDialog = dynamic(() => import('@/components/gifts/GiftCourierDialog').then(mod => mod.GiftCourierDialog));
 
 const formatDate = (dateString?: string) => {
@@ -340,7 +340,7 @@ export default function MembershipCardPage() {
         </Card>
       </div>
 
-      <AddEditGiftDialog
+      <AddEditCardDialog
         isOpen={isAddEditDialogOpen}
         onOpenChange={setIsAddEditDialogOpen}
         onGiftSaved={handleGiftSaved}
