@@ -134,7 +134,21 @@ const calculateProgressInfo = (
   }
 
   if (endDate) {
-    const projectStart = createdAt ? parseISO(createdAt) : effectiveStartDate;
+    const timestamps = [
+      createdAt,
+      updatedAt,
+      crClearanceAt,
+      onDesignAt,
+      onHoldAt,
+      logisticsAt,
+      courierAt,
+      project.coClearanceAt
+    ].filter(Boolean).map(t => parseISO(t!));
+
+    const projectStart = timestamps.length > 0 
+      ? new Date(Math.min(...timestamps.map(d => d.getTime()))) 
+      : effectiveStartDate;
+
     const projectEnd = parseISO(endDate);
     const totalDeliveryDays = Math.max(1, differenceInSeconds(projectEnd, projectStart) / 86400);
 
