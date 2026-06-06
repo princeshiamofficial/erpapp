@@ -12,10 +12,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Card, User } from "@/types";
+import type { Card, User, ServiceCourierNoteItem } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Truck } from 'lucide-react';
 import { transferGiftToCourierAction } from '@/app/(app)/membership-card/actions';
+import { getCourierNotes } from '@/lib/service-options-service';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,8 +42,20 @@ export function CardCourierDialog({ isOpen, onOpenChange, card, currentUser, onS
   const [shippingCharge, setShippingCharge] = useState<string>('0');
   const [editableRecipient, setEditableRecipient] = useState<string>('');
   const [editableAddress, setEditableAddress] = useState<string>('');
+  const [courierNotesOptions, setCourierNotesOptions] = useState<ServiceCourierNoteItem[]>([]);
+  const [courierNote, setCourierNote] = useState<string>('');
   const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      getCourierNotes().then(notes => {
+        setCourierNotesOptions(notes);
+      }).catch(err => {
+        console.error("Error loading courier notes:", err);
+      });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && card) {
@@ -50,6 +63,7 @@ export function CardCourierDialog({ isOpen, onOpenChange, card, currentUser, onS
       setShippingCharge('0');
       setEditableRecipient(card.recipientName);
       setEditableAddress(card.recipientAddress);
+      setCourierNote('');
     }
   }, [isOpen, card]);
 
@@ -73,7 +87,8 @@ export function CardCourierDialog({ isOpen, onOpenChange, card, currentUser, onS
       shippingArea,
       charge,
       editableRecipient !== card.recipientName ? editableRecipient : undefined,
-      editableAddress !== card.recipientAddress ? editableAddress : undefined
+      editableAddress !== card.recipientAddress ? editableAddress : undefined,
+      courierNote || undefined
     );
     setIsSubmitting(false);
 
@@ -156,6 +171,33 @@ export function CardCourierDialog({ isOpen, onOpenChange, card, currentUser, onS
                 className="col-span-2 h-8"
                 placeholder="e.g., 60"
                 min="0"
+              />
+            </div>
+            <div className="grid grid-cols-3 items-center gap-4">
+              <Label htmlFor="predefined-note" className="text-right">Courier Note</Label>
+              <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
+                <SelectTrigger id="predefined-note" className="col-span-2 h-8">
+                  <SelectValue placeholder="Choose a note (Optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none_selected">None</SelectItem>
+                  {courierNotesOptions.map((note) => (
+                    <SelectItem key={note.id} value={note.name}>
+                      {note.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 items-start gap-4">
+              <Label htmlFor="courier-note-custom" className="text-right pt-2">Custom Note</Label>
+              <Textarea
+                id="courier-note-custom"
+                value={courierNote}
+                onChange={(e) => setCourierNote(e.target.value)}
+                className="col-span-2 text-xs"
+                placeholder="Custom delivery instructions..."
+                rows={2}
               />
             </div>
             <div className="grid grid-cols-3 items-center gap-4 mt-2 pt-2 border-t border-dashed">

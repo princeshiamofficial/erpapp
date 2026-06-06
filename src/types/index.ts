@@ -198,6 +198,7 @@ export interface TrackingLink {
   packzyTrackingCode?: string | null;
   shippingArea?: string | null;
   shippingCharge?: number | null;
+  courierNote?: string | null;
   feedback?: { // This field is now deprecated but kept for backwards compatibility
     submittedAt: string;
   };
@@ -571,6 +572,7 @@ export interface Gift {
   packzyTrackingCode?: string | null;
   shippingArea?: string | null;
   shippingCharge?: number | null;
+  courierNote?: string | null;
 }
 
 export type Card = Gift;

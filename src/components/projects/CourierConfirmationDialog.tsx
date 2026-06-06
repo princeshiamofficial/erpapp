@@ -14,11 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Project, User } from "@/types";
+import type { Project, User, ServiceCourierNoteItem } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Truck } from 'lucide-react';
 import { getOrderById } from '@/lib/order-service';
 import { transferToCourierAction } from '@/app/(app)/projects/actions';
+import { getCourierNotes } from '@/lib/service-options-service';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -46,14 +47,27 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
   const [shippingCharge, setShippingCharge] = useState<string>('0');
   const [editableRecipient, setEditableRecipient] = useState<string>('');
   const [editableAddress, setEditableAddress] = useState<string>('');
+  const [courierNotesOptions, setCourierNotesOptions] = useState<ServiceCourierNoteItem[]>([]);
+  const [courierNote, setCourierNote] = useState<string>('');
   const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      getCourierNotes().then(notes => {
+        setCourierNotesOptions(notes);
+      }).catch(err => {
+        console.error("Error loading courier notes:", err);
+      });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && project) {
       setIsLoadingDetails(true);
       setShippingArea('');
       setShippingCharge('0');
+      setCourierNote('');
       const fetchOrderDetails = async () => {
         const order = await getOrderById(project.id);
         if (order) {
@@ -102,7 +116,8 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
       shippingArea,
       charge,
       editableRecipient !== orderDetails?.recipient ? editableRecipient : undefined,
-      editableAddress !== orderDetails?.address ? editableAddress : undefined
+      editableAddress !== orderDetails?.address ? editableAddress : undefined,
+      courierNote || undefined
     );
     setIsSubmitting(false);
 
@@ -200,6 +215,33 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
                 className="col-span-2 h-8"
                 placeholder="e.g., 60"
                 min="0"
+              />
+            </div>
+            <div className="grid grid-cols-3 items-center gap-4">
+              <Label htmlFor="predefined-note" className="text-right">Courier Note</Label>
+              <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
+                <SelectTrigger id="predefined-note" className="col-span-2 h-8">
+                  <SelectValue placeholder="Choose a note (Optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none_selected">None</SelectItem>
+                  {courierNotesOptions.map((note) => (
+                    <SelectItem key={note.id} value={note.name}>
+                      {note.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 items-start gap-4">
+              <Label htmlFor="courier-note-custom" className="text-right pt-2">Custom Note</Label>
+              <Textarea
+                id="courier-note-custom"
+                value={courierNote}
+                onChange={(e) => setCourierNote(e.target.value)}
+                className="col-span-2 text-xs"
+                placeholder="Custom delivery instructions..."
+                rows={2}
               />
             </div>
             <div className="grid grid-cols-3 items-center gap-4 mt-2 pt-2 border-t border-dashed">

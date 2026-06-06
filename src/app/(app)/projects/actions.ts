@@ -152,7 +152,8 @@ export async function transferToCourierAction(
   shippingArea: string,
   shippingCharge: number,
   customRecipientName?: string,
-  customRecipientAddress?: string
+  customRecipientAddress?: string,
+  courierNote?: string
 ): Promise<{ success: boolean; error?: string; consignment?: any }> {
   if (!project || !project.id) {
     return { success: false, error: 'Invalid project data provided.' };
@@ -176,13 +177,17 @@ export async function transferToCourierAction(
     const recipientNameRaw = customRecipientName || order.companyName.split('•').pop()?.trim() || order.companyName;
     const recipientAddressRaw = customRecipientAddress || order.address;
 
-    const packzyPayload = {
+    const packzyPayload: Record<string, any> = {
       invoice: sanitizeForPackzy(order.id),
       recipient_name: sanitizeForPackzy(recipientNameRaw),
       recipient_phone: sanitizeForPackzy(order.phoneNumber),
       recipient_address: sanitizeForPackzy(recipientAddressRaw),
       cod_amount: totalCodAmount,
     };
+
+    if (courierNote && courierNote.trim()) {
+      packzyPayload.note = sanitizeForPackzy(courierNote.trim());
+    }
 
     const urlEncodedBody = Object.entries(packzyPayload)
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
@@ -237,7 +242,7 @@ export async function transferToCourierAction(
       status: SHIPPED_STATUS_ID,
       changedByUserId: actingUser.id,
       changedByUserName: actingUser.name,
-      notes: `Order transferred to SteadFast Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}. COD: ${totalCodAmount}, Shipping: ${shippingCharge}. Area: ${shippingArea}.`,
+      notes: `Order transferred to SteadFast Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}. COD: ${totalCodAmount}, Shipping: ${shippingCharge}. Area: ${shippingArea}.${courierNote ? ` Note: ${courierNote}.` : ''}`,
     };
 
     const orderUpdateSuccess = await updateOrder(order.id, {
@@ -247,6 +252,7 @@ export async function transferToCourierAction(
       packzyTrackingCode: consignment.tracking_code,
       shippingArea: shippingArea,
       shippingCharge: shippingCharge,
+      courierNote: courierNote || null,
       updatedAt: new Date().toISOString(),
       updatedByUserId: actingUser.id,
       updatedByUserName: actingUser.name,
@@ -260,14 +266,18 @@ export async function transferToCourierAction(
     // Add to the shippedOrders collection for quick sync checks
     await addShippedOrderEntry(order.id, consignment.tracking_code);
 
-    const telegramMessage = `
+    let telegramMessage = `
 <b>🚚 Order Shipped via SteadFast!</b>
 
 <b>Order ID:</b> <code>${order.id}</code>
 <b>Company:</b> ${order.companyName}
 <b>Recipient:</b> ${recipientNameRaw}
 <b>COD Amount:</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
-    `;
+`;
+
+    if (courierNote && courierNote.trim()) {
+      telegramMessage += `<b>Note:</b> <i>${courierNote.trim()}</i>\n`;
+    }
 
     const appUrl = await getAppUrl();
     const courierReplyMarkup = {
