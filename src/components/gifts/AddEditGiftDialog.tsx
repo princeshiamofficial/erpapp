@@ -53,7 +53,8 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setRecipientPhone(gift.recipientPhone);
       setRecipientAddress(gift.recipientAddress);
       setOrderId(gift.orderId || null);
-      const initialVal = gift.orderId ? allOrders.find(o => o.id === gift.orderId)?.id || '' : '';
+      const matchedOrder = gift.orderId ? allOrders.find(o => o.id === gift.orderId) : null;
+      const initialVal = matchedOrder ? (matchedOrder.companyName || '').split(' • ')[0].trim() : '';
       setJobIdInput(initialVal);
       initialJobId.current = initialVal.trim();
       setDateGiven(gift.dateGiven ? new Date(gift.dateGiven) : new Date());
