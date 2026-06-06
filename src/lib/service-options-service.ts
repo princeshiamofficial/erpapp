@@ -1,7 +1,7 @@
 
 "use server";
 
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from '@/types';
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from './mysql';
 import { getOrders } from './order-service';
@@ -446,6 +446,114 @@ export const deleteGift = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting gift from MySQL:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+// --- Courier Note Functions ---
+
+const COURIER_NOTES_TABLE = 'service_courier_notes';
+
+let isCourierNotesTableInitialized = false;
+
+export const initCourierNotesTable = async () => {
+  if (isCourierNotesTableInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ${COURIER_NOTES_TABLE} (
+        id VARCHAR(36) PRIMARY KEY,
+        data_json JSON NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    isCourierNotesTableInitialized = true;
+  } catch (error) {
+    console.error("Error creating service_courier_notes table:", error);
+  }
+};
+
+const seedDefaultCourierNotes = async (): Promise<ServiceCourierNoteItem[]> => {
+  const createdItems: ServiceCourierNoteItem[] = [];
+  const defaultNotesData: string[] = ["Please call before delivery", "Leave at front desk", "Do not bend package"];
+
+  for (const name of defaultNotesData) {
+    const id = uuidv4();
+    const newItem: ServiceCourierNoteItem = { id, name };
+    try {
+      await query(`INSERT INTO ${COURIER_NOTES_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItem)]);
+      createdItems.push(newItem);
+    } catch (error) {
+      console.error(`Error seeding courier note "${name}" in MySQL:`, error);
+    }
+  }
+  console.log('Default courier notes seeded in MySQL.');
+  return createdItems;
+};
+
+export const getCourierNotes = async (): Promise<ServiceCourierNoteItem[]> => {
+  try {
+    await initCourierNotesTable();
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${COURIER_NOTES_TABLE} ORDER BY id ASC`);
+    let notes = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as ServiceCourierNoteItem));
+
+    if (notes.length === 0) {
+      console.log("No courier notes found, seeding defaults in MySQL.");
+      notes = await seedDefaultCourierNotes();
+    }
+    return notes.sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error("Error fetching courier notes from MySQL:", error);
+    return [];
+  }
+};
+
+export const addCourierNote = async (name: string): Promise<ServiceCourierNoteItem | null> => {
+  if (!name.trim()) {
+    throw new Error("Courier note cannot be empty.");
+  }
+  try {
+    await initCourierNotesTable();
+    const id = uuidv4();
+    const newItemData: ServiceCourierNoteItem = { id, name: name.trim() };
+    await query(`INSERT INTO ${COURIER_NOTES_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItemData)]);
+    return newItemData;
+  } catch (error) {
+    console.error("Error adding courier note to MySQL:", error);
+    if (error instanceof Error) throw error;
+    return null;
+  }
+};
+
+export const updateCourierNote = async (id: string, name: string): Promise<boolean> => {
+  if (!name.trim()) {
+    throw new Error("Courier note cannot be empty.");
+  }
+  try {
+    await initCourierNotesTable();
+    const rows = await query<any[]>(`SELECT data_json FROM ${COURIER_NOTES_TABLE} WHERE id = ?`, [id]);
+    if (rows.length === 0) return false;
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const finalData = { ...existingData, name: name.trim() };
+    await query(`UPDATE ${COURIER_NOTES_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
+    return true;
+  } catch (error) {
+    console.error("Error updating courier note in MySQL:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+export const deleteCourierNote = async (id: string): Promise<boolean> => {
+  try {
+    await initCourierNotesTable();
+    await query(`DELETE FROM ${COURIER_NOTES_TABLE} WHERE id = ?`, [id]);
+    return true;
+  } catch (error) {
+    console.error("Error deleting courier note from MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }

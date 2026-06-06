@@ -15,8 +15,11 @@ import {
   addGift,
   updateGift,
   deleteGift,
+  addCourierNote,
+  updateCourierNote,
+  deleteCourierNote,
 } from "@/lib/service-options-service";
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from "@/types";
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem } from "@/types";
 
 const SERVICE_MANAGEMENT_PATH = "/(app)/admin/service-management";
 const MODEL_MANAGEMENT_PATH = "/(app)/admin/model-management";
@@ -205,6 +208,52 @@ export async function deleteGiftAction(id: string): Promise<{ success: boolean; 
     return { success: false, error: "Failed to delete gift from database. It might be in use by existing orders." };
   } catch (error) {
     console.error("Error in deleteGiftAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// Courier Note Actions
+export async function addCourierNoteAction(name: string): Promise<{ success: boolean; courierNote?: ServiceCourierNoteItem; error?: string }> {
+  try {
+    const newCourierNote = await addCourierNote(name);
+    if (newCourierNote) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true, courierNote: newCourierNote };
+    }
+    return { success: false, error: "Failed to add courier note to database." };
+  } catch (error) {
+    console.error("Error in addCourierNoteAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateCourierNoteAction(id: string, name: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updateCourierNote(id, name);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update courier note in database." };
+  } catch (error) {
+    console.error("Error in updateCourierNoteAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function deleteCourierNoteAction(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteCourierNote(id);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete courier note from database." };
+  } catch (error) {
+    console.error("Error in deleteCourierNoteAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

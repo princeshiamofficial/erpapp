@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from "@/types";
-import { getLaminations, getPaymentMethods, getGifts } from '@/lib/service-options-service';
+import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem } from "@/types";
+import { getLaminations, getPaymentMethods, getGifts, getCourierNotes } from '@/lib/service-options-service';
 import {
   addLaminationAction, updateLaminationAction, deleteLaminationAction,
   addPaymentMethodAction, updatePaymentMethodAction, deletePaymentMethodAction,
-  addGiftAction, updateGiftAction, deleteGiftAction
+  addGiftAction, updateGiftAction, deleteGiftAction,
+  addCourierNoteAction, updateCourierNoteAction, deleteCourierNoteAction
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,11 +44,7 @@ export default function ServiceManagementPage() {
   const [laminations, setLaminations] = useState<ServiceLaminationItem[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [gifts, setGifts] = useState<ServiceGiftItem[]>([]);
-  const [courierNotes, setCourierNotes] = useState<{ id: string; name: string }[]>([
-    { id: '1', name: 'Please call before delivery' },
-    { id: '2', name: 'Leave at front desk' },
-    { id: '3', name: 'Do not bend package' }
-  ]);
+  const [courierNotes, setCourierNotes] = useState<ServiceCourierNoteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,14 +60,16 @@ export default function ServiceManagementPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedLaminations, fetchedPaymentMethods, fetchedGifts] = await Promise.all([
+      const [fetchedLaminations, fetchedPaymentMethods, fetchedGifts, fetchedCourierNotes] = await Promise.all([
         getLaminations(),
         getPaymentMethods(),
-        getGifts()
+        getGifts(),
+        getCourierNotes()
       ]);
       setLaminations(fetchedLaminations);
       setPaymentMethods(fetchedPaymentMethods);
       setGifts(fetchedGifts);
+      setCourierNotes(fetchedCourierNotes);
     } catch (error) {
       console.error("Error fetching service options:", error);
       toast({ title: "Error", description: "Could not load service options.", variant: "destructive" });
@@ -128,11 +127,10 @@ export default function ServiceManagementPage() {
       } else if (currentType === 'gift') {
         result = await updateGiftAction(editingItem.id, itemName.trim());
       } else if (currentType === 'courierNote') {
-        setCourierNotes(prev => prev.map(note => note.id === editingItem.id ? { ...note, name: itemName.trim() } : note));
-        result = { success: true };
+        result = await updateCourierNoteAction(editingItem.id, itemName.trim());
       }
       if (result?.success) {
-        toast({ title: "Success", description: `${currentType} "${itemName.trim()}" updated.` });
+        toast({ title: "Success", description: `${currentType === 'courierNote' ? 'Courier Note' : currentType} "${itemName.trim()}" updated.` });
       }
     } else if (itemTypeToAdd) {
       if (currentType === 'lamination') {
@@ -142,12 +140,10 @@ export default function ServiceManagementPage() {
       } else if (currentType === 'gift') {
         result = await addGiftAction(itemName.trim());
       } else if (currentType === 'courierNote') {
-        const newNote = { id: Math.random().toString(36).substr(2, 9), name: itemName.trim() };
-        setCourierNotes(prev => [...prev, newNote]);
-        result = { success: true };
+        result = await addCourierNoteAction(itemName.trim());
       }
       if (result?.success) {
-        toast({ title: "Success", description: `${currentType} "${itemName.trim()}" added.` });
+        toast({ title: "Success", description: `${currentType === 'courierNote' ? 'Courier Note' : currentType} "${itemName.trim()}" added.` });
       }
     }
 
@@ -156,11 +152,9 @@ export default function ServiceManagementPage() {
       setItemName('');
       setEditingItem(null);
       setItemTypeToAdd(null);
-      if (currentType !== 'courierNote') {
-        await fetchData();
-      }
+      await fetchData();
     } else if (result) {
-      toast({ title: "Error", description: result.error || `Could not save ${currentType}.`, variant: "destructive" });
+      toast({ title: "Error", description: result.error || `Could not save ${currentType === 'courierNote' ? 'courier note' : currentType}.`, variant: "destructive" });
     }
     setIsSubmitting(false);
   };
@@ -176,19 +170,16 @@ export default function ServiceManagementPage() {
     } else if (itemToDelete.type === 'gift') {
       result = await deleteGiftAction(itemToDelete.id);
     } else if (itemToDelete.type === 'courierNote') {
-      setCourierNotes(prev => prev.filter(note => note.id !== itemToDelete.id));
-      result = { success: true };
+      result = await deleteCourierNoteAction(itemToDelete.id);
     }
 
     if (result?.success) {
-      toast({ title: "Success", description: `${itemToDelete.type} "${itemToDelete.name}" deleted.` });
+      toast({ title: "Success", description: `${itemToDelete.type === 'courierNote' ? 'Courier Note' : itemToDelete.type} "${itemToDelete.name}" deleted.` });
       setIsDeleteDialogOpen(false);
       setItemToDelete(null);
-      if (itemToDelete.type !== 'courierNote') {
-        await fetchData();
-      }
+      await fetchData();
     } else if (result) {
-      toast({ title: "Error", description: result.error || `Could not delete ${itemToDelete.type}. It might be in use.`, variant: "destructive" });
+      toast({ title: "Error", description: result.error || `Could not delete ${itemToDelete.type === 'courierNote' ? 'courier note' : itemToDelete.type}. It might be in use.`, variant: "destructive" });
     }
     setIsSubmitting(false);
   };

@@ -248,6 +248,11 @@ export interface ServiceGiftItem {
   name: string;
 }
 
+export interface ServiceCourierNoteItem {
+  id: string;
+  name: string;
+}
+
 
 export type ExpenseLoggingMode = "all" | "none" | "specificRoles" | "specificUsers";
 
