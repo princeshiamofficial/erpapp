@@ -231,7 +231,7 @@ export default function MembershipCardPage() {
           <div><h1 className="page-title">Membership Cards</h1><p className="page-description">Manage and issue premium tier loyalty membership cards to your high-value customers.</p></div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button size="lg" onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md">
-              <PlusCircle className="mr-2 h-5 w-5" />Issue Membership Card
+              <PlusCircle className="mr-2 h-5 w-5" />Issue Card
             </Button>
           </div>
         </div>

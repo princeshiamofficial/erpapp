@@ -203,9 +203,9 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit' : 'Issue'} Membership Card</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit' : 'Issue'} Card</DialogTitle>
           <DialogDescription>
-            {isEditMode ? `Update details for Issue ID: ${gift.giftIdDisplay}` : 'Record a new membership card issued to a client.'}
+            {isEditMode ? `Update details for Issue ID: ${gift.giftIdDisplay}` : 'Record a new card issued to a client.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
