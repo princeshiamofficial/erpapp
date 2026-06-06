@@ -94,6 +94,14 @@ const STAGE_WEIGHTS: Record<string, number> = {
 };
 const TOTAL_WEIGHT = 5.25;
 
+const formatSlaHours = (hours: number): string => {
+  if (hours % 24 === 0) {
+    const d = hours / 24;
+    return `${d}d SLA`;
+  }
+  return `${hours}H SLA`;
+};
+
 const calculateProgressInfo = (
   project: Project,
   now: Date
@@ -161,21 +169,21 @@ const calculateProgressInfo = (
       effectiveTargetDate = new Date(effectiveStartDate.getTime() + Math.round(allocatedDays * 86400000));
       
       const totalHours = Math.max(1, Math.round(allocatedDays * 24));
-      slaStageName = ` (${totalHours}H SLA)`;
+      slaStageName = ` (${formatSlaHours(totalHours)})`;
     }
   } else {
     switch (status) {
       case 'CR Clearance':
         effectiveTargetDate = addHours(effectiveStartDate, 24);
-        slaStageName = " (24H SLA)";
+        slaStageName = ` (${formatSlaHours(24)})`;
         break;
       case 'On Design':
         effectiveTargetDate = addHours(effectiveStartDate, 48);
-        slaStageName = " (48H SLA)";
+        slaStageName = ` (${formatSlaHours(48)})`;
         break;
       case 'CO Clearance':
         effectiveTargetDate = addHours(effectiveStartDate, 24);
-        slaStageName = " (24H SLA)";
+        slaStageName = ` (${formatSlaHours(24)})`;
         break;
       case 'On Hold':
         effectiveTargetDate = addDays(effectiveStartDate, 15);
@@ -183,11 +191,11 @@ const calculateProgressInfo = (
         break;
       case 'Logistics':
         effectiveTargetDate = addHours(effectiveStartDate, 24);
-        slaStageName = " (24H SLA)";
+        slaStageName = ` (${formatSlaHours(24)})`;
         break;
       case 'Courier':
         effectiveTargetDate = addHours(effectiveStartDate, 6);
-        slaStageName = " (6H SLA)";
+        slaStageName = ` (${formatSlaHours(6)})`;
         break;
       default:
         showProgressBar = false;
