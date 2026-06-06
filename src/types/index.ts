@@ -391,7 +391,7 @@ export interface Project {
   projectIdDisplay: string;
   name: string;
   status: ProjectStatusType;
-  endDate: string;
+  endDate?: string | null;
   assigneeId: string;
   assigneeName: string; // This is the CRM.
   assigneeInitials?: string;
