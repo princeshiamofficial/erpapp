@@ -36,14 +36,7 @@ interface MemberCard {
   status: 'Active' | 'Suspended' | 'Pending';
 }
 
-const INITIAL_MEMBERS: MemberCard[] = [
-  { id: '1', cardNo: 'CH-SLV-89410', name: 'Zahid Hasan', phone: '01712345678', tier: 'Silver', points: 350, issueDate: '2026-01-15', expiryDate: '2027-01-15', status: 'Active' },
-  { id: '2', cardNo: 'CH-GLD-29315', name: 'Anisur Rahman', phone: '01898765432', tier: 'Gold', points: 1250, issueDate: '2025-11-20', expiryDate: '2026-11-20', status: 'Active' },
-  { id: '3', cardNo: 'CH-PLT-50123', name: 'Tasnim Jahan', phone: '01911223344', tier: 'Platinum', points: 3400, issueDate: '2025-08-10', expiryDate: '2026-08-10', status: 'Active' },
-  { id: '4', cardNo: 'CH-SLV-77124', name: 'Kamrul Islam', phone: '01555667788', tier: 'Silver', points: 120, issueDate: '2026-03-01', expiryDate: '2027-03-01', status: 'Pending' },
-  { id: '5', cardNo: 'CH-GLD-44189', name: 'Sumaiya Akter', phone: '01677889900', tier: 'Gold', points: 1550, issueDate: '2025-12-05', expiryDate: '2026-12-05', status: 'Active' },
-  { id: '6', cardNo: 'CH-SLV-30214', name: 'Imran Khan', phone: '01311224455', tier: 'Silver', points: 450, issueDate: '2026-02-18', expiryDate: '2027-02-18', status: 'Suspended' }
-];
+const INITIAL_MEMBERS: MemberCard[] = [];
 
 const ITEMS_PER_PAGE = 25;
 
@@ -334,7 +327,7 @@ export default function MembershipCardPage() {
                     <TableRow>
                       <TableCell colSpan={9} className="h-48 text-center text-muted-foreground">
                         <CreditCardIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />
-                        No members matching filters.
+                        No membership card records found.
                       </TableCell>
                     </TableRow>
                   )}
