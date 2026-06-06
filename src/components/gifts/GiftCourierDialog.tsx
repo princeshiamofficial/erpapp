@@ -182,35 +182,22 @@ export function GiftCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
               />
             </div>
             {isNoteVisible && (
-              <>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <Label htmlFor="predefined-note" className="text-right">Courier Note</Label>
-                  <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
-                    <SelectTrigger id="predefined-note" className="col-span-2 h-8">
-                      <SelectValue placeholder="Choose a note (Optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none_selected">None</SelectItem>
-                      {courierNotesOptions.map((note) => (
-                        <SelectItem key={note.id} value={note.name}>
-                          {note.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-3 items-start gap-4">
-                  <Label htmlFor="courier-note-custom" className="text-right pt-2">Custom Note</Label>
-                  <Textarea
-                    id="courier-note-custom"
-                    value={courierNote}
-                    onChange={(e) => setCourierNote(e.target.value)}
-                    className="col-span-2 text-xs"
-                    placeholder="Custom delivery instructions..."
-                    rows={2}
-                  />
-                </div>
-              </>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label htmlFor="predefined-note" className="text-right">Courier Note</Label>
+                <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
+                  <SelectTrigger id="predefined-note" className="col-span-2 h-8">
+                    <SelectValue placeholder="Choose a note (Optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none_selected">None</SelectItem>
+                    {courierNotesOptions.map((note) => (
+                      <SelectItem key={note.id} value={note.name}>
+                        {note.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             <div className="grid grid-cols-3 items-center gap-4 mt-2 pt-2 border-t border-dashed">
               <Label className="text-right font-bold">Total COD</Label>
