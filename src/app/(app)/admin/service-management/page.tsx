@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, ArrowRight, Gift } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from "@/types";
@@ -21,7 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
+
 
 type ItemType = 'lamination' | 'paymentMethod' | 'gift';
 interface ItemToEdit {
@@ -236,19 +236,7 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
-        <div>
-          <h1 className="page-title">Service Options Management</h1>
-          <p className="page-description">Configure Lamination, Payment Methods, Gifts and other options available for orders. For more advanced settings, visit the new App Settings page.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/admin/crm-target-settings" passHref>
-            <Button variant="outline">
-              Go to App Settings <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      </div>
+
 
       <div className="flex flex-col space-y-6">
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
