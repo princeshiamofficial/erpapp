@@ -126,10 +126,11 @@ const calculateProgressInfo = (
 
   if (endDate) {
     effectiveTargetDate = parseISO(endDate);
-    slaStageName = " (Delivery SLA)";
     if (createdAt) {
       effectiveStartDate = parseISO(createdAt);
     }
+    const diffDays = Math.max(1, Math.round(differenceInSeconds(effectiveTargetDate, effectiveStartDate) / 86400));
+    slaStageName = ` (${diffDays} Day SLA)`;
   } else {
     switch (status) {
       case 'CR Clearance':

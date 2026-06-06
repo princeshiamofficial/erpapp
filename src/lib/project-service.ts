@@ -51,7 +51,9 @@ export const getProjects = async (): Promise<Project[]> => {
     ordersToDisplayAsProjects = allOrders
       .map(order => {
         const projectCreatedAt = order.createdAt || formatISO(new Date());
-        const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2));
+        const projectEndDate = order.acceptedDeliveryDate
+          ? order.acceptedDeliveryDate
+          : formatISO(addDays(new Date(projectCreatedAt), 2));
 
         let projectStatus: ProjectStatusType;
         if (order.currentStatus === 'cancelled') projectStatus = 'Cancel';
@@ -121,7 +123,9 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
     if (order) {
       console.log(`[getProjectById] Found order for ID ${projectId}. Building dynamic project view.`);
       const projectCreatedAt = order.createdAt || formatISO(new Date());
-      const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2));
+      const projectEndDate = order.acceptedDeliveryDate
+        ? order.acceptedDeliveryDate
+        : formatISO(addDays(new Date(projectCreatedAt), 2));
       const crmUser = await getAllUsersService().then(users => users.find(u => u.id === order.crmUserId));
 
       let projectStatus: ProjectStatusType;
