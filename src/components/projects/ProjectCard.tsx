@@ -115,7 +115,7 @@ const calculateProgressInfo = (
   else if (status === 'CO Clearance') effectiveStartDateIso = project.coClearanceAt || onDesignAt;
 
   if (!effectiveStartDateIso) {
-    effectiveStartDateIso = updatedAt || createdAt;
+    effectiveStartDateIso = createdAt || updatedAt;
   }
 
   if (!effectiveStartDateIso) {
