@@ -133,51 +133,19 @@ const calculateProgressInfo = (
     return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
   }
 
-  if (endDate) {
-    const projectStart = createdAt ? parseISO(createdAt) : effectiveStartDate;
-    const projectEnd = parseISO(endDate);
-    const totalDeliveryDays = Math.max(1, differenceInSeconds(projectEnd, projectStart) / 86400);
+  const projectStart = createdAt ? parseISO(createdAt) : effectiveStartDate;
+  const projectEnd = endDate ? parseISO(endDate) : addDays(projectStart, 7);
+  const totalDeliveryDays = Math.max(1, differenceInSeconds(projectEnd, projectStart) / 86400);
 
-    if (status === 'On Hold') {
-      effectiveTargetDate = addDays(effectiveStartDate, 15);
-      slaStageName = " (Max 15 Days)";
-    } else {
-      const weight = STAGE_WEIGHTS[status] || 1.0;
-      const allocatedDays = (weight / TOTAL_WEIGHT) * totalDeliveryDays;
-      effectiveTargetDate = new Date(effectiveStartDate.getTime() + Math.round(allocatedDays * 86400000));
-      const formattedDays = Number.isInteger(allocatedDays) ? allocatedDays.toString() : allocatedDays.toFixed(1);
-      slaStageName = ` (${formattedDays} Day SLA)`;
-    }
+  if (status === 'On Hold') {
+    effectiveTargetDate = addDays(effectiveStartDate, 15);
+    slaStageName = " (Max 15 Days)";
   } else {
-    switch (status) {
-      case 'CR Clearance':
-        effectiveTargetDate = addHours(effectiveStartDate, 24);
-        slaStageName = " (24H SLA)";
-        break;
-      case 'On Design':
-        effectiveTargetDate = addHours(effectiveStartDate, 48);
-        slaStageName = " (48H SLA)";
-        break;
-      case 'CO Clearance':
-        effectiveTargetDate = addHours(effectiveStartDate, 24);
-        slaStageName = " (24H SLA)";
-        break;
-      case 'On Hold':
-        effectiveTargetDate = addDays(effectiveStartDate, 15);
-        slaStageName = " (Max 15 Days)";
-        break;
-      case 'Logistics':
-        effectiveTargetDate = addHours(effectiveStartDate, 24);
-        slaStageName = " (24H SLA)";
-        break;
-      case 'Courier':
-        effectiveTargetDate = addHours(effectiveStartDate, 6);
-        slaStageName = " (6H SLA)";
-        break;
-      default:
-        showProgressBar = false;
-        return { showProgressBar, percentage: 0, displayText: "No target date", isOverdue: false, progressColorClass: "" };
-    }
+    const weight = STAGE_WEIGHTS[status] || 1.0;
+    const allocatedDays = (weight / TOTAL_WEIGHT) * totalDeliveryDays;
+    effectiveTargetDate = new Date(effectiveStartDate.getTime() + Math.round(allocatedDays * 86400000));
+    const formattedDays = Number.isInteger(allocatedDays) ? allocatedDays.toString() : allocatedDays.toFixed(1);
+    slaStageName = ` (${formattedDays} Day SLA)`;
   }
 
   let currentPercentage: number;
