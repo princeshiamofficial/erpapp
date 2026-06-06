@@ -8,7 +8,7 @@ import {
   updateGift as updateGiftInDb,
   deleteGift as deleteGiftFromDb,
   getGiftById,
-} from '@/lib/gift-service';
+} from '@/lib/membership-card-service';
 import { sendTelegramMessage } from "@/lib/notification-utils";
 
 const sanitizeForPackzy = (input: string | null | undefined): string => {
