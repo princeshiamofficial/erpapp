@@ -113,7 +113,7 @@ const calculateProgressInfo = (
     return { showProgressBar: true, percentage: 0, displayText: "Start date missing", isOverdue: false, progressColorClass: "bg-muted" };
   }
 
-  const effectiveStartDate = parseISO(effectiveStartDateIso);
+  let effectiveStartDate = parseISO(effectiveStartDateIso);
   let effectiveTargetDate = endDate ? parseISO(endDate) : now;
   let slaStageName: string | null = null;
   let showProgressBar = true;
@@ -124,38 +124,42 @@ const calculateProgressInfo = (
     return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
   }
 
-  switch (status) {
-    case 'CR Clearance':
-      effectiveTargetDate = addHours(effectiveStartDate, 24);
-      slaStageName = " (24H SLA)";
-      break;
-    case 'On Design':
-      effectiveTargetDate = addHours(effectiveStartDate, 48);
-      slaStageName = " (48H SLA)";
-      break;
-    case 'CO Clearance':
-      effectiveTargetDate = addHours(effectiveStartDate, 24);
-      slaStageName = " (24H SLA)";
-      break;
-    case 'On Hold':
-      effectiveTargetDate = addDays(effectiveStartDate, 15);
-      slaStageName = " (Max 15 Days)";
-      break;
-    case 'Logistics':
-      effectiveTargetDate = addHours(effectiveStartDate, 24);
-      slaStageName = " (24H SLA)";
-      break;
-    case 'Courier':
-      effectiveTargetDate = addHours(effectiveStartDate, 6);
-      slaStageName = " (6H SLA)";
-      break;
-    default:
-      if (!endDate) {
+  if (endDate) {
+    effectiveTargetDate = parseISO(endDate);
+    slaStageName = " (Delivery SLA)";
+    if (createdAt) {
+      effectiveStartDate = parseISO(createdAt);
+    }
+  } else {
+    switch (status) {
+      case 'CR Clearance':
+        effectiveTargetDate = addHours(effectiveStartDate, 24);
+        slaStageName = " (24H SLA)";
+        break;
+      case 'On Design':
+        effectiveTargetDate = addHours(effectiveStartDate, 48);
+        slaStageName = " (48H SLA)";
+        break;
+      case 'CO Clearance':
+        effectiveTargetDate = addHours(effectiveStartDate, 24);
+        slaStageName = " (24H SLA)";
+        break;
+      case 'On Hold':
+        effectiveTargetDate = addDays(effectiveStartDate, 15);
+        slaStageName = " (Max 15 Days)";
+        break;
+      case 'Logistics':
+        effectiveTargetDate = addHours(effectiveStartDate, 24);
+        slaStageName = " (24H SLA)";
+        break;
+      case 'Courier':
+        effectiveTargetDate = addHours(effectiveStartDate, 6);
+        slaStageName = " (6H SLA)";
+        break;
+      default:
         showProgressBar = false;
         return { showProgressBar, percentage: 0, displayText: "No target date", isOverdue: false, progressColorClass: "" };
-      }
-      effectiveTargetDate = parseISO(endDate);
-      break;
+    }
   }
 
   let currentPercentage: number;
@@ -177,7 +181,7 @@ const calculateProgressInfo = (
   } else {
     const secondsRemaining = differenceInSeconds(effectiveTargetDate, now);
     if (secondsRemaining <= 0) {
-      currentDisplayText = (status === 'On Hold') ? "Hold period ended" : "Stage due";
+      currentDisplayText = (status === 'On Hold') ? "Hold period ended" : (endDate ? "Delivery date reached" : "Stage due");
       currentPercentage = 100;
       progressColorClass = isAfter(now, effectiveTargetDate) ? 'bg-destructive' : 'bg-yellow-500';
     } else {
