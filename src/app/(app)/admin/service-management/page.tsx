@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from "@/types";
@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 
-type ItemType = 'lamination' | 'paymentMethod' | 'gift';
+type ItemType = 'lamination' | 'paymentMethod' | 'gift' | 'courierNote';
 interface ItemToEdit {
   id: string;
   name: string;
@@ -43,6 +43,11 @@ export default function ServiceManagementPage() {
   const [laminations, setLaminations] = useState<ServiceLaminationItem[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [gifts, setGifts] = useState<ServiceGiftItem[]>([]);
+  const [courierNotes, setCourierNotes] = useState<{ id: string; name: string }[]>([
+    { id: '1', name: 'Please call before delivery' },
+    { id: '2', name: 'Leave at front desk' },
+    { id: '3', name: 'Do not bend package' }
+  ]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -89,7 +94,7 @@ export default function ServiceManagementPage() {
     setIsAddEditDialogOpen(true);
   };
 
-  const openEditDialog = (item: ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem, type: ItemType) => {
+  const openEditDialog = (item: { id: string; name: string }, type: ItemType) => {
     setEditingItem({
       id: item.id,
       name: item.name,
@@ -100,7 +105,7 @@ export default function ServiceManagementPage() {
     setIsAddEditDialogOpen(true);
   };
 
-  const openDeleteDialog = (item: ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem, type: ItemType) => {
+  const openDeleteDialog = (item: { id: string; name: string }, type: ItemType) => {
     setItemToDelete({ id: item.id, name: item.name, type });
     setIsDeleteDialogOpen(true);
   };
@@ -122,6 +127,9 @@ export default function ServiceManagementPage() {
         result = await updatePaymentMethodAction(editingItem.id, itemName.trim());
       } else if (currentType === 'gift') {
         result = await updateGiftAction(editingItem.id, itemName.trim());
+      } else if (currentType === 'courierNote') {
+        setCourierNotes(prev => prev.map(note => note.id === editingItem.id ? { ...note, name: itemName.trim() } : note));
+        result = { success: true };
       }
       if (result?.success) {
         toast({ title: "Success", description: `${currentType} "${itemName.trim()}" updated.` });
@@ -133,6 +141,10 @@ export default function ServiceManagementPage() {
         result = await addPaymentMethodAction(itemName.trim());
       } else if (currentType === 'gift') {
         result = await addGiftAction(itemName.trim());
+      } else if (currentType === 'courierNote') {
+        const newNote = { id: Math.random().toString(36).substr(2, 9), name: itemName.trim() };
+        setCourierNotes(prev => [...prev, newNote]);
+        result = { success: true };
       }
       if (result?.success) {
         toast({ title: "Success", description: `${currentType} "${itemName.trim()}" added.` });
@@ -144,7 +156,9 @@ export default function ServiceManagementPage() {
       setItemName('');
       setEditingItem(null);
       setItemTypeToAdd(null);
-      await fetchData();
+      if (currentType !== 'courierNote') {
+        await fetchData();
+      }
     } else if (result) {
       toast({ title: "Error", description: result.error || `Could not save ${currentType}.`, variant: "destructive" });
     }
@@ -161,13 +175,18 @@ export default function ServiceManagementPage() {
       result = await deletePaymentMethodAction(itemToDelete.id);
     } else if (itemToDelete.type === 'gift') {
       result = await deleteGiftAction(itemToDelete.id);
+    } else if (itemToDelete.type === 'courierNote') {
+      setCourierNotes(prev => prev.filter(note => note.id !== itemToDelete.id));
+      result = { success: true };
     }
 
     if (result?.success) {
       toast({ title: "Success", description: `${itemToDelete.type} "${itemToDelete.name}" deleted.` });
       setIsDeleteDialogOpen(false);
       setItemToDelete(null);
-      await fetchData();
+      if (itemToDelete.type !== 'courierNote') {
+        await fetchData();
+      }
     } else if (result) {
       toast({ title: "Error", description: result.error || `Could not delete ${itemToDelete.type}. It might be in use.`, variant: "destructive" });
     }
@@ -182,7 +201,7 @@ export default function ServiceManagementPage() {
     );
   }
 
-  const renderItemList = (items: (ServiceLaminationItem | ServicePaymentMethodItem | ServiceGiftItem)[], type: ItemType, title: string, Icon: React.ElementType) => {
+  const renderItemList = (items: { id: string; name: string }[], type: ItemType, title: string, Icon: React.ElementType) => {
     return (
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
         <CardHeader className="border-b p-5">
@@ -236,10 +255,13 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
         {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)}
         {renderItemList(gifts, 'gift', 'Gifts', Gift)}
+        {renderItemList(courierNotes, 'courierNote', 'Courier Notes', ClipboardList)}
       </div>
 
       {/* Add/Edit Dialog */}
@@ -249,7 +271,8 @@ export default function ServiceManagementPage() {
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {
               (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' :
                 (editingItem?.type || itemTypeToAdd) === 'paymentMethod' ? 'Payment Method' :
-                  'Gift'
+                  (editingItem?.type || itemTypeToAdd) === 'gift' ? 'Gift' :
+                    'Courier Note'
             }</DialogTitle>
             <DialogDescription>
               {editingItem ? 'Update the name of this option.' : 'Enter the name for the new option.'}
