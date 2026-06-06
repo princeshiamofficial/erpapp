@@ -163,9 +163,9 @@ export async function transferGiftToCourierAction(
     const telegramMessage = `
 <b>💳 Membership Card Shipped via SteadFast!</b>
 
-<b>Card ID:</b> <code>${existingGift.giftIdDisplay}</code>
+<b>Issue ID:</b> <code>${existingGift.giftIdDisplay}</code>
 <b>Card No.:</b> ${existingGift.giftItemName}
-<b>Card Holder:</b> ${recipientNameRaw}
+<b>Cardholder:</b> ${recipientNameRaw}
 <b>COD (Shipping):</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
 <b>Sent By:</b> ${actingUser.name}
     `;

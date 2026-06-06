@@ -205,7 +205,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit' : 'Issue'} Membership Card</DialogTitle>
           <DialogDescription>
-            {isEditMode ? `Update details for card ID: ${gift.giftIdDisplay}` : 'Record a new membership card issued to a client.'}
+            {isEditMode ? `Update details for Issue ID: ${gift.giftIdDisplay}` : 'Record a new membership card issued to a client.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
@@ -221,18 +221,18 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="recipientName">Card Holder Name</Label>
+              <Label htmlFor="recipientName">Cardholder Name</Label>
               <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required className="border-gray-400 dark:border-gray-600" />
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="recipientPhone">Card Holder Phone</Label>
+            <Label htmlFor="recipientPhone">Cardholder Phone</Label>
             <Input id="recipientPhone" value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} required className="border-gray-400 dark:border-gray-600" />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="recipientAddress">Card Holder Address</Label>
+            <Label htmlFor="recipientAddress">Cardholder Address</Label>
             <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required className="border-gray-400 dark:border-gray-600 min-h-[80px]" />
           </div>
 

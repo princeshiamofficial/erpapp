@@ -250,10 +250,10 @@ export default function MembershipCardPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="pl-6">Card ID</TableHead>
+                    <TableHead className="pl-6">Issue ID</TableHead>
                     <TableHead>Job ID</TableHead>
                     <TableHead>Card No.</TableHead>
-                    <TableHead>Card Holder</TableHead>
+                    <TableHead>Cardholder</TableHead>
                     <TableHead>Phone Number</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Date Issued</TableHead>

@@ -109,7 +109,7 @@ export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
         {gift && (
           <div className="text-sm text-foreground bg-secondary/50 p-4 rounded-md border border-border/50 space-y-3">
             <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="recipient" className="text-right">Card Holder</Label>
+              <Label htmlFor="recipient" className="text-right">Cardholder</Label>
               <Input
                 id="recipient"
                 value={editableRecipient}
