@@ -12,7 +12,7 @@ import {
   Crown, 
   Trash2, 
   Edit3,
-  CreditCard
+  CreditCard as CreditCardIcon
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { format, parseISO } from 'date-fns';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 
 interface MemberCard {
@@ -46,14 +47,21 @@ const INITIAL_MEMBERS: MemberCard[] = [
 
 const ITEMS_PER_PAGE = 25;
 
+const formatDate = (dateString?: string) => {
+  if (!dateString) return "N/A";
+  try {
+    return format(parseISO(dateString), 'd MMM yyyy');
+  } catch (e) {
+    return "Invalid Date";
+  }
+};
+
 export default function MembershipCardPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
   const [members, setMembers] = useState<MemberCard[]>(INITIAL_MEMBERS);
   const [searchTerm, setSearchTerm] = useState('');
-  const [tierFilter, setTierFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<MemberCard | null>(null);
@@ -72,14 +80,13 @@ export default function MembershipCardPage() {
       const matchesSearch = 
         m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.phone.includes(searchTerm) ||
-        m.cardNo.toLowerCase().includes(searchTerm.toLowerCase());
-        
-      const matchesTier = tierFilter === 'all' || m.tier === tierFilter;
-      const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+        m.cardNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.tier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.status.toLowerCase().includes(searchTerm.toLowerCase());
       
-      return matchesSearch && matchesTier && matchesStatus;
+      return matchesSearch;
     });
-  }, [members, searchTerm, tierFilter, statusFilter]);
+  }, [members, searchTerm]);
 
   const totalPages = Math.ceil(filteredMembers.length / ITEMS_PER_PAGE);
 
@@ -90,7 +97,7 @@ export default function MembershipCardPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, tierFilter, statusFilter]);
+  }, [searchTerm]);
 
   const handleOpenAddDialog = () => {
     setSelectedMember(null);
@@ -154,23 +161,6 @@ export default function MembershipCardPage() {
   const handleDelete = (id: string) => {
     setMembers(prev => prev.filter(m => m.id !== id));
     toast({ title: "Card Terminated", description: "Membership card has been terminated.", variant: "destructive" });
-  };
-
-  const getCardStyle = (tier: 'Silver' | 'Gold' | 'Platinum') => {
-    switch (tier) {
-      case 'Platinum':
-        return {
-          badgeClass: 'bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700',
-        };
-      case 'Gold':
-        return {
-          badgeClass: 'bg-amber-500/10 text-amber-500 border border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30',
-        };
-      default: // Silver
-        return {
-          badgeClass: 'bg-slate-500/10 text-slate-500 border border-slate-500/20 dark:bg-slate-500/20 dark:text-slate-400 dark:border-slate-500/30',
-        };
-    }
   };
 
   const renderPagination = () => {
@@ -261,38 +251,14 @@ export default function MembershipCardPage() {
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle className="text-card-foreground text-xl">All Membership Cards</CardTitle>
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search member, phone, card..." 
-                    value={searchTerm} 
-                    onChange={(e) => setSearchTerm(e.target.value)} 
-                    className="pl-10 bg-background h-10 rounded-md w-full" 
-                  />
-                </div>
-                <Select value={tierFilter} onValueChange={setTierFilter}>
-                  <SelectTrigger className="w-full sm:w-[140px] bg-background h-10">
-                    <SelectValue placeholder="Filter Tier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Tiers</SelectItem>
-                    <SelectItem value="Silver">Silver</SelectItem>
-                    <SelectItem value="Gold">Gold</SelectItem>
-                    <SelectItem value="Platinum">Platinum</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[140px] bg-background h-10">
-                    <SelectValue placeholder="Filter Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Suspended">Suspended</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search member, phone, card..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  className="pl-10 bg-background h-10 rounded-md w-full" 
+                />
               </div>
             </div>
           </CardHeader>
@@ -303,8 +269,8 @@ export default function MembershipCardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-6">Card No</TableHead>
-                    <TableHead>Member Name</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead>Member Name</TableHead>
                     <TableHead>Tier</TableHead>
                     <TableHead>Points</TableHead>
                     <TableHead>Issue Date</TableHead>
@@ -316,20 +282,17 @@ export default function MembershipCardPage() {
                 <TableBody>
                   {paginatedMembers.length > 0 ? (
                     paginatedMembers.map((member) => {
-                      const styleConfig = getCardStyle(member.tier);
                       return (
                         <TableRow key={member.id} className="hover:bg-muted/50">
-                          <TableCell className="pl-6 font-mono font-bold text-primary">{member.cardNo}</TableCell>
-                          <TableCell className="font-semibold text-foreground">{member.name}</TableCell>
-                          <TableCell className="font-mono text-sm">{member.phone}</TableCell>
-                          <TableCell>
-                            <span className={cn("inline-flex items-center text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border", styleConfig.badgeClass)}>
-                              {member.tier}
-                            </span>
+                          <TableCell className="pl-6 font-mono text-primary font-bold">{member.cardNo}</TableCell>
+                          <TableCell className="font-mono text-muted-foreground">{member.phone}</TableCell>
+                          <TableCell className="font-medium">{member.name}</TableCell>
+                          <TableCell>{member.tier}</TableCell>
+                          <TableCell>{member.points}</TableCell>
+                          <TableCell>{formatDate(member.issueDate)}</TableCell>
+                          <TableCell className="max-w-[250px] truncate text-muted-foreground text-sm" title={formatDate(member.expiryDate)}>
+                            {formatDate(member.expiryDate)}
                           </TableCell>
-                          <TableCell className="font-bold text-foreground">{member.points}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{member.issueDate}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{member.expiryDate}</TableCell>
                           <TableCell>
                             <span className={cn(
                               "inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full",
@@ -370,7 +333,7 @@ export default function MembershipCardPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={9} className="h-48 text-center text-muted-foreground">
-                        <CreditCard className="mx-auto h-12 w-12 opacity-30 mb-3" />
+                        <CreditCardIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />
                         No members matching filters.
                       </TableCell>
                     </TableRow>
