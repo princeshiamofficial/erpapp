@@ -87,7 +87,7 @@ const navItems: NavItem[] = [
     roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"],
     href: "",
     subItems: [
-      { href: "/gifts", label: "Gift", icon: Gift, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "/gifts", label: "Client Gifts", icon: Gift, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/membership-card", label: "Membership Card", icon: CreditCard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
