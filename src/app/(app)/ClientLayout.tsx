@@ -41,7 +41,7 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
                     <SidebarHeader className="p-4 flex flex-row items-center justify-center gap-2 h-[4.5rem] border-b border-sidebar-border/70 bg-black text-white">
                         <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:hidden">
                             <Image
-                                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                                src="/w-logo.png"
                                 alt="Color Hut Logo"
                                 width={160}
                                 height={40}

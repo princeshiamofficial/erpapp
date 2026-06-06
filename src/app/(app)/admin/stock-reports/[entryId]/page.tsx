@@ -133,7 +133,7 @@ export default function SellEntryInvoicePage() {
                         <div className="flex items-center gap-6">
                             <div className="p-3 bg-primary/5 rounded-2xl print:p-0 print:bg-transparent">
                                 <NextImage
-                                    src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                                    src="/logo.png"
                                     alt="Color Hut Logo"
                                     width={140}
                                     height={35}

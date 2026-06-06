@@ -554,9 +554,9 @@ export function ProjectsKanbanClient() {
 
     return baseProjects.filter(project => {
       const matchesSearchTerm = debouncedSearchTerm.trim() === '' ||
-        project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        project.projectIdDisplay.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        project.assigneeName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (project.name || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (project.projectIdDisplay || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (project.assigneeName || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         (project.designerRepresentativeName || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
 

@@ -124,14 +124,14 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
     <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl invoice-page print:shadow-none print:border-none print:p-0 print:max-w-none print:w-full print:bg-transparent print:text-[13px] print:leading-tight">
       <div className="flex flex-col sm:flex-row justify-between items-start mb-4 pb-4 border-b border-border/30 print:mb-2 print:pb-2 print:border-border/50 print:break-inside-avoid">
         <div>
-          <div className="relative w-[162px] h-[50px] mb-2 p-1 bg-black rounded-lg">
+          <div className="mb-2">
             <Image
               src="/logo.png"
               alt="Color Hut Logo"
-              fill
+              width={160}
+              height={40}
               priority
-              sizes="162px"
-              className="object-contain rounded-lg print:relative print:w-36 print:h-auto"
+              className="object-contain print:w-32 print:h-auto"
             />
           </div>
           <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>

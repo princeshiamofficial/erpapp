@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: InvoicePageProps): Promise<Me
   const businessName = companyNameParts.length > 1 ? companyNameParts[companyNameParts.length - 1] : order.companyName;
 
   return {
-    title: `${businessName} | Order Invoice`,
+    title: `${businessName} | Color Hut`,
   };
 }
 
@@ -56,7 +56,7 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
   const plainAllUsers = JSON.parse(JSON.stringify(allUsersResult));
 
   return (
-    <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
+    <div className="selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
 
 
       <Suspense fallback={<InvoicePageSkeleton />}>
@@ -67,10 +67,6 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
         />
       </Suspense>
 
-      <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30 print:hidden">
-        <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} <span className="font-bold">Color Hut</span>. All rights reserved.</p>
-        <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 sm:mt-1.5">Precision Order Tracking, Simplified.</p>
-      </footer>
     </div>
   );
 }

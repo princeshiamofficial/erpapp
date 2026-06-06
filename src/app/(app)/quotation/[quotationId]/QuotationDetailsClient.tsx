@@ -108,7 +108,7 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
         <div>
           <div className="mb-2">
             <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+              src="/logo.png"
               alt="Color Hut Logo"
               width={160}
               height={40}

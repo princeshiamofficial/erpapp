@@ -68,7 +68,7 @@ export function BillDetailsClient({ bill: initialBill, vendor }: BillDetailsClie
           <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> INVOICE</h2>
           <div className="mb-2">
             <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+              src="/logo.png"
               alt="Color Hut Logo"
               width={160}
               height={40}

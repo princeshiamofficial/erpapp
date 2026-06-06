@@ -44,7 +44,7 @@ export function LoginForm() {
       <CardHeader className="text-center pt-8 pb-4 bg-black rounded-t-xl">
         <div className="mx-auto mb-4">
           <Image
-            src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+            src="/w-logo.png"
             alt="Color Hut Logo"
             width={253}
             height={64}

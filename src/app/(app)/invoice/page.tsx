@@ -244,9 +244,9 @@ export default function InvoiceListPage() {
 
   return (
     <>
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8 print:hidden">
-        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
+      <div className="space-y-6 print:hidden">
+        <Card className="shadow-xl border bg-card rounded-lg">
+          <CardHeader className="border-b p-5 lg:sticky lg:top-[4.5rem] lg:z-20 lg:bg-card lg:rounded-t-lg">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex-grow">
                 <CardTitle className="text-card-foreground text-xl">All Order Invoices</CardTitle>
@@ -313,11 +313,11 @@ export default function InvoiceListPage() {
                 </Button>
               </div>
             )}
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+            <div className="lg:overflow-visible">
+              <Table containerClassName="overflow-auto lg:overflow-visible">
+                <TableHeader className="lg:sticky lg:top-[9.5rem] bg-card z-20 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                   <TableRow>
-                    <TableHead className="w-12 text-center pl-4">
+                    <TableHead className="w-12 text-center pl-4 lg:sticky lg:top-[9.5rem] bg-card z-20">
                       <Checkbox
                         checked={
                           (numSelected > 0 && numSelected < filteredOrders.length)
@@ -328,12 +328,12 @@ export default function InvoiceListPage() {
                         aria-label="Select all rows"
                       />
                     </TableHead>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Net Payable</TableHead>
-                    <TableHead>Paid</TableHead>
-                    <TableHead>Due</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Order ID</TableHead>
+                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Company</TableHead>
+                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Net Payable</TableHead>
+                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Paid</TableHead>
+                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Due</TableHead>
+                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

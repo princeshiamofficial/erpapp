@@ -3,11 +3,13 @@
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } from 'react';
 import Image from 'next/image';
+import Lottie from 'lottie-react';
+import infoAnimation from '../../../../public/info-animation.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -196,12 +198,24 @@ export function OrderDetailsClient({
   const getStatusIcon = (statusId: string, sizeClass = "h-6 w-6") => {
     const statusInfoToUse = getStatusDisplayInfo(statusId);
     const commonClasses = `${sizeClass} mr-2 flex-shrink-0`;
+
+    const renderInfoLottie = () => {
+      if (!isClient) {
+        return <Info className={`${commonClasses} text-primary/80`} />;
+      }
+      return (
+        <div className={`${sizeClass} mr-2 flex-shrink-0`}>
+          <Lottie animationData={infoAnimation} loop={true} />
+        </div>
+      );
+    };
+
     if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) return <CheckCircle className={`${commonClasses} text-green-500`} />;
-    if (statusInfoToUse.name.toLowerCase().includes("design")) return <Info className={`${commonClasses} text-teal-500`} />;
-    if (statusInfoToUse.name.toLowerCase().includes("production")) return <Info className={`${commonClasses} text-blue-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("design")) return renderInfoLottie();
+    if (statusInfoToUse.name.toLowerCase().includes("production")) return renderInfoLottie();
     if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) return <Clock className={`${commonClasses} text-yellow-600`} />;
     if (statusInfoToUse.name.toLowerCase().includes("cancelled")) return <Info className={`${commonClasses} text-red-500`} />;
-    return <Info className={`${commonClasses} text-gray-500`} />;
+    return renderInfoLottie();
   };
 
   const handleCommentSubmit = async (e: FormEvent) => {
@@ -502,42 +516,50 @@ export function OrderDetailsClient({
     <>
       <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center space-x-4 mb-4 sm:mb-0">
-                <Image
-                  src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-                  alt="Color Hut Logo"
-                  width={160}
-                  height={40}
-                  priority
-                  className="object-contain rounded-lg"
-                />
-              </div>
-            </div>
-
+          <CardHeader className="bg-card py-4 px-6 sm:py-5 sm:px-8 border-b border-border/40">
             {(!packzyStatus || packzyStatus === 'unavailable') && (
-              <div className="mt-4 pt-4 border-t border-border/30">
-                <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">{getStatusIcon(order.currentStatus, "h-7 w-7")}Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span></h3>
-                <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
+              <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
+                {getStatusIcon(order.currentStatus, "h-14 w-14 !mr-0")}
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
+                    <span>Current Status:</span>
+                    <span
+                      className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border shadow-sm transition-all duration-200"
+                      style={{
+                        backgroundColor: `${currentStatusInfo.color}15`,
+                        color: currentStatusInfo.color,
+                        borderColor: `${currentStatusInfo.color}30`
+                      }}
+                    >
+                      {currentStatusInfo.name}
+                    </span>
+                  </h3>
+                  <div className="text-xs text-muted-foreground mt-2">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
+                </div>
               </div>
             )}
 
             {order.packzyTrackingCode && (
-              <div className="mt-4 pt-4 border-t border-border/30">
-                <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
-                  <Truck className="h-7 w-7 mr-2 text-primary/80" />
-                  Current Status (SteadFast)
-                </h3>
-                <div className="ml-[40px] sm:ml-[44px]">
-                  {isLoadingPackzyStatus ? (
-                    <Skeleton className="h-7 w-32" />
-                  ) : packzyStatus && packzyStatus !== 'unavailable' ? (
-                    <p className="text-2xl font-bold text-green-600 capitalize">{packzyStatus}</p>
-                  ) : (
-                    <p className="text-muted-foreground">Could not retrieve courier status.</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-0.5">Tracking Code: {order.packzyTrackingCode}</p>
+              <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <Truck className="h-14 w-14 text-primary/80 animate-bounce" style={{ animationDuration: '3s' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-foreground leading-tight">
+                    Current Status (SteadFast)
+                  </h3>
+                  <div className="mt-2">
+                    {isLoadingPackzyStatus ? (
+                      <Skeleton className="h-7 w-32" />
+                    ) : packzyStatus && packzyStatus !== 'unavailable' ? (
+                      <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-600 shadow-sm capitalize">
+                        {packzyStatus}
+                      </span>
+                    ) : (
+                      <p className="text-muted-foreground">Could not retrieve courier status.</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2">Tracking Code: {order.packzyTrackingCode}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -547,8 +569,16 @@ export function OrderDetailsClient({
         <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
           <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
             <div>
-              <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> INVOICE</h2>
-              <p className="font-bold text-foreground">Color Hut</p>
+              <div className="mb-2">
+                <Image
+                  src="/logo.png"
+                  alt="Color Hut Logo"
+                  width={160}
+                  height={40}
+                  priority
+                  className="object-contain print:w-32 print:h-auto"
+                />
+              </div>
               <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
               <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
               <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
