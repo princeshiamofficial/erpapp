@@ -221,7 +221,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="recipientName">Cardholder Name</Label>
+              <Label htmlFor="recipientName">Cardholder</Label>
               <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required className="border-gray-400 dark:border-gray-600" />
             </div>
           </div>
