@@ -85,6 +85,15 @@ interface ProgressInfo {
   progressColorClass: string;
 }
 
+const STAGE_WEIGHTS: Record<string, number> = {
+  'CR Clearance': 1.0,
+  'On Design': 2.0,
+  'CO Clearance': 1.0,
+  'Logistics': 1.0,
+  'Courier': 0.25,
+};
+const TOTAL_WEIGHT = 5.25;
+
 const calculateProgressInfo = (
   project: Project,
   now: Date
@@ -125,12 +134,20 @@ const calculateProgressInfo = (
   }
 
   if (endDate) {
-    effectiveTargetDate = parseISO(endDate);
-    if (createdAt) {
-      effectiveStartDate = parseISO(createdAt);
+    const projectStart = createdAt ? parseISO(createdAt) : effectiveStartDate;
+    const projectEnd = parseISO(endDate);
+    const totalDeliveryDays = Math.max(1, differenceInSeconds(projectEnd, projectStart) / 86400);
+
+    if (status === 'On Hold') {
+      effectiveTargetDate = addDays(effectiveStartDate, 15);
+      slaStageName = " (Max 15 Days)";
+    } else {
+      const weight = STAGE_WEIGHTS[status] || 1.0;
+      const allocatedDays = (weight / TOTAL_WEIGHT) * totalDeliveryDays;
+      effectiveTargetDate = new Date(effectiveStartDate.getTime() + Math.round(allocatedDays * 86400000));
+      const formattedDays = Number.isInteger(allocatedDays) ? allocatedDays.toString() : allocatedDays.toFixed(1);
+      slaStageName = ` (${formattedDays} Day SLA)`;
     }
-    const diffDays = Math.max(1, Math.round(differenceInSeconds(effectiveTargetDate, effectiveStartDate) / 86400));
-    slaStageName = ` (${diffDays} Day SLA)`;
   } else {
     switch (status) {
       case 'CR Clearance':
