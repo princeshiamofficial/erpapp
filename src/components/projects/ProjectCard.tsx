@@ -102,7 +102,10 @@ const formatSlaHours = (hours: number): string => {
     if (d === 1) return `1 Day SLA`;
     return `${d} Days SLA`;
   } else {
-    if (d === 0) return `${h}H SLA`;
+    if (d === 0) {
+      if (h === 1) return `1 Hour SLA`;
+      return `${h} Hours SLA`;
+    }
     return `${d}d ${h}H SLA`;
   }
 };
