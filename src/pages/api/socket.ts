@@ -51,6 +51,14 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIO) => {
                 socket.broadcast.emit("lead-updated", data);
             });
 
+            socket.on("gift-updated", (data) => {
+                socket.broadcast.emit("gift-updated", data);
+            });
+
+            socket.on("membership-card-updated", (data) => {
+                socket.broadcast.emit("membership-card-updated", data);
+            });
+
             socket.on("disconnect", () => {
                 console.log("Client disconnected:", socket.id);
             });

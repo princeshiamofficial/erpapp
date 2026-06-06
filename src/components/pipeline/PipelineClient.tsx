@@ -237,10 +237,10 @@ export function PipelineClient() {
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
       baseLeads = baseLeads.filter(lead =>
-        lead.contactName.toLowerCase().includes(lowercasedFilter) ||
-        lead.businessName.toLowerCase().includes(lowercasedFilter) ||
-        lead.phone.toLowerCase().includes(lowercasedFilter) ||
-        lead.source.toLowerCase().includes(lowercasedFilter) ||
+        (lead.contactName && lead.contactName.toLowerCase().includes(lowercasedFilter)) ||
+        (lead.businessName && lead.businessName.toLowerCase().includes(lowercasedFilter)) ||
+        (lead.phone && lead.phone.toLowerCase().includes(lowercasedFilter)) ||
+        (lead.source && lead.source.toLowerCase().includes(lowercasedFilter)) ||
         (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
       );
     }

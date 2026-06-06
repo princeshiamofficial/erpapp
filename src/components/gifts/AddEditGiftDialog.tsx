@@ -107,11 +107,6 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
           });
           
           setOrderId(matchingOrder ? matchingOrder.id : null);
-
-          toast({
-            title: "Existing Client Found",
-            description: `Details for "${trimmedJobId}" have been auto-filled from clients database.`,
-          });
           return;
         }
       } catch (err) {
@@ -135,11 +130,6 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
           setRecipientName(actualName);
           setRecipientPhone(found.phoneNumber);
           setRecipientAddress(found.address);
-
-          toast({
-            title: "Active Job Found",
-            description: `Details for "${trimmedJobId}" have been auto-filled from active jobs.`,
-          });
         } else {
           setOrderId(null);
         }

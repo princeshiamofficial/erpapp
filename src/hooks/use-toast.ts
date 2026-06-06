@@ -201,6 +201,14 @@ function toast({ ...props }: Toast) {
     },
   })
 
+  // Auto-dismiss after duration (default: 4000ms)
+  const autoDismissDuration = props.duration || 4000;
+  if (autoDismissDuration !== Infinity) {
+    setTimeout(() => {
+      dismiss();
+    }, autoDismissDuration);
+  }
+
   playToastSound();
 
   return {

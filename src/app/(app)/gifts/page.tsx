@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Search, Edit3, Trash2, MoreVertical, Gift as GiftIcon, Loader2, Truck } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { useSocket } from "@/contexts/socket-context";
 import { useRouter } from "next/navigation";
 import type { Gift, User, ServiceGiftItem, TrackingLink } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,6 +42,7 @@ export default function GiftsPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { socket } = useSocket();
 
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [giftOptions, setGiftOptions] = useState<ServiceGiftItem[]>([]);
@@ -92,6 +94,19 @@ export default function GiftsPage() {
       console.error("Failed to silently sync gifts data:", error);
     }
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("gift-updated", (data: any) => {
+      console.log("Gift updated remotely:", data);
+      fetchDataSilent();
+    });
+
+    return () => {
+      socket.off("gift-updated");
+    };
+  }, [socket, fetchDataSilent]);
 
   useEffect(() => {
     if (currentUser) {
@@ -270,21 +285,18 @@ export default function GiftsPage() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div><h1 className="page-title">Client Gifts</h1><p className="page-description">Manage and track gifts given to clients.</p></div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button size="lg" onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md">
-              <PlusCircle className="mr-2 h-5 w-5" />Create Gift
-            </Button>
-          </div>
-        </div>
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle className="text-card-foreground text-xl">All Gift Records</CardTitle>
-              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search gifts, Job ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-background h-10 rounded-md w-full" />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search gifts, Job ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-background h-10 rounded-md w-full" />
+                </div>
+                <Button onClick={handleOpenAddDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md whitespace-nowrap">
+                  <PlusCircle className="mr-2 h-4 w-4" />Create Gift
+                </Button>
               </div>
             </div>
           </CardHeader>

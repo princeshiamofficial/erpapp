@@ -10,6 +10,7 @@ import {
   getGiftById,
 } from '@/lib/membership-card-service';
 import { sendTelegramMessage } from "@/lib/notification-utils";
+import { getIO } from "@/lib/socket-io";
 
 const sanitizeForPackzy = (input: string | null | undefined): string => {
   if (!input) return '';
@@ -36,6 +37,10 @@ export async function addGiftAction(
     const newGift = await addGiftToDb(giftData, currentUser);
     if (newGift) {
       revalidatePath("/(app)/membership-card");
+      const io = getIO();
+      if (io) {
+        io.emit("membership-card-updated", { type: 'create', gift: newGift });
+      }
       return { success: true, gift: newGift };
     }
     return { success: false, error: "Failed to add gift to database." };
@@ -54,6 +59,10 @@ export async function updateGiftAction(
     const updatedGift = await updateGiftInDb(giftId, updates, currentUser);
     if (updatedGift) {
       revalidatePath("/(app)/membership-card");
+      const io = getIO();
+      if (io) {
+        io.emit("membership-card-updated", { type: 'update', gift: updatedGift });
+      }
       return { success: true, gift: updatedGift };
     }
     return { success: false, error: "Failed to update gift in database." };
@@ -68,6 +77,10 @@ export async function deleteGift(giftId: string): Promise<{ success: boolean; er
     const success = await deleteGiftFromDb(giftId);
     if (success) {
       revalidatePath("/(app)/membership-card");
+      const io = getIO();
+      if (io) {
+        io.emit("membership-card-updated", { type: 'delete', id: giftId });
+      }
       return { success: true };
     }
     return { success: false, error: "Failed to delete gift from database." };
@@ -158,6 +171,11 @@ export async function transferGiftToCourierAction(
 
     if (!giftUpdateSuccess) {
       return { success: false, error: "Consignment created, but failed to update membership card record." };
+    }
+
+    const io = getIO();
+    if (io) {
+      io.emit("membership-card-updated", { type: 'update', gift: giftUpdateSuccess });
     }
 
     const telegramMessage = `

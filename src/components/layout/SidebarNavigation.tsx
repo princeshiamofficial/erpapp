@@ -113,6 +113,7 @@ const navItems: NavItem[] = [
   { href: "/report", label: "Report", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/projects", label: "Projects", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR", "CO"] },
   { href: "/admin/stock-reports", label: "Stock Reports", icon: BarChart3, roles: ["LR"] },
+  { href: "/membership-card", label: "Membership Card", icon: CreditCard, roles: ["LR"] },
   {
     isHeader: true,
     label: "Administration",

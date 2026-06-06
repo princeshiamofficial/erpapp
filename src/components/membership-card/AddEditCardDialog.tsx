@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Gift, User, ServiceGiftItem, TrackingLink } from "@/types";
+import type { Card, User, ServiceGiftItem, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addGiftAction, updateGiftAction } from '@/app/(app)/membership-card/actions';
 import { getClientDetailsAction } from '@/app/(app)/orders/actions';
@@ -19,15 +19,27 @@ import { format } from 'date-fns';
 interface AddEditCardDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onGiftSaved: (gift: Gift) => void;
-  gift?: Gift | null;
+  onCardSaved: (card: Card) => void;
+  card?: Card | null;
   currentUser: User;
-  giftOptions: ServiceGiftItem[];
+  cardOptions: ServiceGiftItem[];
   allOrders: TrackingLink[];
+  existingCards?: Card[];
 }
 
-export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, currentUser, giftOptions, allOrders }: AddEditCardDialogProps) {
+export function AddEditCardDialog({ isOpen, onOpenChange, onCardSaved, card, currentUser, cardOptions, allOrders, existingCards = [] }: AddEditCardDialogProps) {
   const [cardNo, setCardNo] = useState('');
+
+  const formatCardNo = (value: string) => {
+    // Strip all non-digits
+    const digits = value.replace(/\D/g, '');
+    // Insert space after every 4 digits
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ').slice(0, 19);
+  };
+
+  const handleCardNoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCardNo(formatCardNo(e.target.value));
+  };
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -35,27 +47,27 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
   const [dateGiven, setDateGiven] = useState<Date | undefined>(new Date());
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGiftPopoverOpen, setIsGiftPopoverOpen] = useState(false);
+  const [isCardPopoverOpen, setIsCardPopoverOpen] = useState(false);
   const [jobIdInput, setJobIdInput] = useState('');
   const { toast } = useToast();
   const initialJobId = useRef('');
 
-  const isEditMode = !!gift;
+  const isEditMode = !!card;
 
   const resetForm = useCallback(() => {
-    if (gift && isEditMode) {
-      const names = Array.isArray(gift.giftItemNames) ? gift.giftItemNames : (gift.giftItemName ? [gift.giftItemName] : []);
+    if (card && isEditMode) {
+      const names = Array.isArray(card.giftItemNames) ? card.giftItemNames : (card.giftItemName ? [card.giftItemName] : []);
       setCardNo(names[0] || '');
-      setRecipientName(gift.recipientName);
-      setRecipientPhone(gift.recipientPhone);
-      setRecipientAddress(gift.recipientAddress);
-      setOrderId(gift.orderId || null);
-      const matchedOrder = gift.orderId ? allOrders.find(o => o.id === gift.orderId) : null;
+      setRecipientName(card.recipientName);
+      setRecipientPhone(card.recipientPhone);
+      setRecipientAddress(card.recipientAddress);
+      setOrderId(card.orderId || null);
+      const matchedOrder = card.orderId ? allOrders.find(o => o.id === card.orderId) : null;
       const initialVal = matchedOrder ? (matchedOrder.companyName || '').split(' • ')[0].trim() : '';
       setJobIdInput(initialVal);
       initialJobId.current = initialVal.trim();
-      setDateGiven(gift.dateGiven ? new Date(gift.dateGiven) : new Date());
-      setNotes(gift.notes || '');
+      setDateGiven(card.dateGiven ? new Date(card.dateGiven) : new Date());
+      setNotes(card.notes || '');
     } else {
       setCardNo('');
       setRecipientName('');
@@ -68,7 +80,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setNotes('');
     }
     setIsSubmitting(false);
-  }, [gift, isEditMode, allOrders]);
+  }, [card, isEditMode, allOrders]);
 
   useEffect(() => {
     if (isOpen) {
@@ -102,11 +114,6 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
           });
           
           setOrderId(matchingOrder ? matchingOrder.id : null);
-
-          toast({
-            title: "Existing Client Found",
-            description: `Details for "${trimmedJobId}" have been auto-filled from clients database.`,
-          });
           return;
         }
       } catch (err) {
@@ -129,11 +136,6 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
           setRecipientName(actualName);
           setRecipientPhone(found.phoneNumber);
           setRecipientAddress(found.address);
-
-          toast({
-            title: "Active Job Found",
-            description: `Details for "${trimmedJobId}" have been auto-filled from active jobs.`,
-          });
         } else {
           setOrderId(null);
         }
@@ -143,18 +145,32 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
     return () => clearTimeout(handler);
   }, [jobIdInput, allOrders, toast]);
 
+  const isCardNoDuplicate = useMemo(() => {
+    const proposed = cardNo.trim();
+    if (!proposed) return false;
+    return existingCards.some(c => 
+      (!isEditMode || c.id !== card?.id) && 
+      c.giftItemName && c.giftItemName.trim() === proposed
+    );
+  }, [cardNo, existingCards, isEditMode, card]);
+
   const canSubmit = useMemo(() => {
     if (isSubmitting) return false;
+    if (isCardNoDuplicate) return false;
     if (!cardNo.trim()) return false;
     if (!recipientName.trim()) return false;
     if (!recipientPhone.trim()) return false;
     if (!recipientAddress.trim()) return false;
     if (!dateGiven) return false;
     return true;
-  }, [isSubmitting, cardNo, recipientName, recipientPhone, recipientAddress, dateGiven]);
+  }, [isSubmitting, isCardNoDuplicate, cardNo, recipientName, recipientPhone, recipientAddress, dateGiven]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCardNoDuplicate) {
+      toast({ title: "Validation Error", description: `Card number "${cardNo.trim()}" already exists. Duplicates are not allowed.`, variant: "destructive" });
+      return;
+    }
     if (!canSubmit) {
       toast({ title: "Validation Error", description: "Please fill all required fields.", variant: "destructive" });
       return;
@@ -162,24 +178,24 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
     setIsSubmitting(true);
 
-    const giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'givenByUserId' | 'givenByUserName' | 'createdAt' | 'updatedAt' | 'giftItemName'> & { giftItemNames: string[] } = {
+    const cardData: Omit<Card, 'id' | 'giftIdDisplay' | 'givenByUserId' | 'givenByUserName' | 'createdAt' | 'updatedAt' | 'giftItemName'> & { giftItemNames: string[] } = {
       giftItemNames: [cardNo.trim()],
       recipientName, recipientPhone, recipientAddress, orderId,
       dateGiven: dateGiven!.toISOString(),
       notes: notes.trim() || null,
     };
 
-    let result: { success: boolean; gift?: Gift; error?: string };
-    if (isEditMode && gift) {
-      result = await updateGiftAction(gift.id, giftData, currentUser);
+    let result: { success: boolean; gift?: Card; error?: string };
+    if (isEditMode && card) {
+      result = await updateGiftAction(card.id, cardData, currentUser);
     } else {
-      result = await addGiftAction(giftData, currentUser);
+      result = await addGiftAction(cardData, currentUser);
     }
 
     setIsSubmitting(false);
     if (result.success) {
       toast({ title: `Card ${isEditMode ? 'Reissued' : 'Issued'}`, description: "The membership card record has been saved." });
-      if (result.gift) onGiftSaved(result.gift);
+      if (result.gift) onCardSaved(result.gift);
       onOpenChange(false);
     } else {
       toast({ title: "Error", description: result.error || "Could not save card record.", variant: "destructive" });
@@ -192,7 +208,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Reissue' : 'Issue'} Card</DialogTitle>
           <DialogDescription>
-            {isEditMode ? `Update details for Issue ID: ${gift.giftIdDisplay}` : 'Record a new card issued to a client.'}
+            {isEditMode ? `Update details for Issue ID: ${card.giftIdDisplay}` : 'Record a new card issued to a client.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
@@ -225,14 +241,19 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div className="space-y-1">
-              <Label htmlFor="cardNo">Card No.</Label>
+              <Label htmlFor="cardNo" className={cn(isCardNoDuplicate && "text-destructive")}>Card No.</Label>
               <Input
                 id="cardNo"
                 value={cardNo}
-                onChange={e => setCardNo(e.target.value)}
+                onChange={handleCardNoChange}
                 required
-                className="font-card-no border-gray-400 dark:border-gray-600"
+                maxLength={19}
+                placeholder="XXXX XXXX XXXX XXXX"
+                className={cn("font-card-no border-gray-400 dark:border-gray-600", isCardNoDuplicate && "border-destructive focus-visible:ring-destructive")}
               />
+              {isCardNoDuplicate && (
+                <p className="text-[11px] font-medium text-destructive mt-1">This card number is already registered.</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="dateGiven">Date Issued</Label>

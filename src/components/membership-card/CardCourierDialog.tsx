@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Gift, User } from "@/types";
+import type { Card, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Truck } from 'lucide-react';
 import { transferGiftToCourierAction } from '@/app/(app)/membership-card/actions';
@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 interface CardCourierDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  gift: Gift | null;
+  card: Card | null;
   currentUser: User | null;
   onSuccess: (trackingCode: string, consignmentId: string) => void;
 }
@@ -35,7 +35,7 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onSuccess }: CardCourierDialogProps) {
+export function CardCourierDialog({ isOpen, onOpenChange, card, currentUser, onSuccess }: CardCourierDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shippingArea, setShippingArea] = useState<string>('');
   const [shippingCharge, setShippingCharge] = useState<string>('0');
@@ -45,16 +45,16 @@ export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isOpen && gift) {
+    if (isOpen && card) {
       setShippingArea('');
       setShippingCharge('0');
-      setEditableRecipient(gift.recipientName);
-      setEditableAddress(gift.recipientAddress);
+      setEditableRecipient(card.recipientName);
+      setEditableAddress(card.recipientAddress);
     }
-  }, [isOpen, gift]);
+  }, [isOpen, card]);
 
   const handleConfirm = async () => {
-    if (!gift || !currentUser) return;
+    if (!card || !currentUser) return;
 
     if (!shippingArea) {
       toast({ title: "Validation Error", description: "Please select a shipping area.", variant: "destructive" });
@@ -68,19 +68,19 @@ export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
 
     setIsSubmitting(true);
     const result = await transferGiftToCourierAction(
-      gift,
+      card,
       currentUser,
       shippingArea,
       charge,
-      editableRecipient !== gift.recipientName ? editableRecipient : undefined,
-      editableAddress !== gift.recipientAddress ? editableAddress : undefined
+      editableRecipient !== card.recipientName ? editableRecipient : undefined,
+      editableAddress !== card.recipientAddress ? editableAddress : undefined
     );
     setIsSubmitting(false);
 
     if (result.success) {
       toast({
         title: "Transfer Successful",
-        description: `Card ${gift.giftIdDisplay} sent to Steadfast. Tracking: ${result.consignment.tracking_code}`,
+        description: `Card ${card.giftIdDisplay} sent to Steadfast. Tracking: ${result.consignment.tracking_code}`,
       });
       onSuccess(result.consignment.tracking_code, result.consignment.consignment_id.toString());
       onOpenChange(false);
@@ -102,11 +102,11 @@ export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
             <Truck className="h-6 w-6 text-primary" /> Transfer Membership Card to Courier
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This will create a consignment in <span className="font-semibold text-foreground">SteadFast</span> for card <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{gift?.giftIdDisplay}</span>.
+            This will create a consignment in <span className="font-semibold text-foreground">SteadFast</span> for card <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{card?.giftIdDisplay}</span>.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {gift && (
+        {card && (
           <div className="text-sm text-foreground bg-secondary/50 p-4 rounded-md border border-border/50 space-y-3">
             <div className="grid grid-cols-3 items-center gap-4">
               <Label htmlFor="recipient" className="text-right">Cardholder</Label>
@@ -120,7 +120,7 @@ export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
             </div>
             <div className="grid grid-cols-3 items-center gap-4">
               <Label htmlFor="phone" className="text-right">Phone</Label>
-              <Input id="phone" value={gift.recipientPhone} readOnly className="col-span-2 h-8 bg-muted/50 cursor-not-allowed" />
+              <Input id="phone" value={card.recipientPhone} readOnly className="col-span-2 h-8 bg-muted/50 cursor-not-allowed" />
             </div>
             <div className="grid grid-cols-3 items-start gap-4">
               <Label htmlFor="address" className="text-right pt-2">Address</Label>
@@ -171,7 +171,7 @@ export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
           <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            disabled={isSubmitting || !gift || !shippingArea}
+            disabled={isSubmitting || !card || !shippingArea}
           >
             {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Transferring...</> : "Confirm Transfer"}
           </AlertDialogAction>

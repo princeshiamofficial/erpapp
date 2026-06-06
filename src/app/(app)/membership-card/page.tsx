@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Search, Edit3, Trash2, MoreVertical, CreditCard, Loader2, Truck } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { useSocket } from "@/contexts/socket-context";
 import { useRouter } from "next/navigation";
-import type { Gift, User, ServiceGiftItem, TrackingLink } from '@/types';
+import type { Card as CardModel, User, ServiceGiftItem, TrackingLink } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-import { getGifts as fetchGifts, deleteGift as deleteGiftAction } from './actions';
-import { getGifts as getGiftOptions } from '@/lib/service-options-service';
+import { getGifts as fetchCards, deleteGift as deleteCardAction } from './actions';
+import { getGifts as getCardOptions } from '@/lib/service-options-service';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +25,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 
 const AddEditCardDialog = dynamic(() => import('@/components/membership-card/AddEditCardDialog').then(mod => mod.AddEditCardDialog));
 const CardCourierDialog = dynamic(() => import('@/components/membership-card/CardCourierDialog').then(mod => mod.CardCourierDialog));
+const ShowCardDialog = dynamic(() => import('@/components/membership-card/ShowCardDialog').then(mod => mod.ShowCardDialog));
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -40,34 +42,37 @@ export default function MembershipCardPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { socket } = useSocket();
 
-  const [gifts, setGifts] = useState<Gift[]>([]);
-  const [giftOptions, setGiftOptions] = useState<ServiceGiftItem[]>([]);
+  const [cards, setCards] = useState<CardModel[]>([]);
+  const [cardOptions, setCardOptions] = useState<ServiceGiftItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
 
-  const [giftToEdit, setGiftToEdit] = useState<Gift | null>(null);
+  const [cardToEdit, setCardToEdit] = useState<CardModel | null>(null);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
 
-  const [giftToDelete, setGiftToDelete] = useState<Gift | null>(null);
+  const [cardToDelete, setCardToDelete] = useState<CardModel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [giftForCourier, setGiftForCourier] = useState<Gift | null>(null);
+  const [cardForCourier, setCardForCourier] = useState<CardModel | null>(null);
   const [isCourierDialogOpen, setIsCourierDialogOpen] = useState(false);
+  const [cardToShow, setCardToShow] = useState<CardModel | null>(null);
+  const [shouldShowConfetti, setShouldShowConfetti] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedGifts, fetchedGiftOptions, fetchedOrders] = await Promise.all([
-        fetchGifts(),
-        getGiftOptions(),
+      const [fetchedCards, fetchedCardOptions, fetchedOrders] = await Promise.all([
+        fetchCards(),
+        getCardOptions(),
         getOrders(),
       ]);
-      setGifts(fetchedGifts);
-      setGiftOptions(fetchedGiftOptions);
+      setCards(fetchedCards);
+      setCardOptions(fetchedCardOptions);
       setAllOrders(fetchedOrders);
     } catch (error) {
       console.error("Failed to fetch card data:", error);
@@ -79,18 +84,31 @@ export default function MembershipCardPage() {
 
   const fetchDataSilent = useCallback(async () => {
     try {
-      const [fetchedGifts, fetchedGiftOptions, fetchedOrders] = await Promise.all([
-        fetchGifts(),
-        getGiftOptions(),
+      const [fetchedCards, fetchedCardOptions, fetchedOrders] = await Promise.all([
+        fetchCards(),
+        getCardOptions(),
         getOrders(),
       ]);
-      setGifts(fetchedGifts);
-      setGiftOptions(fetchedGiftOptions);
+      setCards(fetchedCards);
+      setCardOptions(fetchedCardOptions);
       setAllOrders(fetchedOrders);
     } catch (error) {
       console.error("Failed to silently sync card data:", error);
     }
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("membership-card-updated", (data: any) => {
+      console.log("Membership card updated remotely:", data);
+      fetchDataSilent();
+    });
+
+    return () => {
+      socket.off("membership-card-updated");
+    };
+  }, [socket, fetchDataSilent]);
 
   useEffect(() => {
     if (currentUser) {
@@ -100,101 +118,106 @@ export default function MembershipCardPage() {
     }
   }, [currentUser, fetchData, router]);
 
-  const filteredGifts = useMemo(() => {
-    let result = gifts;
+  const filteredCards = useMemo(() => {
+    let result = cards;
     if (currentUser?.role === 'CRM') {
-      result = result.filter(gift => gift.givenByUserId === currentUser.id);
+      result = result.filter(card => card.givenByUserId === currentUser.id);
     }
     if (!searchTerm) return result;
     const lowerSearchTerm = searchTerm.toLowerCase();
-    return result.filter(gift => {
-      const linkedOrder = gift.orderId ? allOrders.find(o => o.id === gift.orderId) : null;
+    return result.filter(card => {
+      const linkedOrder = card.orderId ? allOrders.find(o => o.id === card.orderId) : null;
       const jobDisplayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim().toLowerCase() : '';
       
       return (
-        gift.giftIdDisplay.toLowerCase().includes(lowerSearchTerm) ||
-        (gift.orderId && gift.orderId.toLowerCase().includes(lowerSearchTerm)) ||
+        card.giftIdDisplay.toLowerCase().includes(lowerSearchTerm) ||
+        (card.orderId && card.orderId.toLowerCase().includes(lowerSearchTerm)) ||
         jobDisplayId.includes(lowerSearchTerm) ||
-        gift.recipientName.toLowerCase().includes(lowerSearchTerm) ||
-        gift.recipientPhone.toLowerCase().includes(lowerSearchTerm) ||
-        (Array.isArray(gift.giftItemNames) && gift.giftItemNames.some(name => name.toLowerCase().includes(lowerSearchTerm)))
+        card.recipientName.toLowerCase().includes(lowerSearchTerm) ||
+        card.recipientPhone.toLowerCase().includes(lowerSearchTerm) ||
+        (Array.isArray(card.giftItemNames) && card.giftItemNames.some(name => name.toLowerCase().includes(lowerSearchTerm)))
       );
     });
-  }, [gifts, searchTerm, currentUser]);
+  }, [cards, searchTerm, currentUser]);
 
-  const totalPages = Math.ceil(filteredGifts.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredCards.length / ITEMS_PER_PAGE);
 
-  const paginatedGifts = useMemo(() => {
+  const paginatedCards = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredGifts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredGifts, currentPage]);
+    return filteredCards.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredCards, currentPage]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  const handleGiftSaved = (savedGift: Gift) => {
-    setGifts(prev => {
-      const exists = prev.some(g => g.id === savedGift.id);
+  const handleCardSaved = (savedCard: CardModel) => {
+    setCards(prev => {
+      const exists = prev.some(c => c.id === savedCard.id);
       if (exists) {
-        return prev.map(g => g.id === savedGift.id ? savedGift : g);
+        return prev.map(c => c.id === savedCard.id ? savedCard : c);
       } else {
-        return [savedGift, ...prev];
+        return [savedCard, ...prev];
       }
     });
     setIsAddEditDialogOpen(false);
-    setGiftToEdit(null);
+    setCardToEdit(null);
+    
+    // Automatically show the card with confetti
+    setCardToShow(savedCard);
+    setShouldShowConfetti(true);
+    
     fetchDataSilent();
   };
 
   const handleOpenAddDialog = () => {
-    setGiftToEdit(null);
+    setCardToEdit(null);
     setIsAddEditDialogOpen(true);
   };
 
-  const handleOpenEditDialog = (gift: Gift) => {
-    setGiftToEdit(gift);
+  const handleOpenEditDialog = (card: CardModel) => {
+    setCardToEdit(card);
     setIsAddEditDialogOpen(true);
   };
 
-  const handleDeleteRequest = (gift: Gift) => {
-    setGiftToDelete(gift);
+  const handleDeleteRequest = (card: CardModel) => {
+    setCardToDelete(card);
   };
 
-  const handleOpenCourierDialog = (gift: Gift) => {
-    setGiftForCourier(gift);
+  const handleOpenCourierDialog = (card: CardModel) => {
+    setCardForCourier(card);
     setIsCourierDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!giftToDelete) return;
+    if (!cardToDelete) return;
     setIsDeleting(true);
-    const result = await deleteGiftAction(giftToDelete.id);
+    const result = await deleteCardAction(cardToDelete.id);
     setIsDeleting(false);
 
     if (result.success) {
-      setGifts(prev => prev.filter(g => g.id !== giftToDelete.id));
-      setGiftToDelete(null);
+      setCards(prev => prev.filter(c => c.id !== cardToDelete.id));
+      setCardToDelete(null);
       toast({ title: "Card Deleted", description: "The membership card record has been successfully deleted." });
       fetchDataSilent();
     } else {
-      setGiftToDelete(null);
+      setCardToDelete(null);
       toast({ title: "Error", description: result.error || "Could not delete the membership card record.", variant: "destructive" });
     }
   };
 
   const handleCourierSuccess = (trackingCode: string, consignmentId: string) => {
-    if (giftForCourier) {
-      setGifts(prev => prev.map(g => {
-        if (g.id === giftForCourier.id) {
+    if (cardForCourier) {
+      setCards(prev => prev.map(c => {
+        if (c.id === cardForCourier.id) {
           return {
-            ...g,
+            ...c,
             courierStatus: 'Shipped',
             packzyConsignmentId: consignmentId,
             packzyTrackingCode: trackingCode,
           };
         }
-        return g;
+        return c;
       }));
     }
     fetchDataSilent();
@@ -262,28 +285,25 @@ export default function MembershipCardPage() {
     );
   };
 
-  if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN', 'CRM'].includes(currentUser.role)) {
+  if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'LR'].includes(currentUser.role)) {
     return <div className="p-8 text-center">Access Denied.</div>
   }
 
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div><h1 className="page-title">Membership Cards</h1><p className="page-description">Manage and issue premium tier loyalty membership cards to your high-value customers.</p></div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button size="lg" onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md">
-              <PlusCircle className="mr-2 h-5 w-5" />Issue Card
-            </Button>
-          </div>
-        </div>
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle className="text-card-foreground text-xl">All Membership Cards</CardTitle>
-              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search member, phone, card..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-background h-10 rounded-md w-full" />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search member, phone, card..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-background h-10 rounded-md w-full" />
+                </div>
+                <Button onClick={handleOpenAddDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md whitespace-nowrap">
+                  <PlusCircle className="mr-2 h-4 w-4" />Issue Card
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -304,7 +324,7 @@ export default function MembershipCardPage() {
                 </TableHeader>
                 <TableBody>
                     {isLoading && [...Array(10)].map((_, i) => (
-                      <TableRow key={`skel-gift-${i}`}>
+                      <TableRow key={`skel-card-${i}`}>
                         <TableCell className="pl-6"><Skeleton className="h-4 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-32" /></TableCell>
@@ -316,13 +336,13 @@ export default function MembershipCardPage() {
                       </TableRow>
                     ))}
 
-                   {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
-                     <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
-                       <TableCell className="pl-6 font-mono text-primary font-bold">{gift.giftIdDisplay}</TableCell>
+                   {!isLoading && paginatedCards.length > 0 && paginatedCards.map((cardItem, index) => (
+                     <TableRow key={cardItem.id || `card-${index}`} className="hover:bg-muted/50">
+                       <TableCell className="pl-6 font-mono text-primary font-bold">{cardItem.giftIdDisplay}</TableCell>
                        <TableCell className="font-mono text-muted-foreground">
-                         {gift.orderId ? (() => {
-                           const linkedOrder = allOrders.find(o => o.id === gift.orderId);
-                           const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : gift.orderId;
+                         {cardItem.orderId ? (() => {
+                           const linkedOrder = allOrders.find(o => o.id === cardItem.orderId);
+                           const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : cardItem.orderId;
                            return (
                              <span className="text-muted-foreground">
                                {displayId}
@@ -331,16 +351,16 @@ export default function MembershipCardPage() {
                          })() : '—'}
                        </TableCell>
                         <TableCell className="font-card-no font-medium text-foreground">
-                          {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
+                          {(Array.isArray(cardItem.giftItemNames) ? cardItem.giftItemNames : [cardItem.giftItemName]).join(', ')}
                         </TableCell>
                        <TableCell>
-                         <div>{gift.recipientName}</div>
+                         <div>{cardItem.recipientName}</div>
                        </TableCell>
-                       <TableCell>{gift.recipientPhone}</TableCell>
-                        <TableCell className="max-w-[250px] truncate text-muted-foreground text-sm" title={gift.recipientAddress}>
-                          {gift.recipientAddress}
+                       <TableCell>{cardItem.recipientPhone}</TableCell>
+                        <TableCell className="max-w-[250px] truncate text-muted-foreground text-sm" title={cardItem.recipientAddress}>
+                          {cardItem.recipientAddress}
                         </TableCell>
-                       <TableCell>{formatDate(gift.dateGiven)}</TableCell>
+                       <TableCell>{formatDate(cardItem.dateGiven)}</TableCell>
                        <TableCell className="pr-6 text-right">
                          <DropdownMenu>
                            <DropdownMenuTrigger asChild>
@@ -349,13 +369,16 @@ export default function MembershipCardPage() {
                              </Button>
                            </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(gift)} className="cursor-pointer">
+                              <DropdownMenuItem onSelect={() => setCardToShow(cardItem)} className="cursor-pointer">
+                                <CreditCard className="mr-2 h-4 w-4" />Show Card
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(cardItem)} className="cursor-pointer">
                                 <Edit3 className="mr-2 h-4 w-4" />Reissue
                               </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleOpenCourierDialog(gift)} className="cursor-pointer">
+                              <DropdownMenuItem onSelect={() => handleOpenCourierDialog(cardItem)} className="cursor-pointer">
                                 <Truck className="mr-2 h-4 w-4" />Transfer to Courier
                               </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleDeleteRequest(gift)} className="cursor-pointer text-destructive focus:text-destructive">
+                              <DropdownMenuItem onSelect={() => handleDeleteRequest(cardItem)} className="cursor-pointer text-destructive focus:text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" />Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -364,8 +387,8 @@ export default function MembershipCardPage() {
                      </TableRow>
                    ))}
 
-                   {!isLoading && paginatedGifts.length === 0 && (
-                     <TableRow key="empty-gifts">
+                   {!isLoading && paginatedCards.length === 0 && (
+                     <TableRow key="empty-cards">
                        <TableCell colSpan={8} className="h-48 text-center">
                          <CreditCard className="mx-auto h-12 w-12 opacity-30 mb-3" />
                          No card records found.
@@ -385,30 +408,44 @@ export default function MembershipCardPage() {
       <AddEditCardDialog
         isOpen={isAddEditDialogOpen}
         onOpenChange={setIsAddEditDialogOpen}
-        onGiftSaved={handleGiftSaved}
-        gift={giftToEdit}
+        onCardSaved={handleCardSaved}
+        card={cardToEdit}
         currentUser={currentUser}
-        giftOptions={giftOptions}
+        cardOptions={cardOptions}
         allOrders={allOrders}
+        existingCards={cards}
       />
 
       <CardCourierDialog
         isOpen={isCourierDialogOpen}
         onOpenChange={setIsCourierDialogOpen}
-        gift={giftForCourier}
+        card={cardForCourier}
         currentUser={currentUser}
         onSuccess={handleCourierSuccess}
       />
 
-      {giftToDelete && (
-        <AlertDialog open={!!giftToDelete} onOpenChange={() => setGiftToDelete(null)}>
+      <ShowCardDialog
+        isOpen={!!cardToShow}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCardToShow(null);
+            setShouldShowConfetti(false);
+          }
+        }}
+        card={cardToShow}
+        allOrders={allOrders}
+        showConfetti={shouldShowConfetti}
+      />
+
+      {cardToDelete && (
+        <AlertDialog open={!!cardToDelete} onOpenChange={() => setCardToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>This will permanently delete the membership card record for <span className="font-semibold">{giftToDelete.recipientName}</span>. This cannot be undone.</AlertDialogDescription>
+              <AlertDialogDescription>This will permanently delete the membership card record for <span className="font-semibold">{cardToDelete.recipientName}</span>. This cannot be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setGiftToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setCardToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isDeleting}>
                 {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete"}
               </AlertDialogAction>

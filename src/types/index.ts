@@ -568,6 +568,8 @@ export interface Gift {
   shippingCharge?: number | null;
 }
 
+export type Card = Gift;
+
 export interface VendorProduct {
   id: string;
   name: string;

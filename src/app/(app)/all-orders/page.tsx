@@ -173,7 +173,7 @@ export default function AllOrdersPage() {
         link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (link.crmUserName && link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (link.designerRepresentativeName && link.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }

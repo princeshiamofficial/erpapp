@@ -62,6 +62,13 @@ export const addGift = async (cardData: Omit<Card, 'id' | 'giftIdDisplay' | 'cre
   try {
     await initMembershipCardsTable();
     const allCards = await getGifts();
+
+    const proposedCardNo = cardData.giftItemNames.join(', ').trim();
+    const isDuplicate = allCards.some(card => card.giftItemName && card.giftItemName.trim() === proposedCardNo);
+    if (isDuplicate) {
+      throw new Error(`Card number "${proposedCardNo}" already exists. Duplicates are not allowed.`);
+    }
+
     const currentYear = new Date().getFullYear();
     const prefix = `C${currentYear}0`; // Membership card prefix e.g., C2026001
     let maxId = 0;
@@ -85,7 +92,7 @@ export const addGift = async (cardData: Omit<Card, 'id' | 'giftIdDisplay' | 'cre
       givenByUserName: currentUser.name,
       createdAt: now,
       updatedAt: now,
-      giftItemName: cardData.giftItemNames.join(', '),
+      giftItemName: proposedCardNo,
     };
 
     await query(`INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?)`, [newCardData.id, JSON.stringify(newCardData)]);
@@ -106,7 +113,13 @@ export const updateGift = async (id: string, updates: Partial<Omit<Card, 'id' | 
 
     const finalUpdates = { ...updates };
     if (updates.giftItemNames) {
-      finalUpdates.giftItemName = updates.giftItemNames.join(', ');
+      const proposedCardNo = updates.giftItemNames.join(', ').trim();
+      const allCards = await getGifts();
+      const isDuplicate = allCards.some(card => card.id !== id && card.giftItemName && card.giftItemName.trim() === proposedCardNo);
+      if (isDuplicate) {
+        throw new Error(`Card number "${proposedCardNo}" already exists. Duplicates are not allowed.`);
+      }
+      finalUpdates.giftItemName = proposedCardNo;
     }
 
     const finalData = {
@@ -119,6 +132,7 @@ export const updateGift = async (id: string, updates: Partial<Omit<Card, 'id' | 
     return finalData;
   } catch (error) {
     console.error(`Error updating membership card ${id} in MySQL:`, error);
+    if (error instanceof Error) throw error;
     return null;
   }
 };
