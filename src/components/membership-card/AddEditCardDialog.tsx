@@ -231,7 +231,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
                 value={cardNo}
                 onChange={e => setCardNo(e.target.value)}
                 required
-                className="border-gray-400 dark:border-gray-600"
+                className="font-card-no border-gray-400 dark:border-gray-600"
               />
             </div>
             <div className="space-y-1">

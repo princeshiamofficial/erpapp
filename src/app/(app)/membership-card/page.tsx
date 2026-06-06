@@ -288,9 +288,9 @@ export default function MembershipCardPage() {
                            );
                          })() : '—'}
                        </TableCell>
-                       <TableCell className="font-medium">
-                         {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
-                       </TableCell>
+                        <TableCell className="font-card-no font-medium text-foreground">
+                          {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
+                        </TableCell>
                        <TableCell>
                          <div>{gift.recipientName}</div>
                        </TableCell>
