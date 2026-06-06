@@ -236,9 +236,7 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-
-
-      <div className="flex flex-col space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
         {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)}
         {renderItemList(gifts, 'gift', 'Gifts', Gift)}
