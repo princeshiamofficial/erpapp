@@ -310,6 +310,7 @@ export interface GlobalSettings {
   telegramChatIds?: string[] | null;
   telegramRedirectDomain?: string | null;
   transactionCategories?: TransactionCategory[]; // New field
+  isCourierNoteVisible?: boolean;
 }
 
 export interface TransactionCategory {

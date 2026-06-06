@@ -20,6 +20,7 @@ import {
   setPaymentValidationStatus,
   setTelegramSettings,
   setLeaderboardRestriction,
+  setCourierNoteVisibility,
 } from "@/lib/settings-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types";
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
@@ -312,6 +313,23 @@ export async function updateRoleBasedTargetsAction(targets: RoleBasedTarget): Pr
     return { success: false, error: "Failed to update role-based targets in database." };
   } catch (error) {
     console.error("Error in updateRoleBasedTargetsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateCourierNoteVisibilityAction(isVisible: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setCourierNoteVisibility(isVisible);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/membership-card");
+      revalidatePath("/(app)/gifts");
+      revalidatePath("/(app)/projects");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update courier note visibility setting in database." };
+  } catch (error) {
+    console.error("Error in updateCourierNoteVisibilityAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

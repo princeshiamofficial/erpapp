@@ -20,6 +20,7 @@ import { Loader2, Truck } from 'lucide-react';
 import { getOrderById } from '@/lib/order-service';
 import { transferToCourierAction } from '@/app/(app)/projects/actions';
 import { getCourierNotes } from '@/lib/service-options-service';
+import { getGlobalSettings } from '@/lib/settings-service';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -49,11 +50,17 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
   const [editableAddress, setEditableAddress] = useState<string>('');
   const [courierNotesOptions, setCourierNotesOptions] = useState<ServiceCourierNoteItem[]>([]);
   const [courierNote, setCourierNote] = useState<string>('');
+  const [isNoteVisible, setIsNoteVisible] = useState<boolean>(true);
   const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
+      getGlobalSettings().then(settings => {
+        setIsNoteVisible(settings.isCourierNoteVisible ?? true);
+      }).catch(err => {
+        console.error("Error loading settings:", err);
+      });
       getCourierNotes().then(notes => {
         setCourierNotesOptions(notes);
       }).catch(err => {
@@ -217,33 +224,37 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
                 min="0"
               />
             </div>
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="predefined-note" className="text-right">Courier Note</Label>
-              <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
-                <SelectTrigger id="predefined-note" className="col-span-2 h-8">
-                  <SelectValue placeholder="Choose a note (Optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none_selected">None</SelectItem>
-                  {courierNotesOptions.map((note) => (
-                    <SelectItem key={note.id} value={note.name}>
-                      {note.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-3 items-start gap-4">
-              <Label htmlFor="courier-note-custom" className="text-right pt-2">Custom Note</Label>
-              <Textarea
-                id="courier-note-custom"
-                value={courierNote}
-                onChange={(e) => setCourierNote(e.target.value)}
-                className="col-span-2 text-xs"
-                placeholder="Custom delivery instructions..."
-                rows={2}
-              />
-            </div>
+            {isNoteVisible && (
+              <>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <Label htmlFor="predefined-note" className="text-right">Courier Note</Label>
+                  <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
+                    <SelectTrigger id="predefined-note" className="col-span-2 h-8">
+                      <SelectValue placeholder="Choose a note (Optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none_selected">None</SelectItem>
+                      {courierNotesOptions.map((note) => (
+                        <SelectItem key={note.id} value={note.name}>
+                          {note.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-3 items-start gap-4">
+                  <Label htmlFor="courier-note-custom" className="text-right pt-2">Custom Note</Label>
+                  <Textarea
+                    id="courier-note-custom"
+                    value={courierNote}
+                    onChange={(e) => setCourierNote(e.target.value)}
+                    className="col-span-2 text-xs"
+                    placeholder="Custom delivery instructions..."
+                    rows={2}
+                  />
+                </div>
+              </>
+            )}
             <div className="grid grid-cols-3 items-center gap-4 mt-2 pt-2 border-t border-dashed">
               <Label className="text-right font-bold">Total COD</Label>
               <div className="col-span-2 font-bold text-base">

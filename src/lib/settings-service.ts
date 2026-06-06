@@ -80,6 +80,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   pipelineAccess: { canViewAllLeads: [] },
   transactionCategories: DEFAULT_TRANSACTION_CATEGORIES,
   telegramRedirectDomain: 'https://app.colorhutbd.xyz',
+  isCourierNoteVisible: true,
 };
 
 export async function getGlobalSettings(): Promise<GlobalSettings> {
@@ -204,4 +205,8 @@ export async function setTelegramSettings(botToken: string | null, chatIds: stri
 
 export async function setTransactionCategories(categories: any[]): Promise<boolean> {
   return updateSettings({ transactionCategories: categories });
+}
+
+export async function setCourierNoteVisibility(isVisible: boolean): Promise<boolean> {
+  return updateSettings({ isCourierNoteVisible: isVisible });
 }

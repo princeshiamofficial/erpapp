@@ -28,6 +28,7 @@ import {
   updateDrAssignmentNotificationTemplatesAction,
   updateRoleBasedTargetsAction,
   updateTelegramSettingsAction,
+  updateCourierNoteVisibilityAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,6 +55,7 @@ export default function CrmTargetSettingsPage() {
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [selectedStatusIds, setSelectedStatusIds] = useState<Set<string>>(new Set());
   const [areCommentsVisible, setAreCommentsVisible] = useState(true);
+  const [isCourierNoteVisible, setIsCourierNoteVisible] = useState(true);
   const [toastSoundUrl, setToastSoundUrl] = useState<string>('');
   const [leaderboardBgUrl, setLeaderboardBgUrl] = useState<string>('');
   const [expenseLoggingPerms, setExpenseLoggingPerms] = useState<ExpenseLoggingPermissions>({
@@ -77,6 +79,7 @@ export default function CrmTargetSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingCrmTargets, setIsSubmittingCrmTargets] = useState(false);
   const [isSubmittingCommentsVisibility, setIsSubmittingCommentsVisibility] = useState(false);
+  const [isSubmittingCourierNoteVisibility, setIsSubmittingCourierNoteVisibility] = useState(false);
   const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false);
   const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false);
   const [isSubmittingExpensePerms, setIsSubmittingExpensePerms] = useState(false);
@@ -97,6 +100,7 @@ export default function CrmTargetSettingsPage() {
       setAllStatuses(fetchedStatuses);
       setSelectedStatusIds(new Set(globalSettings.crmCompletionStatusIds ?? []));
       setAreCommentsVisible(globalSettings.areCommentsVisibleOnPublicPage ?? true);
+      setIsCourierNoteVisible(globalSettings.isCourierNoteVisible ?? true);
       setToastSoundUrl(globalSettings.toastSoundUrl ?? '');
       setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? '');
       setExpenseLoggingPerms(globalSettings.expenseLoggingPermissions ?? { mode: 'all', allowedRoles: [], allowedUserIds: [] });
@@ -153,6 +157,18 @@ export default function CrmTargetSettingsPage() {
       toast({ title: "Update Failed", description: result.error || "Could not update comments visibility.", variant: "destructive" });
     }
     setIsSubmittingCommentsVisibility(false);
+  };
+
+  const handleToggleCourierNoteVisibility = async (newVisibility: boolean) => {
+    setIsSubmittingCourierNoteVisibility(true);
+    const result = await updateCourierNoteVisibilityAction(newVisibility);
+    if (result.success) {
+      setIsCourierNoteVisible(newVisibility);
+      toast({ title: "Settings Updated", description: `Courier note selector is now ${newVisibility ? 'visible' : 'hidden'} on dispatch dialogs.` });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not update courier note visibility.", variant: "destructive" });
+    }
+    setIsSubmittingCourierNoteVisibility(false);
   };
 
   const handleSaveToastSoundUrl = async () => {
@@ -455,6 +471,13 @@ export default function CrmTargetSettingsPage() {
                   <span>Comments Section Visibility (Public Tracking)</span><span className="font-normal leading-snug text-muted-foreground text-xs">Show or hide comments on public order tracking pages.</span>
                 </Label>
                 <Switch id="commentsVisibilitySwitch" checked={areCommentsVisible} onCheckedChange={handleToggleCommentsVisibility} disabled={isSubmittingCommentsVisibility} aria-label="Toggle comments section visibility" />
+              </div>
+
+              <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                <Label htmlFor="courierNoteVisibilitySwitch" className="flex flex-col space-y-1 cursor-pointer">
+                  <span>Courier Note Visibility on Dispatch</span><span className="font-normal leading-snug text-muted-foreground text-xs">Show or hide the Courier Note selector when transferring to courier.</span>
+                </Label>
+                <Switch id="courierNoteVisibilitySwitch" checked={isCourierNoteVisible} onCheckedChange={handleToggleCourierNoteVisibility} disabled={isSubmittingCourierNoteVisibility} aria-label="Toggle courier note visibility" />
               </div>
 
               <div className="p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
