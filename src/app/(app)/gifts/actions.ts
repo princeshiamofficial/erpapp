@@ -97,7 +97,8 @@ export async function transferGiftToCourierAction(
   shippingArea: string,
   shippingCharge: number,
   customRecipientName?: string,
-  customRecipientAddress?: string
+  customRecipientAddress?: string,
+  courierNote?: string
 ): Promise<{ success: boolean; error?: string; consignment?: any }> {
   if (!gift || !gift.id) {
     return { success: false, error: 'Invalid gift data provided.' };
@@ -115,13 +116,17 @@ export async function transferGiftToCourierAction(
     const recipientNameRaw = customRecipientName || existingGift.recipientName;
     const recipientAddressRaw = customRecipientAddress || existingGift.recipientAddress;
 
-    const packzyPayload = {
+    const packzyPayload: Record<string, any> = {
       invoice: sanitizeForPackzy(existingGift.giftIdDisplay),
       recipient_name: sanitizeForPackzy(recipientNameRaw),
       recipient_phone: sanitizeForPackzy(existingGift.recipientPhone),
       recipient_address: sanitizeForPackzy(recipientAddressRaw),
       cod_amount: totalCodAmount,
     };
+
+    if (courierNote && courierNote.trim()) {
+      packzyPayload.note = sanitizeForPackzy(courierNote.trim());
+    }
 
     const urlEncodedBody = Object.entries(packzyPayload)
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
@@ -168,6 +173,7 @@ export async function transferGiftToCourierAction(
       packzyTrackingCode: consignment.tracking_code,
       shippingArea: shippingArea,
       shippingCharge: numericShippingCharge,
+      courierNote: courierNote || null,
     } as any, actingUser);
 
     if (!giftUpdateSuccess) {
@@ -179,7 +185,7 @@ export async function transferGiftToCourierAction(
       io.emit("gift-updated", { type: 'update', gift: giftUpdateSuccess });
     }
 
-    const telegramMessage = `
+    let telegramMessage = `
 <b>🎁 Gift Shipped via SteadFast!</b>
 
 <b>Gift ID:</b> <code>${existingGift.giftIdDisplay}</code>
@@ -188,6 +194,10 @@ export async function transferGiftToCourierAction(
 <b>COD (Shipping):</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
 <b>Sent By:</b> ${actingUser.name}
     `;
+
+    if (courierNote && courierNote.trim()) {
+      telegramMessage += `<b>Note:</b> <i>${courierNote.trim()}</i>\n`;
+    }
 
     const courierReplyMarkup = {
       inline_keyboard: [
