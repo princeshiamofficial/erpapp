@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
+import { parseISO, differenceInSeconds, differenceInCalendarDays, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -150,7 +150,7 @@ const calculateProgressInfo = (
       : effectiveStartDate;
 
     const projectEnd = parseISO(endDate);
-    const totalDeliveryDays = Math.max(1, differenceInSeconds(projectEnd, projectStart) / 86400);
+    const totalDeliveryDays = Math.max(1, differenceInCalendarDays(projectEnd, projectStart));
 
     if (status === 'On Hold') {
       effectiveTargetDate = addDays(effectiveStartDate, 15);
