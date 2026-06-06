@@ -243,3 +243,10 @@ CREATE TABLE daily_routine_entries (
     PRIMARY KEY (id, user_id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+-- 9. Membership Cards
+CREATE TABLE membership_cards (
+    id VARCHAR(36) PRIMARY KEY,
+    data_json JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
