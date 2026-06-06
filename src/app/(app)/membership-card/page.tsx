@@ -77,6 +77,21 @@ export default function MembershipCardPage() {
     }
   }, [toast]);
 
+  const fetchDataSilent = useCallback(async () => {
+    try {
+      const [fetchedGifts, fetchedGiftOptions, fetchedOrders] = await Promise.all([
+        fetchGifts(),
+        getGiftOptions(),
+        getOrders(),
+      ]);
+      setGifts(fetchedGifts);
+      setGiftOptions(fetchedGiftOptions);
+      setAllOrders(fetchedOrders);
+    } catch (error) {
+      console.error("Failed to silently sync card data:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (currentUser) {
       fetchData();
@@ -119,9 +134,17 @@ export default function MembershipCardPage() {
   }, [searchTerm]);
 
   const handleGiftSaved = (savedGift: Gift) => {
-    fetchData();
+    setGifts(prev => {
+      const exists = prev.some(g => g.id === savedGift.id);
+      if (exists) {
+        return prev.map(g => g.id === savedGift.id ? savedGift : g);
+      } else {
+        return [savedGift, ...prev];
+      }
+    });
     setIsAddEditDialogOpen(false);
     setGiftToEdit(null);
+    fetchDataSilent();
   };
 
   const handleOpenAddDialog = () => {
@@ -148,14 +171,33 @@ export default function MembershipCardPage() {
     setIsDeleting(true);
     const result = await deleteGiftAction(giftToDelete.id);
     setIsDeleting(false);
-    setGiftToDelete(null);
 
     if (result.success) {
+      setGifts(prev => prev.filter(g => g.id !== giftToDelete.id));
+      setGiftToDelete(null);
       toast({ title: "Card Deleted", description: "The membership card record has been successfully deleted." });
-      fetchData();
+      fetchDataSilent();
     } else {
+      setGiftToDelete(null);
       toast({ title: "Error", description: result.error || "Could not delete the membership card record.", variant: "destructive" });
     }
+  };
+
+  const handleCourierSuccess = (trackingCode: string, consignmentId: string) => {
+    if (giftForCourier) {
+      setGifts(prev => prev.map(g => {
+        if (g.id === giftForCourier.id) {
+          return {
+            ...g,
+            courierStatus: 'Shipped',
+            packzyConsignmentId: consignmentId,
+            packzyTrackingCode: trackingCode,
+          };
+        }
+        return g;
+      }));
+    }
+    fetchDataSilent();
   };
 
   const renderPagination = () => {
@@ -355,7 +397,7 @@ export default function MembershipCardPage() {
         onOpenChange={setIsCourierDialogOpen}
         gift={giftForCourier}
         currentUser={currentUser}
-        onSuccess={fetchData}
+        onSuccess={handleCourierSuccess}
       />
 
       {giftToDelete && (

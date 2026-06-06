@@ -49,12 +49,12 @@ export async function updateGiftAction(
   giftId: string,
   updates: Partial<Omit<Gift, 'id' | 'createdAt' | 'giftItemName'>> & { giftItemNames: string[] },
   currentUser: User
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; gift?: Gift; error?: string }> {
   try {
-    const success = await updateGiftInDb(giftId, updates, currentUser);
-    if (success) {
+    const updatedGift = await updateGiftInDb(giftId, updates, currentUser);
+    if (updatedGift) {
       revalidatePath("/(app)/membership-card");
-      return { success: true };
+      return { success: true, gift: updatedGift };
     }
     return { success: false, error: "Failed to update gift in database." };
   } catch (error) {

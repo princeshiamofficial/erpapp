@@ -77,7 +77,7 @@ export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'cre
   }
 };
 
-export const updateGift = async (id: string, updates: Partial<Omit<Gift, 'id' | 'createdAt'>>, currentUser: User): Promise<boolean> => {
+export const updateGift = async (id: string, updates: Partial<Omit<Gift, 'id' | 'createdAt'>>, currentUser: User): Promise<Gift | null> => {
   try {
     const existingGift = await getGiftById(id);
     if (!existingGift) throw new Error(`Gift with ID ${id} not found.`);
@@ -94,10 +94,10 @@ export const updateGift = async (id: string, updates: Partial<Omit<Gift, 'id' | 
     };
 
     await query(`UPDATE ${GIFTS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
-    return true;
+    return finalData;
   } catch (error) {
     console.error(`Error updating gift ${id} in MySQL:`, error);
-    return false;
+    return null;
   }
 };
 

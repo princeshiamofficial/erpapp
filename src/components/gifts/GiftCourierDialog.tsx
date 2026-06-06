@@ -28,7 +28,7 @@ interface GiftCourierDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   gift: Gift | null;
   currentUser: User | null;
-  onSuccess: () => void;
+  onSuccess: (trackingCode: string, consignmentId: string) => void;
 }
 
 const formatCurrency = (value: number | null | undefined): string => {
@@ -83,7 +83,7 @@ export function GiftCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
         title: "Transfer Successful",
         description: `Gift ${gift.giftIdDisplay} sent to Steadfast. Tracking: ${result.consignment.tracking_code}`,
       });
-      onSuccess();
+      onSuccess(result.consignment.tracking_code, result.consignment.consignment_id.toString());
       onOpenChange(false);
     } else {
       toast({

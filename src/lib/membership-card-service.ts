@@ -98,7 +98,7 @@ export const addGift = async (cardData: Omit<Card, 'id' | 'giftIdDisplay' | 'cre
   }
 };
 
-export const updateGift = async (id: string, updates: Partial<Omit<Card, 'id' | 'createdAt'>>, currentUser: User): Promise<boolean> => {
+export const updateGift = async (id: string, updates: Partial<Omit<Card, 'id' | 'createdAt'>>, currentUser: User): Promise<Card | null> => {
   try {
     await initMembershipCardsTable();
     const existingCard = await getGiftById(id);
@@ -116,10 +116,10 @@ export const updateGift = async (id: string, updates: Partial<Omit<Card, 'id' | 
     };
 
     await query(`UPDATE ${TABLE_NAME} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
-    return true;
+    return finalData;
   } catch (error) {
     console.error(`Error updating membership card ${id} in MySQL:`, error);
-    return false;
+    return null;
   }
 };
 
