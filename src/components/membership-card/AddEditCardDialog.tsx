@@ -221,18 +221,18 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="recipientName">Recipient Name</Label>
+              <Label htmlFor="recipientName">Card Holder Name</Label>
               <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required className="border-gray-400 dark:border-gray-600" />
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="recipientPhone">Recipient Phone</Label>
+            <Label htmlFor="recipientPhone">Card Holder Phone</Label>
             <Input id="recipientPhone" value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} required className="border-gray-400 dark:border-gray-600" />
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="recipientAddress">Recipient Address</Label>
+            <Label htmlFor="recipientAddress">Card Holder Address</Label>
             <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required className="border-gray-400 dark:border-gray-600 min-h-[80px]" />
           </div>
 

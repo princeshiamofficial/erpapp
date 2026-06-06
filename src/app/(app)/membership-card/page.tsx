@@ -23,7 +23,7 @@ import { format, parseISO } from 'date-fns';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 
 const AddEditCardDialog = dynamic(() => import('@/components/membership-card/AddEditCardDialog').then(mod => mod.AddEditCardDialog));
-const GiftCourierDialog = dynamic(() => import('@/components/gifts/GiftCourierDialog').then(mod => mod.GiftCourierDialog));
+const CardCourierDialog = dynamic(() => import('@/components/membership-card/CardCourierDialog').then(mod => mod.CardCourierDialog));
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -253,7 +253,7 @@ export default function MembershipCardPage() {
                     <TableHead className="pl-6">Card ID</TableHead>
                     <TableHead>Job ID</TableHead>
                     <TableHead>Card No.</TableHead>
-                    <TableHead>Recipient</TableHead>
+                    <TableHead>Card Holder</TableHead>
                     <TableHead>Phone Number</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Date Issued</TableHead>
@@ -350,7 +350,7 @@ export default function MembershipCardPage() {
         allOrders={allOrders}
       />
 
-      <GiftCourierDialog
+      <CardCourierDialog
         isOpen={isCourierDialogOpen}
         onOpenChange={setIsCourierDialogOpen}
         gift={giftForCourier}
@@ -363,7 +363,7 @@ export default function MembershipCardPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>This will permanently delete the gift record for <span className="font-semibold">{giftToDelete.recipientName}</span>. This cannot be undone.</AlertDialogDescription>
+              <AlertDialogDescription>This will permanently delete the membership card record for <span className="font-semibold">{giftToDelete.recipientName}</span>. This cannot be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setGiftToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>

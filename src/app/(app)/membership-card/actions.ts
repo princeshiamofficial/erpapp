@@ -157,15 +157,15 @@ export async function transferGiftToCourierAction(
     } as any, actingUser);
 
     if (!giftUpdateSuccess) {
-      return { success: false, error: "Consignment created, but failed to update gift record." };
+      return { success: false, error: "Consignment created, but failed to update membership card record." };
     }
 
     const telegramMessage = `
-<b>🎁 Gift Shipped via SteadFast!</b>
+<b>💳 Membership Card Shipped via SteadFast!</b>
 
-<b>Gift ID:</b> <code>${existingGift.giftIdDisplay}</code>
-<b>Item(s):</b> ${existingGift.giftItemName}
-<b>Recipient:</b> ${recipientNameRaw}
+<b>Card ID:</b> <code>${existingGift.giftIdDisplay}</code>
+<b>Card No.:</b> ${existingGift.giftItemName}
+<b>Card Holder:</b> ${recipientNameRaw}
 <b>COD (Shipping):</b> ${totalCodAmount.toLocaleString('en-IN')} BDT
 <b>Sent By:</b> ${actingUser.name}
     `;
@@ -174,7 +174,7 @@ export async function transferGiftToCourierAction(
       inline_keyboard: [
         [
           {
-            text: "📦 Track Gift",
+            text: "📦 Track Card",
             url: `https://steadfast.com.bd/tl/${consignment.tracking_code}`
           }
         ]

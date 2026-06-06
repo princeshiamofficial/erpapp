@@ -1,0 +1,182 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import type { Gift, User } from "@/types";
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Truck } from 'lucide-react';
+import { transferGiftToCourierAction } from '@/app/(app)/membership-card/actions';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+interface CardCourierDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  gift: Gift | null;
+  currentUser: User | null;
+  onSuccess: () => void;
+}
+
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'N/A';
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+export function CardCourierDialog({ isOpen, onOpenChange, gift, currentUser, onSuccess }: CardCourierDialogProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shippingArea, setShippingArea] = useState<string>('');
+  const [shippingCharge, setShippingCharge] = useState<string>('0');
+  const [editableRecipient, setEditableRecipient] = useState<string>('');
+  const [editableAddress, setEditableAddress] = useState<string>('');
+  const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen && gift) {
+      setShippingArea('');
+      setShippingCharge('0');
+      setEditableRecipient(gift.recipientName);
+      setEditableAddress(gift.recipientAddress);
+    }
+  }, [isOpen, gift]);
+
+  const handleConfirm = async () => {
+    if (!gift || !currentUser) return;
+
+    if (!shippingArea) {
+      toast({ title: "Validation Error", description: "Please select a shipping area.", variant: "destructive" });
+      return;
+    }
+    const charge = parseFloat(shippingCharge);
+    if (isNaN(charge) || charge < 0) {
+      toast({ title: "Validation Error", description: "Please enter a valid, non-negative shipping charge.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await transferGiftToCourierAction(
+      gift,
+      currentUser,
+      shippingArea,
+      charge,
+      editableRecipient !== gift.recipientName ? editableRecipient : undefined,
+      editableAddress !== gift.recipientAddress ? editableAddress : undefined
+    );
+    setIsSubmitting(false);
+
+    if (result.success) {
+      toast({
+        title: "Transfer Successful",
+        description: `Card ${gift.giftIdDisplay} sent to Steadfast. Tracking: ${result.consignment.tracking_code}`,
+      });
+      onSuccess();
+      onOpenChange(false);
+    } else {
+      toast({
+        title: "Transfer Failed",
+        description: result.error || "Could not transfer card to courier.",
+        variant: "destructive",
+        duration: 8000,
+      });
+    }
+  };
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Truck className="h-6 w-6 text-primary" /> Transfer Membership Card to Courier
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            This will create a consignment in <span className="font-semibold text-foreground">SteadFast</span> for card <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{gift?.giftIdDisplay}</span>.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        {gift && (
+          <div className="text-sm text-foreground bg-secondary/50 p-4 rounded-md border border-border/50 space-y-3">
+            <div className="grid grid-cols-3 items-center gap-4">
+              <Label htmlFor="recipient" className="text-right">Card Holder</Label>
+              <Input
+                id="recipient"
+                value={editableRecipient}
+                onChange={(e) => setEditableRecipient(e.target.value)}
+                readOnly={!isSystemAdmin}
+                className={cn("col-span-2 h-8", !isSystemAdmin && "bg-muted/50 cursor-not-allowed")}
+              />
+            </div>
+            <div className="grid grid-cols-3 items-center gap-4">
+              <Label htmlFor="phone" className="text-right">Phone</Label>
+              <Input id="phone" value={gift.recipientPhone} readOnly className="col-span-2 h-8 bg-muted/50 cursor-not-allowed" />
+            </div>
+            <div className="grid grid-cols-3 items-start gap-4">
+              <Label htmlFor="address" className="text-right pt-2">Address</Label>
+              <Textarea
+                id="address"
+                value={editableAddress}
+                onChange={(e) => setEditableAddress(e.target.value)}
+                readOnly={!isSystemAdmin}
+                className={cn("col-span-2 text-xs", !isSystemAdmin && "bg-muted/50 cursor-not-allowed")}
+                rows={2}
+              />
+            </div>
+            <div className="grid grid-cols-3 items-center gap-4">
+              <Label htmlFor="shipping-area" className="text-right">Shipping Area</Label>
+              <Select value={shippingArea} onValueChange={setShippingArea} required>
+                <SelectTrigger id="shipping-area" className="col-span-2 h-8">
+                  <SelectValue placeholder="Select Area..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Inside Dhaka">Inside Dhaka</SelectItem>
+                  <SelectItem value="Dhaka Suburbs">Dhaka Suburbs</SelectItem>
+                  <SelectItem value="Outside Dhaka">Outside Dhaka</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-3 items-center gap-4">
+              <Label htmlFor="shipping-charge" className="text-right">Shipping Charge</Label>
+              <Input
+                id="shipping-charge"
+                type="number"
+                value={shippingCharge}
+                onChange={(e) => setShippingCharge(e.target.value)}
+                className="col-span-2 h-8"
+                placeholder="e.g., 60"
+                min="0"
+              />
+            </div>
+            <div className="grid grid-cols-3 items-center gap-4 mt-2 pt-2 border-t border-dashed">
+              <Label className="text-right font-bold">Total COD</Label>
+              <div className="col-span-2 font-bold text-base">
+                {formatCurrency(parseFloat(shippingCharge) || 0)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={isSubmitting || !gift || !shippingArea}
+          >
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Transferring...</> : "Confirm Transfer"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
