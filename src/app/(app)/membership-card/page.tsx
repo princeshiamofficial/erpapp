@@ -308,7 +308,7 @@ export default function MembershipCardPage() {
                            </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onSelect={() => handleOpenEditDialog(gift)} className="cursor-pointer">
-                                <Edit3 className="mr-2 h-4 w-4" />Edit
+                                <Edit3 className="mr-2 h-4 w-4" />Reissue
                               </DropdownMenuItem>
                               <DropdownMenuItem onSelect={() => handleOpenCourierDialog(gift)} className="cursor-pointer">
                                 <Truck className="mr-2 h-4 w-4" />Transfer to Courier

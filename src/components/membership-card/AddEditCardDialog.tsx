@@ -191,7 +191,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
     setIsSubmitting(false);
     if (result.success) {
-      toast({ title: `Card ${isEditMode ? 'Updated' : 'Issued'}`, description: "The membership card record has been saved." });
+      toast({ title: `Card ${isEditMode ? 'Reissued' : 'Issued'}`, description: "The membership card record has been saved." });
       if (result.gift) onGiftSaved(result.gift);
       onOpenChange(false);
     } else {
@@ -203,7 +203,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit' : 'Issue'} Card</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Reissue' : 'Issue'} Card</DialogTitle>
           <DialogDescription>
             {isEditMode ? `Update details for Issue ID: ${gift.giftIdDisplay}` : 'Record a new card issued to a client.'}
           </DialogDescription>
@@ -298,7 +298,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Issue Card')}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Reissue Card' : 'Issue Card')}
             </Button>
           </DialogFooter>
         </form>
