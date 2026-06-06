@@ -161,16 +161,7 @@ const calculateProgressInfo = (
       effectiveTargetDate = new Date(effectiveStartDate.getTime() + Math.round(allocatedDays * 86400000));
       
       const totalHours = Math.max(1, Math.round(allocatedDays * 24));
-      const d = Math.floor(totalHours / 24);
-      const h = totalHours % 24;
-
-      if (d === 0) {
-        slaStageName = ` (${h}H SLA)`;
-      } else if (h === 0) {
-        slaStageName = ` (${d}d SLA)`;
-      } else {
-        slaStageName = ` (${d}d ${h}H SLA)`;
-      }
+      slaStageName = ` (${totalHours}H SLA)`;
     }
   } else {
     switch (status) {
