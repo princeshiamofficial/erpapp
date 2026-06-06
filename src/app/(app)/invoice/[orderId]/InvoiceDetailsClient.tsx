@@ -122,17 +122,16 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
 
   return (
     <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl invoice-page print:shadow-none print:border-none print:p-0 print:max-w-none print:w-full print:bg-transparent print:text-[13px] print:leading-tight">
-      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-2 print:pb-2 print:border-border/50 print:break-inside-avoid">
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-4 pb-4 border-b border-border/30 print:mb-2 print:pb-2 print:border-border/50 print:break-inside-avoid">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-2 flex items-center print:text-xl print:mb-1"><FileText className="h-8 w-8 mr-3 print:h-6 print:w-6" /> INVOICE</h2>
-          <div className="mb-2">
+          <div className="relative w-[162px] h-[50px] mb-2 p-1 bg-black rounded-lg">
             <Image
               src="/logo.png"
               alt="Color Hut Logo"
-              width={160}
-              height={40}
+              fill
               priority
-              className="object-contain rounded-lg print:w-32 print:h-auto"
+              sizes="162px"
+              className="object-contain rounded-lg print:relative print:w-36 print:h-auto"
             />
           </div>
           <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
@@ -142,7 +141,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         <div className="text-left sm:text-right mt-4 sm:mt-0">
           <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
           <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-          <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
+          <div className="mt-2 flex sm:justify-end"><svg ref={barcodeRef} className="object-contain h-[35px] max-w-full" data-ai-hint="barcode scan"></svg></div>
         </div>
       </div>
 
