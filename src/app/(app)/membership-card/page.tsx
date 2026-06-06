@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit3, Trash2, MoreVertical, Gift as GiftIcon, Loader2, Truck } from "lucide-react";
+import { PlusCircle, Search, Edit3, Trash2, MoreVertical, CreditCard, Loader2, Truck } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { Gift, User, ServiceGiftItem, TrackingLink } from '@/types';
@@ -70,8 +70,8 @@ export default function MembershipCardPage() {
       setGiftOptions(fetchedGiftOptions);
       setAllOrders(fetchedOrders);
     } catch (error) {
-      console.error("Failed to fetch gifts data:", error);
-      toast({ title: "Error", description: "Could not load gifts data.", variant: "destructive" });
+      console.error("Failed to fetch card data:", error);
+      toast({ title: "Error", description: "Could not load membership card data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -151,10 +151,10 @@ export default function MembershipCardPage() {
     setGiftToDelete(null);
 
     if (result.success) {
-      toast({ title: "Gift Deleted", description: "The gift record has been successfully deleted." });
+      toast({ title: "Card Deleted", description: "The membership card record has been successfully deleted." });
       fetchData();
     } else {
-      toast({ title: "Error", description: result.error || "Could not delete the gift record.", variant: "destructive" });
+      toast({ title: "Error", description: result.error || "Could not delete the membership card record.", variant: "destructive" });
     }
   };
 
@@ -250,13 +250,13 @@ export default function MembershipCardPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="pl-6">Gift ID</TableHead>
+                    <TableHead className="pl-6">Card ID</TableHead>
                     <TableHead>Job ID</TableHead>
-                    <TableHead>Gift Item(s)</TableHead>
+                    <TableHead>Card No.</TableHead>
                     <TableHead>Recipient</TableHead>
                     <TableHead>Phone Number</TableHead>
                     <TableHead>Address</TableHead>
-                    <TableHead>Date Given</TableHead>
+                    <TableHead>Date Issued</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -325,8 +325,8 @@ export default function MembershipCardPage() {
                    {!isLoading && paginatedGifts.length === 0 && (
                      <TableRow key="empty-gifts">
                        <TableCell colSpan={8} className="h-48 text-center">
-                         <GiftIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />
-                         No gift records found.
+                         <CreditCard className="mx-auto h-12 w-12 opacity-30 mb-3" />
+                         No card records found.
                        </TableCell>
                      </TableRow>
                    )}

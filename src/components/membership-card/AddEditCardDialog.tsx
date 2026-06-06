@@ -238,7 +238,7 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div className="space-y-1">
-              <Label>Card Options</Label>
+              <Label>Card No.</Label>
               {selectedGiftItems.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/50 min-h-[40px]">
                   {selectedGiftItems.map((item, idx) => (
@@ -254,15 +254,15 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
               <Popover open={isGiftPopoverOpen} onOpenChange={setIsGiftPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={isGiftPopoverOpen} className="w-full justify-between">
-                    <span className="truncate">{selectedGiftItems.length > 0 ? "Add/Remove items..." : "Select options..."}</span>
+                    <span className="truncate">{selectedGiftItems.length > 0 ? "Add/Remove Card No..." : "Select Card No..."}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
-                    <CommandInput placeholder="Search options..." />
+                    <CommandInput placeholder="Search Card No..." />
                     <CommandList>
-                      <CommandEmpty>No options found.</CommandEmpty>
+                      <CommandEmpty>No cards found.</CommandEmpty>
                       <CommandGroup>
                         {giftOptions.map((option, idx) => (
                           <CommandItem key={`${option.id}-${idx}`} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
