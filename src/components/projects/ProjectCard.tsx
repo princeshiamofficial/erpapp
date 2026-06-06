@@ -160,15 +160,16 @@ const calculateProgressInfo = (
       const allocatedDays = (weight / TOTAL_WEIGHT) * totalDeliveryDays;
       effectiveTargetDate = new Date(effectiveStartDate.getTime() + Math.round(allocatedDays * 86400000));
       
-      const totalHours = Math.round(allocatedDays * 24);
-      if (totalHours < 24) {
-        const allocatedHours = Math.max(1, totalHours);
-        slaStageName = ` (${allocatedHours}H SLA)`;
-      } else if (totalHours % 24 === 0) {
-        const days = totalHours / 24;
-        slaStageName = ` (${days} Day SLA)`;
+      const totalHours = Math.max(1, Math.round(allocatedDays * 24));
+      const d = Math.floor(totalHours / 24);
+      const h = totalHours % 24;
+
+      if (d === 0) {
+        slaStageName = ` (${h}H SLA)`;
+      } else if (h === 0) {
+        slaStageName = ` (${d}d SLA)`;
       } else {
-        slaStageName = ` (${totalHours}H SLA)`;
+        slaStageName = ` (${d}d ${h}H SLA)`;
       }
     }
   } else {
