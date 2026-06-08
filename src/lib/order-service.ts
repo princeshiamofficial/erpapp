@@ -15,6 +15,21 @@ const ORDERS_TABLE = 'orders';
 const PROJECTS_TABLE = 'projects';
 const SHIPPED_ORDERS_TABLE = 'shipped_orders';
 
+// Ensure the `is_starred` column exists in the orders table
+const ensureStarredColumnExists = async () => {
+  try {
+    const columns = await query<any[]>(`SHOW COLUMNS FROM ${ORDERS_TABLE} LIKE 'is_starred'`);
+    if (columns.length === 0) {
+      console.log(`Column 'is_starred' not found in table '${ORDERS_TABLE}'. Creating it...`);
+      await query(`ALTER TABLE ${ORDERS_TABLE} ADD COLUMN is_starred DECIMAL(2,1) DEFAULT 0.0`);
+      console.log(`Column 'is_starred' created successfully.`);
+    }
+  } catch (error) {
+    console.error(`Error ensuring 'is_starred' column exists:`, error);
+  }
+};
+ensureStarredColumnExists();
+
 const mapRowToOrder = (row: any): TrackingLink => ({
   id: row.id,
   clientId: row.client_id,
@@ -37,6 +52,7 @@ const mapRowToOrder = (row: any): TrackingLink => ({
   updatedByUserId: row.updated_by_user_id,
   updatedByUserName: row.updated_by_user_name,
   isPublic: Boolean(row.is_public),
+  isStarred: Number(row.is_starred || 0),
   currentStatus: row.current_status,
   statusHistory: typeof row.status_history === 'string' ? JSON.parse(row.status_history) : row.status_history,
   comments: typeof row.comments === 'string' ? JSON.parse(row.comments) : row.comments,
@@ -251,6 +267,7 @@ export const addOrder = async (orderData: {
   crmUserName: string;
   createdAt: string;
   acceptedDeliveryDate?: string | null;
+  isStarred?: number;
 }): Promise<TrackingLink | null> => {
   const transactionTime = new Date().toISOString();
 
@@ -368,15 +385,15 @@ export const addOrder = async (orderData: {
       `INSERT INTO ${ORDERS_TABLE} (
         id, client_id, order_items, special_client_discount, shipping_charge, 
         order_notes, crm_user_id, created_at, accepted_delivery_date, updated_at, updated_by_user_id, 
-        is_public, current_status, status_history, comments, view_count, advance_payments
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        is_public, is_starred, current_status, status_history, comments, view_count, advance_payments
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         orderId, clientId, JSON.stringify(orderData.orderItems),
         orderData.specialClientDiscount ?? null, orderData.shippingCharge ?? null, orderData.orderNotes || null,
         orderData.crmUserId, mysqlCreatedAt, 
         orderData.acceptedDeliveryDate ? format(parseISO(orderData.acceptedDeliveryDate), 'yyyy-MM-dd HH:mm:ss') : null,
         mysqlUpdatedAt, orderData.crmUserId,
-        false, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
+        false, orderData.isStarred ?? 0, orderData.initialStatusId, JSON.stringify([initialLogEntry]),
         JSON.stringify([]), 0, JSON.stringify(initialAdvancePayments)
       ]
     );
@@ -394,7 +411,7 @@ export const addOrder = async (orderData: {
       acceptedDeliveryDate: orderData.acceptedDeliveryDate || null,
       updatedAt: transactionTime,
       updatedByUserId: orderData.crmUserId, updatedByUserName: orderData.crmUserName,
-      isPublic: false, currentStatus: orderData.initialStatusId,
+      isPublic: false, isStarred: orderData.isStarred ?? 0, currentStatus: orderData.initialStatusId,
       statusHistory: [initialLogEntry], comments: [], viewCount: 0,
       advancePayments: initialAdvancePayments,
       packzyConsignmentId: null, packzyTrackingCode: null,
@@ -450,6 +467,7 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     if (updates.designerRepresentativeId !== undefined) { fields.push('designer_representative_id = ?'); params.push(updates.designerRepresentativeId); }
     if (updates.updatedByUserId !== undefined) { fields.push('updated_by_user_id = ?'); params.push(updates.updatedByUserId); }
     if (updates.isPublic !== undefined) { fields.push('is_public = ?'); params.push(updates.isPublic); }
+    if (updates.isStarred !== undefined) { fields.push('is_starred = ?'); params.push(updates.isStarred); }
     if (updates.currentStatus !== undefined) { fields.push('current_status = ?'); params.push(updates.currentStatus); }
     if (updates.statusHistory !== undefined) { fields.push('status_history = ?'); params.push(JSON.stringify(updates.statusHistory)); }
     if (updates.comments !== undefined) { fields.push('comments = ?'); params.push(JSON.stringify(updates.comments)); }

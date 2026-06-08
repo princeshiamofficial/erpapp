@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard, Star } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useSocket } from "@/contexts/socket-context";
 import Link from "next/link";
@@ -215,7 +215,16 @@ export default function OrdersPage() {
       });
     }
 
-    if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sortOrders = (a: TrackingLink, b: TrackingLink) => {
+      const aStarred = a.isStarred || 0;
+      const bStarred = b.isStarred || 0;
+      if (aStarred !== bStarred) {
+        return bStarred - aStarred;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    };
+
+    if (!searchTerm) return [...result].sort(sortOrders);
 
     const lowerSearchTerm = searchTerm.toLowerCase();
     return result.filter(order =>
@@ -224,7 +233,7 @@ export default function OrdersPage() {
       (order.phoneNumber || '').toLowerCase().includes(lowerSearchTerm) ||
       (order.crmUserName || '').toLowerCase().includes(lowerSearchTerm) ||
       (order.designerRepresentativeName || '').toLowerCase().includes(lowerSearchTerm)
-    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ).sort(sortOrders);
   }, [orders, searchTerm, currentUser, viewType, selectedDateRange]);
 
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
@@ -597,9 +606,11 @@ export default function OrdersPage() {
                   return (
                     <TableRow key={order.id || `order-${index}`} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="pl-6">
-                        <Link href={`/track/${order.id}`} className="font-medium text-primary hover:underline">
-                          {order.id}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          <Link href={`/track/${order.id}`} className="font-medium text-primary hover:underline">
+                            {order.id}
+                          </Link>
+                        </div>
                       </TableCell>
                       <TableCell className="text-card-foreground">
                         <div>{order.companyName}</div>

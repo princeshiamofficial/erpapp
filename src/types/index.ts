@@ -189,6 +189,7 @@ export interface TrackingLink {
   updatedByUserId?: string;
   updatedByUserName?: string;
   isPublic: boolean;
+  isStarred?: number;
   currentStatus: string; // ID of a CustomStatus
   statusHistory: OrderLogEntry[];
   comments: Comment[];
@@ -419,6 +420,7 @@ export interface Project {
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
+  isStarred?: number;
 }
 
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';

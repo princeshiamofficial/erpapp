@@ -375,9 +375,6 @@ export default function MembershipCardPage() {
                               <DropdownMenuItem onSelect={() => handleOpenEditDialog(cardItem)} className="cursor-pointer">
                                 <Edit3 className="mr-2 h-4 w-4" />Reissue
                               </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleOpenCourierDialog(cardItem)} className="cursor-pointer">
-                                <Truck className="mr-2 h-4 w-4" />Transfer to Courier
-                              </DropdownMenuItem>
                               <DropdownMenuItem onSelect={() => handleDeleteRequest(cardItem)} className="cursor-pointer text-destructive focus:text-destructive">
                                 <Trash2 className="mr-2 h-4 w-4" />Delete
                               </DropdownMenuItem>

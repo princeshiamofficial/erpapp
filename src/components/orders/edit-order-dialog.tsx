@@ -19,7 +19,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction, getClientDetailsAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Star } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -77,6 +77,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
   const [orderNotes, setOrderNotes] = useState('');
   const [isAutoFilled, setIsAutoFilled] = useState(false);
+  const [isStarred, setIsStarred] = useState<number>(0);
 
   const initialJobIdRef = useRef('');
   const initialCompanyNameRef = useRef('');
@@ -171,6 +172,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setOrderNotes(order.orderNotes || '');
       setOrderItems(order.orderItems.map(item => ({ ...item, quantity: item.quantity.toString() })));
       setShippingCharge(order.shippingCharge && Number(order.shippingCharge) !== 0 ? order.shippingCharge.toString() : '');
+      setIsStarred(order.isStarred || 0);
 
       const currentAdvancePayments = order.advancePayments || [];
       if (currentAdvancePayments.length === 0 && order.advancePayment && order.advancePayment > 0) {
@@ -512,6 +514,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       orderNotes: orderNotes.trim() || null,
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
       advancePayments: [...existingAdvancePayments],
+      isStarred,
     };
 
     if (parseFloat(newAdvanceAmount) > 0) {
@@ -553,9 +556,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => { setCompanyNameInput(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} /></div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => { setAddress(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} /></div>
-              <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-4", order.currentStatus === 'delivered' ? "lg:grid-cols-2" : "lg:grid-cols-3")}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
+                  <Label htmlFor="edit-phoneNumber" className="h-5 flex items-center">Phone Number *</Label>
                   <Input
                     id="edit-phoneNumber"
                     type="tel"
@@ -576,7 +579,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="edit-orderDate">Date Created *</Label>
+                  <Label htmlFor="edit-orderDate" className="h-5 flex items-center">Date Created *</Label>
                   <Popover open={isOrderDatePopoverOpen} onOpenChange={setIsOrderDatePopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !createdAt && "text-muted-foreground")} disabled={isSubmitting}>
@@ -591,7 +594,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 </div>
                 {order.currentStatus !== 'delivered' && (
                   <div className="space-y-1">
-                    <Label htmlFor="edit-acceptedDeliveryDate">Delivery Date (Optional)</Label>
+                    <Label htmlFor="edit-acceptedDeliveryDate" className="h-5 flex items-center">Delivery Date (Optional)</Label>
                     <Popover open={isDeliveryDatePopoverOpen} onOpenChange={setIsDeliveryDatePopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !acceptedDeliveryDate && "text-muted-foreground")} disabled={isSubmitting}>
@@ -605,6 +608,51 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     </Popover>
                   </div>
                 )}
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-1.5 h-5 cursor-pointer">
+                    <Star className={cn("h-4 w-4 transition-all", isStarred > 0 ? "fill-amber-500 text-amber-500 scale-110" : "text-muted-foreground")} />
+                    Priority Star Rating
+                  </Label>
+                  <div className="flex items-center justify-between h-10 px-3 border rounded-md bg-background">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((starIndex) => {
+                        const isFull = isStarred >= starIndex;
+                        const isHalf = !isFull && isStarred >= starIndex - 0.5;
+
+                        return (
+                          <button
+                            key={starIndex}
+                            type="button"
+                            onClick={() => {
+                              if (isStarred === starIndex) {
+                                setIsStarred(0);
+                              } else if (isStarred === starIndex - 0.5) {
+                                setIsStarred(starIndex);
+                              } else {
+                                setIsStarred(starIndex - 0.5);
+                              }
+                            }}
+                            className="relative cursor-pointer transition-transform hover:scale-110 active:scale-95 shrink-0 outline-none"
+                            disabled={isSubmitting}
+                          >
+                            {isFull ? (
+                              <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
+                            ) : isHalf ? (
+                              <div className="relative">
+                                <Star className="h-5 w-5 text-muted-foreground/30 dark:text-muted-foreground/20" />
+                                <div className="absolute top-0 left-0 overflow-hidden w-[50%] h-full">
+                                  <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
+                                </div>
+                              </div>
+                            ) : (
+                              <Star className="h-5 w-5 text-muted-foreground/30 dark:text-muted-foreground/20 hover:text-amber-400" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting} /></div>
               <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Order Items *</Label>

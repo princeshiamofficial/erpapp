@@ -210,13 +210,17 @@ export function ProjectsKanbanClient() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("project-updated", (data: any) => {
-      console.log("Project updated remotely:", data);
+    const handleUpdate = (data: any) => {
+      console.log("Realtime update received on projects board:", data);
       fetchData(true);
-    });
+    };
+
+    socket.on("project-updated", handleUpdate);
+    socket.on("order-updated", handleUpdate);
 
     return () => {
-      socket.off("project-updated");
+      socket.off("project-updated", handleUpdate);
+      socket.off("order-updated", handleUpdate);
     };
   }, [socket, fetchData]);
 
@@ -426,7 +430,7 @@ export function ProjectsKanbanClient() {
       const nameParts = (p.name || '').split(' • ');
       const jobId = nameParts.length > 1 ? nameParts[0].trim() : p.projectIdDisplay;
       const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : p.name;
-      
+
       return {
         'Job ID': jobId,
         'Company Name': companyName,
@@ -582,8 +586,49 @@ export function ProjectsKanbanClient() {
     };
 
     const sorted = [...filteredProjects].sort((a, b) => {
-      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      const aStarred = a.isStarred !== undefined && a.isStarred > 0;
+      const bStarred = b.isStarred !== undefined && b.isStarred > 0;
+
+      // Helper to get stage-specific timestamp
+      const getStageTimestamp = (p: Project) => {
+        let ts: string | undefined;
+        switch (p.status) {
+          case 'CR Clearance': ts = p.crClearanceAt; break;
+          case 'CO Clearance': ts = p.coClearanceAt || p.onDesignAt; break;
+          case 'On Design': ts = p.onDesignAt; break;
+          case 'On Hold': ts = p.onHoldAt; break;
+          case 'Logistics': ts = p.logisticsAt; break;
+          case 'Courier': ts = p.courierAt; break;
+          case 'Delivered': ts = p.deliveredAt; break;
+          case 'Cancel': ts = p.cancelAt; break;
+        }
+        const fallback = p.updatedAt || p.createdAt || 0;
+        if (!ts) {
+          return fallback ? new Date(fallback).getTime() : 0;
+        }
+        try {
+          return new Date(ts).getTime();
+        } catch {
+          return fallback ? new Date(fallback).getTime() : 0;
+        }
+      };
+
+      const dateA = getStageTimestamp(a);
+      const dateB = getStageTimestamp(b);
+
+      if (aStarred && !bStarred) return -1;
+      if (!aStarred && bStarred) return 1;
+
+      if (aStarred && bStarred) {
+        const starA = a.isStarred || 0;
+        const starB = b.isStarred || 0;
+        if (starB !== starA) {
+          return starB - starA; // Star based (highest stars first)
+        }
+        return dateB - dateA; // If same stars, sort by stage date
+      }
+
+      // Neither is starred, sort by stage date based
       return dateB - dateA;
     });
 

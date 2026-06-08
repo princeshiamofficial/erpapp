@@ -48,6 +48,7 @@ interface CreateOrderDialogFormData {
   orderNotes?: string | null;
   initialStatusId: string;
   acceptedDeliveryDate?: string | null;
+  isStarred?: number;
 }
 
 const formatAmountForNotification = (amount: number): string => {
@@ -160,6 +161,7 @@ export async function createOrderAction(
       crmUserName: currentUser.name,
       newAdvancePaymentNotes: data.newAdvancePaymentNotes || null,
       acceptedDeliveryDate: data.acceptedDeliveryDate || null,
+      isStarred: data.isStarred ?? 0,
     };
 
     const createdOrder = await addOrderService(newOrderDataForService);

@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createOrderAction, getClientDetailsAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, UploadCloud, Paperclip, XCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, UploadCloud, Paperclip, XCircle, Star } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -69,6 +69,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStarred, setIsStarred] = useState<number>(0);
   const [isOrderDatePopoverOpen, setIsOrderDatePopoverOpen] = useState(false);
   const [isDeliveryDatePopoverOpen, setIsDeliveryDatePopoverOpen] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
@@ -123,6 +124,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setIsAutoFilled(false);
     setSelectedPaymentProof(null);
     setIsUploadingProof(false);
+    setIsStarred(0);
   }, []);
 
   const fetchOptions = useCallback(async () => {
@@ -519,6 +521,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
       acceptedDeliveryDate: acceptedDeliveryDate ? acceptedDeliveryDate.toISOString() : null,
+      isStarred,
     };
 
     const result = await createOrderAction(orderDataForAction, currentUser);
@@ -563,7 +566,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="phoneNumber">Phone Number *</Label>
+                <Label htmlFor="phoneNumber" className="h-5 flex items-center">Phone Number *</Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -584,58 +587,102 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="orderDate">Order Date *</Label>
-                 <Popover open={isOrderDatePopoverOpen} onOpenChange={setIsOrderDatePopoverOpen}>
-                   <PopoverTrigger asChild>
-                     <Button
-                       variant={"outline"}
-                       className={cn(
-                         "w-full justify-start text-left font-normal",
-                         !currentOrderDate && "text-muted-foreground"
-                       )}
-                       disabled={isSubmitting}
-                     >
-                       <CalendarDays className="mr-2 h-4 w-4" />
-                       {currentOrderDate ? format(currentOrderDate, "PPP") : <span>Pick a date</span>}
-                     </Button>
-                   </PopoverTrigger>
-                   <PopoverContent className="w-auto p-0" align="start">
-                     <Calendar
-                       mode="single"
-                       selected={currentOrderDate}
-                       onSelect={(date) => { setCurrentOrderDate(date); setIsOrderDatePopoverOpen(false); }}
-                       initialFocus
-                       disabled={isSubmitting}
-                     />
-                   </PopoverContent>
-                 </Popover>
+                <Label htmlFor="orderDate" className="h-5 flex items-center">Order Date *</Label>
+                <Popover open={isOrderDatePopoverOpen} onOpenChange={setIsOrderDatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !currentOrderDate && "text-muted-foreground"
+                      )}
+                      disabled={isSubmitting}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {currentOrderDate ? format(currentOrderDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={currentOrderDate}
+                      onSelect={(date) => { setCurrentOrderDate(date); setIsOrderDatePopoverOpen(false); }}
+                      initialFocus
+                      disabled={isSubmitting}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="acceptedDeliveryDate">Delivery Date (Optional)</Label>
-                 <Popover open={isDeliveryDatePopoverOpen} onOpenChange={setIsDeliveryDatePopoverOpen}>
-                   <PopoverTrigger asChild>
-                     <Button
-                       variant={"outline"}
-                       className={cn(
-                         "w-full justify-start text-left font-normal",
-                         !acceptedDeliveryDate && "text-muted-foreground"
-                       )}
-                       disabled={isSubmitting}
-                     >
-                       <CalendarDays className="mr-2 h-4 w-4" />
-                       {acceptedDeliveryDate ? format(acceptedDeliveryDate, "PPP") : <span>Pick a date</span>}
-                     </Button>
-                   </PopoverTrigger>
-                   <PopoverContent className="w-auto p-0" align="start">
-                     <Calendar
-                       mode="single"
-                       selected={acceptedDeliveryDate}
-                       onSelect={(date) => { setAcceptedDeliveryDate(date); setIsDeliveryDatePopoverOpen(false); }}
-                       initialFocus
-                       disabled={isSubmitting}
-                     />
-                   </PopoverContent>
-                 </Popover>
+                <Label htmlFor="acceptedDeliveryDate" className="h-5 flex items-center">Delivery Date (Optional)</Label>
+                <Popover open={isDeliveryDatePopoverOpen} onOpenChange={setIsDeliveryDatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !acceptedDeliveryDate && "text-muted-foreground"
+                      )}
+                      disabled={isSubmitting}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {acceptedDeliveryDate ? format(acceptedDeliveryDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={acceptedDeliveryDate}
+                      onSelect={(date) => { setAcceptedDeliveryDate(date); setIsDeliveryDatePopoverOpen(false); }}
+                      initialFocus
+                      disabled={isSubmitting}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1.5 h-5 cursor-pointer">
+                  <Star className={cn("h-4 w-4 transition-all", isStarred > 0 ? "fill-amber-500 text-amber-500 scale-110" : "text-muted-foreground")} />
+                  Priority Star Rating
+                </Label>
+                <div className="flex items-center justify-between h-10 px-3 border rounded-md bg-background">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((starIndex) => {
+                      const isFull = isStarred >= starIndex;
+                      const isHalf = !isFull && isStarred >= starIndex - 0.5;
+
+                      return (
+                        <button
+                          key={starIndex}
+                          type="button"
+                          onClick={() => {
+                            if (isStarred === starIndex) {
+                              setIsStarred(0);
+                            } else if (isStarred === starIndex - 0.5) {
+                              setIsStarred(starIndex);
+                            } else {
+                              setIsStarred(starIndex - 0.5);
+                            }
+                          }}
+                          className="relative cursor-pointer transition-transform hover:scale-110 active:scale-95 shrink-0 outline-none"
+                        >
+                          {isFull ? (
+                            <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
+                          ) : isHalf ? (
+                            <div className="relative">
+                              <Star className="h-5 w-5 text-muted-foreground/30 dark:text-muted-foreground/20" />
+                              <div className="absolute top-0 left-0 overflow-hidden w-[50%] h-full">
+                                <Star className="h-5 w-5 fill-amber-500 text-amber-500" />
+                              </div>
+                            </div>
+                          ) : (
+                            <Star className="h-5 w-5 text-muted-foreground/30 dark:text-muted-foreground/20 hover:text-amber-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
 

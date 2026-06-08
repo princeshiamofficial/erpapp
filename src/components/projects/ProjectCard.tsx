@@ -3,7 +3,7 @@
 import type { Project, CustomStatus, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react';
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck, Star } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import NextLink from 'next/link';
 import { Progress } from '@/components/ui/progress';
@@ -83,6 +83,7 @@ interface ProgressInfo {
   displayText: string;
   isOverdue: boolean;
   progressColorClass: string;
+  stageTargetDate: string;
 }
 
 const STAGE_WEIGHTS: Record<string, number> = {
@@ -135,7 +136,7 @@ const calculateProgressInfo = (
   }
 
   if (!effectiveStartDateIso) {
-    return { showProgressBar: true, percentage: 0, displayText: "Start date missing", isOverdue: false, progressColorClass: "bg-muted" };
+    return { showProgressBar: true, percentage: 0, displayText: "Start date missing", isOverdue: false, progressColorClass: "bg-muted", stageTargetDate: 'N/A' };
   }
 
   let effectiveStartDate = parseISO(effectiveStartDateIso);
@@ -146,7 +147,7 @@ const calculateProgressInfo = (
 
   if (status === 'Cancel' || status === 'Delivered') {
     showProgressBar = false;
-    return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
+    return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "", stageTargetDate: endDate ? parseISO(endDate).toLocaleDateString() : 'N/A' };
   }
 
   if (endDate) {
@@ -207,7 +208,7 @@ const calculateProgressInfo = (
         break;
       default:
         showProgressBar = false;
-        return { showProgressBar, percentage: 0, displayText: "No target date", isOverdue: false, progressColorClass: "" };
+        return { showProgressBar, percentage: 0, displayText: "No target date", isOverdue: false, progressColorClass: "", stageTargetDate: endDate ? parseISO(endDate).toLocaleDateString() : 'N/A' };
     }
   }
 
@@ -253,6 +254,7 @@ const calculateProgressInfo = (
     displayText: currentDisplayText,
     isOverdue: currentIsOverdue,
     progressColorClass,
+    stageTargetDate: effectiveTargetDate.toLocaleDateString(),
   };
 };
 
@@ -371,7 +373,7 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
               "inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/30"
             )}>
               <CalendarDays className="mr-1.5 h-3 w-3" />
-              Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
+              Target: {progressInfo.stageTargetDate}
             </div>
           </NextLink>
 
@@ -456,6 +458,32 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
                 </TooltipProvider>
               </>
             )}
+            {project.isStarred !== undefined && project.isStarred > 0 && (
+              <div className="ml-auto flex items-center gap-0.5 shrink-0" title={`${project.isStarred.toFixed(1)} Stars Priority`}>
+                {[1, 2, 3, 4, 5].map((starIndex) => {
+                  const rating = project.isStarred || 0;
+                  const isFull = rating >= starIndex;
+                  const isHalf = !isFull && rating >= starIndex - 0.5;
+
+                  return (
+                    <div key={starIndex} className="relative shrink-0">
+                      {isFull ? (
+                        <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                      ) : isHalf ? (
+                        <div className="relative">
+                          <Star className="h-3.5 w-3.5 text-muted-foreground/30 dark:text-muted-foreground/20" />
+                          <div className="absolute top-0 left-0 overflow-hidden w-[50%] h-full">
+                            <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                          </div>
+                        </div>
+                      ) : (
+                        <Star className="h-3.5 w-3.5 text-muted-foreground/30 dark:text-muted-foreground/20" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -471,6 +499,7 @@ export const ProjectCard = React.memo(ProjectCardComponent, (prevProps, nextProp
     prevProps.project.updatedAt === nextProps.project.updatedAt &&
     prevProps.project.name === nextProps.project.name &&
     prevProps.project.endDate === nextProps.project.endDate &&
+    prevProps.project.isStarred === nextProps.project.isStarred &&
     prevProps.project.designerRepresentativeId === nextProps.project.designerRepresentativeId &&
     prevProps.currentUser?.id === nextProps.currentUser?.id &&
     prevProps.isOverlay === nextProps.isOverlay &&

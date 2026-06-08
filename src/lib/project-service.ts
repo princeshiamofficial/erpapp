@@ -44,7 +44,7 @@ export const getProjects = async (): Promise<Project[]> => {
     ]);
 
     const projectsMap = new Map(persistentProjects.map(p => [
-      p.id, 
+      p.id,
       typeof p.data_json === 'string' ? JSON.parse(p.data_json) : p.data_json
     ]));
 
@@ -68,20 +68,21 @@ export const getProjects = async (): Promise<Project[]> => {
         const dynamicProject: Project = {
           ...persistentData,
           id: order.id,
-          projectIdDisplay: order.id, 
-          name: order.companyName, 
+          projectIdDisplay: order.id,
+          name: order.companyName,
           status: projectStatus,
-          assigneeId: order.crmUserId, 
+          assigneeId: order.crmUserId,
           assigneeName: order.crmUserName,
           assigneeInitials: getInitialsForName(order.crmUserName),
           assigneeAvatarUrl: null,
           designerRepresentativeId: order.designerRepresentativeId || null,
           designerRepresentativeName: order.designerRepresentativeName || null,
           designerRepresentativeAvatarUrl: null,
-          categoryTag: 'From Order', 
+          categoryTag: 'From Order',
           createdAt: projectCreatedAt,
-          updatedAt: order.updatedAt || projectCreatedAt, 
+          updatedAt: order.updatedAt || projectCreatedAt,
           endDate: projectEndDate,
+          isStarred: order.isStarred || 0,
         };
         return dynamicProject;
       });
@@ -150,6 +151,7 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
         createdAt: projectCreatedAt,
         updatedAt: order.updatedAt || projectCreatedAt,
         endDate: projectEndDate,
+        isStarred: order.isStarred || 0,
       };
     }
   } catch (error) {

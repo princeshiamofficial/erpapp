@@ -302,6 +302,13 @@ export async function transferToCourierAction(
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/active-orders");
 
+    // Emit socket events for real-time updates
+    const io = getIO();
+    if (io) {
+      io.emit("project-updated", { id: project.id, status: 'Courier' });
+      io.emit("order-updated", { id: project.id });
+    }
+
     return { success: true, consignment };
 
   } catch (error) {
