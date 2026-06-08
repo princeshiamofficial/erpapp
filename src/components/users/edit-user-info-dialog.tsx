@@ -33,7 +33,7 @@ interface EditUserInfoDialogProps {
 export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChange, availableCategories = [] }: EditUserInfoDialogProps) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  const [companyName, setCompanyName] = useState(user.companyName || '');
+  const [companyName, setCompanyName] = useState(user.companyName || 'Color Hut');
   const [phone, setPhone] = useState(user.phone || '');
   const [address, setAddress] = useState(user.address || ''); // New state for address
   const [category, setCategory] = useState(user.category || '');
@@ -48,7 +48,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
     if (isOpen && user) {
       setName(user.name);
       setEmail(user.email);
-      setCompanyName(user.companyName || '');
+      setCompanyName(user.companyName || 'Color Hut');
       setPhone(user.phone || '');
       setAddress(user.address || ''); // Set address state
       setCategory(user.category || '');

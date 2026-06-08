@@ -81,10 +81,6 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">User</Label>
-              <p className="col-span-3 font-medium">{user.name} ({user.email})</p>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role-edit" className="text-right">Role</Label>
               <Select 
                 value={selectedRole} 

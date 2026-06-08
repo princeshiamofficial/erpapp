@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { LogOut, User as UserIcon, Settings, Edit3, Calculator, Hash } from "lucide-react";
 import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
+import { getRoles } from "@/lib/user-role-service";
 
 const GyroscopeIcon = ({ className }: { className?: string }) => (
   <svg
@@ -38,6 +39,7 @@ const GyroscopeIcon = ({ className }: { className?: string }) => (
 export function UserNav() {
   const { currentUser, logout } = useAuth();
   const [displayMode, setDisplayMode] = useState<'amount'|'quantity'>('quantity');
+  const [roleName, setRoleName] = useState<string>("");
 
   const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
 
@@ -47,6 +49,22 @@ export function UserNav() {
       setDisplayMode(savedMode);
     }
   }, []);
+
+  useEffect(() => {
+    async function fetchRoleName() {
+      if (!currentUser?.role) return;
+      try {
+        const roles = await getRoles();
+        const roleDef = roles.find(r => r.id === currentUser.role);
+        if (roleDef) {
+          setRoleName(roleDef.name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch roles in UserNav:", error);
+      }
+    }
+    fetchRoleName();
+  }, [currentUser]);
 
   const toggleDisplayMode = () => {
     const newMode = displayMode === 'amount' ? 'quantity' : 'amount';
@@ -89,7 +107,7 @@ export function UserNav() {
               {currentUser.email}
             </p>
             <p className="text-xs leading-none text-muted-foreground font-semibold pt-1">
-              Role: {currentUser.role.replace(/_/g, " ")}
+              Role: {roleName || currentUser.role.replace(/_/g, " ")}
             </p>
           </div>
         </DropdownMenuLabel>

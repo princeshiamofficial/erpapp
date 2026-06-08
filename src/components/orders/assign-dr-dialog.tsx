@@ -74,7 +74,7 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
         setIsLoadingDrs(true);
         try {
           const allUsers = await getUsers();
-          const drs = allUsers.filter(user => user.role === 'DESIGNER_REPRESENTATIVE');
+          const drs = allUsers.filter(user => user.role === 'DESIGNER_REPRESENTATIVE' && !user.isBanned);
           setDesignerReps(drs);
         } catch (error) {
           console.error("Failed to fetch designer representatives:", error);

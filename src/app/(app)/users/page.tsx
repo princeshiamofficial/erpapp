@@ -245,12 +245,15 @@ export default function UsersPage() {
 
     // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().replace(/_/g, ' ').includes(searchTerm.toLowerCase()) ||
-        (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      filtered = filtered.filter(user => {
+        const roleName = roleDefinitionsMap.get(user.role)?.name || user.role.replace(/_/g, ' ');
+        return (
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          roleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          ((user.companyName || 'Color Hut').toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+      });
     }
 
     // Sort the results by role priority then name
@@ -269,11 +272,6 @@ export default function UsersPage() {
       return a.name.localeCompare(b.name);
     });
   }, [usersToDisplay, searchTerm, statusFilter, availableRoles]);
-
-
-  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
-    return null;
-  }
 
   const canCurrentUserEditRoleOf = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
@@ -314,6 +312,10 @@ export default function UsersPage() {
   }, [currentUser]);
 
   const showBanStatusColumn = currentUser?.role === 'SYSTEM_ADMIN';
+
+  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
+    return null;
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -414,7 +416,7 @@ export default function UsersPage() {
                             style={{ backgroundColor: badgeColor, color: textColor }}
                             className="border-none"
                           >
-                            {user.role.replace(/_/g, ' ')}
+                            {roleDef?.name || user.role.replace(/_/g, ' ')}
                           </Badge>
                         </TableCell>
                         {showBanStatusColumn && (
@@ -426,7 +428,7 @@ export default function UsersPage() {
                             )}
                           </TableCell>
                         )}
-                        <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.companyName || 'Color Hut'}</TableCell>
                         <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
