@@ -381,179 +381,179 @@ export default function UsersPage() {
                   <TableHead className="pr-6 text-right min-w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-                <TableBody>
-                  {isLoadingUsers && [...Array(10)].map((_, i) => (
-                    <TableRow key={`skel-user-${i}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      {showBanStatusColumn && <TableCell><Skeleton className="h-5 w-24" /></TableCell>}
-                      <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-9 inline-block rounded-md" /></TableCell>
-                    </TableRow>
-                  ))}
+              <TableBody>
+                {isLoadingUsers && [...Array(10)].map((_, i) => (
+                  <TableRow key={`skel-user-${i}`}>
+                    <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    {showBanStatusColumn && <TableCell><Skeleton className="h-5 w-24" /></TableCell>}
+                    <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-9 inline-block rounded-md" /></TableCell>
+                  </TableRow>
+                ))}
 
-                  {!isLoadingUsers && filteredUsers.length > 0 && filteredUsers.map((user, index) => {
-                    const roleDef = roleDefinitionsMap.get(user.role);
-                    const badgeColor = roleDef?.color || '#6b7280';
-                    const textColor = getContrastTextColor(badgeColor);
+                {!isLoadingUsers && filteredUsers.length > 0 && filteredUsers.map((user, index) => {
+                  const roleDef = roleDefinitionsMap.get(user.role);
+                  const badgeColor = roleDef?.color || '#6b7280';
+                  const textColor = getContrastTextColor(badgeColor);
 
-                    return (
-                      <TableRow key={user.id || `user-${index}`} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 font-mono text-muted-foreground">{index + 1}</TableCell>
-                        <TableCell>
-                          <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
-                            <AvatarImage src={user.avatarUrl || undefined} alt={user.name} data-ai-hint="user face" />
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
-                          </Avatar>
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">{user.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                        <TableCell>
-                          <Badge
-                            style={{ backgroundColor: badgeColor, color: textColor }}
-                            className="border-none"
-                          >
-                            {roleDef?.name || user.role.replace(/_/g, ' ')}
-                          </Badge>
-                        </TableCell>
-                        {showBanStatusColumn && (
-                          <TableCell>
-                            {user.isBanned ? (
-                              <Badge variant="destructive" className="bg-red-500/20 text-red-700 border-red-500/30">Banned</Badge>
-                            ) : (
-                              <Badge variant="default" className="bg-green-500/20 text-green-700 border-green-500/30">Active</Badge>
-                            )}
-                          </TableCell>
-                        )}
-                        <TableCell className="text-muted-foreground">{user.companyName || 'Color Hut'}</TableCell>
-                        <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-9 w-9" title="User Actions">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions for {user.name}</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuGroup>
-                                {currentUser?.role === 'SYSTEM_ADMIN' && user.role !== 'SYSTEM_ADMIN' && roleDef?.isDefault && (
-                                  <DropdownMenuItem
-                                    onSelect={() => impersonate(user)}
-                                    className="cursor-pointer text-orange-600 focus:text-orange-700"
-                                  >
-                                    <Eye className="mr-2 h-4 w-4" /> View as
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem
-                                  onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
-                                  disabled={!canAdminModifyTargetUser(user)}
-                                  className="cursor-pointer"
-                                >
-                                  <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
-                                </DropdownMenuItem>
-                                {currentUser?.role === 'SYSTEM_ADMIN' && (
-                                  <DropdownMenuItem
-                                    onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
-                                    className={`cursor-pointer ${user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}`}
-                                    disabled={!canSystemAdminToggleBan(user)}
-                                  >
-                                    {user.isBanned ? <UserCheck className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
-                                    {user.isBanned ? "Unban User" : "Ban User"}
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem
-                                  onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
-                                  disabled={!canAdminModifyTargetUser(user)}
-                                  className="cursor-pointer"
-                                >
-                                  <UserCog className="mr-2 h-4 w-4" /> Set Avatar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true); }}
-                                  disabled={!canAdminModifyTargetUser(user)}
-                                  className="cursor-pointer"
-                                >
-                                  <KeyRound className="mr-2 h-4 w-4" /> Change Password
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true); }}
-                                  disabled={!canCurrentUserEditRoleOf(user)}
-                                  className="cursor-pointer"
-                                >
-                                  <Edit className="mr-2 h-4 w-4" /> Edit Role
-                                </DropdownMenuItem>
-                                {user.role === 'CRM' && (
-                                  <DropdownMenuItem
-                                    onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true); }}
-                                    disabled={!canAdminModifyTargetUser(user)}
-                                    className="cursor-pointer"
-                                  >
-                                    <Target className="mr-2 h-4 w-4" /> Set Sales Targets
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuGroup>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true); }}
-                                disabled={!canAdminDeleteTargetUser(user)}
-                                className="cursor-pointer text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-
-                  {!isLoadingUsers && filteredUsers.length === 0 && (
-                    <TableRow key="empty-users">
-                      <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
-                        <svg
-                          width="64"
-                          height="64"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                          className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mx-auto mb-6 opacity-50", "h-16 w-16")}
+                  return (
+                    <TableRow key={user.id || `user-${index}`} className="hover:bg-muted/50 transition-colors">
+                      <TableCell className="pl-6 font-mono text-muted-foreground">{index + 1}</TableCell>
+                      <TableCell>
+                        <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
+                          <AvatarImage src={user.avatarUrl || undefined} alt={user.name} data-ai-hint="user face" />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                      </TableCell>
+                      <TableCell className="font-medium text-foreground">{user.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell>
+                        <Badge
+                          style={{ backgroundColor: badgeColor, color: textColor }}
+                          className="border-none"
                         >
-                          <path
-                            d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M17 4.5L7 9.5"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        <p className="text-lg text-muted-foreground font-medium">
-                          {searchTerm ? "No users match your search." : "No users found in database."}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {searchTerm ? "Try a different search term." : (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') ? "Add users to manage them here." : "User data could not be loaded."}
-                        </p>
+                          {roleDef?.name || user.role.replace(/_/g, ' ')}
+                        </Badge>
+                      </TableCell>
+                      {showBanStatusColumn && (
+                        <TableCell>
+                          {user.isBanned ? (
+                            <Badge variant="destructive" className="bg-red-500/20 text-red-700 border-red-500/30">Banned</Badge>
+                          ) : (
+                            <Badge variant="default" className="bg-green-500/20 text-green-700 border-green-500/30">Active</Badge>
+                          )}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-muted-foreground">{user.companyName || 'Color Hut'}</TableCell>
+                      <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" title="User Actions">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions for {user.name}</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup>
+                              {currentUser?.role === 'SYSTEM_ADMIN' && user.role !== 'SYSTEM_ADMIN' && roleDef?.isDefault && (
+                                <DropdownMenuItem
+                                  onSelect={() => impersonate(user)}
+                                  className="cursor-pointer text-orange-600 focus:text-orange-700"
+                                >
+                                  <Eye className="mr-2 h-4 w-4" /> View as
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
+                                disabled={!canAdminModifyTargetUser(user)}
+                                className="cursor-pointer"
+                              >
+                                <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
+                              </DropdownMenuItem>
+                              {currentUser?.role === 'SYSTEM_ADMIN' && (
+                                <DropdownMenuItem
+                                  onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
+                                  className={`cursor-pointer ${user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}`}
+                                  disabled={!canSystemAdminToggleBan(user)}
+                                >
+                                  {user.isBanned ? <UserCheck className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
+                                  {user.isBanned ? "Unban User" : "Ban User"}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
+                                disabled={!canAdminModifyTargetUser(user)}
+                                className="cursor-pointer"
+                              >
+                                <UserCog className="mr-2 h-4 w-4" /> Set Avatar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true); }}
+                                disabled={!canAdminModifyTargetUser(user)}
+                                className="cursor-pointer"
+                              >
+                                <KeyRound className="mr-2 h-4 w-4" /> Change Password
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true); }}
+                                disabled={!canCurrentUserEditRoleOf(user)}
+                                className="cursor-pointer"
+                              >
+                                <Edit className="mr-2 h-4 w-4" /> Edit Role
+                              </DropdownMenuItem>
+                              {user.role === 'CRM' && (
+                                <DropdownMenuItem
+                                  onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true); }}
+                                  disabled={!canAdminModifyTargetUser(user)}
+                                  className="cursor-pointer"
+                                >
+                                  <Target className="mr-2 h-4 w-4" /> Set Sales Targets
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true); }}
+                              disabled={!canAdminDeleteTargetUser(user)}
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
+                  );
+                })}
+
+                {!isLoadingUsers && filteredUsers.length === 0 && (
+                  <TableRow key="empty-users">
+                    <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
+                      <svg
+                        width="64"
+                        height="64"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mx-auto mb-6 opacity-50", "h-16 w-16")}
+                      >
+                        <path
+                          d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M17 4.5L7 9.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <p className="text-lg text-muted-foreground font-medium">
+                        {searchTerm ? "No users match your search." : "No users found in database."}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {searchTerm ? "Try a different search term." : (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') ? "Add users to manage them here." : "User data could not be loaded."}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
             </Table>
           </div>
         </CardContent>
