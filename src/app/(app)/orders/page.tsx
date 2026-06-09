@@ -216,11 +216,6 @@ export default function OrdersPage() {
     }
 
     const sortOrders = (a: TrackingLink, b: TrackingLink) => {
-      const aStarred = a.isStarred || 0;
-      const bStarred = b.isStarred || 0;
-      if (aStarred !== bStarred) {
-        return bStarred - aStarred;
-      }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     };
 

@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   // Table Section
   sectionTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: 'medium',
     color: '#0F172A',
     marginTop: 15,
     marginBottom: 7,
@@ -266,7 +266,31 @@ const styles = StyleSheet.create({
     height: 100,
     opacity: 0.4,
     transform: 'rotate(-20deg)',
-  }
+  },
+  // Note Section — matches web UI exactly (no icon, "Order Notes:" heading)
+  noteWrapper: {
+    marginTop: 14,
+  },
+  noteHeading: {
+    fontSize: 14,
+    fontWeight: 'medium',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  noteCard: {
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderStyle: 'solid',
+    backgroundColor: '#FFFEF0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  noteText: {
+    fontSize: 9,
+    color: '#92400E',
+    lineHeight: 1.6,
+  },
 });
 
 interface QuotationPDFProps {
@@ -372,6 +396,16 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
               </View>
             ))}
           </View>
+
+          {/* Note Section */}
+          {quotation.orderNotes && (
+            <View style={styles.noteWrapper}>
+              <Text style={styles.noteHeading}>Notes</Text>
+              <View style={styles.noteCard}>
+                <Text style={styles.noteText}>{quotation.orderNotes}</Text>
+              </View>
+            </View>
+          )}
 
           {/* Summary Section */}
           <View style={styles.summarySection}>
