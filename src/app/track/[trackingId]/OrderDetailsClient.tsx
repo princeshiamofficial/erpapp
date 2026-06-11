@@ -755,12 +755,11 @@ export function OrderDetailsClient({
             {order.statusHistory.slice().reverse().map((entry, index) => {
               const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
                 <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
-                  {/* Solid background mask to block the vertical timeline line from showing through semi-transparent circle */}
-                  <div className="absolute z-10 left-[-36px] sm:left-[-42px] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-card ring-4 ring-card" />
                   <div 
-                    className={`absolute z-20 left-[-36px] sm:left-[-42px] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
+                    className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
                     style={{
-                      backgroundColor: index === 0 ? entryStatusInfo.color : `${entryStatusInfo.color}15`,
+                      backgroundColor: index === 0 ? entryStatusInfo.color : 'hsl(var(--background))',
+                      backgroundImage: index === 0 ? 'none' : `linear-gradient(${entryStatusInfo.color}15, ${entryStatusInfo.color}15)`,
                       borderColor: index === 0 ? 'transparent' : `${entryStatusInfo.color}30`
                     }}
                   >
