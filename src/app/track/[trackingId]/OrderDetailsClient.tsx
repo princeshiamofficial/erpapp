@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +29,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import NextLink from 'next/link';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
@@ -107,6 +108,7 @@ export function OrderDetailsClient({
   const [isDeletingComment, setIsDeletingComment] = useState(false);
 
   const [showApproveButton, setShowApproveButton] = useState(false);
+  const [previewDocumentUrl, setPreviewDocumentUrl] = useState<string | null>(null);
 
   // Combine server-passed user and client-side user for the most up-to-date state
   const currentUser = useMemo(() => authContextUser || initialCurrentUser, [authContextUser, initialCurrentUser]);
@@ -772,29 +774,52 @@ export function OrderDetailsClient({
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
                     <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                     <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
-                    {entry.notes && (() => {
-                      const imageMatch = entry.notes.match(/(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i);
-                      const imageUrl = imageMatch ? imageMatch[1] : null;
-                      return (
-                        <div className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm flex items-start gap-4 justify-between">
-                          <div className="flex-1 whitespace-pre-wrap">{entry.notes}</div>
-                          {imageUrl && (
-                            <a 
-                              href={imageUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded border border-border overflow-hidden bg-background shadow-sm hover:ring-2 hover:ring-primary/50 transition-all group"
-                            >
-                              <img 
-                                src={imageUrl} 
-                                alt="Attachment Proof" 
-                                className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-200"
-                              />
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    {entry.notes ? (
+                      (() => {
+                        const imgRegex = /(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i;
+                        const match = entry.notes.match(imgRegex);
+                        const imageUrl = match ? match[1] : null;
+                        
+                        if (imageUrl) {
+                          const parts = entry.notes.split(imageUrl);
+                          return (
+                            <div className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm flex justify-between items-center gap-4">
+                              <div className="flex-1">
+                                {parts[0]}
+                                <button 
+                                  type="button"
+                                  onClick={() => setPreviewDocumentUrl(imageUrl)}
+                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors text-xs align-middle mx-1"
+                                >
+                                  <FileImage className="h-3.5 w-3.5" />
+                                  View Proof Image
+                                </button>
+                                {parts[1]}
+                              </div>
+                              <div 
+                                className="flex-shrink-0 cursor-pointer overflow-hidden rounded-md border border-border/60 hover:opacity-85 transition-opacity"
+                                onClick={() => setPreviewDocumentUrl(imageUrl)}
+                              >
+                                <img 
+                                  src={imageUrl} 
+                                  alt="Proof thumbnail" 
+                                  className="h-12 w-12 sm:h-16 sm:w-16 object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = "/placeholder.svg";
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
+                            {entry.notes}
+                          </p>
+                        );
+                      })()
+                    ) : null}
                   </div>
                 </div>);
             })}</div>
@@ -857,6 +882,40 @@ export function OrderDetailsClient({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {previewDocumentUrl && (
+        <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
+          <DialogContent className="w-fit max-w-[95vw] p-0 overflow-hidden bg-transparent border-none shadow-none" hideCloseButton={true}>
+            <DialogTitle className="sr-only">Document Preview</DialogTitle>
+            <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
+            <div className="relative flex items-center justify-center bg-transparent">
+              {previewDocumentUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
+                <img 
+                  src={previewDocumentUrl} 
+                  alt="Document Preview" 
+                  className="max-h-[80vh] max-w-[90vw] object-contain animate-in fade-in-50 duration-200"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src !== '/placeholder.svg' && !target.src.endsWith('/placeholder.svg')) {
+                      target.src = '/placeholder.svg';
+                    }
+                  }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-muted-foreground p-12 min-h-[300px] bg-background rounded-lg border shadow-lg w-[400px] max-w-full">
+                  <Paperclip className="h-16 w-16 mb-4 opacity-50" />
+                  <p className="mb-4">This file cannot be previewed directly.</p>
+                  <Button asChild>
+                    <a href={previewDocumentUrl} target="_blank" rel="noopener noreferrer">
+                      Download File
+                    </a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
