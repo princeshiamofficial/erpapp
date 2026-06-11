@@ -829,7 +829,7 @@ function DashboardContent() {
       invoiceDue: currentInvoiceDue,
       totalPurchase: currentTotalPurchaseValue,
       totalPurchaseCount: currentTotalPurchaseItemQuantity,
-      netValue: currentTotalSales - currentTotalPurchaseValue,
+      netValue: currentTotalSales - currentTotalExpenses,
       salesChartData: chartData,
       deliveredCount: currentDeliveredCount.toString(),
       ordersWithDueCount: currentOrdersWithDueCount,
