@@ -243,6 +243,7 @@ export interface ServiceLaminationItem {
 export interface ServicePaymentMethodItem {
   id: string;
   name: string;
+  icon?: string | null;
 }
 
 export interface ServiceGiftItem {

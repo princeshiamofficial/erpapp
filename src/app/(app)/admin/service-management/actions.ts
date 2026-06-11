@@ -121,9 +121,9 @@ export async function deleteLaminationAction(id: string): Promise<{ success: boo
 }
 
 // Payment Method Actions
-export async function addPaymentMethodAction(name: string): Promise<{ success: boolean; paymentMethod?: ServicePaymentMethodItem; error?: string }> {
+export async function addPaymentMethodAction(name: string, icon?: string | null): Promise<{ success: boolean; paymentMethod?: ServicePaymentMethodItem; error?: string }> {
   try {
-    const newPaymentMethod = await addPaymentMethod(name);
+    const newPaymentMethod = await addPaymentMethod(name, icon);
     if (newPaymentMethod) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
@@ -136,9 +136,9 @@ export async function addPaymentMethodAction(name: string): Promise<{ success: b
   }
 }
 
-export async function updatePaymentMethodAction(id: string, name: string): Promise<{ success: boolean; error?: string }> {
+export async function updatePaymentMethodAction(id: string, name: string, icon?: string | null): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updatePaymentMethod(id, name);
+    const success = await updatePaymentMethod(id, name, icon);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);

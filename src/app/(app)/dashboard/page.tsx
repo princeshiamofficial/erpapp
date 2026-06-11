@@ -70,7 +70,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
 import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory, UserRole, Feedback } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getModels } from '@/lib/service-options-service';
+import { getModels, getPaymentMethods } from '@/lib/service-options-service';
 import { useToast } from '@/hooks/use-toast';
 import { getUsers } from '@/lib/user-service';
 import { getProjects } from '@/lib/project-service';
@@ -216,44 +216,58 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
   );
 };
 
-const CustomYAxisTick = ({ x, y, payload }: any) => {
+const CustomYAxisTick = ({ x, y, payload, paymentMethods }: any) => {
   const name = payload?.value || "";
   const lowerName = name.toLowerCase();
 
-  if (lowerName.includes('ssl') || lowerName.includes('commerz')) {
+  if (lowerName.includes('cod')) {
     return (
       <g transform={`translate(${x - 26}, ${y - 10})`}>
         <foreignObject width="20" height="20">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#0052FF" />
-            <path d="M12 2v20s8-4 8-10V5l-8-3z" fill="#FF3366" />
-            <rect x="7" y="11" width="10" height="7" rx="1" fill="#FFFFFF" />
-            <path d="M9 11V9c0-1.66 1.34-3 3-3s3 1.34 3 3v2" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <img src="/cod-icon.webp" alt="COD" className="h-5 w-5 object-contain" />
         </foreignObject>
       </g>
     );
   }
 
+  const matchedMethod = paymentMethods?.find(
+    (pm: any) => pm.name.toLowerCase() === lowerName
+  );
+
   let IconComponent = Coins;
   let colorClass = "text-muted-foreground";
 
-  if (lowerName.includes('bkash')) {
-    IconComponent = Smartphone;
-    colorClass = "text-pink-500";
-  } else if (lowerName.includes('cod')) {
-    IconComponent = Truck;
-    colorClass = "text-amber-500";
-  } else if (lowerName.includes('bank') || lowerName.includes('transfer')) {
-    IconComponent = Landmark;
-    colorClass = "text-sky-500";
-  } else if (lowerName.includes('cash')) {
-    IconComponent = Banknote;
-    colorClass = "text-emerald-500";
-  } else if (lowerName.includes('card')) {
-    IconComponent = CreditCard;
-    colorClass = "text-indigo-500";
+  const iconName = matchedMethod?.icon;
+  if (iconName) {
+    switch (iconName) {
+      case 'Smartphone': IconComponent = Smartphone; break;
+      case 'CreditCard': IconComponent = CreditCard; break;
+      case 'Banknote': IconComponent = Banknote; break;
+      case 'Landmark': IconComponent = Landmark; break;
+      case 'Coins': IconComponent = Coins; break;
+      case 'Truck': IconComponent = Truck; break;
+    }
+  } else {
+    if (lowerName.includes('bkash')) {
+      IconComponent = Smartphone;
+      colorClass = "text-pink-500";
+    } else if (lowerName.includes('bank') || lowerName.includes('transfer')) {
+      IconComponent = Landmark;
+      colorClass = "text-sky-500";
+    } else if (lowerName.includes('cash')) {
+      IconComponent = Banknote;
+      colorClass = "text-emerald-500";
+    } else if (lowerName.includes('card')) {
+      IconComponent = CreditCard;
+      colorClass = "text-indigo-500";
+    }
   }
+
+  if (IconComponent === Smartphone) colorClass = "text-pink-500";
+  else if (IconComponent === Truck) colorClass = "text-amber-500";
+  else if (IconComponent === Landmark) colorClass = "text-sky-500";
+  else if (IconComponent === Banknote) colorClass = "text-emerald-500";
+  else if (IconComponent === CreditCard) colorClass = "text-indigo-500";
 
   return (
     <g transform={`translate(${x - 26}, ${y - 10})`}>
@@ -389,8 +403,8 @@ function DashboardContent() {
       return null;
     }
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
-        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(),
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions, fetchedPaymentMethods] = await Promise.all([
+        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(), getPaymentMethods()
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -413,7 +427,8 @@ function DashboardContent() {
         allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
         allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
         allFeedback: fetchedFeedback,
-        allTransactions: fetchedTransactions
+        allTransactions: fetchedTransactions,
+        allPaymentMethods: fetchedPaymentMethods
       };
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -432,7 +447,7 @@ function DashboardContent() {
     retry: 1,
   });
 
-  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
+  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [], allPaymentMethods = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -1708,7 +1723,7 @@ function DashboardContent() {
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} />} width={40} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} paymentMethods={allPaymentMethods} />} width={40} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
                               cursor={{ fill: 'hsl(var(--muted))' }}

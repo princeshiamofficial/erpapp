@@ -275,16 +275,23 @@ export const deleteLamination = async (id: string): Promise<boolean> => {
 
 const seedDefaultPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
   const createdItems: ServicePaymentMethodItem[] = [];
-  const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
+  const defaultPaymentMethodsData = [
+    { name: "Cash", icon: "Banknote" },
+    { name: "Card", icon: "CreditCard" },
+    { name: "Bank Transfer", icon: "Landmark" },
+    { name: "Mobile Banking", icon: "Smartphone" },
+    { name: "Cheque", icon: "Coins" },
+    { name: "Other", icon: "Coins" }
+  ];
 
-  for (const name of defaultPaymentMethodsData) {
+  for (const item of defaultPaymentMethodsData) {
     const id = uuidv4();
-    const newItem: ServicePaymentMethodItem = { id, name };
+    const newItem: ServicePaymentMethodItem = { id, name: item.name, icon: item.icon };
     try {
       await query(`INSERT INTO ${PAYMENT_METHODS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItem)]);
       createdItems.push(newItem);
     } catch (error) {
-      console.error(`Error seeding payment method "${name}" in MySQL:`, error);
+      console.error(`Error seeding payment method "${item.name}" in MySQL:`, error);
     }
   }
   console.log('Default payment methods seeded in MySQL.');
@@ -322,13 +329,13 @@ export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> =
 };
 
 
-export const addPaymentMethod = async (name: string): Promise<ServicePaymentMethodItem | null> => {
+export const addPaymentMethod = async (name: string, icon?: string | null): Promise<ServicePaymentMethodItem | null> => {
   if (!name.trim()) {
     throw new Error("Payment method name cannot be empty.");
   }
   try {
     const id = uuidv4();
-    const newItemData: ServicePaymentMethodItem = { id, name: name.trim() };
+    const newItemData: ServicePaymentMethodItem = { id, name: name.trim(), icon: icon || null };
     await query(`INSERT INTO ${PAYMENT_METHODS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItemData)]);
     return newItemData;
   } catch (error) {
@@ -338,7 +345,7 @@ export const addPaymentMethod = async (name: string): Promise<ServicePaymentMeth
   }
 };
 
-export const updatePaymentMethod = async (id: string, name: string): Promise<boolean> => {
+export const updatePaymentMethod = async (id: string, name: string, icon?: string | null): Promise<boolean> => {
   if (!name.trim()) {
     throw new Error("Payment method name cannot be empty.");
   }
@@ -346,7 +353,7 @@ export const updatePaymentMethod = async (id: string, name: string): Promise<boo
     const rows = await query<any[]>(`SELECT data_json FROM ${PAYMENT_METHODS_TABLE} WHERE id = ?`, [id]);
     if (rows.length === 0) return false;
     const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
-    const finalData = { ...existingData, name: name.trim() };
+    const finalData = { ...existingData, name: name.trim(), icon: icon || null };
     await query(`UPDATE ${PAYMENT_METHODS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
     return true;
   } catch (error) {

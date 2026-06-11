@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift, ClipboardList } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift, ClipboardList, Smartphone, Banknote, Landmark, Coins, Truck } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem } from "@/types";
@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 type ItemType = 'lamination' | 'paymentMethod' | 'gift' | 'courierNote';
@@ -29,6 +30,7 @@ interface ItemToEdit {
   id: string;
   name: string;
   type: ItemType;
+  icon?: string | null;
 }
 interface ItemToDelete {
   id: string;
@@ -52,6 +54,7 @@ export default function ServiceManagementPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
+  const [itemIcon, setItemIcon] = useState<string>('CreditCard');
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ItemType | null>(null);
@@ -90,17 +93,20 @@ export default function ServiceManagementPage() {
     setEditingItem(null);
     setItemTypeToAdd(type);
     setItemName('');
+    setItemIcon('CreditCard');
     setIsAddEditDialogOpen(true);
   };
 
-  const openEditDialog = (item: { id: string; name: string }, type: ItemType) => {
+  const openEditDialog = (item: any, type: ItemType) => {
     setEditingItem({
       id: item.id,
       name: item.name,
+      icon: item.icon || 'CreditCard',
       type
     });
     setItemTypeToAdd(null);
     setItemName(item.name);
+    setItemIcon(item.icon || 'CreditCard');
     setIsAddEditDialogOpen(true);
   };
 
@@ -123,7 +129,7 @@ export default function ServiceManagementPage() {
       if (currentType === 'lamination') {
         result = await updateLaminationAction(editingItem.id, itemName.trim());
       } else if (currentType === 'paymentMethod') {
-        result = await updatePaymentMethodAction(editingItem.id, itemName.trim());
+        result = await updatePaymentMethodAction(editingItem.id, itemName.trim(), itemIcon);
       } else if (currentType === 'gift') {
         result = await updateGiftAction(editingItem.id, itemName.trim());
       } else if (currentType === 'courierNote') {
@@ -136,7 +142,7 @@ export default function ServiceManagementPage() {
       if (currentType === 'lamination') {
         result = await addLaminationAction(itemName.trim());
       } else if (currentType === 'paymentMethod') {
-        result = await addPaymentMethodAction(itemName.trim());
+        result = await addPaymentMethodAction(itemName.trim(), itemIcon);
       } else if (currentType === 'gift') {
         result = await addGiftAction(itemName.trim());
       } else if (currentType === 'courierNote') {
@@ -192,7 +198,7 @@ export default function ServiceManagementPage() {
     );
   }
 
-  const renderItemList = (items: { id: string; name: string }[], type: ItemType, title: string, Icon: React.ElementType) => {
+  const renderItemList = (items: { id: string; name: string; icon?: string | null }[], type: ItemType, title: string, Icon: React.ElementType) => {
     return (
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
         <CardHeader className="border-b p-5">
@@ -218,25 +224,41 @@ export default function ServiceManagementPage() {
             </div>
           ) : (
             <ul className="divide-y divide-border/50">
-              {items.map((item) => (
-                <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                  <span className="font-medium text-foreground flex-1 whitespace-nowrap overflow-hidden text-ellipsis" title={item.name}>{item.name}</span>
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openDeleteDialog(item, type)}
-                      title={`Delete ${type}`}
-                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
+              {items.map((item) => {
+                let ItemIconComponent = Icon;
+                if (type === 'paymentMethod' && item.icon) {
+                  switch (item.icon) {
+                    case 'Smartphone': ItemIconComponent = Smartphone; break;
+                    case 'CreditCard': ItemIconComponent = CreditCard; break;
+                    case 'Banknote': ItemIconComponent = Banknote; break;
+                    case 'Landmark': ItemIconComponent = Landmark; break;
+                    case 'Coins': ItemIconComponent = Coins; break;
+                    case 'Truck': ItemIconComponent = Truck; break;
+                  }
+                }
+                return (
+                  <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                    <span className="font-medium text-foreground flex-1 flex items-center gap-2.5 truncate" title={item.name}>
+                      {type === 'paymentMethod' && <ItemIconComponent className="h-4.5 w-4.5 text-muted-foreground/80 flex-shrink-0" />}
+                      <span className="truncate">{item.name}</span>
+                    </span>
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openDeleteDialog(item, type)}
+                        title={`Delete ${type}`}
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>
@@ -274,6 +296,36 @@ export default function ServiceManagementPage() {
               <Label htmlFor="itemName">Name</Label>
               <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
             </div>
+            {(editingItem?.type || itemTypeToAdd) === 'paymentMethod' && (
+              <div className="space-y-2">
+                <Label htmlFor="itemIcon">Icon</Label>
+                <Select value={itemIcon} onValueChange={setItemIcon} disabled={isSubmitting}>
+                  <SelectTrigger id="itemIcon" className="w-full">
+                    <SelectValue placeholder="Select Icon" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Smartphone">
+                      <span className="flex items-center gap-2"><Smartphone className="h-4 w-4" /> Smartphone / Mobile</span>
+                    </SelectItem>
+                    <SelectItem value="CreditCard">
+                      <span className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> Credit Card / Debit Card</span>
+                    </SelectItem>
+                    <SelectItem value="Banknote">
+                      <span className="flex items-center gap-2"><Banknote className="h-4 w-4" /> Banknote / Cash</span>
+                    </SelectItem>
+                    <SelectItem value="Landmark">
+                      <span className="flex items-center gap-2"><Landmark className="h-4 w-4" /> Landmark / Bank Transfer</span>
+                    </SelectItem>
+                    <SelectItem value="Coins">
+                      <span className="flex items-center gap-2"><Coins className="h-4 w-4" /> Coins / Cheque / Other</span>
+                    </SelectItem>
+                    <SelectItem value="Truck">
+                      <span className="flex items-center gap-2"><Truck className="h-4 w-4" /> Truck / COD</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : (editingItem ? "Save Changes" : "Add Option")}</Button>
