@@ -1567,10 +1567,10 @@ function DashboardContent() {
                       Traffic Sources
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className={cn("p-2 sm:p-4", currentUser?.role === 'CRM' ? "h-[380px] sm:h-[400px]" : "h-[220px] sm:h-[250px]")}>
+                  <CardContent className="h-[380px] sm:h-[400px] p-2 sm:p-4">
                     {isLoadingContent ? (
                       <div className="flex items-center justify-center h-full">
-                        <Skeleton className={cn("rounded-full", currentUser?.role === 'CRM' ? "h-64 w-64" : "h-40 w-40")} />
+                        <Skeleton className="h-64 w-64 rounded-full" />
                       </div>
                     ) : trafficSourcesData.length > 0 ? (
                       <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
@@ -1583,8 +1583,8 @@ function DashboardContent() {
                               nameKey="name" 
                               cx="50%" 
                               cy="50%" 
-                              innerRadius={currentUser?.role === 'CRM' ? 70 : 45} 
-                              outerRadius={currentUser?.role === 'CRM' ? 90 : 60} 
+                              innerRadius={70} 
+                              outerRadius={90} 
                               paddingAngle={4}
                               cornerRadius={6}
                               strokeWidth={0}
@@ -1603,14 +1603,14 @@ function DashboardContent() {
                                         <tspan
                                           x={viewBox.cx}
                                           y={(viewBox.cy || 0) - 8}
-                                          className={cn("fill-foreground font-bold font-mono tracking-tight", currentUser?.role === 'CRM' ? "text-2xl" : "text-lg")}
+                                          className="fill-foreground font-bold font-mono tracking-tight text-2xl"
                                         >
                                           {totalLeads}
                                         </tspan>
                                         <tspan
                                           x={viewBox.cx}
-                                          y={(viewBox.cy || 0) + (currentUser?.role === 'CRM' ? 14 : 10)}
-                                          className={cn("fill-muted-foreground uppercase tracking-widest font-semibold", currentUser?.role === 'CRM' ? "text-[10px]" : "text-[8px]")}
+                                          y={(viewBox.cy || 0) + 14}
+                                          className="fill-muted-foreground uppercase tracking-widest font-semibold text-[10px]"
                                         >
                                           Total Leads
                                         </tspan>
@@ -1650,9 +1650,9 @@ function DashboardContent() {
                         Payments
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
+                    <CardContent className="h-[380px] sm:h-[400px] p-2 sm:p-4">
                       {isLoadingContent ? (
-                        <Skeleton className="h-[200px] w-full" />
+                        <Skeleton className="h-[350px] w-full" />
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
