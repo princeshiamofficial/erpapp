@@ -222,9 +222,9 @@ const CustomYAxisTick = ({ x, y, payload, paymentMethods }: any) => {
 
   if (lowerName.includes('cod')) {
     return (
-      <g transform={`translate(${x - 44}, ${y - 16})`}>
-        <foreignObject width="38" height="32">
-          <img src="/cod-icon.webp" alt="COD" className="w-[38px] h-[32px] object-contain" />
+      <g transform={`translate(${x - 38}, ${y - 16})`}>
+        <foreignObject width="32" height="32">
+          <img src="/cod-icon.webp" alt="COD" className="w-full h-full object-contain" />
         </foreignObject>
       </g>
     );
@@ -1723,7 +1723,7 @@ function DashboardContent() {
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} paymentMethods={allPaymentMethods} />} width={54} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} paymentMethods={allPaymentMethods} />} width={50} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
                               cursor={{ fill: 'hsl(var(--muted))' }}
