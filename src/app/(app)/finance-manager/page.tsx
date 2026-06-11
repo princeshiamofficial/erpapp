@@ -878,6 +878,12 @@ export default function FinanceManagerPage() {
                   src={previewDocumentUrl} 
                   alt="Document Preview" 
                   className="max-h-[85vh] max-w-full object-contain rounded animate-in fade-in-50 duration-200"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src !== '/placeholder.svg' && !target.src.endsWith('/placeholder.svg')) {
+                      target.src = '/placeholder.svg';
+                    }
+                  }}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center text-white p-12 min-h-[300px]">
