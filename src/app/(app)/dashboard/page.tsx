@@ -86,6 +86,7 @@ import { getTaskEntries, type TaskEntry, getMonthlyTargetHistory, setMonthlyTarg
 import { getDr2oEntries } from '@/lib/dr2o-service';
 import { CANCELLED_STATUS_ID } from '@/lib/status-constants'; // Import CANCELLED_STATUS_ID
 import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
+import { getAllTransactionsAction } from '@/app/(app)/finance-manager/actions';
 
 
 // Lazy loading components
@@ -335,8 +336,8 @@ function DashboardContent() {
       return null;
     }
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries] = await Promise.all([
-        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'),
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
+        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -358,7 +359,8 @@ function DashboardContent() {
         allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers,
         allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
         allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
-        allFeedback: fetchedFeedback
+        allFeedback: fetchedFeedback,
+        allTransactions: fetchedTransactions
       };
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -377,7 +379,7 @@ function DashboardContent() {
     retry: 1,
   });
 
-  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [] } = queryData || {};
+  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -597,10 +599,10 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
 
-  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount, invoicePayment, invoicePaymentCount } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0, invoicePayment: 0, invoicePaymentCount: 0 };
+      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0, invoicePayment: 0, invoicePaymentCount: 0, totalExpenses: 0, totalExpensesCount: 0 };
     }
 
     let currentTotalSales = 0;
@@ -615,10 +617,13 @@ function DashboardContent() {
     let currentRepeatSalesAmount = 0;
     let currentInvoicePayment = 0;
     let currentInvoicePaymentCount = 0;
+    let currentTotalExpenses = 0;
+    let currentTotalExpensesCount = 0;
 
     const customerOrderHistory = new Set<string>();
     const repeatOrderIds = new Set<string>();
-    const paidOrderIds = new Set<string>();
+    const advancePaidOrderIds = new Set<string>();
+    const codPaidOrderIds = new Set<string>();
     
     // Sort all non-cancelled orders by date to identify the first order for each customer
     const sortedValidOrders = [...allOrders]
@@ -690,16 +695,14 @@ function DashboardContent() {
             const isCod = methodName === 'cod' || methodName === 'system auto-settled' || methodName === 'courier';
             if (isCod) {
               currentInvoiceCodPaid += payment.amount;
-              currentInvoiceCodPaidCount++;
+              codPaidOrderIds.add(order.id);
             } else {
-              paidOrderIds.add(order.id);
+              advancePaidOrderIds.add(order.id);
             }
           }
         });
       }
     });
-
-    currentInvoicePaidCount = paidOrderIds.size;
 
     const currentInvoiceDue = currentTotalSales - currentTotalAdvance;
     const currentInvoicePaid = currentTotalSales - currentInvoiceDue;
@@ -797,6 +800,30 @@ function DashboardContent() {
       }
     }
 
+    allTransactions.forEach(t => {
+      if (t.type === 'expense') {
+        try {
+          const transactionDate = parseISO(t.date);
+          if (isWithinInterval(transactionDate, interval)) {
+            if (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') {
+              if (selectedCrmId !== 'all') {
+                if (t.userId !== selectedCrmId) return;
+              }
+            } else {
+              if (t.userId !== currentUser?.id) return;
+            }
+            currentTotalExpenses += (Number(t.amount) || 0);
+            currentTotalExpensesCount++;
+          }
+        } catch (e) {
+          console.error("Error parsing transaction date for dashboard:", t.date, e);
+        }
+      }
+    });
+
+    currentInvoicePaidCount = advancePaidOrderIds.size;
+    currentInvoiceCodPaidCount = codPaidOrderIds.size;
+
     return {
       totalSales: currentTotalSales,
       invoiceDue: currentInvoiceDue,
@@ -815,8 +842,10 @@ function DashboardContent() {
       repeatSalesAmount: currentRepeatSalesAmount,
       invoicePayment: currentInvoicePayment,
       invoicePaymentCount: currentInvoicePaymentCount,
+      totalExpenses: currentTotalExpenses,
+      totalExpensesCount: currentTotalExpensesCount,
     };
-  }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity]);
+  }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity, allTransactions]);
 
   const [teamPerformanceDateRange, setTeamPerformanceDateRange] = useState<DateRange | undefined>(() => {
     const now = new Date();
@@ -1063,7 +1092,7 @@ function DashboardContent() {
         icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
       { 
         title: "Expense", 
-        value: showAmount ? formatCurrency(0) : "0", 
+        value: showAmount ? formatCurrency(totalExpenses) : totalExpensesCount.toString(), 
         icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
     ];
