@@ -861,15 +861,15 @@ export default function FinanceManagerPage() {
 
       {previewDocumentUrl && (
         <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
-          <DialogContent className="max-w-3xl p-6" hideCloseButton={false}>
+          <DialogContent className="max-w-3xl p-0 overflow-hidden" hideCloseButton={false}>
             <DialogTitle className="sr-only">Document Preview</DialogTitle>
             <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
-            <div className="relative w-full h-full flex items-center justify-center bg-muted/20 rounded-lg p-2 min-h-[300px]">
+            <div className="relative w-full h-full flex items-center justify-center bg-muted/20 min-h-[300px]">
               {previewDocumentUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
                 <img 
                   src={previewDocumentUrl} 
                   alt="Document Preview" 
-                  className="max-h-[75vh] max-w-full object-contain rounded animate-in fade-in-50 duration-200"
+                  className="max-h-[80vh] max-w-full object-contain animate-in fade-in-50 duration-200"
                   onError={(e) => {
                     const target = e.currentTarget;
                     if (target.src !== '/placeholder.svg' && !target.src.endsWith('/placeholder.svg')) {
