@@ -239,7 +239,7 @@ const queryClient = new QueryClient();
 const LeftAlignedTick = ({ y, payload }: any) => {
   return (
     <text x={0} y={y} dy={4} fontSize={14} fontWeight={500} textAnchor="start" fill="currentColor" className="fill-muted-foreground">
-      {payload.value}
+      {payload.value} :
     </text>
   );
 };
