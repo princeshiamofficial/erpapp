@@ -861,7 +861,7 @@ export default function FinanceManagerPage() {
 
       {previewDocumentUrl && (
         <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
-          <DialogContent className="max-w-3xl p-0 overflow-hidden" hideCloseButton={false}>
+          <DialogContent className="max-w-3xl p-0 overflow-hidden" hideCloseButton={true}>
             <DialogTitle className="sr-only">Document Preview</DialogTitle>
             <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
             <div className="relative w-full h-full flex items-center justify-center bg-muted/20 min-h-[300px]">
