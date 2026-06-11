@@ -1656,7 +1656,7 @@ function DashboardContent() {
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={130} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
                               cursor={{ fill: 'hsl(var(--muted))' }}
