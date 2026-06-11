@@ -1553,7 +1553,7 @@ function DashboardContent() {
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className={cn("grid grid-cols-1 lg:grid-cols-2 gap-6", currentUser?.role === 'CRM' && "lg:items-start")}>
                 <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
                   <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
                     <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
