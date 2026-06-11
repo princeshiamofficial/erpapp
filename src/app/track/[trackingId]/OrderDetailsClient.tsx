@@ -215,6 +215,7 @@ export function OrderDetailsClient({
     if (statusInfoToUse.name.toLowerCase().includes("production")) return renderInfoLottie();
     if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) return <Clock className={`${commonClasses} text-yellow-600`} />;
     if (statusInfoToUse.name.toLowerCase().includes("cancelled")) return <Info className={`${commonClasses} text-red-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("submitted")) return <Package className={`${commonClasses} text-blue-500`} />;
     return renderInfoLottie();
   };
 
