@@ -783,37 +783,18 @@ export function OrderDetailsClient({
                         if (imageUrl) {
                           const parts = entry.notes.split(imageUrl);
                           return (
-                            <div className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm flex justify-between items-center gap-4">
-                              <div className="flex-1">
-                                {parts[0]}
-                                <button 
-                                  type="button"
-                                  onClick={() => setPreviewDocumentUrl(imageUrl)}
-                                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors text-xs align-middle mx-1"
-                                >
-                                  <FileImage className="h-3.5 w-3.5" />
-                                  View Proof Image
-                                </button>
-                                {parts[1]}
-                              </div>
-                              <div 
-                                className="flex-shrink-0 cursor-pointer overflow-hidden rounded-md border border-border/60 hover:opacity-85 transition-opacity"
+                            <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
+                              {parts[0]}
+                              <button 
+                                type="button"
                                 onClick={() => setPreviewDocumentUrl(imageUrl)}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors text-xs align-middle mx-1"
                               >
-                                <img 
-                                  src={imageUrl} 
-                                  alt="Proof thumbnail" 
-                                  className="h-12 w-12 sm:h-16 sm:w-16 object-cover"
-                                  onError={(e) => {
-                                    const img = e.currentTarget;
-                                    const wrapper = img.parentElement;
-                                    if (wrapper) {
-                                      wrapper.style.display = 'none';
-                                    }
-                                  }}
-                                />
-                              </div>
-                            </div>
+                                <FileImage className="h-3.5 w-3.5" />
+                                View Proof Image
+                              </button>
+                              {parts[1]}
+                            </p>
                           );
                         }
                         
