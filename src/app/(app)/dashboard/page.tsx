@@ -618,6 +618,9 @@ function DashboardContent() {
 
     const customerOrderHistory = new Set<string>();
     const repeatOrderIds = new Set<string>();
+    const uniqueInvoicePaidOrders = new Set<string>();
+    const uniqueInvoiceCodPaidOrders = new Set<string>();
+    const uniqueInvoicePaymentOrders = new Set<string>();
     
     // Sort all non-cancelled orders by date to identify the first order for each customer
     const sortedValidOrders = [...allOrders]
@@ -683,20 +686,24 @@ function DashboardContent() {
         order.advancePayments.forEach(payment => {
           if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
             currentInvoicePayment += payment.amount;
-            currentInvoicePaymentCount++;
+            uniqueInvoicePaymentOrders.add(order.id);
 
             const methodName = payment.paymentMethod?.toLowerCase() || '';
             const isCod = methodName === 'cod' || methodName === 'system auto-settled' || methodName === 'courier';
             if (isCod) {
               currentInvoiceCodPaid += payment.amount;
-              currentInvoiceCodPaidCount++;
+              uniqueInvoiceCodPaidOrders.add(order.id);
             } else {
-              currentInvoicePaidCount++;
+              uniqueInvoicePaidOrders.add(order.id);
             }
           }
         });
       }
     });
+
+    currentInvoicePaidCount = uniqueInvoicePaidOrders.size;
+    currentInvoiceCodPaidCount = uniqueInvoiceCodPaidOrders.size;
+    currentInvoicePaymentCount = uniqueInvoicePaymentOrders.size;
 
     const currentInvoiceDue = currentTotalSales - currentTotalAdvance;
     const currentInvoicePaid = currentTotalSales - currentInvoiceDue;
