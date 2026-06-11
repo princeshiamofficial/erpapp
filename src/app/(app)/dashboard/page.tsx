@@ -1498,93 +1498,114 @@ function DashboardContent() {
                   </CardContent>
                 </Card>
 
-                {canSeeSystemAdminCharts && (
-                  <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
-                    <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
-                      <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                        <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
-                          <Landmark className="h-5 w-5 text-primary" />
-                        </div>
-                        <span className="hidden sm:inline-flex items-center">
-                          <Landmark className="mr-2 h-6 w-6 text-primary" />
-                        </span>
-                        Payments
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
-                      {isLoadingContent ? (
-                        <Skeleton className="h-[200px] w-full" />
-                      ) : paymentMethodData.length > 0 ? (
-                        <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
-                          <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
-                            <XAxis type="number" hide />
-                            <ChartTooltip
-                              cursor={{ fill: 'hsl(var(--muted))' }}
-                              content={({ active, payload }) => {
-                                if (active && payload && payload.length) {
-                                  return (
-                                    <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                      <div className="grid grid-cols-1 gap-1.5">
-                                        <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                        {showAmount ? (
-                                          <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
-                                        ) : (
-                                          <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
-                                        )}
+                {currentUser?.role === 'CRM' ? (
+                  <TeamPerformanceGraph
+                    allTasks={allTasks}
+                    monthlyTargetData={teamPerformanceData}
+                    totalPerformanceTarget={totalPerformanceTarget}
+                    onDateRangeChange={handleTeamPerformanceDateRangeChange}
+                    selectedDateRange={teamPerformanceDateRange}
+                    userMap={new Map(allUsers.map(u => [u.id, u]))}
+                    globalSettings={globalSettings}
+                    onTeamChange={handleTeamChange}
+                    onSpecificUserChange={handleSpecificUserChange}
+                    selectedTeam={selectedTeam}
+                    specificUserId={specificUserId}
+                    isAdminView={isAdminView}
+                    refetchData={refetch}
+                    allUsers={allUsers.filter(u => !u.isBanned)}
+                    specificUserOptions={specificUserOptions}
+                  />
+                ) : (
+                  canSeeSystemAdminCharts && (
+                    <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
+                      <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
+                        <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                          <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
+                            <Landmark className="h-5 w-5 text-primary" />
+                          </div>
+                          <span className="hidden sm:inline-flex items-center">
+                            <Landmark className="mr-2 h-6 w-6 text-primary" />
+                          </span>
+                          Payments
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
+                        {isLoadingContent ? (
+                          <Skeleton className="h-[200px] w-full" />
+                        ) : paymentMethodData.length > 0 ? (
+                          <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
+                            <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                              <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                              <XAxis type="number" hide />
+                              <ChartTooltip
+                                cursor={{ fill: 'hsl(var(--muted))' }}
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    return (
+                                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                          <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                          {showAmount ? (
+                                            <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
+                                          ) : (
+                                            <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  )
-                                }
-                                return null;
-                              }}
-                            />
-                            <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
-                              <LabelList
-                                dataKey="percentage"
-                                position="right"
-                                offset={8}
-                                className="fill-foreground text-xs font-medium"
-                                formatter={(value: number) => `${value.toFixed(1)}%`}
+                                    )
+                                  }
+                                  return null;
+                                }}
                               />
-                            </Bar>
-                          </RechartsBarChart>
-                        </ChartContainer>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                          No payment data for this period.
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                              <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
+                                <LabelList
+                                  dataKey="percentage"
+                                  position="right"
+                                  offset={8}
+                                  className="fill-foreground text-xs font-medium"
+                                  formatter={(value: number) => `${value.toFixed(1)}%`}
+                                />
+                              </Bar>
+                            </RechartsBarChart>
+                          </ChartContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-muted-foreground">
+                            No payment data for this period.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
                 )}
               </div>
             </div>
           </>
         )}
 
-        <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLrOrCo) ? "lg:grid-cols-1" : "")}>
-          <div className="lg:col-span-1">
-            <TeamPerformanceGraph
-              allTasks={allTasks}
-              monthlyTargetData={teamPerformanceData}
-              totalPerformanceTarget={totalPerformanceTarget}
-              onDateRangeChange={handleTeamPerformanceDateRangeChange}
-              selectedDateRange={teamPerformanceDateRange}
-              userMap={new Map(allUsers.map(u => [u.id, u]))}
-              globalSettings={globalSettings}
-              onTeamChange={handleTeamChange}
-              onSpecificUserChange={handleSpecificUserChange}
-              selectedTeam={selectedTeam}
-              specificUserId={specificUserId}
-              isAdminView={isAdminView}
-              refetchData={refetch}
-              allUsers={allUsers.filter(u => !u.isBanned)}
-              specificUserOptions={specificUserOptions}
-            />
+        {currentUser?.role !== 'CRM' && (
+          <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLrOrCo) ? "lg:grid-cols-1" : "")}>
+            <div className="lg:col-span-1">
+              <TeamPerformanceGraph
+                allTasks={allTasks}
+                monthlyTargetData={teamPerformanceData}
+                totalPerformanceTarget={totalPerformanceTarget}
+                onDateRangeChange={handleTeamPerformanceDateRangeChange}
+                selectedDateRange={teamPerformanceDateRange}
+                userMap={new Map(allUsers.map(u => [u.id, u]))}
+                globalSettings={globalSettings}
+                onTeamChange={handleTeamChange}
+                onSpecificUserChange={handleSpecificUserChange}
+                selectedTeam={selectedTeam}
+                specificUserId={specificUserId}
+                isAdminView={isAdminView}
+                refetchData={refetch}
+                allUsers={allUsers.filter(u => !u.isBanned)}
+                specificUserOptions={specificUserOptions}
+              />
+            </div>
           </div>
-
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
           {canSeeSystemAdminCharts && (
