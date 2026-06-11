@@ -861,23 +861,15 @@ export default function FinanceManagerPage() {
 
       {previewDocumentUrl && (
         <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
-          <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-none" hideCloseButton={true}>
+          <DialogContent className="max-w-3xl p-6" hideCloseButton={false}>
             <DialogTitle className="sr-only">Document Preview</DialogTitle>
             <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
-            <div className="relative w-full h-full flex items-center justify-center bg-black/85 rounded-lg p-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute top-2 right-2 text-white hover:bg-white/20 z-50 rounded-full h-8 w-8"
-                onClick={() => setPreviewDocumentUrl(null)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
+            <div className="relative w-full h-full flex items-center justify-center bg-muted/20 rounded-lg p-2 min-h-[300px]">
               {previewDocumentUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
                 <img 
                   src={previewDocumentUrl} 
                   alt="Document Preview" 
-                  className="max-h-[85vh] max-w-full object-contain rounded animate-in fade-in-50 duration-200"
+                  className="max-h-[75vh] max-w-full object-contain rounded animate-in fade-in-50 duration-200"
                   onError={(e) => {
                     const target = e.currentTarget;
                     if (target.src !== '/placeholder.svg' && !target.src.endsWith('/placeholder.svg')) {
@@ -886,7 +878,7 @@ export default function FinanceManagerPage() {
                   }}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-white p-12 min-h-[300px]">
+                <div className="flex flex-col items-center justify-center text-muted-foreground p-12 min-h-[300px]">
                   <Paperclip className="h-16 w-16 mb-4 opacity-50" />
                   <p className="mb-4">This file cannot be previewed directly.</p>
                   <Button asChild>
