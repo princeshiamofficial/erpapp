@@ -236,6 +236,14 @@ const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory;
 
 const queryClient = new QueryClient();
 
+const LeftAlignedTick = ({ y, payload }: any) => {
+  return (
+    <text x={0} y={y} dy={4} fontSize={14} fontWeight={500} textAnchor="start" fill="currentColor" className="fill-muted-foreground">
+      {payload.value}
+    </text>
+  );
+};
+
 export default function DashboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const [isClient, setIsClient] = useState(false);
@@ -1656,7 +1664,7 @@ function DashboardContent() {
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={{ fontSize: 14, fontWeight: 500 }} width={145} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" tick={<LeftAlignedTick />} width={145} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
                               cursor={{ fill: 'hsl(var(--muted))' }}
