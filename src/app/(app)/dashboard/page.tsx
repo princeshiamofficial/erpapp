@@ -220,6 +220,21 @@ const CustomYAxisTick = ({ x, y, payload }: any) => {
   const name = payload?.value || "";
   const lowerName = name.toLowerCase();
 
+  if (lowerName.includes('ssl') || lowerName.includes('commerz')) {
+    return (
+      <g transform={`translate(${x - 26}, ${y - 10})`}>
+        <foreignObject width="20" height="20">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#0052FF" />
+            <path d="M12 2v20s8-4 8-10V5l-8-3z" fill="#FF3366" />
+            <rect x="7" y="11" width="10" height="7" rx="1" fill="#FFFFFF" />
+            <path d="M9 11V9c0-1.66 1.34-3 3-3s3 1.34 3 3v2" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </foreignObject>
+      </g>
+    );
+  }
+
   let IconComponent = Coins;
   let colorClass = "text-muted-foreground";
 
