@@ -74,7 +74,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { motion } from 'framer-motion';
 import { getFinanceColorClasses } from '@/lib/finance-colors';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
@@ -862,6 +862,8 @@ export default function FinanceManagerPage() {
       {previewDocumentUrl && (
         <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
           <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-none" hideCloseButton={true}>
+            <DialogTitle className="sr-only">Document Preview</DialogTitle>
+            <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
             <div className="relative w-full h-full flex items-center justify-center bg-black/85 rounded-lg p-2">
               <Button 
                 variant="ghost" 
