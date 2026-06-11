@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, Monitor } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, Monitor, Palette } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -217,6 +217,7 @@ export function OrderDetailsClient({
     if (statusInfoToUse.name.toLowerCase().includes("cancelled")) return <Info className={`${commonClasses} text-red-500`} />;
     if (statusInfoToUse.name.toLowerCase().includes("submitted")) return <Package className={`${commonClasses} text-blue-500`} />;
     if (statusInfoToUse.name.toLowerCase().includes("clearance")) return <Monitor className={`${commonClasses} text-indigo-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("dr assigned") || statusInfoToUse.name.toLowerCase().includes("assigned")) return <Palette className={`${commonClasses} text-pink-500`} />;
     return renderInfoLottie();
   };
 
