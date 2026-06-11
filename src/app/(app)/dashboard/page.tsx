@@ -44,7 +44,11 @@ import {
   ClipboardList,
   TrendingUp, // For Assets icon
   Target, // For Target icon
-  LineChart as LineChartIcon
+  LineChart as LineChartIcon,
+  Smartphone,
+  CreditCard,
+  Banknote,
+  Coins
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -209,6 +213,39 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
       {/* Subtle border glow for mobile dark mode */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent sm:hidden" />
     </Card>
+  );
+};
+
+const CustomYAxisTick = ({ x, y, payload }: any) => {
+  const name = payload?.value || "";
+  const lowerName = name.toLowerCase();
+
+  let IconComponent = Coins;
+  let colorClass = "text-muted-foreground";
+
+  if (lowerName.includes('bkash')) {
+    IconComponent = Smartphone;
+    colorClass = "text-pink-500";
+  } else if (lowerName.includes('cod')) {
+    IconComponent = Truck;
+    colorClass = "text-amber-500";
+  } else if (lowerName.includes('bank') || lowerName.includes('transfer')) {
+    IconComponent = Landmark;
+    colorClass = "text-sky-500";
+  } else if (lowerName.includes('cash')) {
+    IconComponent = Banknote;
+    colorClass = "text-emerald-500";
+  } else if (lowerName.includes('card')) {
+    IconComponent = CreditCard;
+    colorClass = "text-indigo-500";
+  }
+
+  return (
+    <g transform={`translate(${x - 26}, ${y - 10})`}>
+      <foreignObject width="20" height="20">
+        <IconComponent className={cn("h-5 w-5", colorClass)} />
+      </foreignObject>
+    </g>
   );
 };
 
@@ -1656,7 +1693,7 @@ function DashboardContent() {
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={130} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} />} width={40} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
                               cursor={{ fill: 'hsl(var(--muted))' }}
