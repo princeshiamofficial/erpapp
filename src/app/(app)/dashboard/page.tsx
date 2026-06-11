@@ -1280,6 +1280,101 @@ function DashboardContent() {
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
+  const renderRecentFeedbackCard = () => {
+    return (
+      <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
+        {/* Premium background highlight for mobile */}
+        <div className="absolute inset-0 opacity-[0.02] sm:hidden bg-gradient-to-br from-primary via-transparent to-primary pointer-events-none" />
+
+        <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-6 relative z-10">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
+              <MessageSquare className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                <span className="hidden sm:inline"><MessageSquare className="mr-2 h-6 w-6 text-primary" /></span>
+                Recent Feedback
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm line-clamp-1 sm:line-clamp-none">Latest client feedback from tracking pages.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-2 sm:pt-6 relative z-10">
+          {isLoadingContent ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+            </div>
+          ) : recentFeedback.length > 0 ? (
+            <ScrollArea className="h-[400px] pr-3 -mr-3 sm:mr-0 sm:pr-3">
+              <div className="space-y-0 sm:space-y-4">
+                {recentFeedback.map((feedback, index) => {
+                  const crmUser = userMap.get(feedback.crmUserId || '');
+                  return (
+                    <div
+                      key={feedback.id}
+                      className={cn(
+                        "py-5 sm:p-4 transition-colors",
+                        "sm:border sm:rounded-lg sm:bg-secondary/30",
+                        "border-none bg-transparent rounded-none",
+                        index !== recentFeedback.length - 1 && "border-b border-border/40 sm:border-none"
+                      )}
+                      onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 sm:h-10 sm:w-10 border-2 border-primary/10">
+                            <AvatarImage src={crmUser?.avatarUrl || undefined} alt={crmUser?.name} />
+                            <AvatarFallback className="bg-primary/5 text-primary text-xs">{getInitials(crmUser?.name)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-bold sm:font-semibold text-foreground text-sm sm:text-base leading-tight">
+                              {feedback.companyName}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Order ID: {feedback.orderId}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-0.5 text-amber-500 scale-90 sm:scale-100 origin-right">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={cn("h-3.5 w-3.5", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground/30")}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mt-3 relative">
+                        <p className="text-sm text-foreground/80 sm:text-foreground/90 italic border-l-2 border-primary/40 pl-4 py-0.5 leading-relaxed">
+                          {renderFeedbackText(feedback.text)}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 mt-3">
+                        <p className="text-[10px] text-muted-foreground/70 uppercase tracking-tighter">
+                          {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground/50">
+              <div className="p-4 bg-muted/20 rounded-full mb-4">
+                <MessageSquare className="h-10 w-10 opacity-20" />
+              </div>
+              <p className="font-medium text-sm">No feedback yet.</p>
+            </div>
+          )}
+        </CardContent>
+
+        {/* Decorative background icon for mobile */}
+        <div className="absolute -right-8 -bottom-8 opacity-[0.03] sm:hidden pointer-events-none transform rotate-12 scale-150">
+          <MessageSquare className="h-32 w-32 text-primary" />
+        </div>
+      </Card>
+    );
+  };
 
   return (
     <>
@@ -1498,114 +1593,95 @@ function DashboardContent() {
                   </CardContent>
                 </Card>
 
-                {currentUser?.role === 'CRM' ? (
-                  <TeamPerformanceGraph
-                    allTasks={allTasks}
-                    monthlyTargetData={teamPerformanceData}
-                    totalPerformanceTarget={totalPerformanceTarget}
-                    onDateRangeChange={handleTeamPerformanceDateRangeChange}
-                    selectedDateRange={teamPerformanceDateRange}
-                    userMap={new Map(allUsers.map(u => [u.id, u]))}
-                    globalSettings={globalSettings}
-                    onTeamChange={handleTeamChange}
-                    onSpecificUserChange={handleSpecificUserChange}
-                    selectedTeam={selectedTeam}
-                    specificUserId={specificUserId}
-                    isAdminView={isAdminView}
-                    refetchData={refetch}
-                    allUsers={allUsers.filter(u => !u.isBanned)}
-                    specificUserOptions={specificUserOptions}
-                  />
-                ) : (
-                  canSeeSystemAdminCharts && (
-                    <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
-                      <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
-                        <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                          <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
-                            <Landmark className="h-5 w-5 text-primary" />
-                          </div>
-                          <span className="hidden sm:inline-flex items-center">
-                            <Landmark className="mr-2 h-6 w-6 text-primary" />
-                          </span>
-                          Payments
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
-                        {isLoadingContent ? (
-                          <Skeleton className="h-[200px] w-full" />
-                        ) : paymentMethodData.length > 0 ? (
-                          <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
-                            <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                              <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
-                              <XAxis type="number" hide />
-                              <ChartTooltip
-                                cursor={{ fill: 'hsl(var(--muted))' }}
-                                content={({ active, payload }) => {
-                                  if (active && payload && payload.length) {
-                                    return (
-                                      <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                        <div className="grid grid-cols-1 gap-1.5">
-                                          <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                          {showAmount ? (
-                                            <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
-                                          ) : (
-                                            <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
-                                          )}
-                                        </div>
+                {canSeeSystemAdminCharts && (
+                  <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
+                    <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
+                      <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                        <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
+                          <Landmark className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="hidden sm:inline-flex items-center">
+                          <Landmark className="mr-2 h-6 w-6 text-primary" />
+                        </span>
+                        Payments
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
+                      {isLoadingContent ? (
+                        <Skeleton className="h-[200px] w-full" />
+                      ) : paymentMethodData.length > 0 ? (
+                        <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
+                          <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                            <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <XAxis type="number" hide />
+                            <ChartTooltip
+                              cursor={{ fill: 'hsl(var(--muted))' }}
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                      <div className="grid grid-cols-1 gap-1.5">
+                                        <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                        {showAmount ? (
+                                          <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
+                                        )}
                                       </div>
-                                    )
-                                  }
-                                  return null;
-                                }}
+                                    </div>
+                                  )
+                                }
+                                return null;
+                              }}
+                            />
+                            <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
+                              <LabelList
+                                dataKey="percentage"
+                                position="right"
+                                offset={8}
+                                className="fill-foreground text-xs font-medium"
+                                formatter={(value: number) => `${value.toFixed(1)}%`}
                               />
-                              <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
-                                <LabelList
-                                  dataKey="percentage"
-                                  position="right"
-                                  offset={8}
-                                  className="fill-foreground text-xs font-medium"
-                                  formatter={(value: number) => `${value.toFixed(1)}%`}
-                                />
-                              </Bar>
-                            </RechartsBarChart>
-                          </ChartContainer>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-muted-foreground">
-                            No payment data for this period.
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )
+                            </Bar>
+                          </RechartsBarChart>
+                        </ChartContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          No payment data for this period.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 )}
+
+                {currentUser?.role === 'CRM' && renderRecentFeedbackCard()}
               </div>
             </div>
           </>
         )}
 
-        {currentUser?.role !== 'CRM' && (
-          <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLrOrCo) ? "lg:grid-cols-1" : "")}>
-            <div className="lg:col-span-1">
-              <TeamPerformanceGraph
-                allTasks={allTasks}
-                monthlyTargetData={teamPerformanceData}
-                totalPerformanceTarget={totalPerformanceTarget}
-                onDateRangeChange={handleTeamPerformanceDateRangeChange}
-                selectedDateRange={teamPerformanceDateRange}
-                userMap={new Map(allUsers.map(u => [u.id, u]))}
-                globalSettings={globalSettings}
-                onTeamChange={handleTeamChange}
-                onSpecificUserChange={handleSpecificUserChange}
-                selectedTeam={selectedTeam}
-                specificUserId={specificUserId}
-                isAdminView={isAdminView}
-                refetchData={refetch}
-                allUsers={allUsers.filter(u => !u.isBanned)}
-                specificUserOptions={specificUserOptions}
-              />
-            </div>
+        <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLrOrCo) ? "lg:grid-cols-1" : "")}>
+          <div className="lg:col-span-1">
+            <TeamPerformanceGraph
+              allTasks={allTasks}
+              monthlyTargetData={teamPerformanceData}
+              totalPerformanceTarget={totalPerformanceTarget}
+              onDateRangeChange={handleTeamPerformanceDateRangeChange}
+              selectedDateRange={teamPerformanceDateRange}
+              userMap={new Map(allUsers.map(u => [u.id, u]))}
+              globalSettings={globalSettings}
+              onTeamChange={handleTeamChange}
+              onSpecificUserChange={handleSpecificUserChange}
+              selectedTeam={selectedTeam}
+              specificUserId={specificUserId}
+              isAdminView={isAdminView}
+              refetchData={refetch}
+              allUsers={allUsers.filter(u => !u.isBanned)}
+              specificUserOptions={specificUserOptions}
+            />
           </div>
-        )}
+
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
           {canSeeSystemAdminCharts && (
@@ -1618,99 +1694,7 @@ function DashboardContent() {
           {canSeeAdminCharts && (
             <OrderAnalysisClient allOrders={allOrders} />
           )}
-          {!isDesignerRepOrLrOrCo && (
-            <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
-              {/* Premium background highlight for mobile */}
-              <div className="absolute inset-0 opacity-[0.02] sm:hidden bg-gradient-to-br from-primary via-transparent to-primary pointer-events-none" />
-
-              <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-6 relative z-10">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="p-2.5 bg-primary/10 rounded-xl sm:hidden">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
-                      <span className="hidden sm:inline"><MessageSquare className="mr-2 h-6 w-6 text-primary" /></span>
-                      Recent Feedback
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm line-clamp-1 sm:line-clamp-none">Latest client feedback from tracking pages.</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 pt-2 sm:pt-6 relative z-10">
-                {isLoadingContent ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
-                  </div>
-                ) : recentFeedback.length > 0 ? (
-                  <ScrollArea className="h-[400px] pr-3 -mr-3 sm:mr-0 sm:pr-3">
-                    <div className="space-y-0 sm:space-y-4">
-                      {recentFeedback.map((feedback, index) => {
-                        const crmUser = userMap.get(feedback.crmUserId || '');
-                        return (
-                          <div
-                            key={feedback.id}
-                            className={cn(
-                              "py-5 sm:p-4 transition-colors",
-                              "sm:border sm:rounded-lg sm:bg-secondary/30",
-                              "border-none bg-transparent rounded-none",
-                              index !== recentFeedback.length - 1 && "border-b border-border/40 sm:border-none"
-                            )}
-                            onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 sm:h-10 sm:w-10 border-2 border-primary/10">
-                                  <AvatarImage src={crmUser?.avatarUrl || undefined} alt={crmUser?.name} />
-                                  <AvatarFallback className="bg-primary/5 text-primary text-xs">{getInitials(crmUser?.name)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="font-bold sm:font-semibold text-foreground text-sm sm:text-base leading-tight">
-                                    {feedback.companyName}
-                                  </p>
-                                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Order ID: {feedback.orderId}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-0.5 text-amber-500 scale-90 sm:scale-100 origin-right">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={cn("h-3.5 w-3.5", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground/30")}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            <div className="mt-3 relative">
-                              <p className="text-sm text-foreground/80 sm:text-foreground/90 italic border-l-2 border-primary/40 pl-4 py-0.5 leading-relaxed">
-                                {renderFeedbackText(feedback.text)}
-                              </p>
-                            </div>
-                            <div className="flex items-center justify-end gap-2 mt-3">
-                              <p className="text-[10px] text-muted-foreground/70 uppercase tracking-tighter">
-                                {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground/50">
-                    <div className="p-4 bg-muted/20 rounded-full mb-4">
-                      <MessageSquare className="h-10 w-10 opacity-20" />
-                    </div>
-                    <p className="font-medium text-sm">No feedback yet.</p>
-                  </div>
-                )}
-              </CardContent>
-
-              {/* Decorative background icon for mobile */}
-              <div className="absolute -right-8 -bottom-8 opacity-[0.03] sm:hidden pointer-events-none transform rotate-12 scale-150">
-                <MessageSquare className="h-32 w-32 text-primary" />
-              </div>
-            </Card>
-          )}
+          {!isDesignerRepOrLrOrCo && currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
           {canSeeSystemAdminCharts && (
             <Card className="shadow-xl bg-card rounded-lg min-h-[480px] hidden sm:block">
               <CardHeader>
