@@ -1017,7 +1017,7 @@ function DashboardContent() {
       { 
         title: "Advance Paid", 
         value: showAmount ? formatCurrency(invoicePaid) : invoicePaidCount.toString(), 
-        icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+        icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN', 'CRM'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Invoice COD Paid", 
