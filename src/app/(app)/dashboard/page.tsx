@@ -1553,7 +1553,7 @@ function DashboardContent() {
                 </CardContent>
               </Card>
 
-              <div className={cn("grid grid-cols-1 lg:grid-cols-2 gap-6", currentUser?.role === 'CRM' && "lg:items-start")}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
                   <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
                     <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
@@ -1566,17 +1566,17 @@ function DashboardContent() {
                       Traffic Sources
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
+                  <CardContent className={cn("p-2 sm:p-4", currentUser?.role === 'CRM' ? "h-[380px] sm:h-[400px]" : "h-[220px] sm:h-[250px]")}>
                     {isLoadingContent ? (
                       <div className="flex items-center justify-center h-full">
-                        <Skeleton className="h-40 w-40 rounded-full" />
+                        <Skeleton className={cn("rounded-full", currentUser?.role === 'CRM' ? "h-64 w-64" : "h-40 w-40")} />
                       </div>
                     ) : trafficSourcesData.length > 0 ? (
                       <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <RechartsPieChart>
                             <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-                            <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                            <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={currentUser?.role === 'CRM' ? 95 : 60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
                               {trafficSourcesData.map((entry) => (
                                 <Cell key={`cell-${entry.name}`} fill={entry.fill} />
                               ))}
