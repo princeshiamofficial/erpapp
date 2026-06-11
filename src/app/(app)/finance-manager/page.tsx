@@ -861,15 +861,15 @@ export default function FinanceManagerPage() {
 
       {previewDocumentUrl && (
         <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
-          <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-none shadow-none" hideCloseButton={true}>
+          <DialogContent className="w-fit max-w-[95vw] p-0 overflow-hidden bg-transparent border-none shadow-none" hideCloseButton={true}>
             <DialogTitle className="sr-only">Document Preview</DialogTitle>
             <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
-            <div className="relative w-full h-full flex items-center justify-center bg-transparent min-h-[300px]">
+            <div className="relative flex items-center justify-center bg-transparent">
               {previewDocumentUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
                 <img 
                   src={previewDocumentUrl} 
                   alt="Document Preview" 
-                  className="max-h-[80vh] max-w-full object-contain animate-in fade-in-50 duration-200"
+                  className="max-h-[80vh] max-w-[90vw] object-contain animate-in fade-in-50 duration-200"
                   onError={(e) => {
                     const target = e.currentTarget;
                     if (target.src !== '/placeholder.svg' && !target.src.endsWith('/placeholder.svg')) {
@@ -878,7 +878,7 @@ export default function FinanceManagerPage() {
                   }}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-muted-foreground p-12 min-h-[300px] bg-background rounded-lg border shadow-lg">
+                <div className="flex flex-col items-center justify-center text-muted-foreground p-12 min-h-[300px] bg-background rounded-lg border shadow-lg w-[400px] max-w-full">
                   <Paperclip className="h-16 w-16 mb-4 opacity-50" />
                   <p className="mb-4">This file cannot be previewed directly.</p>
                   <Button asChild>
