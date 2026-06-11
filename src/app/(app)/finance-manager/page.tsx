@@ -861,10 +861,10 @@ export default function FinanceManagerPage() {
 
       {previewDocumentUrl && (
         <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
-          <DialogContent className="max-w-3xl p-0 overflow-hidden" hideCloseButton={true}>
+          <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-none shadow-none" hideCloseButton={true}>
             <DialogTitle className="sr-only">Document Preview</DialogTitle>
             <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
-            <div className="relative w-full h-full flex items-center justify-center bg-muted/20 min-h-[300px]">
+            <div className="relative w-full h-full flex items-center justify-center bg-transparent min-h-[300px]">
               {previewDocumentUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
                 <img 
                   src={previewDocumentUrl} 
@@ -878,7 +878,7 @@ export default function FinanceManagerPage() {
                   }}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-muted-foreground p-12 min-h-[300px]">
+                <div className="flex flex-col items-center justify-center text-muted-foreground p-12 min-h-[300px] bg-background rounded-lg border shadow-lg">
                   <Paperclip className="h-16 w-16 mb-4 opacity-50" />
                   <p className="mb-4">This file cannot be previewed directly.</p>
                   <Button asChild>
