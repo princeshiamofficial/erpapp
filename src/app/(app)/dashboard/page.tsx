@@ -1663,9 +1663,9 @@ function DashboardContent() {
                         Payments
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[380px] sm:h-[400px] p-2 sm:p-4">
+                    <CardContent className="h-[220px] sm:h-[250px] p-2 sm:p-4">
                       {isLoadingContent ? (
-                        <Skeleton className="h-[350px] w-full" />
+                        <Skeleton className="h-[200px] w-full" />
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
@@ -1691,7 +1691,7 @@ function DashboardContent() {
                                 return null;
                               }}
                             />
-                            <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={22}>
+                            <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 8, 8, 0]} barSize={22}>
                               <LabelList
                                 dataKey="percentage"
                                 position="right"
