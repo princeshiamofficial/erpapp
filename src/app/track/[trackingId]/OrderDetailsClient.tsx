@@ -201,7 +201,7 @@ export function OrderDetailsClient({
 
     const renderInfoLottie = () => {
       if (forceStatic || !isClient) {
-        return <Info className={`${commonClasses} text-primary/80`} />;
+        return <Info className={commonClasses} style={{ color: statusInfoToUse.color }} />;
       }
       return (
         <div className={`${sizeClass} mr-2 flex-shrink-0`}>
@@ -210,11 +210,17 @@ export function OrderDetailsClient({
       );
     };
 
-    if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) return <CheckCircle className={`${commonClasses} text-green-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) {
+      return <CheckCircle className={commonClasses} style={{ color: statusInfoToUse.color }} />;
+    }
     if (statusInfoToUse.name.toLowerCase().includes("design")) return renderInfoLottie();
     if (statusInfoToUse.name.toLowerCase().includes("production")) return renderInfoLottie();
-    if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) return <Clock className={`${commonClasses} text-yellow-600`} />;
-    if (statusInfoToUse.name.toLowerCase().includes("cancelled")) return <Info className={`${commonClasses} text-red-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) {
+      return <Clock className={commonClasses} style={{ color: statusInfoToUse.color }} />;
+    }
+    if (statusInfoToUse.name.toLowerCase().includes("cancelled")) {
+      return <Info className={commonClasses} style={{ color: statusInfoToUse.color }} />;
+    }
     return renderInfoLottie();
   };
 
@@ -749,7 +755,19 @@ export function OrderDetailsClient({
             {order.statusHistory.slice().reverse().map((entry, index) => {
               const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
                 <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
-                  <div className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'bg-primary shadow-lg' : 'bg-muted border-2 border-border group-hover:bg-primary/20 group-hover:border-primary/50'}`}>{index === 0 ? <CheckCircle className={`h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground`} /> : getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0 group-hover:text-primary", true)}</div>
+                  <div 
+                    className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
+                    style={{
+                      backgroundColor: index === 0 ? entryStatusInfo.color : `${entryStatusInfo.color}15`,
+                      borderColor: index === 0 ? 'transparent' : `${entryStatusInfo.color}30`
+                    }}
+                  >
+                    {index === 0 ? (
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: entryStatusInfo.textColor }} />
+                    ) : (
+                      getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0", true)
+                    )}
+                  </div>
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
                     <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                     <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
