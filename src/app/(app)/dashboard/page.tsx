@@ -222,9 +222,9 @@ const CustomYAxisTick = ({ x, y, payload, paymentMethods }: any) => {
 
   if (lowerName.includes('cod')) {
     return (
-      <g transform={`translate(${x - 26}, ${y - 10})`}>
-        <foreignObject width="20" height="20">
-          <img src="/cod-icon.webp" alt="COD" className="h-5 w-5 object-contain" />
+      <g transform={`translate(${x - 38}, ${y - 16})`}>
+        <foreignObject width="32" height="32">
+          <img src="/cod-icon.webp" alt="COD" className="h-8 w-8 object-contain" />
         </foreignObject>
       </g>
     );
@@ -270,9 +270,9 @@ const CustomYAxisTick = ({ x, y, payload, paymentMethods }: any) => {
   else if (IconComponent === CreditCard) colorClass = "text-indigo-500";
 
   return (
-    <g transform={`translate(${x - 26}, ${y - 10})`}>
-      <foreignObject width="20" height="20">
-        <IconComponent className={cn("h-5 w-5", colorClass)} />
+    <g transform={`translate(${x - 38}, ${y - 16})`}>
+      <foreignObject width="32" height="32">
+        <IconComponent className={cn("h-8 w-8", colorClass)} />
       </foreignObject>
     </g>
   );
@@ -1723,7 +1723,7 @@ function DashboardContent() {
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} paymentMethods={allPaymentMethods} />} width={40} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} paymentMethods={allPaymentMethods} />} width={50} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
                               cursor={{ fill: 'hsl(var(--muted))' }}
