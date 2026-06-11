@@ -74,6 +74,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { motion } from 'framer-motion';
 import { getFinanceColorClasses } from '@/lib/finance-colors';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
@@ -144,6 +145,7 @@ export default function FinanceManagerPage() {
 
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [isCategoryManageOpen, setIsCategoryManageOpen] = useState(false);
+  const [previewDocumentUrl, setPreviewDocumentUrl] = useState<string | null>(null);
 
   const expenseCategories = useMemo(() => {
     return globalAppSettings?.transactionCategories || [];
@@ -643,10 +645,14 @@ export default function FinanceManagerPage() {
                           <TableCell className="text-xs text-muted-foreground">{format(parseISO(t.date), "d MMM, yyyy")}</TableCell>
                           <TableCell>
                             {t.documentUrl ? (
-                              <Button asChild variant="outline" size="icon" className="h-8 w-8">
-                                <NextLink href={t.documentUrl} target="_blank" rel="noopener noreferrer" title="View Document">
-                                  <Paperclip className="h-4 w-4" />
-                                </NextLink>
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-8 w-8"
+                                onClick={() => setPreviewDocumentUrl(t.documentUrl || null)}
+                                title="View Document"
+                              >
+                                <Paperclip className="h-4 w-4" />
                               </Button>
                             ) : (
                               <span className="text-xs text-muted-foreground/60">-</span>
@@ -852,6 +858,40 @@ export default function FinanceManagerPage() {
         categories={expenseCategories}
         onCategoriesUpdated={fetchFinancialData}
       />
+
+      {previewDocumentUrl && (
+        <Dialog open={!!previewDocumentUrl} onOpenChange={(open) => { if (!open) setPreviewDocumentUrl(null); }}>
+          <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-none" hideCloseButton={true}>
+            <div className="relative w-full h-full flex items-center justify-center bg-black/85 rounded-lg p-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-2 right-2 text-white hover:bg-white/20 z-50 rounded-full h-8 w-8"
+                onClick={() => setPreviewDocumentUrl(null)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+              {previewDocumentUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
+                <img 
+                  src={previewDocumentUrl} 
+                  alt="Document Preview" 
+                  className="max-h-[85vh] max-w-full object-contain rounded animate-in fade-in-50 duration-200"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-white p-12 min-h-[300px]">
+                  <Paperclip className="h-16 w-16 mb-4 opacity-50" />
+                  <p className="mb-4">This file cannot be previewed directly.</p>
+                  <Button asChild>
+                    <a href={previewDocumentUrl} target="_blank" rel="noopener noreferrer">
+                      Download File
+                    </a>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
