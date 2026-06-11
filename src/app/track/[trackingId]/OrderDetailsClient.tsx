@@ -195,13 +195,13 @@ export function OrderDetailsClient({
   const lastStatusUpdateEntry = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
   const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
 
-  const getStatusIcon = (statusId: string, sizeClass = "h-6 w-6") => {
+  const getStatusIcon = (statusId: string, sizeClass = "h-6 w-6", colorClass?: string) => {
     const statusInfoToUse = getStatusDisplayInfo(statusId);
-    const commonClasses = `${sizeClass} mr-2 flex-shrink-0`;
+    const commonClasses = `${sizeClass} mr-2 flex-shrink-0 ${colorClass || ''}`;
 
     const renderInfoLottie = () => {
-      if (!isClient) {
-        return <Info className={`${commonClasses} text-primary/80`} />;
+      if (!isClient || colorClass) {
+        return <Info className={cn(commonClasses, !colorClass && "text-primary/80")} />;
       }
       return (
         <div className={`${sizeClass} mr-2 flex-shrink-0`}>
@@ -210,14 +210,14 @@ export function OrderDetailsClient({
       );
     };
 
-    if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) return <CheckCircle className={`${commonClasses} text-green-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) return <CheckCircle className={cn(commonClasses, !colorClass && "text-green-500")} />;
     if (statusInfoToUse.name.toLowerCase().includes("design")) return renderInfoLottie();
     if (statusInfoToUse.name.toLowerCase().includes("production")) return renderInfoLottie();
-    if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) return <Clock className={`${commonClasses} text-yellow-600`} />;
-    if (statusInfoToUse.name.toLowerCase().includes("cancelled")) return <Info className={`${commonClasses} text-red-500`} />;
-    if (statusInfoToUse.name.toLowerCase().includes("submitted")) return <Package className={`${commonClasses} text-blue-500`} />;
-    if (statusInfoToUse.name.toLowerCase().includes("clearance")) return <Monitor className={`${commonClasses} text-indigo-500`} />;
-    if (statusInfoToUse.name.toLowerCase().includes("dr assigned") || statusInfoToUse.name.toLowerCase().includes("assigned")) return <Palette className={`${commonClasses} text-pink-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) return <Clock className={cn(commonClasses, !colorClass && "text-yellow-600")} />;
+    if (statusInfoToUse.name.toLowerCase().includes("cancelled")) return <Info className={cn(commonClasses, !colorClass && "text-red-500")} />;
+    if (statusInfoToUse.name.toLowerCase().includes("submitted")) return <Package className={cn(commonClasses, !colorClass && "text-blue-500")} />;
+    if (statusInfoToUse.name.toLowerCase().includes("clearance")) return <Monitor className={cn(commonClasses, !colorClass && "text-indigo-500")} />;
+    if (statusInfoToUse.name.toLowerCase().includes("dr assigned") || statusInfoToUse.name.toLowerCase().includes("assigned")) return <Palette className={cn(commonClasses, !colorClass && "text-pink-500")} />;
     return renderInfoLottie();
   };
 
@@ -745,14 +745,16 @@ export function OrderDetailsClient({
 
         <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-            <div className="flex items-center space-x-3 sm:space-x-4"><Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
-            <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
+            <div className="flex items-center space-x-3 sm:space-x-4"><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
+            <CardDescription className="text-muted-foreground mt-1">Timeline of order progress and updates.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-primary/30 ml-2 sm:ml-3">
             {order.statusHistory.slice().reverse().map((entry, index) => {
               const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
                 <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
-                  <div className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'bg-primary shadow-lg' : 'bg-muted border-2 border-border group-hover:bg-primary/20 group-hover:border-primary/50'}`}>{index === 0 ? <CheckCircle className={`h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground`} /> : getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0 group-hover:text-primary")}</div>
+                  <div className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'bg-primary shadow-lg' : 'bg-muted border-2 border-border group-hover:bg-primary/20 group-hover:border-primary/50'}`}>
+                    {getStatusIcon(entry.status, index === 0 ? "h-4 w-4 sm:h-5 sm:w-5 !mr-0" : "h-4 w-4 sm:h-4 sm:w-4 !mr-0 group-hover:text-primary", index === 0 ? "text-primary-foreground" : undefined)}
+                  </div>
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
                     <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                     <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
