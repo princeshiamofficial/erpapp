@@ -805,7 +805,11 @@ export function OrderDetailsClient({
                                   alt="Proof thumbnail" 
                                   className="h-12 w-12 sm:h-16 sm:w-16 object-cover"
                                   onError={(e) => {
-                                    e.currentTarget.src = "/placeholder.svg";
+                                    const img = e.currentTarget;
+                                    const wrapper = img.parentElement;
+                                    if (wrapper) {
+                                      wrapper.style.display = 'none';
+                                    }
                                   }}
                                 />
                               </div>
