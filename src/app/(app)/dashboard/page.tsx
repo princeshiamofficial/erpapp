@@ -61,6 +61,7 @@ import {
   Bar,
   BarChart as RechartsBarChart,
   LabelList,
+  Label as RechartsLabel,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
 import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory, UserRole, Feedback } from '@/types';
@@ -1576,7 +1577,50 @@ function DashboardContent() {
                         <ResponsiveContainer width="100%" height="100%">
                           <RechartsPieChart>
                             <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-                            <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={currentUser?.role === 'CRM' ? 95 : 60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                            <Pie 
+                              data={trafficSourcesData} 
+                              dataKey="value" 
+                              nameKey="name" 
+                              cx="50%" 
+                              cy="50%" 
+                              innerRadius={currentUser?.role === 'CRM' ? 70 : 45} 
+                              outerRadius={currentUser?.role === 'CRM' ? 90 : 60} 
+                              paddingAngle={4}
+                              cornerRadius={6}
+                              strokeWidth={0}
+                            >
+                              <RechartsLabel
+                                content={({ viewBox }) => {
+                                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                    const totalLeads = trafficSourcesData.reduce((acc, curr) => acc + curr.value, 0);
+                                    return (
+                                      <text
+                                        x={viewBox.cx}
+                                        y={viewBox.cy}
+                                        textAnchor="middle"
+                                        dominantBaseline="middle"
+                                      >
+                                        <tspan
+                                          x={viewBox.cx}
+                                          y={(viewBox.cy || 0) - 8}
+                                          className={cn("fill-foreground font-bold font-mono tracking-tight", currentUser?.role === 'CRM' ? "text-2xl" : "text-lg")}
+                                        >
+                                          {totalLeads}
+                                        </tspan>
+                                        <tspan
+                                          x={viewBox.cx}
+                                          y={(viewBox.cy || 0) + (currentUser?.role === 'CRM' ? 14 : 10)}
+                                          className={cn("fill-muted-foreground uppercase tracking-widest font-semibold", currentUser?.role === 'CRM' ? "text-[10px]" : "text-[8px]")}
+                                        >
+                                          Total Leads
+                                        </tspan>
+                                      </text>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                                position="center"
+                              />
                               {trafficSourcesData.map((entry) => (
                                 <Cell key={`cell-${entry.name}`} fill={entry.fill} />
                               ))}
