@@ -44,11 +44,7 @@ import {
   ClipboardList,
   TrendingUp, // For Assets icon
   Target, // For Target icon
-  LineChart as LineChartIcon,
-  Smartphone,
-  CreditCard,
-  Banknote,
-  Coins
+  LineChart as LineChartIcon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -70,7 +66,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
 import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory, UserRole, Feedback } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getModels, getPaymentMethods } from '@/lib/service-options-service';
+import { getModels } from '@/lib/service-options-service';
 import { useToast } from '@/hooks/use-toast';
 import { getUsers } from '@/lib/user-service';
 import { getProjects } from '@/lib/project-service';
@@ -216,68 +212,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
   );
 };
 
-const CustomYAxisTick = ({ x, y, payload, paymentMethods }: any) => {
-  const name = payload?.value || "";
-  const lowerName = name.toLowerCase();
-
-  if (lowerName.includes('cod')) {
-    return (
-      <g transform={`translate(${x - 38}, ${y - 16})`}>
-        <foreignObject width="32" height="32">
-          <img src="/cod-icon.webp" alt="COD" className="w-full h-full object-contain" />
-        </foreignObject>
-      </g>
-    );
-  }
-
-  const matchedMethod = paymentMethods?.find(
-    (pm: any) => pm.name.toLowerCase() === lowerName
-  );
-
-  let IconComponent = Coins;
-  let colorClass = "text-muted-foreground";
-
-  const iconName = matchedMethod?.icon;
-  if (iconName) {
-    switch (iconName) {
-      case 'Smartphone': IconComponent = Smartphone; break;
-      case 'CreditCard': IconComponent = CreditCard; break;
-      case 'Banknote': IconComponent = Banknote; break;
-      case 'Landmark': IconComponent = Landmark; break;
-      case 'Coins': IconComponent = Coins; break;
-      case 'Truck': IconComponent = Truck; break;
-    }
-  } else {
-    if (lowerName.includes('bkash')) {
-      IconComponent = Smartphone;
-      colorClass = "text-pink-500";
-    } else if (lowerName.includes('bank') || lowerName.includes('transfer')) {
-      IconComponent = Landmark;
-      colorClass = "text-sky-500";
-    } else if (lowerName.includes('cash')) {
-      IconComponent = Banknote;
-      colorClass = "text-emerald-500";
-    } else if (lowerName.includes('card')) {
-      IconComponent = CreditCard;
-      colorClass = "text-indigo-500";
-    }
-  }
-
-  if (IconComponent === Smartphone) colorClass = "text-pink-500";
-  else if (IconComponent === Truck) colorClass = "text-amber-500";
-  else if (IconComponent === Landmark) colorClass = "text-sky-500";
-  else if (IconComponent === Banknote) colorClass = "text-emerald-500";
-  else if (IconComponent === CreditCard) colorClass = "text-indigo-500";
-
-  return (
-    <g transform={`translate(${x - 38}, ${y - 16})`}>
-      <foreignObject width="32" height="32">
-        <IconComponent className={cn("h-8 w-8", colorClass)} />
-      </foreignObject>
-    </g>
-  );
-};
-
 
 const ALL_PROJECT_STATUSES_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; color: string; gradient: string; shadow: string; }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6', gradient: 'linear-gradient(to right, #3b82f6, #60a5fa)', shadow: '0 4px 15px 0 rgba(59, 130, 246, 0.4)' },
@@ -403,8 +337,8 @@ function DashboardContent() {
       return null;
     }
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions, fetchedPaymentMethods] = await Promise.all([
-        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(), getPaymentMethods()
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
+        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -427,8 +361,7 @@ function DashboardContent() {
         allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
         allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
         allFeedback: fetchedFeedback,
-        allTransactions: fetchedTransactions,
-        allPaymentMethods: fetchedPaymentMethods
+        allTransactions: fetchedTransactions
       };
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -447,7 +380,7 @@ function DashboardContent() {
     retry: 1,
   });
 
-  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [], allPaymentMethods = [] } = queryData || {};
+  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -1723,7 +1656,7 @@ function DashboardContent() {
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
                           <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                            <YAxis dataKey="name" type="category" tick={(props) => <CustomYAxisTick {...props} paymentMethods={allPaymentMethods} />} width={50} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" tick={{ fontSize: 14, fontWeight: 500 }} width={145} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
                               cursor={{ fill: 'hsl(var(--muted))' }}
