@@ -1668,7 +1668,7 @@ function DashboardContent() {
                         <Skeleton className="h-[350px] w-full" />
                       ) : paymentMethodData.length > 0 ? (
                         <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
-                          <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                          <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }} barCategoryGap="20%">
                             <YAxis dataKey="name" type="category" tick={<LeftAlignedTick />} width={145} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                             <XAxis type="number" hide />
                             <ChartTooltip
@@ -1691,7 +1691,7 @@ function DashboardContent() {
                                 return null;
                               }}
                             />
-                            <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
+                            <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]}>
                               <LabelList
                                 dataKey="percentage"
                                 position="right"
