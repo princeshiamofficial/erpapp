@@ -12,7 +12,8 @@ import type { User } from '@/types';
 import type { Metadata, Viewport } from 'next';
 
 export const viewport: Viewport = {
-  width: 1024,
+  width: 'device-width',
+  initialScale: 1,
 };
 
 interface ClientPageProps {
