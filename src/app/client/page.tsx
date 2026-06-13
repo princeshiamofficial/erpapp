@@ -48,7 +48,7 @@ function TrackingPageSkeleton() {
     <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 animate-pulse">
       <div className="shadow-2xl overflow-hidden border border-border/40 bg-card rounded-xl">
         <div className="bg-card p-6 sm:p-8 border-b border-border/40">
-          <div className="flex flex-col items-start space-y-3">
+          <div className="flex flex-col items-start space-y-1">
             {/* Logo skeleton */}
             <div className="h-6 w-24 bg-muted/60 rounded-lg border border-border/30" />
             {/* Title skeleton */}

@@ -762,7 +762,7 @@ export function OrderDetailsClient({
         {hideStatusHeader && (
           <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl mt-6 sm:mt-8">
             <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-              <div className="flex flex-col items-start space-y-3">
+              <div className="flex flex-col items-start space-y-1">
                 <Image
                   src="/logo.png"
                   alt="Color Hut Logo"
