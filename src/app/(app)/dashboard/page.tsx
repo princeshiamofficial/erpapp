@@ -1580,10 +1580,10 @@ function DashboardContent() {
                       Traffic Sources
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="h-[380px] sm:h-[400px] p-2 sm:p-4">
+                  <CardContent className={cn("p-2 sm:p-4", isCrm ? "h-[380px] sm:h-[400px]" : "h-[220px] sm:h-[250px]")}>
                     {isLoadingContent ? (
                       <div className="flex items-center justify-center h-full">
-                        <Skeleton className="h-64 w-64 rounded-full" />
+                        <Skeleton className={cn(isCrm ? "h-64 w-64" : "h-36 w-36", "rounded-full")} />
                       </div>
                     ) : trafficSourcesData.length > 0 ? (
                       <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
@@ -1596,8 +1596,8 @@ function DashboardContent() {
                               nameKey="name" 
                               cx="50%" 
                               cy="50%" 
-                              innerRadius={70} 
-                              outerRadius={90} 
+                              innerRadius={isCrm ? 70 : 50} 
+                              outerRadius={isCrm ? 90 : 65} 
                               paddingAngle={4}
                               cornerRadius={6}
                               strokeWidth={0}
@@ -1615,15 +1615,15 @@ function DashboardContent() {
                                       >
                                         <tspan
                                           x={viewBox.cx}
-                                          y={(viewBox.cy || 0) - 8}
-                                          className="fill-foreground font-bold font-mono tracking-tight text-2xl"
+                                          y={(viewBox.cy || 0) - (isCrm ? 8 : 4)}
+                                          className={cn("fill-foreground font-bold font-mono tracking-tight", isCrm ? "text-2xl" : "text-xl")}
                                         >
                                           {totalLeads}
                                         </tspan>
                                         <tspan
                                           x={viewBox.cx}
-                                          y={(viewBox.cy || 0) + 14}
-                                          className="fill-muted-foreground uppercase tracking-widest font-semibold text-[10px]"
+                                          y={(viewBox.cy || 0) + (isCrm ? 14 : 12)}
+                                          className={cn("fill-muted-foreground uppercase tracking-widest font-semibold", isCrm ? "text-[10px]" : "text-[9px]")}
                                         >
                                           Total Leads
                                         </tspan>

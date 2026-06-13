@@ -225,7 +225,7 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
                               </TimelineHeader>
                               <TimelineDescription className="flex justify-between items-start">
                                   <div>
-                                    <p>{item.notes}</p>
+                                    <p>{item.activity === 'Lead Created' ? (lead.notes || 'Initial lead entry created.') : item.notes}</p>
                                     <p className="text-xs text-muted-foreground italic mt-1">- {item.changedByUserName}</p>
                                   </div>
                                   {currentUser.role === 'SYSTEM_ADMIN' && (

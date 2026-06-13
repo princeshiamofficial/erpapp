@@ -62,6 +62,18 @@ const getInitials = (name?: string) => {
   return parts[0].charAt(0).toUpperCase() + parts[parts.length - 1].charAt(0).toUpperCase();
 };
 
+const getRecentActivityNote = (lead: Lead): string => {
+  if (!lead.activityHistory || lead.activityHistory.length === 0) {
+    return lead.notes || 'Initial lead entry created.';
+  }
+  const sortedActivities = [...lead.activityHistory].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const latest = sortedActivities[0];
+  if (latest.activity === 'Lead Created') {
+    return lead.notes || 'Initial lead entry created.';
+  }
+  return latest.notes || latest.activity;
+};
+
 export default function EventsPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const { socket } = useSocket();
@@ -424,6 +436,7 @@ export default function EventsPage() {
                   <TableHead>Business Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Stage</TableHead>
+                  <TableHead>Comment</TableHead>
                   <TableHead>Assigned CRM</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -438,6 +451,7 @@ export default function EventsPage() {
                       <TableCell><div className="h-5 w-28 bg-muted animate-pulse rounded" /></TableCell>
                       <TableCell><div className="h-5 w-24 bg-muted animate-pulse rounded" /></TableCell>
                       <TableCell><div className="h-6 w-16 bg-muted animate-pulse rounded-full" /></TableCell>
+                      <TableCell><div className="h-5 w-36 bg-muted animate-pulse rounded" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
@@ -476,6 +490,9 @@ export default function EventsPage() {
                           <Badge className={cn("hover:opacity-85 font-medium shadow-none text-xs border border-transparent", getCategoryColorClass(lead.category))}>
                             {LEAD_CATEGORY_LABELS[lead.category] || lead.category}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-muted-foreground" title={getRecentActivityNote(lead)}>
+                          {getRecentActivityNote(lead)}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <div className="flex items-center gap-2">
@@ -518,7 +535,7 @@ export default function EventsPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-48 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-48 text-center text-muted-foreground">
                       <AlertCircle className="h-10 w-10 mx-auto mb-2 opacity-55 text-primary" />
                       <p className="font-medium text-sm">No scheduled events found</p>
                       <p className="text-xs max-w-xs mx-auto mt-1">Try resetting the search or filters to see available scheduled leads.</p>

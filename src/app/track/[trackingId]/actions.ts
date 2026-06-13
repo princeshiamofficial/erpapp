@@ -5,8 +5,9 @@
 
 import { revalidatePath } from "next/cache";
 import type { Comment, TrackingLink, User, UserRole } from "@/types";
-import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered, deleteComment as deleteCommentFromOrder } from "@/lib/order-service";
+import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered, deleteComment as deleteCommentFromOrder, updateOrder, getOrderById } from "@/lib/order-service";
 import { DELIVERED_STATUS_ID } from '@/lib/status-constants';
+import { v4 as uuidv4 } from 'uuid';
 
 // For top-level comments from the main form (typically by client or general update)
 export async function submitCommentAction(
@@ -215,14 +216,17 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
       return { error: responseData.message || 'Failed to fetch delivery status from Steadfast.' };
     }
 
-    if (responseData.status === 200 && responseData.delivery_status === 'delivered') {
+    const deliveryStatus = responseData.delivery_status;
+    const isDeliveredLike = deliveryStatus === 'delivered' || deliveryStatus === 'delivered_approval_pending';
+
+    if (responseData.status === 200 && isDeliveredLike) {
       try {
         const order = await getOrderByTrackingCode(trackingCode);
         if (order) {
           // Trigger settlement if the conditions are met (due amount > 0 or status not yet Delivered)
           await autoSettleOrderIfDelivered(
             order.id,
-            "System auto-settled: Courier confirmed delivery.",
+            `System auto-settled: Courier confirmed delivery (Status: ${deliveryStatus}).`,
             { id: order.crmUserId, name: order.crmUserName }
           );
         }
@@ -236,5 +240,46 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
   } catch (error) {
     console.error('Error calling Packzy API:', error);
     return { error: 'An unexpected error occurred while fetching delivery status.' };
+  }
+}
+
+export async function approveOrderAction(orderId: string): Promise<TrackingLink | { error: string }> {
+  try {
+    const order = await getOrderById(orderId);
+    if (!order) {
+      return { error: "Order not found." };
+    }
+
+    const newLogEntry = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      status: 'approved-for-production',
+      changedByUserId: 'client-approved',
+      changedByUserName: 'Client',
+      notes: 'Terms accepted and order approved by client.'
+    };
+
+    const updatedHistory = [...(order.statusHistory || []), newLogEntry];
+
+    const success = await updateOrder(orderId, {
+      currentStatus: 'approved-for-production',
+      statusHistory: updatedHistory
+    });
+
+    if (!success) {
+      return { error: "Failed to update order status." };
+    }
+
+    const updatedOrder = await getOrderById(orderId);
+    if (!updatedOrder) {
+      return { error: "Failed to fetch updated order." };
+    }
+
+    revalidatePath(`/track/${orderId}`);
+    revalidatePath(`/client`);
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in approveOrderAction:", error);
+    return { error: error instanceof Error ? error.message : "Failed to approve order." };
   }
 }

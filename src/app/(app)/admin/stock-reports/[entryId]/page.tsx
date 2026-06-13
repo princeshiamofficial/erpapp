@@ -15,6 +15,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Separator } from "@/components/ui/separator";
 import JsBarcode from 'jsbarcode';
 
+function SafeImage({ src, alt, width, height, className }: { src: string; alt: string; width: number; height: number; className?: string }) {
+    const [error, setError] = useState(false);
+
+    if (error) {
+        return (
+            <div className={`rounded-md bg-muted flex items-center justify-center shrink-0`} style={{ width, height }}>
+                <Package className="text-muted-foreground/30" style={{ width: width * 0.5, height: height * 0.5 }} />
+            </div>
+        );
+    }
+
+    return (
+        <NextImage
+            src={src}
+            alt={alt}
+            width={width}
+            height={height}
+            unoptimized={true}
+            className={className}
+            onError={() => setError(true)}
+        />
+    );
+}
+
 export default function SellEntryInvoicePage() {
     const params = useParams();
     const router = useRouter();
@@ -207,12 +231,11 @@ export default function SellEntryInvoicePage() {
                                     <div key={idx} className="p-4 bg-muted/20 border border-border/30 rounded-lg space-y-3 shadow-sm">
                                         <div className="flex gap-3">
                                             {product?.imageUrl ? (
-                                                <NextImage
+                                                <SafeImage
                                                     src={product.imageUrl}
                                                     alt={item.productName || 'Product'}
-                                                    width={50}
-                                                    height={50}
-                                                    unoptimized={true}
+                                                    width={56}
+                                                    height={56}
                                                     className="rounded-md object-cover h-14 w-14"
                                                 />
                                             ) : (
@@ -248,9 +271,10 @@ export default function SellEntryInvoicePage() {
                             <Table>
                                 <TableHeader className="bg-muted/30">
                                     <TableRow className="hover:bg-transparent border-b border-border/10">
-                                        <TableHead className="text-[10px] uppercase font-bold tracking-widest h-10 px-6">Model Description</TableHead>
-                                        <TableHead className="text-[10px] uppercase font-bold tracking-widest text-center h-10">Units</TableHead>
-                                        <TableHead className="text-[10px] uppercase font-bold tracking-widest text-right h-10 px-6">Verification</TableHead>
+                                        <TableHead className="text-[10px] font-bold tracking-widest h-10 px-6">Model Description</TableHead>
+                                        <TableHead className="text-[10px] font-bold tracking-widest text-center h-10">Current Stock</TableHead>
+                                        <TableHead className="text-[10px] font-bold tracking-widest text-center h-10">Units</TableHead>
+                                        <TableHead className="text-[10px] font-bold tracking-widest text-right h-10 px-6">Verification</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -258,20 +282,19 @@ export default function SellEntryInvoicePage() {
                                         const product = allProducts.find(p => p.id === item.productId);
                                         return (
                                             <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
-                                                <TableCell className="font-medium text-card-foreground">
+                                                <TableCell className="py-1.5 font-medium text-card-foreground">
                                                     <div className="flex items-center gap-3">
                                                         {product?.imageUrl ? (
-                                                            <NextImage
+                                                            <SafeImage
                                                                 src={product.imageUrl}
                                                                 alt={item.productName || 'Product'}
-                                                                width={40}
-                                                                height={40}
-                                                                unoptimized={true}
+                                                                width={32}
+                                                                height={32}
                                                                 className="rounded-md object-cover"
                                                             />
                                                         ) : (
-                                                            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                                                                <span className="text-muted-foreground text-[10px]">No Img</span>
+                                                            <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                                                                <span className="text-muted-foreground text-[9px] font-semibold">No Img</span>
                                                             </div>
                                                         )}
                                                         <div className="flex flex-col gap-0.5">
@@ -280,8 +303,9 @@ export default function SellEntryInvoicePage() {
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-center font-bold text-foreground/80">{item.quantity}</TableCell>
-                                                <TableCell className="text-right px-6">
+                                                <TableCell className="py-1.5 text-center font-bold text-foreground/80">{product?.stockCount ?? 0}</TableCell>
+                                                <TableCell className="py-1.5 text-center font-bold text-foreground/80">{item.quantity}</TableCell>
+                                                <TableCell className="py-1.5 text-right px-6">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${sellEntry.status === 'Approved' ? "text-green-600/80 bg-green-500/5" :
                                                         sellEntry.status === 'Rejected' ? "text-red-600/80 bg-red-500/5" :
                                                             "text-amber-600/80 bg-amber-500/5"
@@ -326,30 +350,11 @@ export default function SellEntryInvoicePage() {
                             )}
                         </div>
 
-                        <div className="flex flex-col items-end gap-10">
-                            <div className="flex flex-col items-end">
-                                <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1">Cumulative Units</span>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-light text-foreground">{sellEntry.quantity}</span>
-                                    <span className="text-xs font-bold text-primary uppercase tracking-widest">PCS</span>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col items-end">
-                                <div className="mb-2">
-                                    <NextImage
-                                        src="https://i.postimg.cc/MHShWWsQ/owner-signature.png"
-                                        alt="Owner Signature"
-                                        width={160}
-                                        height={50}
-                                        unoptimized
-                                        className="object-contain mix-blend-multiply opacity-90"
-                                    />
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <p className="text-[9px] font-bold text-foreground/80 uppercase tracking-[0.2em]">Authorized Signature</p>
-                                    <div className="h-[2px] w-24 bg-primary/20 mt-1"></div>
-                                </div>
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1">Cumulative Units</span>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-light text-foreground">{sellEntry.quantity}</span>
+                                <span className="text-xs font-bold text-primary uppercase tracking-widest">PCS</span>
                             </div>
                         </div>
                     </div>

@@ -243,7 +243,6 @@ export interface ServiceLaminationItem {
 export interface ServicePaymentMethodItem {
   id: string;
   name: string;
-  icon?: string | null;
 }
 
 export interface ServiceGiftItem {
@@ -795,4 +794,5 @@ export interface StockActivity {
   userId: string;
   timestamp: string; // ISO string
   details?: string;
+  entryId?: string;
 }

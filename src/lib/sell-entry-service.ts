@@ -54,7 +54,7 @@ export const addSellEntry = async (
         if (status === 'Approved') {
             for (const item of items) {
                 await updateStockQuantity(item.productId, -1 * (item.quantity || 0));
-                await logStockActivity('SALE', item.productName, recordedByUserName, recordedByUserId, `Sale recorded & approved: ${item.quantity} units`, item.quantity, item.productId);
+                await logStockActivity('SALE', item.productName, recordedByUserName, recordedByUserId, `Sale recorded & approved: ${item.quantity} units`, item.quantity, item.productId, entryId);
             }
         }
 
@@ -124,7 +124,7 @@ export const approveSellEntry = async (
 
         if (updatedData.items && Array.isArray(updatedData.items)) {
             for (const item of updatedData.items) {
-                await logStockActivity('SALE', item.productName, approvedByUserName, approvedByUserId, `Sale approved for ${item.productName}: ${item.quantity} units`, item.quantity, item.productId);
+                await logStockActivity('SALE', item.productName, approvedByUserName, approvedByUserId, `Sale approved for ${item.productName}: ${item.quantity} units`, item.quantity, item.productId, updatedData.entryId);
             }
         }
 

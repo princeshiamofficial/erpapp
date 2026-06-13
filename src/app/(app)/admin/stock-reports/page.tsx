@@ -34,6 +34,31 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+function SafeImage({ src, alt, width, height, className, fill }: { src: string; alt: string; width?: number; height?: number; className?: string; fill?: boolean }) {
+    const [error, setError] = useState(false);
+
+    if (error) {
+        return (
+            <div className={cn("rounded bg-muted flex items-center justify-center shrink-0 border border-border/40", fill ? "absolute inset-0 w-full h-full" : "")} style={!fill ? { width, height } : undefined}>
+                <Package className="text-muted-foreground/30" style={!fill ? { width: width ? width * 0.5 : 20, height: height ? height * 0.5 : 20 } : { width: '50%', height: '50%' }} />
+            </div>
+        );
+    }
+
+    return (
+        <NextImage
+            src={src}
+            alt={alt}
+            width={width}
+            height={height}
+            fill={fill}
+            unoptimized={true}
+            className={className}
+            onError={() => setError(true)}
+        />
+    );
+}
+
 export default function StockReportsPage() {
     const { currentUser } = useAuth();
     const router = useRouter();
@@ -76,6 +101,7 @@ export default function StockReportsPage() {
     const [sellEntryToDelete, setSellEntryToDelete] = useState<SellEntry | null>(null);
     const [sellEntryDate, setSellEntryDate] = useState<Date>(new Date());
     const [activities, setActivities] = useState<(StockActivity & { userAvatar?: string | null })[]>([]);
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
     // Form state
     const [itemName, setItemName] = useState('');
@@ -134,7 +160,45 @@ export default function StockReportsPage() {
         return { totalProducts, totalStock, totalSold, lowStockItems, topSelling, stockCategories };
     }, [models]);
 
+    const groupedActivities = useMemo(() => {
+        const result: (StockActivity & { userAvatar?: string | null; items?: any[] })[] = [];
+        const saleGroups = new Map<string, any>();
 
+        activities.forEach(activity => {
+            if (activity.type === 'SALE' && activity.entryId) {
+                if (!saleGroups.has(activity.entryId)) {
+                    const groupObj = {
+                        ...activity,
+                        items: [{
+                            productName: activity.productName,
+                            quantity: activity.quantity,
+                            details: activity.details
+                        }]
+                    };
+                    saleGroups.set(activity.entryId, groupObj);
+                    result.push(groupObj);
+                } else {
+                    const group = saleGroups.get(activity.entryId);
+                    group.items.push({
+                        productName: activity.productName,
+                        quantity: activity.quantity,
+                        details: activity.details
+                    });
+                }
+            } else {
+                result.push({ ...activity });
+            }
+        });
+
+        return result;
+    }, [activities]);
+
+    const toggleGroup = (entryId: string) => {
+        setExpandedGroups(prev => ({
+            ...prev,
+            [entryId]: !prev[entryId]
+        }));
+    };
 
     const openAddDialog = () => {
         setItemName('');
@@ -415,12 +479,11 @@ export default function StockReportsPage() {
                                                         {/* Image */}
                                                         <div className="h-16 w-16 relative rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border/40">
                                                             {item.imageUrl ? (
-                                                                <NextImage
+                                                                <SafeImage
                                                                     src={item.imageUrl}
                                                                     alt={item.name}
                                                                     fill
                                                                     className="object-cover"
-                                                                    unoptimized={true}
                                                                 />
                                                             ) : (
                                                                 <ImageIcon className="h-6 w-6 text-muted-foreground/30 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -514,12 +577,11 @@ export default function StockReportsPage() {
                                                     <TableCell>
                                                         <div className="h-10 w-10 relative rounded-md overflow-hidden bg-muted flex items-center justify-center border">
                                                             {item.imageUrl ? (
-                                                                <NextImage
+                                                                <SafeImage
                                                                     src={item.imageUrl}
                                                                     alt={item.name}
                                                                     fill
                                                                     className="object-cover"
-                                                                    unoptimized={true}
                                                                 />
                                                             ) : (
                                                                 <ImageIcon className="h-5 w-5 text-muted-foreground" />
@@ -860,58 +922,96 @@ export default function StockReportsPage() {
                                     </div>
                                     <ScrollArea className="flex-1 px-6 h-[400px]">
                                         <div className="divide-y divide-border/40">
-                                            {activities.length === 0 ? (
+                                            {groupedActivities.length === 0 ? (
                                                 <div className="p-12 text-center">
                                                     <Activity className="h-8 w-8 mx-auto mb-2 text-muted-foreground/20" />
                                                     <p className="text-sm text-muted-foreground">No recent activity</p>
                                                 </div>
                                             ) : (
-                                                activities.map((activity) => (
-                                                    <div key={activity.id} className="py-4 hover:bg-white/40 transition-colors">
-                                                        <div className="flex gap-3">
-                                                            <div className={cn(
-                                                                "h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                                                                activity.type === 'ADD' ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
-                                                                activity.type === 'RESTOCK' ? "bg-blue-500/10 text-blue-600 border border-blue-500/20" :
-                                                                activity.type === 'SALE' ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" :
-                                                                activity.type === 'DELETE' ? "bg-destructive/10 text-destructive border border-destructive/20" :
-                                                                "bg-muted text-muted-foreground"
-                                                            )}>
-                                                                {activity.type === 'ADD' ? <PlusCircle className="h-4 w-4" /> :
-                                                                 activity.type === 'RESTOCK' ? <Layers className="h-4 w-4" /> :
-                                                                 activity.type === 'SALE' ? <TrendingUp className="h-4 w-4" /> :
-                                                                 <Edit className="h-4 w-4" />}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex justify-between items-start">
-                                                                    <p className="text-sm font-semibold text-foreground truncate">
-                                                                        {activity.productName}
-                                                                    </p>
-                                                                    <span className="text-[10px] font-medium text-muted-foreground/60 whitespace-nowrap ml-2">
-                                                                        {format(new Date(activity.timestamp), 'h:mm a')}
-                                                                    </span>
+                                                groupedActivities.map((activity) => {
+                                                    const isGroup = !!activity.items && activity.items.length > 0;
+                                                    const isExpanded = isGroup && activity.entryId ? expandedGroups[activity.entryId] : false;
+
+                                                    return (
+                                                        <div key={activity.id} className="py-4 hover:bg-white/40 transition-colors">
+                                                            <div className="flex gap-3">
+                                                                <div className={cn(
+                                                                    "h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm",
+                                                                    activity.type === 'ADD' ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
+                                                                    activity.type === 'RESTOCK' ? "bg-blue-500/10 text-blue-600 border border-blue-500/20" :
+                                                                    activity.type === 'SALE' ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" :
+                                                                    activity.type === 'DELETE' ? "bg-destructive/10 text-destructive border border-destructive/20" :
+                                                                    "bg-muted text-muted-foreground"
+                                                                )}>
+                                                                    {activity.type === 'ADD' ? <PlusCircle className="h-4 w-4" /> :
+                                                                     activity.type === 'RESTOCK' ? <Layers className="h-4 w-4" /> :
+                                                                     activity.type === 'SALE' ? <TrendingUp className="h-4 w-4" /> :
+                                                                     <Edit className="h-4 w-4" />}
                                                                 </div>
-                                                                <p className="text-[13px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">
-                                                                    {activity.details}
-                                                                </p>
-                                                                <div className="flex items-center gap-2 mt-2">
-                                                                    <Avatar className="h-4 w-4 border border-border/50">
-                                                                        <AvatarImage src={activity.userAvatar || undefined} />
-                                                                        <AvatarFallback className="text-[8px] bg-primary/10 text-primary uppercase">
-                                                                            {activity.userName?.substring(0, 2)}
-                                                                        </AvatarFallback>
-                                                                    </Avatar>
-                                                                    <span className="text-[10px] text-primary/80 font-semibold">
-                                                                        {activity.userName}
-                                                                    </span>
-                                                                    <span className="text-[10px] text-muted-foreground/40 font-normal ml-auto">
-                                                                        {format(new Date(activity.timestamp), 'MMM d, yyyy')}
-                                                                    </span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <p className="text-sm font-semibold text-foreground truncate">
+                                                                            {isGroup ? (
+                                                                                <span className="flex items-center gap-1.5">
+                                                                                    Sale Approved: <Link href={`/admin/stock-reports/${activity.entryId}`} className="text-primary hover:underline font-mono font-bold">#{activity.entryId}</Link>
+                                                                                </span>
+                                                                            ) : (
+                                                                                activity.productName
+                                                                            )}
+                                                                        </p>
+                                                                        <span className="text-[10px] font-medium text-muted-foreground/60 whitespace-nowrap ml-2">
+                                                                            {format(new Date(activity.timestamp), 'h:mm a')}
+                                                                        </span>
+                                                                    </div>
+                                                                    
+                                                                    {isGroup ? (
+                                                                        <div className="mt-1">
+                                                                            <button 
+                                                                                onClick={() => activity.entryId && toggleGroup(activity.entryId)}
+                                                                                className="text-[13px] text-muted-foreground hover:text-foreground flex items-center gap-1.5 focus:outline-none transition-colors"
+                                                                            >
+                                                                                <span>Sale approved for {activity.items!.length} product{activity.items!.length > 1 ? 's' : ''}</span>
+                                                                                <span className="text-xs text-primary/70">
+                                                                                    ({isExpanded ? 'click to hide' : 'click to expand'})
+                                                                                </span>
+                                                                            </button>
+
+                                                                            {isExpanded && (
+                                                                                <div className="mt-2 pl-3 border-l-2 border-primary/20 space-y-1.5 py-1 bg-muted/20 rounded-r-md">
+                                                                                    {activity.items!.map((item, idx) => (
+                                                                                        <div key={idx} className="text-[12px] text-foreground/80 flex justify-between pr-2">
+                                                                                            <span className="font-medium">{item.productName}</span>
+                                                                                            <span className="text-muted-foreground font-mono font-semibold">{item.quantity} units</span>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-[13px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">
+                                                                            {activity.details}
+                                                                        </p>
+                                                                    )}
+
+                                                                    <div className="flex items-center gap-2 mt-2">
+                                                                        <Avatar className="h-4 w-4 border border-border/50">
+                                                                            <AvatarImage src={activity.userAvatar || undefined} />
+                                                                            <AvatarFallback className="text-[8px] bg-primary/10 text-primary uppercase">
+                                                                                {activity.userName?.substring(0, 2)}
+                                                                            </AvatarFallback>
+                                                                        </Avatar>
+                                                                        <span className="text-[10px] text-primary/80 font-semibold">
+                                                                            {activity.userName}
+                                                                        </span>
+                                                                        <span className="text-[10px] text-muted-foreground/40 font-normal ml-auto">
+                                                                            {format(new Date(activity.timestamp), 'MMM d, yyyy')}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))
+                                                    );
+                                                })
                                             )}
                                         </div>
                                     </ScrollArea>
@@ -1274,7 +1374,7 @@ export default function StockReportsPage() {
                         <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                             <div className="space-y-2 p-1">
                                 <Label className="text-sm font-semibold">Transaction Date *</Label>
-                                <Popover>
+                                <Popover modal={false}>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant={"outline"}
@@ -1325,6 +1425,7 @@ export default function StockReportsPage() {
                                             <Popover
                                                 open={openProductSearchIndex === index}
                                                 onOpenChange={(open) => setOpenProductSearchIndex(open ? index : null)}
+                                                modal={false}
                                             >
                                                 <PopoverTrigger asChild>
                                                     <Button
@@ -1340,7 +1441,7 @@ export default function StockReportsPage() {
                                                                 return selectedProduct ? (
                                                                     <div className="flex items-center gap-2">
                                                                         {selectedProduct.imageUrl && (
-                                                                            <NextImage
+                                                                            <SafeImage
                                                                                 src={selectedProduct.imageUrl}
                                                                                 alt={selectedProduct.name}
                                                                                 width={24}
@@ -1375,7 +1476,7 @@ export default function StockReportsPage() {
                                                                     >
                                                                         <div className="flex items-center gap-3 w-full">
                                                                             {product.imageUrl ? (
-                                                                                <NextImage
+                                                                                <SafeImage
                                                                                     src={product.imageUrl}
                                                                                     alt={product.name}
                                                                                     width={40}

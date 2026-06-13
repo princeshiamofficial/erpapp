@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { getStatusById } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
-import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction, deleteCommentAction } from './actions';
+import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction, deleteCommentAction, approveOrderAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
@@ -70,6 +70,7 @@ interface OrderDetailsClientProps {
   areCommentsVisible: boolean;
   rolesAllowedToViewFinancials: UserRole[]; // New prop
   initialCurrentUser: User | null; // New prop for server-passed user
+  hideStatusHeader?: boolean;
 }
 
 export function OrderDetailsClient({
@@ -78,7 +79,8 @@ export function OrderDetailsClient({
   allUsersForMentions = [],
   areCommentsVisible,
   rolesAllowedToViewFinancials,
-  initialCurrentUser
+  initialCurrentUser,
+  hideStatusHeader = false
 }: OrderDetailsClientProps) {
   const { currentUser: authContextUser } = useAuth();
   const [order, setOrder] = useState(initialOrder);
@@ -109,6 +111,34 @@ export function OrderDetailsClient({
 
   const [showApproveButton, setShowApproveButton] = useState(false);
   const [previewDocumentUrl, setPreviewDocumentUrl] = useState<string | null>(null);
+
+  const [designChecked, setDesignChecked] = useState(false);
+  const [paymentChecked, setPaymentChecked] = useState(false);
+  const [noModificationChecked, setNoModificationChecked] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+
+  const isApproved = useMemo(() => {
+    const approvedStatuses = ['approved-for-production', 'in-production', 'quality-check', 'logistics', 'shipped', 'delivered'];
+    return approvedStatuses.includes(order.currentStatus);
+  }, [order.currentStatus]);
+
+  const handleApproveOrder = async () => {
+    if (!designChecked || !paymentChecked || !noModificationChecked) {
+      toast({ title: "Please accept all terms", description: "You must check all options to approve the order.", variant: "destructive" });
+      return;
+    }
+
+    setIsApproving(true);
+    const result = await approveOrderAction(order.id);
+    setIsApproving(false);
+
+    if ('error' in result) {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    } else {
+      setOrder(result);
+      toast({ title: "Order Approved", description: "Thank you! The order has been approved and moved to production." });
+    }
+  };
 
   // Combine server-passed user and client-side user for the most up-to-date state
   const currentUser = useMemo(() => authContextUser || initialCurrentUser, [authContextUser, initialCurrentUser]);
@@ -523,207 +553,293 @@ export function OrderDetailsClient({
   return (
     <>
       <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-        <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-          <CardHeader className="bg-card py-4 px-6 sm:py-5 sm:px-8 border-b border-border/40">
-            {(!packzyStatus || packzyStatus === 'unavailable') && (
-              <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
-                {getStatusIcon(order.currentStatus, "h-14 w-14 !mr-0")}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
-                    <span>Current Status:</span>
-                    <span
-                      className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border shadow-sm transition-all duration-200"
-                      style={{
-                        backgroundColor: `${currentStatusInfo.color}15`,
-                        color: currentStatusInfo.color,
-                        borderColor: `${currentStatusInfo.color}30`
-                      }}
-                    >
-                      {currentStatusInfo.name}
-                    </span>
-                  </h3>
-                  <div className="text-xs text-muted-foreground mt-2">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
-                </div>
-              </div>
-            )}
-
-            {order.packzyTrackingCode && (
-              <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
-                <div className="flex-shrink-0">
-                  <Truck className="h-14 w-14 text-primary/80 animate-bounce" style={{ animationDuration: '3s' }} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-foreground leading-tight">
-                    Current Status (SteadFast)
-                  </h3>
-                  <div className="mt-2">
-                    {isLoadingPackzyStatus ? (
-                      <Skeleton className="h-7 w-32" />
-                    ) : packzyStatus && packzyStatus !== 'unavailable' ? (
-                      <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-600 shadow-sm capitalize">
-                        {packzyStatus}
+        {!hideStatusHeader && (
+          <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+            <CardHeader className="bg-card py-4 px-6 sm:py-5 sm:px-8 border-b border-border/40">
+              {(!packzyStatus || packzyStatus === 'unavailable') && (
+                <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
+                  {getStatusIcon(order.currentStatus, "h-14 w-14 !mr-0")}
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
+                      <span>Current Status:</span>
+                      <span
+                        className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border shadow-sm transition-all duration-200"
+                        style={{
+                          backgroundColor: `${currentStatusInfo.color}15`,
+                          color: currentStatusInfo.color,
+                          borderColor: `${currentStatusInfo.color}30`
+                        }}
+                      >
+                        {currentStatusInfo.name}
                       </span>
-                    ) : (
-                      <p className="text-muted-foreground">Could not retrieve courier status.</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-2">Tracking Code: {order.packzyTrackingCode}</p>
+                    </h3>
+                    <div className="text-xs text-muted-foreground mt-2">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
                   </div>
                 </div>
-              </div>
-            )}
-          </CardHeader>
-        </div>
-
-        <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
-          <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
-            <div>
-              <div className="mb-2">
-                <Image
-                  src="/logo.png"
-                  alt="Color Hut Logo"
-                  width={160}
-                  height={40}
-                  priority
-                  className="object-contain print:w-32 print:h-auto"
-                />
-              </div>
-              <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
-              <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-              <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
-            </div>
-            <div className="text-left sm:text-right mt-4 sm:mt-0">
-              <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-              <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-              {order.acceptedDeliveryDate && (
-                <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
               )}
-              <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-              <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
-              <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
-              <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
-              <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
-            </div>
-            {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-              <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
-              <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
-              <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
-            </div>)}
-          </div>
-
-          {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">Order Items</h3>
-              <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
-                      {shouldShowFinancials && (
-                        <>
-                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
-                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead>
-                        </>
+              {order.packzyTrackingCode && (
+                <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <Truck className="h-14 w-14 text-primary/80 animate-bounce" style={{ animationDuration: '3s' }} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-foreground leading-tight">
+                      Current Status (SteadFast)
+                    </h3>
+                    <div className="mt-2">
+                      {isLoadingPackzyStatus ? (
+                        <Skeleton className="h-7 w-32" />
+                      ) : packzyStatus && packzyStatus !== 'unavailable' ? (
+                        <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-600 shadow-sm capitalize">
+                          {packzyStatus}
+                        </span>
+                      ) : (
+                        <p className="text-muted-foreground">Could not retrieve courier status.</p>
                       )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.orderItems.map((item, index) => (
-                      <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
-                        <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
-                        <TableCell className="text-card-foreground">{item.lamination}</TableCell>
+                      <p className="text-xs text-muted-foreground mt-2">Tracking Code: {order.packzyTrackingCode}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardHeader>
+          </div>
+        )}
+
+        {!hideStatusHeader && (
+          <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
+              <div>
+                <div className="mb-2">
+                  <Image
+                    src="/logo.png"
+                    alt="Color Hut Logo"
+                    width={160}
+                    height={40}
+                    priority
+                    className="object-contain print:w-32 print:h-auto"
+                  />
+                </div>
+                <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
+                <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
+                <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+              </div>
+              <div className="text-left sm:text-right mt-4 sm:mt-0">
+                <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                {order.acceptedDeliveryDate && (
+                  <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                )}
+                <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
+                <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+                <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
+                <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
+              </div>
+              {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
+                <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
+                <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
+              </div>)}
+            </div>
+
+            {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">Order Items</h3>
+                <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
                         {shouldShowFinancials && (
                           <>
-                            <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
-                            <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
+                            <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
+                            <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead>
                           </>
                         )}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-          {(!Array.isArray(order.orderItems) || order.orderItems.length === 0) && (<div className="mb-6 p-4 text-center text-muted-foreground border border-dashed border-border/40 rounded-md bg-secondary/30"><Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />No service items specified for this order.</div>)}
-          {order.orderNotes && (<div className="mb-8">
-            <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
-            <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
-          </div>)}
-
-          {shouldShowFinancials && allAdvancePaymentRecords.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
-              <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
-                <Table>
-                  <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Reference/Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {allAdvancePaymentRecords.map((record) => (
-                      <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="text-xs text-muted-foreground">{isClient ? formatDate(record.date, false) : <Skeleton className="h-4 w-24" />}</TableCell>
-                        <TableCell className="font-medium text-green-600">{formatCurrency(record.amount)}</TableCell>
-                        <TableCell>
-                          {record.documentUrl ? (
-                            <NextLink href={record.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-primary hover:underline" title="View Payment Proof">
-                              <Paperclip className="h-3.5 w-3.5" />
-                              <span>{record.paymentMethod || 'N/A'}</span>
-                            </NextLink>
-                          ) : (
-                            <span className="text-card-foreground">{record.paymentMethod || 'N/A'}</span>
+                    </TableHeader>
+                    <TableBody>
+                      {order.orderItems.map((item, index) => (
+                        <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
+                          <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
+                          <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
+                          <TableCell className="text-card-foreground">{item.lamination}</TableCell>
+                          {shouldShowFinancials && (
+                            <>
+                              <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
+                              <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
+                            </>
                           )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{record.notes || 'N/A'}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{record.recordedByUserName || 'N/A'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+            {(!Array.isArray(order.orderItems) || order.orderItems.length === 0) && (<div className="mb-6 p-4 text-center text-muted-foreground border border-dashed border-border/40 rounded-md bg-secondary/30"><Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />No service items specified for this order.</div>)}
+            {order.orderNotes && (<div className="mb-8">
+              <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
+              <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
+            </div>)}
 
-          {shouldShowFinancials && (
-            <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
-              <div className="w-full max-w-xs sm:max-w-sm relative">
-                <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
-                {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
-                <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
-                {shippingCharge <= 0 && (
-                  <p className="text-sm font-semibold text-muted-foreground mb-2 text-right">(Excluding delivery charge)</p>
-                )}
-                {shippingCharge > 0 && (
-                  <div className="flex justify-between mb-2">
-                    <span className="text-md text-muted-foreground flex items-center"><Truck className="h-4 w-4 mr-1" />Shipping Charge:</span>
-                    <span className="text-md font-medium text-foreground">+ {formatCurrency(shippingCharge)}</span>
+            {shouldShowFinancials && allAdvancePaymentRecords.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
+                <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Reference/Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {allAdvancePaymentRecords.map((record) => (
+                        <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
+                          <TableCell className="text-xs text-muted-foreground">{isClient ? formatDate(record.date, false) : <Skeleton className="h-4 w-24" />}</TableCell>
+                          <TableCell className="font-medium text-green-600">{formatCurrency(record.amount)}</TableCell>
+                          <TableCell>
+                            {record.documentUrl ? (
+                              <NextLink href={record.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-primary hover:underline" title="View Payment Proof">
+                                <Paperclip className="h-3.5 w-3.5" />
+                                <span>{record.paymentMethod || 'N/A'}</span>
+                              </NextLink>
+                            ) : (
+                              <span className="text-card-foreground">{record.paymentMethod || 'N/A'}</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{record.notes || 'N/A'}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{record.recordedByUserName || 'N/A'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {shouldShowFinancials && (
+              <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
+                <div className="w-full max-w-xs sm:max-w-sm relative">
+                  <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
+                  {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
+                  <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
+                  {shippingCharge <= 0 && (
+                    <p className="text-sm font-semibold text-muted-foreground mb-2 text-right">(Excluding delivery charge)</p>
+                  )}
+                  {shippingCharge > 0 && (
+                    <div className="flex justify-between mb-2">
+                      <span className="text-md text-muted-foreground flex items-center"><Truck className="h-4 w-4 mr-1" />Shipping Charge:</span>
+                      <span className="text-md font-medium text-foreground">+ {formatCurrency(shippingCharge)}</span>
+                    </div>
+                  )}
+                  {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">{showPaidBadge ? "Total Paid:" : "Total Advance Paid:"}</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
+
+                  {showPaidBadge ? (
+                    <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
+                      <Image
+                        src="/paid-stamp.png"
+                        alt="Paid Stamp"
+                        width={150}
+                        height={150}
+                        className="opacity-80"
+                        unoptimized
+                      />
+                    </div>
+                  ) : (grandTotal > 0 && amountDue > 0.01) && (
+                    <><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {hideStatusHeader && (
+          <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl mt-6 sm:mt-8">
+            <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
+                <div>
+                  <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 sm:p-8 space-y-6">
+              {isApproved ? (
+                <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg p-4 flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-emerald-800 dark:text-emerald-200">Order Already Approved</h4>
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
+                      This order has already been accepted and approved for production by the client.
+                    </p>
                   </div>
-                )}
-                {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">{showPaidBadge ? "Total Paid:" : "Total Advance Paid:"}</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
-
-                {showPaidBadge ? (
-                  <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
-                    <Image
-                      src="/paid-stamp.png"
-                      alt="Paid Stamp"
-                      width={150}
-                      height={150}
-                      className="opacity-80"
-                      unoptimized
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={designChecked}
+                      onChange={(e) => setDesignChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
                     />
+                    <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
+                      <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={paymentChecked}
+                      onChange={(e) => setPaymentChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                    />
+                    <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
+                      <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={noModificationChecked}
+                      onChange={(e) => setNoModificationChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                    />
+                    <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
+                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                    </span>
+                  </label>
+
+                  <div className="pt-4 flex justify-end">
+                    <Button
+                      onClick={handleApproveOrder}
+                      disabled={isApproving || !designChecked || !paymentChecked || !noModificationChecked}
+                      size="lg"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 shadow-lg hover:shadow-primary/30 transition-all duration-200"
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        "Approve"
+                      )}
+                    </Button>
                   </div>
-                ) : (grandTotal > 0 && amountDue > 0.01) && (
-                  <><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {showApproveButton && (
           <div id="approve" className="text-center py-8">
@@ -746,70 +862,74 @@ export function OrderDetailsClient({
           </div>
         )}
 
-        <Separator className="my-6 sm:my-8 bg-border/30" />
+        {!hideStatusHeader && (
+          <>
+            <Separator className="my-6 sm:my-8 bg-border/30" />
 
-        <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-            <div className="flex items-center space-x-3 sm:space-x-4"><Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
-            <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-zinc-400 dark:border-zinc-600 ml-2 sm:ml-3">
-            {order.statusHistory.slice().reverse().map((entry, index) => {
-              const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
-                <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
-                  <div 
-                    className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
-                    style={{
-                      backgroundColor: index === 0 ? entryStatusInfo.color : 'hsl(var(--background))',
-                      backgroundImage: index === 0 ? 'none' : `linear-gradient(${entryStatusInfo.color}15, ${entryStatusInfo.color}15)`,
-                      borderColor: index === 0 ? 'transparent' : `${entryStatusInfo.color}30`
-                    }}
-                  >
-                    {index === 0 ? (
-                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: entryStatusInfo.textColor }} />
-                    ) : (
-                      getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0", true)
-                    )}
-                  </div>
-                  <div className="flex-1 pt-px ml-2 sm:ml-3">
-                    <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                    <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
-                    {entry.notes ? (
-                      (() => {
-                        const imgRegex = /(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i;
-                        const match = entry.notes.match(imgRegex);
-                        const imageUrl = match ? match[1] : null;
-                        
-                        if (imageUrl) {
-                          const parts = entry.notes.split(imageUrl);
-                          return (
-                            <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
-                              {parts[0]}
-                              <button 
-                                type="button"
-                                onClick={() => setPreviewDocumentUrl(imageUrl)}
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors text-xs align-middle mx-1"
-                              >
-                                <FileImage className="h-3.5 w-3.5" />
-                                View Proof Image
-                              </button>
-                              {parts[1]}
-                            </p>
-                          );
-                        }
-                        
-                        return (
-                          <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
-                            {entry.notes}
-                          </p>
-                        );
-                      })()
-                    ) : null}
-                  </div>
-                </div>);
-            })}</div>
-          </CardContent>
-        </Card>
+            <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+              <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
+                <div className="flex items-center space-x-3 sm:space-x-4"><Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
+                <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-zinc-400 dark:border-zinc-600 ml-2 sm:ml-3">
+                {order.statusHistory.slice().reverse().map((entry, index) => {
+                  const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
+                    <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
+                      <div 
+                        className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
+                        style={{
+                          backgroundColor: index === 0 ? entryStatusInfo.color : 'hsl(var(--background))',
+                          backgroundImage: index === 0 ? 'none' : `linear-gradient(${entryStatusInfo.color}15, ${entryStatusInfo.color}15)`,
+                          borderColor: index === 0 ? 'transparent' : `${entryStatusInfo.color}30`
+                        }}
+                      >
+                        {index === 0 ? (
+                          <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: entryStatusInfo.textColor }} />
+                        ) : (
+                          getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0", true)
+                        )}
+                      </div>
+                      <div className="flex-1 pt-px ml-2 sm:ml-3">
+                        <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
+                        <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
+                        {entry.notes ? (
+                          (() => {
+                            const imgRegex = /(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i;
+                            const match = entry.notes.match(imgRegex);
+                            const imageUrl = match ? match[1] : null;
+                            
+                            if (imageUrl) {
+                              const parts = entry.notes.split(imageUrl);
+                              return (
+                                <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
+                                  {parts[0]}
+                                  <button 
+                                    type="button"
+                                    onClick={() => setPreviewDocumentUrl(imageUrl)}
+                                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors text-xs align-middle mx-1"
+                                  >
+                                    <FileImage className="h-3.5 w-3.5" />
+                                    View Proof Image
+                                  </button>
+                                  {parts[1]}
+                                </p>
+                              );
+                            }
+                            
+                            return (
+                              <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
+                                {entry.notes}
+                              </p>
+                            );
+                          })()
+                        ) : null}
+                      </div>
+                    </div>);
+                })}</div>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {areCommentsVisible && (<Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">

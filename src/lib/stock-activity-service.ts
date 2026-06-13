@@ -33,7 +33,8 @@ export const logStockActivity = async (
     userId: string,
     details?: string,
     quantity?: number,
-    productId?: string
+    productId?: string,
+    entryId?: string
 ) => {
     try {
         await initStockActivityTable();
@@ -47,7 +48,8 @@ export const logStockActivity = async (
             userName,
             userId,
             timestamp: new Date().toISOString(),
-            details
+            details,
+            entryId
         };
 
         await query(`INSERT INTO ${TABLE_NAME} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(activity)]);
