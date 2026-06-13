@@ -762,8 +762,8 @@ export function OrderDetailsClient({
         {hideStatusHeader && (
           <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl mt-6 sm:mt-8">
             <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-                <div className="flex flex-col items-start space-y-1">
+              <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end gap-4">
+                <div className="flex flex-col items-center sm:items-start space-y-1">
                   <Image
                     src="/logo.png"
                     alt="Color Hut Logo"
@@ -773,7 +773,7 @@ export function OrderDetailsClient({
                   />
                   <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>
                 </div>
-                <div className="text-left sm:text-right">
+                <div className="text-center sm:text-right">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Client</p>
                   <p className="text-base sm:text-lg font-bold text-foreground">
                     {order.companyName.split('•').map((part: string) => part.trim()).slice(-1)[0]}
