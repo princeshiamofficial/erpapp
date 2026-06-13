@@ -46,23 +46,46 @@ export async function generateMetadata({ searchParams }: ClientPageProps): Promi
 function TrackingPageSkeleton() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 animate-pulse">
-      <div className="shadow-2xl overflow-hidden border-border/40 bg-card rounded-xl">
+      <div className="shadow-2xl overflow-hidden border border-border/40 bg-card rounded-xl">
         <div className="bg-card p-6 sm:p-8 border-b border-border/40">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6">
-            <div className="h-16 w-16 sm:h-20 sm:w-20 bg-primary/10 rounded-lg border border-primary/20 flex items-center justify-center mb-4 sm:mb-0 flex-shrink-0">
-              <Package className="h-8 w-8 sm:h-10 sm:w-10 text-primary opacity-50" />
-            </div>
-            <div>
-              <Skeleton className="h-8 w-72 mb-2 sm:h-10" />
-              <Skeleton className="h-5 w-48 sm:h-6" />
-            </div>
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Logo skeleton */}
+            <div className="h-8 w-28 bg-muted/60 rounded-lg border border-border/30" />
+            {/* Divider */}
+            <div className="h-6 w-px bg-border/30" />
+            {/* Title skeleton */}
+            <Skeleton className="h-6 w-36 sm:h-7 sm:w-44" />
           </div>
         </div>
-        <div className="p-6 sm:p-8 space-y-8">
-          <div>
-            <Skeleton className="h-7 w-40 mb-2" />
-            <Skeleton className="h-10 w-56 mb-1" />
-            <Skeleton className="h-4 w-48" />
+        <div className="p-6 sm:p-8 space-y-6">
+          {/* Checklist item 1 */}
+          <div className="flex items-start gap-3.5">
+            <div className="h-5 w-5 bg-muted/50 rounded border border-border/30 mt-1 flex-shrink-0 animate-pulse" />
+            <div className="space-y-2 w-full">
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          </div>
+          {/* Checklist item 2 */}
+          <div className="flex items-start gap-3.5">
+            <div className="h-5 w-5 bg-muted/50 rounded border border-border/30 mt-1 flex-shrink-0 animate-pulse" />
+            <div className="space-y-2 w-full">
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          </div>
+          {/* Checklist item 3 */}
+          <div className="flex items-start gap-3.5">
+            <div className="h-5 w-5 bg-muted/50 rounded border border-border/30 mt-1 flex-shrink-0 animate-pulse" />
+            <div className="space-y-2 w-full">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+
+          {/* Button skeleton */}
+          <div className="pt-4 border-t border-border/30 flex justify-end">
+            <Skeleton className="h-10 w-28 sm:w-32 rounded-lg" />
           </div>
         </div>
       </div>
