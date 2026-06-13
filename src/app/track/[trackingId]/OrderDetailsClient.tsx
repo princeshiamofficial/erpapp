@@ -763,7 +763,7 @@ export function OrderDetailsClient({
           <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl mt-6 sm:mt-8">
             <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
               <div className="flex items-center space-x-3 sm:space-x-4">
-                <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-circle-check-big h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20"><path d="M21.801 10A10 10 0 1 1 17 3.335"></path><path d="m9 11 3 3L22 4"></path></svg>
                 <div>
                   <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>
                 </div>
