@@ -224,6 +224,18 @@ export function OrderDetailsClient({
   }, [allStatuses]);
 
   const currentStatusInfo = getStatusDisplayInfo(order.currentStatus);
+  const isClearance = useMemo(() => {
+    const statusName = currentStatusInfo.name.toLowerCase();
+    const statusId = order.currentStatus.toLowerCase();
+    return statusName.includes("cr clearance") || 
+           statusName.includes("co clearance") || 
+           statusId.includes("cr_clearance") ||
+           statusId.includes("co_clearance") ||
+           statusId.includes("cr-clearance") || 
+           statusId.includes("co-clearance") ||
+           statusId.includes("cr clearance") ||
+           statusId.includes("co clearance");
+  }, [currentStatusInfo, order.currentStatus]);
   const lastStatusUpdateEntry = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
   const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
 
@@ -802,7 +814,15 @@ export function OrderDetailsClient({
                       className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
                     />
                     <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                      <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                      {isClearance ? (
+                        <>
+                          <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                        </>
+                      ) : (
+                        <>
+                          <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                        </>
+                      )}
                     </span>
                   </label>
 
@@ -826,7 +846,15 @@ export function OrderDetailsClient({
                       className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
                     />
                     <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                      {isClearance ? (
+                        <>
+                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
+                        </>
+                      ) : (
+                        <>
+                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                        </>
+                      )}
                     </span>
                   </label>
 
