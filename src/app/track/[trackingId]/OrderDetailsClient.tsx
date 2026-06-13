@@ -242,11 +242,11 @@ export function OrderDetailsClient({
       );
     };
 
+    if (statusInfoToUse.name.toLowerCase().includes("design")) return renderInfoLottie();
+    if (statusInfoToUse.name.toLowerCase().includes("production")) return renderInfoLottie();
     if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) {
       return <CheckCircle className={commonClasses} style={{ color: statusInfoToUse.color }} />;
     }
-    if (statusInfoToUse.name.toLowerCase().includes("design")) return renderInfoLottie();
-    if (statusInfoToUse.name.toLowerCase().includes("production")) return renderInfoLottie();
     if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) {
       return <Clock className={commonClasses} style={{ color: statusInfoToUse.color }} />;
     }
