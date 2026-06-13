@@ -775,7 +775,7 @@ export function OrderDetailsClient({
                 </div>
                 <div className="text-left sm:text-right">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Client</p>
-                  <p className="text-base sm:text-lg font-bold text-primary">
+                  <p className="text-base sm:text-lg font-bold text-foreground">
                     {order.companyName.split('•').map((part: string) => part.trim()).slice(-1)[0]}
                   </p>
                 </div>
