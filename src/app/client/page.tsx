@@ -48,11 +48,17 @@ function TrackingPageSkeleton() {
     <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 animate-pulse">
       <div className="shadow-2xl overflow-hidden border border-border/40 bg-card rounded-xl">
         <div className="bg-card p-6 sm:p-8 border-b border-border/40">
-          <div className="flex flex-col items-start space-y-1">
-            {/* Logo skeleton */}
-            <div className="h-6 w-24 bg-muted/60 rounded-lg border border-border/30" />
-            {/* Title skeleton */}
-            <Skeleton className="h-5 w-32 sm:h-6 sm:w-40" />
+          <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
+            <div className="flex flex-col items-start space-y-1">
+              {/* Logo skeleton */}
+              <div className="h-6 w-24 bg-muted/60 rounded-lg border border-border/30" />
+              {/* Title skeleton */}
+              <Skeleton className="h-5 w-32 sm:h-6 sm:w-40" />
+            </div>
+            <div className="text-left sm:text-right space-y-1.5 flex-shrink-0">
+              <Skeleton className="h-3 w-12 sm:ml-auto" />
+              <Skeleton className="h-5 w-36 sm:ml-auto" />
+            </div>
           </div>
         </div>
         <div className="p-6 sm:p-8 space-y-6">
