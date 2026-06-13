@@ -52,7 +52,7 @@ function TrackingPageSkeleton() {
             {/* Logo skeleton */}
             <div className="h-6 w-24 bg-muted/60 rounded-lg border border-border/30" />
             {/* Title skeleton */}
-            <Skeleton className="h-6 w-36 sm:h-7 sm:w-44" />
+            <Skeleton className="h-5 w-32 sm:h-6 sm:w-40" />
           </div>
         </div>
         <div className="p-6 sm:p-8 space-y-6">

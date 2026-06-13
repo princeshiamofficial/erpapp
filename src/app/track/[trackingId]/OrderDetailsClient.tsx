@@ -770,7 +770,7 @@ export function OrderDetailsClient({
                   height={25}
                   className="h-6 w-auto flex-shrink-0 object-contain"
                 />
-                <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>
+                <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-6 sm:p-8 space-y-6">
