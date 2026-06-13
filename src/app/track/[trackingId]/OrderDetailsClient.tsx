@@ -766,9 +766,9 @@ export function OrderDetailsClient({
                 <Image
                   src="/logo.png"
                   alt="Color Hut Logo"
-                  width={120}
-                  height={30}
-                  className="h-8 w-auto sm:h-10 flex-shrink-0 object-contain"
+                  width={80}
+                  height={20}
+                  className="h-5 w-auto sm:h-6 flex-shrink-0 object-contain"
                 />
                 <div>
                   <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>

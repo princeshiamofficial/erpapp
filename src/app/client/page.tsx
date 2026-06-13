@@ -50,9 +50,9 @@ function TrackingPageSkeleton() {
         <div className="bg-card p-6 sm:p-8 border-b border-border/40">
           <div className="flex items-center space-x-3 sm:space-x-4">
             {/* Logo skeleton */}
-            <div className="h-8 w-28 bg-muted/60 rounded-lg border border-border/30" />
+            <div className="h-5 w-20 sm:h-6 sm:w-24 bg-muted/60 rounded-lg border border-border/30" />
             {/* Divider */}
-            <div className="h-6 w-px bg-border/30" />
+            <div className="h-4 w-px bg-border/30 sm:h-5" />
             {/* Title skeleton */}
             <Skeleton className="h-6 w-36 sm:h-7 sm:w-44" />
           </div>
