@@ -566,7 +566,7 @@ export function OrderDetailsClient({
     if (hideStatusHeader) return null;
     return (
       <>
-        <Separator className="my-4 sm:my-6 bg-border/30" />
+        <Separator className="my-1 sm:my-1.5 bg-border/30" />
 
         <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
@@ -647,7 +647,7 @@ export function OrderDetailsClient({
 
   return (
     <>
-      <main className="max-w-4xl mx-auto space-y-5 sm:space-y-6">
+      <main className="max-w-4xl mx-auto space-y-4 sm:space-y-5">
         {!hideStatusHeader && (
           <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
             <CardHeader className="bg-card py-2 px-3 sm:py-2.5 sm:px-4 border-b border-border/40">
