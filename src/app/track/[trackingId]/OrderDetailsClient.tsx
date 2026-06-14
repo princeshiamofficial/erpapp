@@ -738,7 +738,7 @@ export function OrderDetailsClient({
                 ) : (
                   <div className="flex flex-row items-center justify-between sm:justify-end gap-6 mt-2">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
+                      <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
                       {order.acceptedDeliveryDate && (
                         <div className="text-sm text-muted-foreground mt-1 whitespace-nowrap">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
                       )}
