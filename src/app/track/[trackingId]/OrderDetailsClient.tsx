@@ -589,7 +589,16 @@ export function OrderDetailsClient({
                     )}
                   </div>
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
-                    <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
+                    <div className="flex items-center gap-3">
+                      <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
+                      {index === 0 && (entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance') && (
+                        <NextLink href={`/approval/${order.id}`} passHref>
+                          <Button size="sm" className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all">
+                            Approve
+                          </Button>
+                        </NextLink>
+                      )}
+                    </div>
                     <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
                       <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />
                       {isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}
