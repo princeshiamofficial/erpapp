@@ -3,7 +3,7 @@
 import type { Project, CustomStatus, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck, Star } from 'lucide-react';
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck, Star, BadgeCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import NextLink from 'next/link';
 import { Progress } from '@/components/ui/progress';
@@ -458,32 +458,37 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
                 </TooltipProvider>
               </>
             )}
-            {project.isStarred !== undefined && project.isStarred > 0 && (
-              <div className="ml-auto flex items-center gap-0.5 shrink-0" title={`${project.isStarred.toFixed(1)} Stars Priority`}>
-                {[1, 2, 3, 4, 5].map((starIndex) => {
-                  const rating = project.isStarred || 0;
-                  const isFull = rating >= starIndex;
-                  const isHalf = !isFull && rating >= starIndex - 0.5;
+            <div className="ml-auto flex items-center gap-1 shrink-0">
+              {project.isClientApproved && (
+                <BadgeCheck className="h-5 w-5 text-white fill-[#1877F2] shrink-0" />
+              )}
+              {project.isStarred !== undefined && project.isStarred > 0 && (
+                <div className="flex items-center gap-0.5 shrink-0" title={`${project.isStarred.toFixed(1)} Stars Priority`}>
+                  {[1, 2, 3, 4, 5].map((starIndex) => {
+                    const rating = project.isStarred || 0;
+                    const isFull = rating >= starIndex;
+                    const isHalf = !isFull && rating >= starIndex - 0.5;
 
-                  return (
-                    <div key={starIndex} className="relative shrink-0">
-                      {isFull ? (
-                        <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-                      ) : isHalf ? (
-                        <div className="relative">
-                          <Star className="h-3.5 w-3.5 text-muted-foreground/30 dark:text-muted-foreground/20" />
-                          <div className="absolute top-0 left-0 overflow-hidden w-[50%] h-full">
-                            <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                    return (
+                      <div key={starIndex} className="relative shrink-0">
+                        {isFull ? (
+                          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                        ) : isHalf ? (
+                          <div className="relative">
+                            <Star className="h-3.5 w-3.5 text-muted-foreground/30 dark:text-muted-foreground/20" />
+                            <div className="absolute top-0 left-0 overflow-hidden w-[50%] h-full">
+                              <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <Star className="h-3.5 w-3.5 text-muted-foreground/30 dark:text-muted-foreground/20" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        ) : (
+                          <Star className="h-3.5 w-3.5 text-muted-foreground/30 dark:text-muted-foreground/20" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -500,6 +505,7 @@ export const ProjectCard = React.memo(ProjectCardComponent, (prevProps, nextProp
     prevProps.project.name === nextProps.project.name &&
     prevProps.project.endDate === nextProps.project.endDate &&
     prevProps.project.isStarred === nextProps.project.isStarred &&
+    prevProps.project.isClientApproved === nextProps.project.isClientApproved &&
     prevProps.project.designerRepresentativeId === nextProps.project.designerRepresentativeId &&
     prevProps.currentUser?.id === nextProps.currentUser?.id &&
     prevProps.isOverlay === nextProps.isOverlay &&

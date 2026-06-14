@@ -253,7 +253,7 @@ export async function approveOrderAction(orderId: string): Promise<TrackingLink 
     const newLogEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
-      status: 'approved-for-production',
+      status: order.currentStatus,
       changedByUserId: 'client-approved',
       changedByUserName: 'Client',
       notes: 'Terms accepted and order approved by client.'
@@ -262,7 +262,6 @@ export async function approveOrderAction(orderId: string): Promise<TrackingLink 
     const updatedHistory = [...(order.statusHistory || []), newLogEntry];
 
     const success = await updateOrder(orderId, {
-      currentStatus: 'approved-for-production',
       statusHistory: updatedHistory
     });
 

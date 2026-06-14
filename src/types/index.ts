@@ -421,6 +421,7 @@ export interface Project {
   designerRepresentativeName?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
   isStarred?: number;
+  isClientApproved?: boolean;
 }
 
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';

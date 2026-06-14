@@ -121,8 +121,9 @@ export function OrderDetailsClient({
 
   const isApproved = useMemo(() => {
     const approvedStatuses = ['approved-for-production', 'in-production', 'quality-check', 'logistics', 'shipped', 'delivered'];
-    return approvedStatuses.includes(order.currentStatus);
-  }, [order.currentStatus]);
+    return approvedStatuses.includes(order.currentStatus) ||
+      (order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved'));
+  }, [order.currentStatus, order.statusHistory]);
 
   const handleApproveOrder = async () => {
     if (!designChecked || !paymentChecked || !noModificationChecked) {
@@ -593,7 +594,7 @@ export function OrderDetailsClient({
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
                     <div className="flex items-center justify-between w-full gap-3">
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                      {index === 0 && !currentUser && (
+                      {index === 0 && !currentUser && !isApproved && (
                         entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
                         entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
                         entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
