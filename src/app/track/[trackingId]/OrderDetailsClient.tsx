@@ -591,7 +591,11 @@ export function OrderDetailsClient({
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
                     <div className="flex items-center gap-3">
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                      {index === 0 && (entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance') && (
+                      {index === 0 && (
+                        entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
+                        entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
+                        entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
+                      ) && (
                         <NextLink href={`/approval/${order.id}`} passHref>
                           <Button size="sm" className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all">
                             Approve
