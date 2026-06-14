@@ -459,12 +459,11 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
               </>
             )}
             <div className="ml-auto flex items-center gap-1 shrink-0">
-              {project.isDocsApproved && (
-                <BadgeCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
-              )}
-              {project.isDesignApproved && (
+              {project.isDesignApproved ? (
                 <BadgeCheck className="h-4 w-4 text-white fill-green-600 dark:fill-green-500 dark:text-black shrink-0" />
-              )}
+              ) : project.isDocsApproved ? (
+                <BadgeCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
+              ) : null}
               {project.isStarred !== undefined && project.isStarred > 0 && (
                 <div className="flex items-center gap-0.5 shrink-0" title={`${project.isStarred.toFixed(1)} Stars Priority`}>
                   {[1, 2, 3, 4, 5].map((starIndex) => {
