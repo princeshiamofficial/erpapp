@@ -3,7 +3,7 @@
 import type { Project, CustomStatus, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck, Star, BadgeCheck, FileCheck } from 'lucide-react';
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck, Star, BadgeCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import NextLink from 'next/link';
 import { Progress } from '@/components/ui/progress';
@@ -460,10 +460,10 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
             )}
             <div className="ml-auto flex items-center gap-1 shrink-0">
               {project.isDocsApproved && (
-                <FileCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
+                <BadgeCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
               )}
               {project.isDesignApproved && (
-                <BadgeCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
+                <BadgeCheck className="h-4 w-4 text-white fill-green-600 dark:fill-green-500 dark:text-black shrink-0" />
               )}
               {project.isStarred !== undefined && project.isStarred > 0 && (
                 <div className="flex items-center gap-0.5 shrink-0" title={`${project.isStarred.toFixed(1)} Stars Priority`}>
