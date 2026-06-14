@@ -105,8 +105,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
 
   const handleUploadAndConfirm = async () => {
     if (!selectedFile) {
-      onConfirm("File uploaded: Yes (No proof provided).");
-      onOpenChange(false);
+      toast({ title: "Proof Required", description: "Please upload a proof image to proceed.", variant: "destructive" });
       return;
     }
 
@@ -127,16 +126,15 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
       const result = await response.json();
       if (result.success && result.file_url) {
         onConfirm(`File uploaded: Yes. Proof: ${result.file_url}`);
+        onOpenChange(false);
       } else {
         throw new Error(result.message || "Failed to get file URL.");
       }
     } catch (error) {
       console.error("Upload error:", error);
-      toast({ title: "Upload Failed", description: "Could not upload proof image. Proceeding without it.", variant: "destructive" });
-      onConfirm("File uploaded: Yes (Proof upload failed).");
+      toast({ title: "Upload Failed", description: "Could not upload proof image. Please try again.", variant: "destructive" });
     } finally {
       setIsUploading(false);
-      onOpenChange(false);
     }
   };
 
@@ -206,7 +204,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
                 <>
                   <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">Drag & drop, paste, or click to upload proof</p>
-                  <p className="text-xs text-muted-foreground">(Optional, Max 5MB, Images Only)</p>
+                  <p className="text-xs font-semibold text-destructive mt-1">(Required, Max 5MB, Images Only)</p>
                 </>
               )}
             </div>
@@ -221,7 +219,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
 
             <DialogFooter className="pt-4 border-t">
               <Button variant="outline" onClick={() => setStep('initial')} disabled={isUploading}>Back</Button>
-              <Button onClick={handleUploadAndConfirm} disabled={isUploading}>
+              <Button onClick={handleUploadAndConfirm} disabled={isUploading || !selectedFile}>
                 {isUploading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</>
                 ) : (
