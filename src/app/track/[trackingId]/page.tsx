@@ -105,7 +105,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
   const areCommentsVisible = plainGlobalSettings.areCommentsVisibleOnPublicPage ?? true;
 
   return (
-    <div className="min-h-screen bg-background pt-0 pb-6 sm:pb-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
+    <div className="min-h-screen bg-background pt-0 pb-6 sm:pb-10 px-2 sm:px-4 lg:px-3 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
       <Suspense fallback={<TrackingPageSkeleton />}>
         <OrderDetailsLoader
           order={plainOrderData}

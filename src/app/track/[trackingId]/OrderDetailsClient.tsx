@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } f
 import Image from 'next/image';
 import Lottie from 'lottie-react';
 import infoAnimation from '../../../../public/info-animation.json';
+import courierAnimation from '../../../../public/courier.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -227,14 +228,14 @@ export function OrderDetailsClient({
   const isClearance = useMemo(() => {
     const statusName = currentStatusInfo.name.toLowerCase();
     const statusId = order.currentStatus.toLowerCase();
-    return statusName.includes("cr clearance") || 
-           statusName.includes("co clearance") || 
-           statusId.includes("cr_clearance") ||
-           statusId.includes("co_clearance") ||
-           statusId.includes("cr-clearance") || 
-           statusId.includes("co-clearance") ||
-           statusId.includes("cr clearance") ||
-           statusId.includes("co clearance");
+    return statusName.includes("cr clearance") ||
+      statusName.includes("co clearance") ||
+      statusId.includes("cr_clearance") ||
+      statusId.includes("co_clearance") ||
+      statusId.includes("cr-clearance") ||
+      statusId.includes("co-clearance") ||
+      statusId.includes("cr clearance") ||
+      statusId.includes("co clearance");
   }, [currentStatusInfo, order.currentStatus]);
   const lastStatusUpdateEntry = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
   const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
@@ -561,15 +562,86 @@ export function OrderDetailsClient({
 
   const showPaidBadge = grandTotal > 0 && amountDue <= 0.01;
 
+  const renderStatusHistory = () => {
+    if (hideStatusHeader) return null;
+    return (
+      <>
+        <Separator className="my-4 sm:my-6 bg-border/30" />
+
+        <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
+            <div className="flex items-center space-x-3 sm:space-x-4"><Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
+            <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-zinc-400 dark:border-zinc-600 ml-2 sm:ml-3">
+            {order.statusHistory.slice().reverse().map((entry, index) => {
+              const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
+                <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
+                  <div
+                    className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
+                    style={{
+                      backgroundColor: index === 0 ? entryStatusInfo.color : 'hsl(var(--background))',
+                      backgroundImage: index === 0 ? 'none' : `linear-gradient(${entryStatusInfo.color}15, ${entryStatusInfo.color}15)`,
+                      borderColor: index === 0 ? 'transparent' : `${entryStatusInfo.color}30`
+                    }}
+                  >
+                    {index === 0 ? (
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: entryStatusInfo.textColor }} />
+                    ) : (
+                      getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0", true)
+                    )}
+                  </div>
+                  <div className="flex-1 pt-px ml-2 sm:ml-3">
+                    <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
+                    <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
+                    {entry.notes ? (
+                      (() => {
+                        const imgRegex = /(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i;
+                        const match = entry.notes.match(imgRegex);
+                        const imageUrl = match ? match[1] : null;
+
+                        if (imageUrl) {
+                          const parts = entry.notes.split(imageUrl);
+                          return (
+                            <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
+                              {parts[0]}
+                              <button
+                                type="button"
+                                onClick={() => setPreviewDocumentUrl(imageUrl)}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors text-xs align-middle mx-1"
+                              >
+                                <FileImage className="h-3.5 w-3.5" />
+                                View Proof Image
+                              </button>
+                              {parts[1]}
+                            </p>
+                          );
+                        }
+
+                        return (
+                          <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
+                            {entry.notes}
+                          </p>
+                        );
+                      })()
+                    ) : null}
+                  </div>
+                </div>);
+            })}</div>
+          </CardContent>
+        </Card>
+      </>
+    );
+  };
 
   return (
     <>
-      <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+      <main className="max-w-4xl mx-auto space-y-5 sm:space-y-6">
         {!hideStatusHeader && (
           <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-            <CardHeader className="bg-card py-4 px-6 sm:py-5 sm:px-8 border-b border-border/40">
+            <CardHeader className="bg-card py-2 px-3 sm:py-2.5 sm:px-4 border-b border-border/40">
               {(!packzyStatus || packzyStatus === 'unavailable') && (
-                <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
+                <div className="mt-2 pt-2 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-2">
                   {getStatusIcon(order.currentStatus, "h-14 w-14 !mr-0")}
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
@@ -591,32 +663,38 @@ export function OrderDetailsClient({
               )}
 
               {order.packzyTrackingCode && (
-                <div className="mt-4 pt-4 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-4">
+                <div className="mt-2 pt-2 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-center gap-2">
                   <div className="flex-shrink-0">
-                    <Truck className="h-14 w-14 text-primary/80 animate-bounce" style={{ animationDuration: '3s' }} />
+                    {isClient ? (
+                      <div className="h-20 w-20 flex-shrink-0">
+                        <Lottie animationData={courierAnimation} loop={true} />
+                      </div>
+                    ) : (
+                      <Truck className="h-20 w-20 text-primary/80 animate-bounce" style={{ animationDuration: '3s' }} />
+                    )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground leading-tight">
-                      Current Status (SteadFast)
-                    </h3>
-                    <div className="mt-2">
+                    <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
+                      <span>Courier Status:</span>
                       {isLoadingPackzyStatus ? (
-                        <Skeleton className="h-7 w-32" />
+                        <Skeleton className="h-7 w-20" />
                       ) : packzyStatus && packzyStatus !== 'unavailable' ? (
                         <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-600 shadow-sm capitalize">
                           {packzyStatus}
                         </span>
                       ) : (
-                        <p className="text-muted-foreground">Could not retrieve courier status.</p>
+                        <span className="text-sm font-normal text-muted-foreground">Could not retrieve courier status.</span>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">Tracking Code: {order.packzyTrackingCode}</p>
-                    </div>
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-2">Tracking Code: {order.packzyTrackingCode}</p>
                   </div>
                 </div>
               )}
             </CardHeader>
           </div>
         )}
+
+        {!currentUser && renderStatusHistory()}
 
         {!hideStatusHeader && (
           <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
@@ -902,74 +980,7 @@ export function OrderDetailsClient({
           </div>
         )}
 
-        {!hideStatusHeader && (
-          <>
-            <Separator className="my-6 sm:my-8 bg-border/30" />
-
-            <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-              <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-                <div className="flex items-center space-x-3 sm:space-x-4"><Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
-                <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-zinc-400 dark:border-zinc-600 ml-2 sm:ml-3">
-                {order.statusHistory.slice().reverse().map((entry, index) => {
-                  const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
-                    <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
-                      <div 
-                        className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
-                        style={{
-                          backgroundColor: index === 0 ? entryStatusInfo.color : 'hsl(var(--background))',
-                          backgroundImage: index === 0 ? 'none' : `linear-gradient(${entryStatusInfo.color}15, ${entryStatusInfo.color}15)`,
-                          borderColor: index === 0 ? 'transparent' : `${entryStatusInfo.color}30`
-                        }}
-                      >
-                        {index === 0 ? (
-                          <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: entryStatusInfo.textColor }} />
-                        ) : (
-                          getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0", true)
-                        )}
-                      </div>
-                      <div className="flex-1 pt-px ml-2 sm:ml-3">
-                        <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                        <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
-                        {entry.notes ? (
-                          (() => {
-                            const imgRegex = /(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i;
-                            const match = entry.notes.match(imgRegex);
-                            const imageUrl = match ? match[1] : null;
-                            
-                            if (imageUrl) {
-                              const parts = entry.notes.split(imageUrl);
-                              return (
-                                <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
-                                  {parts[0]}
-                                  <button 
-                                    type="button"
-                                    onClick={() => setPreviewDocumentUrl(imageUrl)}
-                                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium transition-colors text-xs align-middle mx-1"
-                                  >
-                                    <FileImage className="h-3.5 w-3.5" />
-                                    View Proof Image
-                                  </button>
-                                  {parts[1]}
-                                </p>
-                              );
-                            }
-                            
-                            return (
-                              <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
-                                {entry.notes}
-                              </p>
-                            );
-                          })()
-                        ) : null}
-                      </div>
-                    </div>);
-                })}</div>
-              </CardContent>
-            </Card>
-          </>
-        )}
+        {currentUser && renderStatusHistory()}
 
         {areCommentsVisible && (<Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
@@ -1036,9 +1047,9 @@ export function OrderDetailsClient({
             <DialogDescription className="sr-only">Preview of transaction document attachment</DialogDescription>
             <div className="relative flex items-center justify-center bg-transparent">
               {previewDocumentUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
-                <img 
-                  src={previewDocumentUrl} 
-                  alt="Document Preview" 
+                <img
+                  src={previewDocumentUrl}
+                  alt="Document Preview"
                   className="max-h-[80vh] max-w-[90vw] object-contain animate-in fade-in-50 duration-200"
                   onError={(e) => {
                     const target = e.currentTarget;
