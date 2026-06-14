@@ -250,6 +250,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [router, toast, originalUser]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (currentUser) {
+        const value = JSON.stringify(currentUser);
+        const date = new Date();
+        date.setTime(date.getTime() + (7 * 24 * 60 * 60 * 1000));
+        document.cookie = `colorhut-user=${encodeURIComponent(value)}; expires=${date.toUTCString()}; path=/; SameSite=Lax`;
+      } else {
+        document.cookie = 'colorhut-user=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+      }
+    }
+  }, [currentUser]);
+
   return (
     <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUserAvatar, refreshCurrentUser, impersonate, stopImpersonating, originalUser, isSuspendedDialogOpen }}>
       {children}
