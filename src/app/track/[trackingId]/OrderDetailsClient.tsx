@@ -756,7 +756,11 @@ export function OrderDetailsClient({
                   />
                 </div>
                 <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
-                <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
+                <p className="text-muted-foreground text-sm flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                  <span>colorhut.official@gmail.com</span>
+                  <span className="hidden sm:inline text-muted-foreground/50">|</span>
+                  <span>+8801919-760626</span>
+                </p>
                 {currentUser && (
                   <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
                 )}
