@@ -4,7 +4,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Comment, TrackingLink, User, UserRole } from "@/types";
+import type { Comment, TrackingLink, User, UserRole, AdvancePaymentRecord } from "@/types";
 import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered, deleteComment as deleteCommentFromOrder, updateOrder, getOrderById } from "@/lib/order-service";
 import { DELIVERED_STATUS_ID } from '@/lib/status-constants';
 import { v4 as uuidv4 } from 'uuid';
@@ -243,7 +243,10 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
   }
 }
 
-export async function approveOrderAction(orderId: string): Promise<TrackingLink | { error: string }> {
+export async function approveOrderAction(
+  orderId: string,
+  paymentRecord?: { amount: number; paymentMethod: string; notes?: string; documentUrl?: string }
+): Promise<TrackingLink | { error: string }> {
   try {
     const order = await getOrderById(orderId);
     if (!order) {
@@ -267,8 +270,25 @@ export async function approveOrderAction(orderId: string): Promise<TrackingLink 
 
     const updatedHistory = [...(order.statusHistory || []), newLogEntry];
 
+    let updatedPayments = order.advancePayments || [];
+    if (paymentRecord) {
+      const newAdvancePayment: AdvancePaymentRecord = {
+        id: uuidv4(),
+        amount: paymentRecord.amount,
+        date: new Date().toISOString(),
+        paymentMethod: paymentRecord.paymentMethod,
+        notes: paymentRecord.notes || 'Payment proof uploaded by client during approval.',
+        recordedByUserId: 'client',
+        recordedByUserName: 'Client',
+        documentUrl: paymentRecord.documentUrl || null,
+        status: 'Pending'
+      };
+      updatedPayments = [...updatedPayments, newAdvancePayment];
+    }
+
     const success = await updateOrder(orderId, {
-      statusHistory: updatedHistory
+      statusHistory: updatedHistory,
+      ...(paymentRecord ? { advancePayments: updatedPayments } : {})
     });
 
     if (!success) {
