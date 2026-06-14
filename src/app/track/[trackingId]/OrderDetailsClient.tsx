@@ -1034,6 +1034,38 @@ export function OrderDetailsClient({
                     </span>
                   </label>
 
+                  {!isClearance && (
+                    <div className="ml-7 mt-2 p-3 bg-secondary/60 dark:bg-secondary/40 border border-border/50 rounded-lg text-xs space-y-1.5 text-muted-foreground shadow-sm max-w-sm">
+                      <div className="flex justify-between border-b border-border/30 pb-1.5">
+                        <span className="font-semibold text-foreground">50% Advance Target:</span>
+                        <span className="font-medium text-foreground">{formatCurrency(grandTotal * 0.5)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/30 pb-1.5">
+                        <span className="font-semibold text-foreground">Previously Paid:</span>
+                        <span className="font-medium text-foreground">{formatCurrency(totalAdvancePaid)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/30 pb-1.5">
+                        {grandTotal * 0.5 > totalAdvancePaid ? (
+                          <>
+                            <span className="font-semibold text-destructive">Remaining for 50%:</span>
+                            <span className="font-bold text-destructive">{formatCurrency((grandTotal * 0.5) - totalAdvancePaid)}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-semibold text-green-600">Status:</span>
+                            <span className="font-bold text-green-600">50% Advance Met</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex justify-between pt-0.5">
+                        <span className="font-semibold text-foreground">Payment Method:</span>
+                        <span className="font-medium text-foreground truncate max-w-[200px]" title={allAdvancePaymentRecords.map(r => r.paymentMethod).filter(Boolean).join(', ') || order.paymentMethod || 'N/A'}>
+                          {allAdvancePaymentRecords.map(r => r.paymentMethod).filter(Boolean).join(', ') || order.paymentMethod || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <label className="flex items-start gap-3.5 cursor-pointer group">
                     <input
                       type="checkbox"
@@ -1238,6 +1270,38 @@ export function OrderDetailsClient({
                   <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
                 </span>
               </label>
+
+              {!isClearance && (
+                <div className="ml-7 mt-2 p-3 bg-secondary/60 dark:bg-secondary/40 border border-border/50 rounded-lg text-xs space-y-1.5 text-muted-foreground shadow-sm">
+                  <div className="flex justify-between border-b border-border/30 pb-1.5">
+                    <span className="font-semibold text-foreground">50% Advance Target:</span>
+                    <span className="font-medium text-foreground">{formatCurrency(grandTotal * 0.5)}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-border/30 pb-1.5">
+                    <span className="font-semibold text-foreground">Previously Paid:</span>
+                    <span className="font-medium text-foreground">{formatCurrency(totalAdvancePaid)}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-border/30 pb-1.5">
+                    {grandTotal * 0.5 > totalAdvancePaid ? (
+                      <>
+                        <span className="font-semibold text-destructive">Remaining for 50%:</span>
+                        <span className="font-bold text-destructive">{formatCurrency((grandTotal * 0.5) - totalAdvancePaid)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-green-600">Status:</span>
+                        <span className="font-bold text-green-600">50% Advance Met</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex justify-between pt-0.5">
+                    <span className="font-semibold text-foreground">Payment Method:</span>
+                    <span className="font-medium text-foreground truncate max-w-[200px]" title={allAdvancePaymentRecords.map(r => r.paymentMethod).filter(Boolean).join(', ') || order.paymentMethod || 'N/A'}>
+                      {allAdvancePaymentRecords.map(r => r.paymentMethod).filter(Boolean).join(', ') || order.paymentMethod || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <label className="flex items-start gap-3.5 cursor-pointer group">
                 <input
