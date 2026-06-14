@@ -250,13 +250,19 @@ export async function approveOrderAction(orderId: string): Promise<TrackingLink 
       return { error: "Order not found." };
     }
 
+    const isDocsApproval = order.currentStatus === 'co-clearance';
+    const changedByUserId = isDocsApproval ? 'client-approved-docs' : 'client-approved-design';
+    const notes = isDocsApproval 
+      ? 'Terms accepted and documents approved by client.' 
+      : 'Terms accepted and design approved by client.';
+
     const newLogEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
       status: order.currentStatus,
-      changedByUserId: 'client-approved',
+      changedByUserId,
       changedByUserName: 'Client',
-      notes: 'Terms accepted and order approved by client.'
+      notes
     };
 
     const updatedHistory = [...(order.statusHistory || []), newLogEntry];

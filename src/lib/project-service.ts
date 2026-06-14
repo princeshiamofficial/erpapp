@@ -65,8 +65,12 @@ export const getProjects = async (): Promise<Project[]> => {
 
         const persistentData = projectsMap.get(order.id) || {};
 
-        const isClientApproved = order.statusHistory && Array.isArray(order.statusHistory)
-          ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved')
+        const isDocsApproved = order.statusHistory && Array.isArray(order.statusHistory)
+          ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved-docs')
+          : false;
+
+        const isDesignApproved = order.statusHistory && Array.isArray(order.statusHistory)
+          ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved' || entry.changedByUserId === 'client-approved-design')
           : false;
 
         const dynamicProject: Project = {
@@ -87,7 +91,8 @@ export const getProjects = async (): Promise<Project[]> => {
           updatedAt: order.updatedAt || projectCreatedAt,
           endDate: projectEndDate,
           isStarred: order.isStarred || 0,
-          isClientApproved,
+          isDocsApproved,
+          isDesignApproved,
         };
         return dynamicProject;
       });
@@ -140,8 +145,12 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
       else if (order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design')) projectStatus = 'On Design';
       else projectStatus = 'CR Clearance';
 
-      const isClientApproved = order.statusHistory && Array.isArray(order.statusHistory)
-        ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved')
+      const isDocsApproved = order.statusHistory && Array.isArray(order.statusHistory)
+        ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved-docs')
+        : false;
+
+      const isDesignApproved = order.statusHistory && Array.isArray(order.statusHistory)
+        ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved' || entry.changedByUserId === 'client-approved-design')
         : false;
 
       return {
@@ -161,7 +170,8 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
         updatedAt: order.updatedAt || projectCreatedAt,
         endDate: projectEndDate,
         isStarred: order.isStarred || 0,
-        isClientApproved,
+        isDocsApproved,
+        isDesignApproved,
       };
     }
   } catch (error) {

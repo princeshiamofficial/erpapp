@@ -3,7 +3,7 @@
 import type { Project, CustomStatus, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck, Star, BadgeCheck } from 'lucide-react';
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck, Star, BadgeCheck, FileCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import NextLink from 'next/link';
 import { Progress } from '@/components/ui/progress';
@@ -459,15 +459,11 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
               </>
             )}
             <div className="ml-auto flex items-center gap-1 shrink-0">
-              {project.isClientApproved && (
-                <BadgeCheck
-                  className={cn(
-                    "h-4 w-4 text-white shrink-0",
-                    project.status === 'CO Clearance'
-                      ? "fill-black dark:fill-white dark:text-black"
-                      : "fill-[#10B981]"
-                  )}
-                />
+              {project.isDocsApproved && (
+                <FileCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
+              )}
+              {project.isDesignApproved && (
+                <BadgeCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
               )}
               {project.isStarred !== undefined && project.isStarred > 0 && (
                 <div className="flex items-center gap-0.5 shrink-0" title={`${project.isStarred.toFixed(1)} Stars Priority`}>
@@ -512,7 +508,8 @@ export const ProjectCard = React.memo(ProjectCardComponent, (prevProps, nextProp
     prevProps.project.name === nextProps.project.name &&
     prevProps.project.endDate === nextProps.project.endDate &&
     prevProps.project.isStarred === nextProps.project.isStarred &&
-    prevProps.project.isClientApproved === nextProps.project.isClientApproved &&
+    prevProps.project.isDocsApproved === nextProps.project.isDocsApproved &&
+    prevProps.project.isDesignApproved === nextProps.project.isDesignApproved &&
     prevProps.project.designerRepresentativeId === nextProps.project.designerRepresentativeId &&
     prevProps.currentUser?.id === nextProps.currentUser?.id &&
     prevProps.isOverlay === nextProps.isOverlay &&

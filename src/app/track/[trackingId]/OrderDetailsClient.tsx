@@ -119,11 +119,46 @@ export function OrderDetailsClient({
   const [noModificationChecked, setNoModificationChecked] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
-  const isApproved = useMemo(() => {
-    const approvedStatuses = ['approved-for-production', 'in-production', 'quality-check', 'logistics', 'shipped', 'delivered'];
-    return approvedStatuses.includes(order.currentStatus) ||
-      (order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved'));
+  const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
+    const status = allStatuses.find(s => s.id === statusId);
+    if (status) {
+      return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
+    }
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
+  }, [allStatuses]);
+
+  const currentStatusInfo = useMemo(() => getStatusDisplayInfo(order.currentStatus), [getStatusDisplayInfo, order.currentStatus]);
+
+  const isClearance = useMemo(() => {
+    const statusName = currentStatusInfo.name.toLowerCase();
+    const statusId = order.currentStatus.toLowerCase();
+    return statusName.includes("cr clearance") ||
+      statusName.includes("co clearance") ||
+      statusId.includes("cr_clearance") ||
+      statusId.includes("co_clearance") ||
+      statusId.includes("cr-clearance") ||
+      statusId.includes("co-clearance") ||
+      statusId.includes("cr clearance") ||
+      statusId.includes("co clearance");
+  }, [currentStatusInfo, order.currentStatus]);
+
+  const isDocsApproved = useMemo(() => {
+    return order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved-docs');
+  }, [order.statusHistory]);
+
+  const isDesignApproved = useMemo(() => {
+    const legacyApprovedStatuses = ['approved-for-production', 'in-production', 'quality-check', 'logistics', 'shipped', 'delivered'];
+    return legacyApprovedStatuses.includes(order.currentStatus) ||
+      (order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved' || entry.changedByUserId === 'client-approved-design'));
   }, [order.currentStatus, order.statusHistory]);
+
+  const isApproved = useMemo(() => {
+    if (isClearance) {
+      return isDocsApproved;
+    } else {
+      return isDesignApproved;
+    }
+  }, [isClearance, isDocsApproved, isDesignApproved]);
 
   const handleApproveOrder = async () => {
     if (!designChecked || !paymentChecked || !noModificationChecked) {
@@ -219,27 +254,7 @@ export function OrderDetailsClient({
     return currentUser?.id || clientReactorId;
   }, [currentUser, clientReactorId]);
 
-  const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
-    const status = allStatuses.find(s => s.id === statusId);
-    if (status) {
-      return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
-    }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
-  }, [allStatuses]);
-
-  const currentStatusInfo = getStatusDisplayInfo(order.currentStatus);
-  const isClearance = useMemo(() => {
-    const statusName = currentStatusInfo.name.toLowerCase();
-    const statusId = order.currentStatus.toLowerCase();
-    return statusName.includes("cr clearance") ||
-      statusName.includes("co clearance") ||
-      statusId.includes("cr_clearance") ||
-      statusId.includes("co_clearance") ||
-      statusId.includes("cr-clearance") ||
-      statusId.includes("co-clearance") ||
-      statusId.includes("cr clearance") ||
-      statusId.includes("co clearance");
-  }, [currentStatusInfo, order.currentStatus]);
+  // Status display and clearance info are now declared above
   const lastStatusUpdateEntry = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
   const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
 
@@ -957,9 +972,13 @@ export function OrderDetailsClient({
                 <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg p-4 flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-emerald-800 dark:text-emerald-200">Order Already Approved</h4>
+                    <h4 className="font-semibold text-emerald-800 dark:text-emerald-200">
+                      {isClearance ? "Documents Already Approved" : "Design Already Approved"}
+                    </h4>
                     <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
-                      This order has already been accepted and approved for production by the client.
+                      {isClearance
+                        ? "The documents and terms for this order have already been accepted and approved by the client."
+                        : "The design and terms for this order have already been accepted and approved by the client."}
                     </p>
                   </div>
                 </div>
