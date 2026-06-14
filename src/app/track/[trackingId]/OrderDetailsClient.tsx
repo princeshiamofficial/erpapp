@@ -589,7 +589,7 @@ export function OrderDetailsClient({
                     )}
                   </div>
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between w-full gap-3">
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                       {index === 0 && (
                         entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
