@@ -70,7 +70,7 @@ export const getProjects = async (): Promise<Project[]> => {
           : false;
 
         const isDesignApproved = order.statusHistory && Array.isArray(order.statusHistory)
-          ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved' || entry.changedByUserId === 'client-approved-design')
+          ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved-design')
           : false;
 
         const dynamicProject: Project = {
@@ -150,7 +150,7 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
         : false;
 
       const isDesignApproved = order.statusHistory && Array.isArray(order.statusHistory)
-        ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved' || entry.changedByUserId === 'client-approved-design')
+        ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved-design')
         : false;
 
       return {

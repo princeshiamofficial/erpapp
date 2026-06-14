@@ -149,7 +149,7 @@ export function OrderDetailsClient({
   const isDesignApproved = useMemo(() => {
     const legacyApprovedStatuses = ['approved-for-production', 'in-production', 'quality-check', 'logistics', 'shipped', 'delivered'];
     return legacyApprovedStatuses.includes(order.currentStatus) ||
-      (order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved' || entry.changedByUserId === 'client-approved-design'));
+      (order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved-design'));
   }, [order.currentStatus, order.statusHistory]);
 
   const isApproved = useMemo(() => {
