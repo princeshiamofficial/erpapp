@@ -1158,7 +1158,7 @@ export function OrderDetailsClient({
         <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
           <DialogContent className="fixed z-50 grid w-full gap-6 border bg-background p-6 shadow-lg duration-200 sm:rounded-xl max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:max-w-full max-sm:w-full sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-md max-h-[85vh] overflow-y-auto" hideCloseButton={false}>
             <DialogTitle className="text-lg font-bold text-foreground">
-              Approve Order & Specifications
+              Terms & Conditions
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground -mt-3">
               Please review and confirm all requirements to proceed.
