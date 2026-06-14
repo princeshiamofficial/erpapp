@@ -723,10 +723,14 @@ export function OrderDetailsClient({
                 </div>
                 <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
                 <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-                <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+                {currentUser && (
+                  <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+                )}
               </div>
               <div className="text-left sm:text-right mt-4 sm:mt-0">
-                <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                {currentUser && (
+                  <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                )}
                 <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
                 {order.acceptedDeliveryDate && (
                   <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
