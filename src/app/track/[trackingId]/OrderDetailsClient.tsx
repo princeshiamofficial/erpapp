@@ -118,6 +118,7 @@ export function OrderDetailsClient({
   const [paymentChecked, setPaymentChecked] = useState(false);
   const [noModificationChecked, setNoModificationChecked] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showSuccessStep, setShowSuccessStep] = useState(false);
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
@@ -171,6 +172,69 @@ export function OrderDetailsClient({
     }
   }, [isClearance, isDocsApproved, isDesignApproved]);
 
+  const renderSuccessStep = () => {
+    return (
+      <div className="text-center py-6 space-y-5 animate-in fade-in-50 duration-300">
+        <div className="mx-auto h-12 w-12 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center border border-green-200 dark:border-green-800/40">
+          <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="space-y-1.5">
+          <h4 className="text-lg font-bold text-foreground">Order Approved Successfully!</h4>
+          <p className="text-sm text-muted-foreground">
+            {isClearance 
+              ? "Documents and terms have been accepted."
+              : "Design and terms have been accepted."}
+          </p>
+        </div>
+
+        {!isClearance && (
+          <div className="mx-auto p-4 bg-secondary/60 dark:bg-secondary/40 border border-border/50 rounded-xl text-xs space-y-2 text-muted-foreground shadow-sm text-left max-w-sm">
+            <h5 className="font-semibold text-foreground text-sm border-b border-border/30 pb-1.5 mb-1">Payment Confirmation</h5>
+            <div className="flex justify-between border-b border-border/30 pb-1.5">
+              <span className="font-medium text-foreground">50% Advance Target:</span>
+              <span className="font-bold text-foreground">{formatCurrency(grandTotal * 0.5)}</span>
+            </div>
+            <div className="flex justify-between border-b border-border/30 pb-1.5">
+              <span className="font-medium text-foreground">Previously Paid:</span>
+              <span className="font-bold text-foreground">{formatCurrency(totalAdvancePaid)}</span>
+            </div>
+            <div className="flex justify-between border-b border-border/30 pb-1.5">
+              {grandTotal * 0.5 > totalAdvancePaid ? (
+                <>
+                  <span className="font-medium text-destructive">Remaining for 50%:</span>
+                  <span className="font-extrabold text-destructive">{formatCurrency((grandTotal * 0.5) - totalAdvancePaid)}</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-green-600">Status:</span>
+                  <span className="font-extrabold text-green-600">50% Advance Met</span>
+                </>
+              )}
+            </div>
+            <div className="flex justify-between pt-0.5">
+              <span className="font-medium text-foreground">Payment Method:</span>
+              <span className="font-bold text-foreground truncate max-w-[200px]" title={allAdvancePaymentRecords.map(r => r.paymentMethod).filter(Boolean).join(', ') || order.paymentMethod || 'N/A'}>
+                {allAdvancePaymentRecords.map(r => r.paymentMethod).filter(Boolean).join(', ') || order.paymentMethod || 'N/A'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-2">
+          <Button
+            onClick={() => {
+              setShowSuccessStep(false);
+              setIsApprovalDialogOpen(false);
+            }}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 rounded-lg"
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   const handleApproveOrder = async () => {
     if (!designChecked || !paymentChecked || !noModificationChecked) {
       toast({ title: "Please accept all terms", description: "You must check all options to approve the order.", variant: "destructive" });
@@ -185,8 +249,8 @@ export function OrderDetailsClient({
       toast({ title: "Error", description: result.error, variant: "destructive" });
     } else {
       setOrder(result);
-      toast({ title: "Order Approved", description: "Thank you! The order has been approved and moved to production." });
-      setIsApprovalDialogOpen(false);
+      toast({ title: "Order Approved", description: "Thank you! The order has been approved." });
+      setShowSuccessStep(true);
     }
   };
 
@@ -1000,6 +1064,8 @@ export function OrderDetailsClient({
                     </p>
                   </div>
                 </div>
+              ) : showSuccessStep ? (
+                renderSuccessStep()
               ) : (
                 <div className="space-y-4">
                   <label className="flex items-start gap-3.5 cursor-pointer group">
@@ -1225,20 +1291,29 @@ export function OrderDetailsClient({
       )}
 
       {isApprovalDialogOpen && (
-        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <Dialog open={isApprovalDialogOpen} onOpenChange={(open) => {
+          setIsApprovalDialogOpen(open);
+          if (!open) {
+            setShowSuccessStep(false);
+          }
+        }}>
           <DialogContent
             className="fixed z-50 grid w-full gap-6 border bg-background p-6 shadow-lg duration-200 sm:rounded-xl max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:max-w-full max-sm:w-full sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-md max-h-[85vh] overflow-y-auto max-sm:data-[state=open]:slide-in-from-bottom-full max-sm:data-[state=open]:slide-in-from-left-0 max-sm:data-[state=open]:zoom-in-100 max-sm:data-[state=closed]:slide-out-to-bottom-full max-sm:data-[state=closed]:slide-out-to-left-0 max-sm:data-[state=closed]:zoom-out-100 max-sm:duration-300"
             hideCloseButton={false}
             onPointerDownOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
-            <DialogTitle className="text-lg font-bold text-foreground">
-              Terms & Conditions
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground -mt-3">
-              Please review and confirm to proceed.
-            </DialogDescription>
-            <div className="space-y-4 pt-2">
+            {showSuccessStep ? (
+              renderSuccessStep()
+            ) : (
+              <>
+                <DialogTitle className="text-lg font-bold text-foreground">
+                  Terms & Conditions
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground -mt-3">
+                  Please review and confirm to proceed.
+                </DialogDescription>
+                <div className="space-y-4 pt-2">
               <label className="flex items-start gap-3.5 cursor-pointer group">
                 <input
                   type="checkbox"
@@ -1349,6 +1424,8 @@ export function OrderDetailsClient({
                 </Button>
               </div>
             </div>
+            </>
+            )}
           </DialogContent>
         </Dialog>
       )}
