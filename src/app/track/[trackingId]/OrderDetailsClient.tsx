@@ -88,6 +88,7 @@ export function OrderDetailsClient({
   const [isClient, setIsClient] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [replyingTo, setReplyingTo] = useState<{ parentId: string; targetName: string; formUnderId: string } | null>(null);
@@ -138,6 +139,7 @@ export function OrderDetailsClient({
     } else {
       setOrder(result);
       toast({ title: "Order Approved", description: "Thank you! The order has been approved and moved to production." });
+      setIsApprovalDialogOpen(false);
     }
   };
 
@@ -596,11 +598,13 @@ export function OrderDetailsClient({
                         entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
                         entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
                       ) && (
-                        <NextLink href={`/approval/${order.id}`} passHref>
-                          <Button size="sm" className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all">
-                            Approve
-                          </Button>
-                        </NextLink>
+                        <Button
+                          onClick={() => setIsApprovalDialogOpen(true)}
+                          size="sm"
+                          className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all"
+                        >
+                          Approve
+                        </Button>
                       )}
                     </div>
                     <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
@@ -1145,6 +1149,98 @@ export function OrderDetailsClient({
                   </Button>
                 </div>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isApprovalDialogOpen && (
+        <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+          <DialogContent className="fixed z-50 grid w-full gap-6 border bg-background p-6 shadow-lg duration-200 sm:rounded-xl max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:max-w-full max-sm:w-full sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-md max-h-[85vh] overflow-y-auto" hideCloseButton={false}>
+            <DialogTitle className="text-lg font-bold text-foreground">
+              Approve Order & Specifications
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground -mt-3">
+              Please review and confirm all requirements to proceed.
+            </DialogDescription>
+            <div className="space-y-4 pt-2">
+              <label className="flex items-start gap-3.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={designChecked}
+                  onChange={(e) => setDesignChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                />
+                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                  {isClearance ? (
+                    <>
+                      <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                    </>
+                  )}
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={paymentChecked}
+                  onChange={(e) => setPaymentChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                />
+                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                  <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={noModificationChecked}
+                  onChange={(e) => setNoModificationChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                />
+                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                  {isClearance ? (
+                    <>
+                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
+                    </>
+                  ) : (
+                    <>
+                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                    </>
+                  )}
+                </span>
+              </label>
+
+              <div className="pt-4 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsApprovalDialogOpen(false)}
+                  disabled={isApproving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleApproveOrder}
+                  disabled={isApproving || !designChecked || !paymentChecked || !noModificationChecked}
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-md hover:shadow-primary/30 transition-all duration-200"
+                >
+                  {isApproving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    "Approve"
+                  )}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
