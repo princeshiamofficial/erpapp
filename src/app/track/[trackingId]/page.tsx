@@ -139,7 +139,6 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
 
       <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30 print:hidden">
         <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} <span className="font-bold">Color Hut</span>. All rights reserved.</p>
-        <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 sm:mt-1.5">Precision Order Tracking, Simplified.</p>
       </footer>
     </div>
   );
