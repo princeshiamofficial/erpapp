@@ -127,7 +127,14 @@ export function OrderDetailsClient({
     return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
 
-  const currentStatusInfo = useMemo(() => getStatusDisplayInfo(order.currentStatus), [getStatusDisplayInfo, order.currentStatus]);
+  const currentStatusInfo = useMemo(() => {
+    const info = getStatusDisplayInfo(order.currentStatus);
+    const hasDocsApprovedLog = order.statusHistory && order.statusHistory.some(entry => entry.status === 'co-clearance' && entry.notes === 'Terms accepted and documents approved by client.');
+    if (order.currentStatus === 'co-clearance' && hasDocsApprovedLog) {
+      return { ...info, name: 'Docs Approved' };
+    }
+    return info;
+  }, [getStatusDisplayInfo, order.currentStatus, order.statusHistory]);
 
   const isClearance = useMemo(() => {
     const statusName = currentStatusInfo.name.toLowerCase();
@@ -590,7 +597,11 @@ export function OrderDetailsClient({
           </CardHeader>
           <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-zinc-400 dark:border-zinc-600 ml-2 sm:ml-3">
             {order.statusHistory.slice().reverse().map((entry, index) => {
-              const entryStatusInfo = getStatusDisplayInfo(entry.status); return (
+              let entryStatusInfo = getStatusDisplayInfo(entry.status);
+              if (entry.status === 'co-clearance' && entry.notes === 'Terms accepted and documents approved by client.') {
+                entryStatusInfo = { ...entryStatusInfo, name: 'Docs Approved' };
+              }
+              return (
                 <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
                   <div
                     className={`absolute z-10 -left-[2.25rem] sm:-left-[2.625rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'shadow-lg' : 'border-2'}`}
