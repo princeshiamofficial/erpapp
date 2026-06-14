@@ -737,28 +737,30 @@ export function OrderDetailsClient({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
-                <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
-                <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
-                <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
-              </div>
-              {order.designerRepresentativeName && (
+            {currentUser && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={order.designerRepresentativeAvatarUrl || undefined} alt={order.designerRepresentativeName} />
-                      <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                        {order.designerRepresentativeName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-lg font-semibold text-foreground">{order.designerRepresentativeName}</span>
-                  </div>
+                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
+                  <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+                  <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
+                  <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
                 </div>
-              )}
-            </div>
+                {order.designerRepresentativeName && (
+                  <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={order.designerRepresentativeAvatarUrl || undefined} alt={order.designerRepresentativeName} />
+                        <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                          {order.designerRepresentativeName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-lg font-semibold text-foreground">{order.designerRepresentativeName}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
               <div className="mb-6">
