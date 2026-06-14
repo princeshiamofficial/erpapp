@@ -13,11 +13,33 @@ interface InvoicePageProps {
   params: Promise<{ orderId: string }>;
 }
 
+import { cookies } from 'next/headers';
+import type { User } from '@/types';
 import type { Metadata, Viewport } from 'next';
 
-export const viewport: Viewport = {
-  width: 1024,
-};
+export async function generateViewport(): Promise<Viewport> {
+  const cookieStore = await cookies();
+  const userCookie = cookieStore.get('colorhut-user');
+  let currentUser: User | null = null;
+  if (userCookie) {
+    try {
+      currentUser = JSON.parse(userCookie.value);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  if (!currentUser) {
+    return {
+      width: 'device-width',
+      initialScale: 1,
+    };
+  }
+
+  return {
+    width: 1024,
+  };
+}
 
 export async function generateMetadata({ params }: InvoicePageProps): Promise<Metadata> {
   const { orderId } = await params;

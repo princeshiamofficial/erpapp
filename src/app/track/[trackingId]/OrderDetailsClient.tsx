@@ -732,9 +732,8 @@ export function OrderDetailsClient({
                 <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
               </div>
               {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
                 <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
-                <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
               </div>)}
             </div>
 
