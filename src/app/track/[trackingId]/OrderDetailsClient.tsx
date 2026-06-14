@@ -163,15 +163,15 @@ export function OrderDetailsClient({
         JsBarcode(barcodeRef.current, order.id, {
           format: "CODE128",
           displayValue: false,
-          width: 1.4,
-          height: 30,
-          margin: 2,
+          width: currentUser ? 1.4 : 0.7,
+          height: currentUser ? 30 : 15,
+          margin: currentUser ? 2 : 1,
         });
       } catch (e) {
         console.error("JsBarcode error:", e);
       }
     }
-  }, [order.id]);
+  }, [order.id, currentUser]);
 
   useEffect(() => {
     setIsClient(true);
