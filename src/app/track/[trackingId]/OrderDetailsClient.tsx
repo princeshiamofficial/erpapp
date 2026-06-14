@@ -565,10 +565,7 @@ export function OrderDetailsClient({
   const renderStatusHistory = () => {
     if (hideStatusHeader) return null;
     return (
-      <>
-        <Separator className="my-1 sm:my-1.5 bg-border/30" />
-
-        <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+      <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
             <div className="flex items-center space-x-3 sm:space-x-4"><Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
             <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
@@ -641,71 +638,72 @@ export function OrderDetailsClient({
             })}</div>
           </CardContent>
         </Card>
-      </>
     );
   };
 
   return (
     <>
       <main className="max-w-4xl mx-auto space-y-4 sm:space-y-5">
-        {!hideStatusHeader && (
-          <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-            <CardHeader className="bg-card py-2 px-3 sm:py-2.5 sm:px-4 border-b border-border/40">
-              {(!packzyStatus || packzyStatus === 'unavailable') && (
-                <div className="mt-2 pt-2 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-2">
-                  {getStatusIcon(order.currentStatus, "h-14 w-14 !mr-0")}
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
-                      <span>Current Status:</span>
-                      <span
-                        className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border shadow-sm transition-all duration-200"
-                        style={{
-                          backgroundColor: `${currentStatusInfo.color}15`,
-                          color: currentStatusInfo.color,
-                          borderColor: `${currentStatusInfo.color}30`
-                        }}
-                      >
-                        {currentStatusInfo.name}
-                      </span>
-                    </h3>
-                    <div className="text-xs text-muted-foreground mt-2">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
-                  </div>
-                </div>
-              )}
-
-              {order.packzyTrackingCode && (
-                <div className="mt-2 pt-2 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-center gap-2">
-                  <div className="flex-shrink-0">
-                    {isClient ? (
-                      <div className="h-20 w-20 flex-shrink-0">
-                        <Lottie animationData={courierAnimation} loop={true} />
-                      </div>
-                    ) : (
-                      <Truck className="h-20 w-20 text-primary/80 animate-bounce" style={{ animationDuration: '3s' }} />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
-                      <span>Courier Status:</span>
-                      {isLoadingPackzyStatus ? (
-                        <Skeleton className="h-7 w-20" />
-                      ) : packzyStatus && packzyStatus !== 'unavailable' ? (
-                        <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-600 shadow-sm capitalize">
-                          {packzyStatus}
+        <div className="space-y-2">
+          {!hideStatusHeader && (
+            <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+              <CardHeader className="bg-card py-2 px-3 sm:py-2.5 sm:px-4 border-b border-border/40">
+                {(!packzyStatus || packzyStatus === 'unavailable') && (
+                  <div className="mt-2 pt-2 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-start gap-2">
+                    {getStatusIcon(order.currentStatus, "h-14 w-14 !mr-0")}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
+                        <span>Current Status:</span>
+                        <span
+                          className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border shadow-sm transition-all duration-200"
+                          style={{
+                            backgroundColor: `${currentStatusInfo.color}15`,
+                            color: currentStatusInfo.color,
+                            borderColor: `${currentStatusInfo.color}30`
+                          }}
+                        >
+                          {currentStatusInfo.name}
                         </span>
-                      ) : (
-                        <span className="text-sm font-normal text-muted-foreground">Could not retrieve courier status.</span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-2">Tracking Code: {order.packzyTrackingCode}</p>
+                      </h3>
+                      <div className="text-xs text-muted-foreground mt-2">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardHeader>
-          </div>
-        )}
+                )}
 
-        {!currentUser && renderStatusHistory()}
+                {order.packzyTrackingCode && (
+                  <div className="mt-2 pt-2 border-t border-border/30 first:mt-0 first:pt-0 first:border-t-0 flex items-center gap-2">
+                    <div className="flex-shrink-0">
+                      {isClient ? (
+                        <div className="h-20 w-20 flex-shrink-0">
+                          <Lottie animationData={courierAnimation} loop={true} />
+                        </div>
+                      ) : (
+                        <Truck className="h-20 w-20 text-primary/80 animate-bounce" style={{ animationDuration: '3s' }} />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-foreground flex flex-wrap items-center gap-2 leading-tight">
+                        <span>Courier Status:</span>
+                        {isLoadingPackzyStatus ? (
+                          <Skeleton className="h-7 w-20" />
+                        ) : packzyStatus && packzyStatus !== 'unavailable' ? (
+                          <span className="inline-flex items-center text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-600 shadow-sm capitalize">
+                            {packzyStatus}
+                          </span>
+                        ) : (
+                          <span className="text-sm font-normal text-muted-foreground">Could not retrieve courier status.</span>
+                        )}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-2">Tracking Code: {order.packzyTrackingCode}</p>
+                    </div>
+                  </div>
+                )}
+              </CardHeader>
+            </div>
+          )}
+
+          {!currentUser && renderStatusHistory()}
+        </div>
 
         {!hideStatusHeader && (
           <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
