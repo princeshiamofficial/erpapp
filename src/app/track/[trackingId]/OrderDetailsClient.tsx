@@ -597,8 +597,15 @@ export function OrderDetailsClient({
                     {entry.notes ? (
                       (() => {
                         let noteText = entry.notes;
-                        if (!currentUser && noteText.includes("Order transferred to SteadFast Courier")) {
-                          noteText = "Order transferred to SteadFast Courier.";
+                        if (!currentUser) {
+                          if (noteText.includes("Order transferred to SteadFast Courier")) {
+                            noteText = "Order transferred to SteadFast Courier.";
+                          } else if (noteText.includes("File upload confirmed by")) {
+                            const parts = noteText.split(". Confirmation details:");
+                            if (parts.length > 0) {
+                              noteText = parts[0] + ".";
+                            }
+                          }
                         }
                         const imgRegex = /(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i;
                         const match = noteText.match(imgRegex);
