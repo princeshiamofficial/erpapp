@@ -743,8 +743,8 @@ export function OrderDetailsClient({
 
         {!hideStatusHeader && (
           <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
-            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 gap-4">
-              <div className="w-full">
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
+              <div>
                 <div className="mb-2">
                   <Image
                     src="/logo.png"
@@ -755,53 +755,37 @@ export function OrderDetailsClient({
                     className="object-contain print:w-32 print:h-auto"
                   />
                 </div>
-                <p className="text-muted-foreground text-sm mb-2">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
-                
+                <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
+                <p className="text-muted-foreground text-sm flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                  <span>colorhut.official@gmail.com</span>
+                  <span className="hidden sm:inline text-muted-foreground/50">|</span>
+                  <span>+8801919-760626</span>
+                </p>
+                {currentUser && (
+                  <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+                )}
+              </div>
+              <div className="text-left sm:text-right mt-4 sm:mt-0 w-full sm:w-auto">
                 {currentUser ? (
                   <>
-                    <p className="text-muted-foreground text-sm flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-                      <span>colorhut.official@gmail.com</span>
-                      <span className="hidden sm:inline text-muted-foreground/50">|</span>
-                      <span>+8801919-760626</span>
-                    </p>
-                    {lastEditedByEntry ? (
-                      <div className="text-sm text-muted-foreground mt-1.5">
-                        {isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground mt-1.5">
-                        {isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>}
-                      </div>
+                    <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                    <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                    {order.acceptedDeliveryDate && (
+                      <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
                     )}
+                    <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
                   </>
                 ) : (
-                  <div className="space-y-1.5 w-full">
-                    <div className="flex flex-row items-center justify-between gap-4 w-full">
-                      <span className="text-muted-foreground text-sm">colorhut.official@gmail.com</span>
-                      <div className="flex-shrink-0">
-                        <svg ref={barcodeRef} className="object-contain h-[17px] sm:h-[34px] w-auto" data-ai-hint="barcode scan"></svg>
-                      </div>
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 sm:gap-2 mt-2">
+                    <div className="text-left sm:text-right">
+                      <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
                     </div>
-                    <div className="flex flex-row items-center justify-between gap-4 w-full">
-                      <span className="text-muted-foreground text-sm">+8801919-760626</span>
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">
-                        Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-32"><Skeleton className="h-full w-full" /></div>}
-                      </span>
+                    <div className="flex-shrink-0 mt-0 sm:mt-2">
+                      <svg ref={barcodeRef} className="object-contain h-[17px] sm:h-[34px] w-auto" data-ai-hint="barcode scan"></svg>
                     </div>
                   </div>
                 )}
               </div>
-
-              {currentUser && (
-                <div className="text-left sm:text-right mt-4 sm:mt-0 w-full sm:w-auto flex-shrink-0">
-                  <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-                  <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-                  {order.acceptedDeliveryDate && (
-                    <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-                  )}
-                  <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
-                </div>
-              )}
             </div>
 
             <div className={cn(
