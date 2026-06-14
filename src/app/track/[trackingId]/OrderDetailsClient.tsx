@@ -771,14 +771,14 @@ export function OrderDetailsClient({
                   <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
                   <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
                 </div>
-                <div className="flex flex-col items-start sm:items-end justify-between sm:text-right flex-shrink-0 mt-2 sm:mt-0">
-                  <div className="space-y-1">
+                <div className="flex flex-row items-center justify-between sm:justify-end gap-6 flex-shrink-0 mt-2 sm:mt-0 self-center">
+                  <div className="text-left sm:text-right space-y-1">
                     <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
                     {order.acceptedDeliveryDate && (
                       <div className="text-sm text-muted-foreground mt-1 whitespace-nowrap">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
                     )}
                   </div>
-                  <div className="flex-shrink-0 mt-3 sm:mt-4">
+                  <div className="flex-shrink-0">
                     <svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg>
                   </div>
                 </div>
