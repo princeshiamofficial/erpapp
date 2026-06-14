@@ -775,9 +775,6 @@ export function OrderDetailsClient({
                   <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 sm:gap-2 mt-2">
                     <div className="text-left sm:text-right">
                       <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
-                      {order.acceptedDeliveryDate && (
-                        <div className="text-sm text-muted-foreground mt-1 whitespace-nowrap">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
-                      )}
                     </div>
                     <div className="flex-shrink-0 mt-0 sm:mt-2">
                       <svg ref={barcodeRef} className="object-contain h-[17px] sm:h-[34px] w-auto" data-ai-hint="barcode scan"></svg>
