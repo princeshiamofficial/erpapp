@@ -590,7 +590,16 @@ export function OrderDetailsClient({
                   </div>
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
                     <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                    <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
+                    <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
+                      <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />
+                      {isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}
+                      {currentUser && (
+                        <>
+                          <span className="mx-1.5 hidden sm:inline">&bull;</span>
+                          <span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span>
+                        </>
+                      )}
+                    </div>
                     {entry.notes ? (
                       (() => {
                         let noteText = entry.notes;
@@ -665,7 +674,21 @@ export function OrderDetailsClient({
                           {currentStatusInfo.name}
                         </span>
                       </h3>
-                      <div className="text-xs text-muted-foreground mt-2">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        {isClient ? (
+                          lastStatusUpdateEntry ? (
+                            currentUser ? (
+                              `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}`
+                            ) : (
+                              `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)}`
+                            )
+                          ) : (
+                            "Status pending."
+                          )
+                        ) : (
+                          <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -725,65 +748,57 @@ export function OrderDetailsClient({
                   <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
                 )}
               </div>
-              {currentUser && (
-                <div className="text-left sm:text-right mt-4 sm:mt-0 w-full sm:w-auto">
-                  <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-                  <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-                  {order.acceptedDeliveryDate && (
-                    <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-                  )}
-                  <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
-                </div>
-              )}
-            </div>
-
-            {currentUser ? (
-              <div className={cn(
-                "grid gap-6 mb-8",
-                order.designerRepresentativeName ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
-              )}>
-                <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
-                  <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
-                  <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
-                  <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
-                </div>
-                {order.designerRepresentativeName && (
-                  <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={order.designerRepresentativeAvatarUrl || undefined} alt={order.designerRepresentativeName} />
-                        <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                          {order.designerRepresentativeName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-lg font-semibold text-foreground">{order.designerRepresentativeName}</span>
+              <div className="text-left sm:text-right mt-4 sm:mt-0 w-full sm:w-auto">
+                {currentUser ? (
+                  <>
+                    <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                    <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                    {order.acceptedDeliveryDate && (
+                      <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                    )}
+                    <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
+                  </>
+                ) : (
+                  <div className="flex flex-row items-center justify-between sm:justify-end gap-6 mt-2">
+                    <div className="text-left sm:text-right">
+                      <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
+                      {order.acceptedDeliveryDate && (
+                        <div className="text-sm text-muted-foreground mt-1 whitespace-nowrap">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      <svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg>
                     </div>
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
-                <div className="flex-1 w-full space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
-                  <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
-                  <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
-                  <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
-                </div>
-                <div className="flex flex-row items-center justify-between sm:justify-end gap-6 flex-shrink-0 mt-2 sm:mt-0 self-center">
-                  <div className="text-left sm:text-right space-y-1">
-                    <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
-                    {order.acceptedDeliveryDate && (
-                      <div className="text-sm text-muted-foreground mt-1 whitespace-nowrap">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
-                    )}
-                  </div>
-                  <div className="flex-shrink-0">
-                    <svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg>
-                  </div>
-                </div>
+            </div>
+
+            <div className={cn(
+              "grid gap-6 mb-8",
+              currentUser && order.designerRepresentativeName ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+            )}>
+              <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
+                <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+                <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
+                <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
               </div>
-            )}
+              {currentUser && order.designerRepresentativeName && (
+                <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={order.designerRepresentativeAvatarUrl || undefined} alt={order.designerRepresentativeName} />
+                      <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                        {order.designerRepresentativeName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-lg font-semibold text-foreground">{order.designerRepresentativeName}</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
               <div className="mb-6">
