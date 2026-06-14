@@ -1161,7 +1161,7 @@ export function OrderDetailsClient({
               Terms & Conditions
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground -mt-3">
-              Please review and confirm all requirements to proceed.
+              Please review and confirm to proceed.
             </DialogDescription>
             <div className="space-y-4 pt-2">
               <label className="flex items-start gap-3.5 cursor-pointer group">
