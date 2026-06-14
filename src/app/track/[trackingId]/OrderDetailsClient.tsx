@@ -133,6 +133,10 @@ export function OrderDetailsClient({
     if (order.currentStatus === 'co-clearance' && hasDocsApprovedLog) {
       return { ...info, name: 'Docs Approved' };
     }
+    const hasDesignApprovedLog = order.statusHistory && order.statusHistory.some(entry => entry.notes === 'Terms accepted and design approved by client.');
+    if (hasDesignApprovedLog && (info.name === 'DR Assigned' || info.name === 'On Design' || order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design') || order.currentStatus === 'on-hold')) {
+      return { ...info, name: 'Design Approved' };
+    }
     return info;
   }, [getStatusDisplayInfo, order.currentStatus, order.statusHistory]);
 
@@ -600,6 +604,9 @@ export function OrderDetailsClient({
               let entryStatusInfo = getStatusDisplayInfo(entry.status);
               if (entry.status === 'co-clearance' && entry.notes === 'Terms accepted and documents approved by client.') {
                 entryStatusInfo = { ...entryStatusInfo, name: 'Docs Approved' };
+              }
+              if (entry.notes === 'Terms accepted and design approved by client.') {
+                entryStatusInfo = { ...entryStatusInfo, name: 'Design Approved' };
               }
               return (
                 <div key={entry.id} className="flex items-start space-x-3 sm:space-x-4 relative group">
