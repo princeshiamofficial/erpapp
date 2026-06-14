@@ -596,12 +596,16 @@ export function OrderDetailsClient({
                     <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
                     {entry.notes ? (
                       (() => {
+                        let noteText = entry.notes;
+                        if (!currentUser && noteText.includes("Order transferred to SteadFast Courier")) {
+                          noteText = "Order transferred to SteadFast Courier.";
+                        }
                         const imgRegex = /(\/uploads\/[^\s\)]+\.(?:png|jpg|jpeg|gif|webp))/i;
-                        const match = entry.notes.match(imgRegex);
+                        const match = noteText.match(imgRegex);
                         const imageUrl = match ? match[1] : null;
 
                         if (imageUrl) {
-                          const parts = entry.notes.split(imageUrl);
+                          const parts = noteText.split(imageUrl);
                           return (
                             <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
                               {parts[0]}
@@ -620,7 +624,7 @@ export function OrderDetailsClient({
 
                         return (
                           <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">
-                            {entry.notes}
+                            {noteText}
                           </p>
                         );
                       })()
