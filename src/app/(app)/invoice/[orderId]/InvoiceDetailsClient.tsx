@@ -11,6 +11,7 @@ import type { CustomStatus, TrackingLink, User, AdvancePaymentRecord } from "@/t
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 import { getPackzyDeliveryStatusAction } from '../actions';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const formatCurrency = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -121,7 +122,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
 
 
   return (
-    <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl invoice-page print:shadow-none print:border-none print:p-0 print:max-w-none print:w-full print:bg-transparent print:text-[13px] print:leading-tight">
+    <div ref={invoiceRef} className="max-w-4xl mx-auto p-4 sm:p-6 bg-card border border-border/40 rounded-xl shadow-2xl invoice-page print:shadow-none print:border-none print:p-0 print:max-w-none print:w-full print:bg-transparent print:text-[13px] print:leading-tight">
       <div className="flex flex-col sm:flex-row justify-between items-start mb-4 pb-4 border-b border-border/30 print:mb-2 print:pb-2 print:border-border/50 print:break-inside-avoid">
         <div>
           <div className="mb-2">
@@ -134,34 +135,61 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
               className="object-contain print:w-32 print:h-auto"
             />
           </div>
-          <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
-          <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
+          <p className="text-muted-foreground text-xs">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
+          <p className="text-muted-foreground text-xs">colorhut.official@gmail.com | +8801919-760626</p>
 
         </div>
         <div className="text-left sm:text-right mt-4 sm:mt-0">
-          <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-          <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-          <div className="mt-2 flex sm:justify-end"><svg ref={barcodeRef} className="object-contain h-[35px] max-w-full" data-ai-hint="barcode scan"></svg></div>
+          <p className="text-base font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+          <div className="text-xs text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt) : <div className="h-3.5 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+          <div className="mt-1.5 flex sm:justify-end"><svg ref={barcodeRef} className="object-contain h-[30px] max-w-full" data-ai-hint="barcode scan"></svg></div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-2 print:break-inside-avoid">
-        <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:p-2">
-          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
-          <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 print:mb-2 print:break-inside-avoid">
+        <div className="space-y-1 p-3 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:p-2">
+          <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
+          <p className="text-base font-semibold text-foreground">{order.companyName}</p>
           <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
           <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
         </div>
-        {order.designerRepresentativeName && (<div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:p-2">
-          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
-          <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
-          <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
-        </div>)}
+        {(order.designerRepresentativeName || order.crmUserName) && (
+          <div className="space-y-3 p-3 bg-secondary/40 border border-border/20 rounded-lg shadow-sm print:p-2">
+            {order.crmUserName && (
+              <div className="space-y-1">
+                <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">CR Manager:</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={order.assigneeAvatarUrl || undefined} alt={order.crmUserName} />
+                    <AvatarFallback className="text-[9px] font-medium bg-primary/10 text-primary">
+                      {(order.crmUserName || "").split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-semibold text-foreground">{order.crmUserName}</span>
+                </div>
+              </div>
+            )}
+            {order.designerRepresentativeName && (
+              <div className="space-y-1">
+                <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={order.designerRepresentativeAvatarUrl || undefined} alt={order.designerRepresentativeName} />
+                    <AvatarFallback className="text-[9px] font-medium bg-primary/10 text-primary">
+                      {(order.designerRepresentativeName || "").split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-semibold text-foreground">{order.designerRepresentativeName}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
         <div className="mb-6 print:mb-2 print:break-inside-auto">
-          <h3 className="text-lg font-semibold mb-3 print:mb-1 text-foreground flex items-start">Order Items</h3>
+          <h3 className="text-base font-semibold mb-3 print:mb-1 text-foreground flex items-start">Order Items</h3>
           <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
             <Table><TableHeader><TableRow><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead></TableRow></TableHeader>
               <TableBody>{order.orderItems.map((item, index) => (<TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors print:break-inside-avoid">
@@ -172,13 +200,13 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
       )}
 
       {order.orderNotes && (<div className="mb-8 print:mb-2">
-        <h3 className="text-lg font-semibold text-foreground mb-2 print:mb-1 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
+        <h3 className="text-base font-semibold text-foreground mb-2 print:mb-1 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
         <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 print:p-2 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
       </div>)}
 
       {allAdvancePaymentRecords.length > 0 && (
         <div className="mb-8 print:mb-2">
-          <h3 className="text-lg font-semibold text-foreground mb-3 print:mb-1 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
+          <h3 className="text-base font-semibold text-foreground mb-3 print:mb-1 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
           <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm print:shadow-none">
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
@@ -198,7 +226,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         </div>
       )}
 
-      <div className="flex justify-end mt-8 pt-6 border-t border-border/30 print:mt-2 print:pt-2 print:break-inside-avoid">
+      <div className="flex justify-end mt-6 pt-4 border-t border-border/30 print:mt-2 print:pt-2 print:break-inside-avoid">
         <div className="w-full max-w-xs sm:max-w-sm relative">
           <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
           {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}

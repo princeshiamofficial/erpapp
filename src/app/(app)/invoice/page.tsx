@@ -2,16 +2,22 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { Printer, Search, Package, X, Loader2 } from 'lucide-react';
+import { Printer, Search, Package, X, Loader2, Download, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { TrackingLink, CustomStatus, AdvancePaymentRecord, User } from '@/types';
-import { getOrdersPaginated } from '@/lib/order-service';
+import { getOrders } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
 import { getUsers } from '@/lib/user-service';
@@ -21,7 +27,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { Checkbox } from "@/components/ui/checkbox";
 import { InvoiceDetailsClient } from '../invoice/[orderId]/InvoiceDetailsClient';
 import { cn } from '@/lib/utils';
-import { useInView } from 'react-intersection-observer';
 import {
   Select,
   SelectContent,
@@ -29,6 +34,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis
+} from "@/components/ui/pagination";
 
 
 const formatCurrency = (value: number | string | null | undefined): string => {
@@ -55,59 +69,30 @@ export default function InvoiceListPage() {
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [ordersToPrint, setOrdersToPrint] = useState<TrackingLink[] | null>(null);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState<string | null>(null);
+  const [isDownloadingMultiple, setIsDownloadingMultiple] = useState(false);
 
   // Pagination states
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
-  const LIMIT = 20;
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
-  const { ref, inView } = useInView({
-    threshold: 0,
-    triggerOnce: false,
-  });
-
-
-  const fetchInvoiceData = useCallback(async (isInitial = true, currentSearch = searchTerm, currentStatus = selectedStatus) => {
+  const fetchInvoiceData = useCallback(async () => {
     if (!currentUser) {
       setIsLoading(false);
       return;
     }
-
-    if (isInitial) {
-      setIsLoading(true);
-      setPage(0);
-    } else {
-      setIsLoadingMore(true);
-    }
-
+    setIsLoading(true);
     try {
-      const offset = isInitial ? 0 : (page + 1) * LIMIT;
-      const effectiveStatus = currentStatus === 'all' ? '' : currentStatus;
-
-      // Fetch statuses and users only once
       const promises: any[] = [
-        getOrdersPaginated(LIMIT, offset, currentSearch, effectiveStatus),
+        getOrders(),
       ];
 
       if (allStatuses.length === 0) promises.push(getStatuses());
       if (allUsers.length === 0) promises.push(getUsers());
 
-      const [orderResult, fetchedStatuses, fetchedUsers] = await Promise.all(promises);
+      const [ordersList, fetchedStatuses, fetchedUsers] = await Promise.all(promises);
 
-      if (isInitial) {
-        setAllOrders(orderResult.orders);
-        setPage(0);
-      } else {
-        setAllOrders(prev => [...prev, ...orderResult.orders]);
-        setPage(prev => prev + 1);
-      }
-
-      setTotalCount(orderResult.total);
-      const currentOrdersCount = isInitial ? orderResult.orders.length : allOrders.length + orderResult.orders.length;
-      setHasMore(currentOrdersCount < orderResult.total);
-
+      setAllOrders(ordersList);
       if (fetchedStatuses) setAllStatuses(fetchedStatuses);
       if (fetchedUsers) setAllUsers(fetchedUsers);
     } catch (error) {
@@ -115,23 +100,74 @@ export default function InvoiceListPage() {
       toast({ title: "Error", description: "Could not load invoice data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
-      setIsLoadingMore(false);
     }
-  }, [currentUser, toast, page, allStatuses.length, allUsers.length, searchTerm, selectedStatus, LIMIT]);
+  }, [currentUser, toast, allStatuses.length, allUsers.length]);
 
   useEffect(() => {
-    // Debounce search and status changes
-    const timer = setTimeout(() => {
-      fetchInvoiceData(true, searchTerm, selectedStatus);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm, selectedStatus, currentUser]);
+    fetchInvoiceData();
+  }, [currentUser, fetchInvoiceData]);
+
+  const filteredOrders = useMemo(() => {
+    let result = allOrders;
+
+    if (selectedStatus !== 'all') {
+      result = result.filter(order => order.currentStatus === selectedStatus);
+    }
+
+    if (!searchTerm) return result;
+
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return result.filter(order =>
+      (order.id || '').toLowerCase().includes(lowerSearchTerm) ||
+      (order.companyName || '').toLowerCase().includes(lowerSearchTerm) ||
+      (order.phoneNumber || '').toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [allOrders, searchTerm, selectedStatus]);
+
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredOrders, currentPage]);
 
   useEffect(() => {
-    if (inView && hasMore && !isLoading && !isLoadingMore) {
-      fetchInvoiceData(false);
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus]);
+
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (currentPage < 3) endPage = maxPagesToShow;
+      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) pageNumbers.push('...');
+      }
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
     }
-  }, [inView, hasMore, isLoading, isLoadingMore, fetchInvoiceData]);
+    return pageNumbers.map((page, index) => (
+      <PaginationItem key={index}>
+        {page === '...' ? <PaginationEllipsis />
+          : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+            {page}
+          </PaginationLink>
+        }
+      </PaginationItem>
+    ));
+  };
 
 
   const handlePrintInvoices = async (orderIds: string[]) => {
@@ -167,7 +203,7 @@ export default function InvoiceListPage() {
 
       const timer = setTimeout(() => {
         window.print();
-      }, 100);
+      }, 800);
 
       return () => {
         clearTimeout(timer);
@@ -176,8 +212,124 @@ export default function InvoiceListPage() {
     }
   }, [ordersToPrint]);
 
-  const filteredOrders = allOrders;
+  const triggerPdfPrint = (url: string) => {
+    // Create a hidden off-screen iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '1024px';
+    iframe.style.height = '768px';
+    iframe.style.border = '0';
+    iframe.src = url;
+    
+    document.body.appendChild(iframe);
+    
+    // Backup programmatic print trigger in case embedded script execution is delayed
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (e) {
+        console.warn("Direct iframe print call blocked or not supported by browser PDF viewer. Relying on embedded PDF auto-print script.", e);
+      }
+    };
+    
+    // Clean up the iframe after 15 seconds to ensure print completes loading
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 15000);
+  };
 
+  const handleDownloadPDF = async (order: TrackingLink) => {
+    setIsDownloadingPDF(order.id);
+    try {
+      const { pdf } = await import('@react-pdf/renderer');
+      const { InvoicePDF } = await import('@/components/invoices/InvoicePDF');
+      
+      const initialBlob = await pdf(<InvoicePDF orders={[order]} />).toBlob();
+      
+      // Inject auto-print action using pdf-lib
+      const { PDFDocument } = await import('pdf-lib');
+      const arrayBuffer = await initialBlob.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      pdfDoc.addJavaScript('print', 'this.print({bUI: true, bSilent: false, bShrinkToFit: true});');
+      const modifiedPdfBytes = await pdfDoc.save();
+      const printBlob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
+      
+      const url = URL.createObjectURL(printBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Invoice_${order.id}.pdf`;
+      link.click();
+      
+      // Auto trigger print dialog
+      triggerPdfPrint(url);
+      
+      toast({ title: "Success", description: `Invoice ${order.id} downloaded & print triggered.` });
+      
+      // Revoke the object URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast({ title: "Error", description: "Failed to generate PDF.", variant: "destructive" });
+    } finally {
+      setIsDownloadingPDF(null);
+    }
+  };
+
+  const handleDownloadMultiplePDFs = async (orderIds: string[]) => {
+    if (orderIds.length === 0) return;
+    setIsDownloadingMultiple(true);
+    try {
+      const fullOrders = await getFullOrdersByIds(orderIds);
+      if (fullOrders.length === 0) {
+        toast({ title: "Download Error", description: "Could not retrieve selected orders.", variant: "destructive" });
+        return;
+      }
+      
+      const { pdf } = await import('@react-pdf/renderer');
+      const { InvoicePDF } = await import('@/components/invoices/InvoicePDF');
+
+      const initialBlob = await pdf(<InvoicePDF orders={fullOrders} />).toBlob();
+      
+      // Inject auto-print action using pdf-lib
+      const { PDFDocument } = await import('pdf-lib');
+      const arrayBuffer = await initialBlob.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      pdfDoc.addJavaScript('print', 'this.print({bUI: true, bSilent: false, bShrinkToFit: true});');
+      const modifiedPdfBytes = await pdfDoc.save();
+      const printBlob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
+      
+      const url = URL.createObjectURL(printBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      if (fullOrders.length === 1) {
+        link.download = `Invoice_${fullOrders[0].id}.pdf`;
+        toast({ title: "Success", description: `Invoice ${fullOrders[0].id} downloaded & print triggered.` });
+      } else {
+        const dateStr = new Date().toISOString().split('T')[0];
+        link.download = `Invoices_Merged_${dateStr}.pdf`;
+        toast({ title: "Success", description: `${fullOrders.length} Invoices merged, downloaded & print triggered.` });
+      }
+      
+      link.click();
+      
+      // Auto trigger print dialog
+      triggerPdfPrint(url);
+      
+      setSelectedRowIds(new Set());
+      
+      // Revoke the object URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      console.error("Multiple PDF generation error:", error);
+      toast({ title: "Error", description: "Failed to generate multiple PDFs.", variant: "destructive" });
+    } finally {
+      setIsDownloadingMultiple(false);
+    }
+  };
 
   useEffect(() => {
     setSelectedRowIds(new Set());
@@ -222,9 +374,17 @@ export default function InvoiceListPage() {
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      setSelectedRowIds(new Set(filteredOrders.map(o => o.id)));
+      setSelectedRowIds(prev => {
+        const newSelection = new Set(prev);
+        paginatedOrders.forEach(o => newSelection.add(o.id));
+        return newSelection;
+      });
     } else {
-      setSelectedRowIds(new Set());
+      setSelectedRowIds(prev => {
+        const newSelection = new Set(prev);
+        paginatedOrders.forEach(o => newSelection.delete(o.id));
+        return newSelection;
+      });
     }
   };
 
@@ -241,6 +401,15 @@ export default function InvoiceListPage() {
   };
 
   const numSelected = selectedRowIds.size;
+  const tableHeaderTopClass = numSelected > 0 ? "lg:top-[13.25rem]" : "lg:top-[9.5rem]";
+
+  const isAllPageSelected = useMemo(() => {
+    return paginatedOrders.length > 0 && paginatedOrders.every(o => selectedRowIds.has(o.id));
+  }, [paginatedOrders, selectedRowIds]);
+
+  const isSomePageSelected = useMemo(() => {
+    return paginatedOrders.some(o => selectedRowIds.has(o.id)) && !isAllPageSelected;
+  }, [paginatedOrders, selectedRowIds, isAllPageSelected]);
 
   return (
     <>
@@ -271,19 +440,23 @@ export default function InvoiceListPage() {
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     {[
-                      'CR Clearance',
-                      'CO Clearance',
-                      'On Design',
-                      'On Hold',
-                      'Logistics',
-                      'Courier',
-                      'Delivered',
-                      'Cancel'
-                    ].map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
+                      'order-submitted',
+                      'co-clearance',
+                      'ready-for-design',
+                      'on-hold',
+                      'logistics',
+                      'shipped',
+                      'delivered',
+                      'cancelled'
+                    ].map((statusId) => {
+                      const status = allStatuses.find(s => s.id === statusId);
+                      if (!status) return null;
+                      return (
+                        <SelectItem key={status.id} value={status.id}>
+                          {status.name}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -291,22 +464,24 @@ export default function InvoiceListPage() {
           </CardHeader>
           <CardContent className="p-0">
             {numSelected > 0 && (
-              <div className="flex items-center gap-4 px-5 py-3 bg-secondary/50 border-b">
+              <div className="flex items-center gap-4 px-5 h-[60px] bg-secondary/95 backdrop-blur-sm border-b lg:sticky lg:top-[9.5rem] lg:z-20">
                 <div className="text-sm font-semibold text-foreground flex-1">
                   {numSelected} row{numSelected > 1 ? 's' : ''} selected.
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePrintInvoices(Array.from(selectedRowIds))}
-                  disabled={isPreparingPrint}
-                >
-                  {isPreparingPrint ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing...</>
-                  ) : (
-                    <><Printer className="mr-2 h-4 w-4" /> Print Selected</>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadMultiplePDFs(Array.from(selectedRowIds))}
+                    disabled={isDownloadingMultiple}
+                  >
+                    {isDownloadingMultiple ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Printing...</>
+                    ) : (
+                      <><Printer className="mr-2 h-4 w-4" /> Print</>
+                    )}
+                  </Button>
+                </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSelectedRowIds(new Set())}>
                   <X className="h-4 w-4" />
                   <span className="sr-only">Clear selection</span>
@@ -315,25 +490,26 @@ export default function InvoiceListPage() {
             )}
             <div className="lg:overflow-visible">
               <Table containerClassName="overflow-auto lg:overflow-visible">
-                <TableHeader className="lg:sticky lg:top-[9.5rem] bg-card z-20 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                <TableHeader className={`lg:sticky ${tableHeaderTopClass} bg-card z-20 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]`}>
                   <TableRow>
-                    <TableHead className="w-12 text-center pl-4 lg:sticky lg:top-[9.5rem] bg-card z-20">
+                    <TableHead className={`w-12 text-center pl-4 lg:sticky ${tableHeaderTopClass} bg-card z-20`}>
                       <Checkbox
                         checked={
-                          (numSelected > 0 && numSelected < filteredOrders.length)
+                          isSomePageSelected
                             ? 'indeterminate'
-                            : (numSelected === filteredOrders.length && filteredOrders.length > 0)
+                            : isAllPageSelected
                         }
                         onCheckedChange={handleSelectAll}
                         aria-label="Select all rows"
                       />
                     </TableHead>
-                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Order ID</TableHead>
-                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Company</TableHead>
-                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Net Payable</TableHead>
-                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Paid</TableHead>
-                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Due</TableHead>
-                    <TableHead className="lg:sticky lg:top-[9.5rem] bg-card z-20">Status</TableHead>
+                    <TableHead className={`lg:sticky ${tableHeaderTopClass} bg-card z-20`}>Order ID</TableHead>
+                    <TableHead className={`lg:sticky ${tableHeaderTopClass} bg-card z-20`}>Company</TableHead>
+                    <TableHead className={`lg:sticky ${tableHeaderTopClass} bg-card z-20`}>Net Payable</TableHead>
+                    <TableHead className={`lg:sticky ${tableHeaderTopClass} bg-card z-20`}>Paid</TableHead>
+                    <TableHead className={`lg:sticky ${tableHeaderTopClass} bg-card z-20`}>Due</TableHead>
+                    <TableHead className={`lg:sticky ${tableHeaderTopClass} bg-card z-20`}>Status</TableHead>
+                    <TableHead className={`lg:sticky ${tableHeaderTopClass} bg-card z-20 text-right pr-6`}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -347,10 +523,11 @@ export default function InvoiceListPage() {
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                        <TableCell className="text-right pr-6"><Skeleton className="h-8 w-8 ml-auto rounded" /></TableCell>
                       </TableRow>
                     ))
-                  ) : filteredOrders.length > 0 ? (
-                    filteredOrders.map((order) => {
+                  ) : paginatedOrders.length > 0 ? (
+                    paginatedOrders.map((order) => {
                       const financials = getOrderFinancials(order);
                       const statusInfo = getStatusDisplayInfo(order.currentStatus);
                       const isSelected = selectedRowIds.has(order.id);
@@ -379,12 +556,42 @@ export default function InvoiceListPage() {
                               {statusInfo.name}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-right pr-6">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Actions">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onSelect={() => handleDownloadPDF(order)}
+                                  className="cursor-pointer"
+                                  disabled={isDownloadingPDF === order.id}
+                                >
+                                  {isDownloadingPDF === order.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Download className="mr-2 h-4 w-4" />
+                                  )}
+                                  Download PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => handlePrintInvoices([order.id])}
+                                  className="cursor-pointer"
+                                >
+                                  <Printer className="mr-2 h-4 w-4" />
+                                  Print Invoice
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
                         </TableRow>
                       );
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                      <TableCell colSpan={8} className="text-center py-12 h-[300px]">
                         <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                         <p className="text-lg text-muted-foreground font-medium">No orders found.</p>
                         <p className="text-sm text-muted-foreground">
@@ -396,31 +603,39 @@ export default function InvoiceListPage() {
                 </TableBody>
               </Table>
             </div>
-            {hasMore && (
-              <div ref={ref} className="py-8 flex justify-center border-t">
-                {isLoadingMore ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Loading more invoices...</span>
-                  </div>
-                ) : (
-                  <div className="h-1" />
-                )}
-              </div>
-            )}
-            {!hasMore && allOrders.length > 0 && (
-              <div className="py-6 text-center text-muted-foreground text-sm border-t bg-muted/20">
-                Showing all {allOrders.length} invoices.
-              </div>
-            )}
           </CardContent>
+          {totalPages > 1 && (
+            <CardFooter className="py-4 border-t">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  {renderPagination()}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                      aria-disabled={currentPage === totalPages}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </CardFooter>
+          )}
 
         </Card>
       </div>
 
       {/* Hidden container for printing */}
       {ordersToPrint && (
-        <div className="hidden print:block">
+        <div className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none print:static print:opacity-100 print:pointer-events-auto print:block print:w-full print:h-auto print:overflow-visible">
           {ordersToPrint.map(order => (
             <div key={`print-${order.id}`} className="invoice-page">
               <InvoiceDetailsClient

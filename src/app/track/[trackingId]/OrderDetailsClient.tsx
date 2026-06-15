@@ -780,8 +780,8 @@ export function OrderDetailsClient({
         </div>
 
         {!hideStatusHeader && (
-          <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
-            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
+          <div ref={invoiceRef} className="p-4 sm:p-6 bg-card border border-border/40 rounded-xl shadow-2xl">
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-4 pb-4 border-b border-border/30">
               <div>
                 <div className="mb-2">
                   <Image
@@ -793,32 +793,32 @@ export function OrderDetailsClient({
                     className="object-contain print:w-32 print:h-auto"
                   />
                 </div>
-                <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
-                <p className="text-muted-foreground text-sm flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                <p className="text-muted-foreground text-xs">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
+                <p className="text-muted-foreground text-xs flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
                   <span>colorhut.official@gmail.com</span>
                   <span className="hidden sm:inline text-muted-foreground/50">|</span>
                   <span>+8801919-760626</span>
                 </p>
                 {currentUser && (
-                  <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+                  <div className="text-xs text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-3.5 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-3.5 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
                 )}
               </div>
               <div className="text-left sm:text-right mt-4 sm:mt-0 w-full sm:w-auto">
                 {currentUser ? (
                   <>
-                    <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-                    <div className="text-sm text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                    <p className="text-base font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                    <div className="text-xs text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-3.5 w-56"><Skeleton className="h-full w-full" /></div>}</div>
                     {order.acceptedDeliveryDate && (
-                      <div className="text-sm text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                      <div className="text-xs text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-3.5 w-56"><Skeleton className="h-full w-full" /></div>}</div>
                     )}
-                    <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
+                    <div className="mt-1.5"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
                   </>
                 ) : (
-                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 sm:gap-2 mt-2">
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 sm:gap-2 mt-1.5">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-3.5 w-40"><Skeleton className="h-full w-full" /></div>}</div>
                     </div>
-                    <div className="flex-shrink-0 mt-0 sm:mt-2">
+                    <div className="flex-shrink-0 mt-0 sm:mt-1.5">
                       <svg ref={barcodeRef} className="object-contain h-[17px] sm:h-[34px] w-auto" data-ai-hint="barcode scan"></svg>
                     </div>
                   </div>
@@ -827,34 +827,52 @@ export function OrderDetailsClient({
             </div>
 
             <div className={cn(
-              "grid gap-6 mb-8",
-              currentUser && order.designerRepresentativeName ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+              "grid gap-6 mb-6",
+              currentUser && (order.designerRepresentativeName || order.crmUserName) ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
             )}>
-              <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
-                <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+              <div className="space-y-1 p-3 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
+                <p className="text-base font-semibold text-foreground">{order.companyName}</p>
                 <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
                 <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
               </div>
-              {currentUser && order.designerRepresentativeName && (
-                <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                  <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={order.designerRepresentativeAvatarUrl || undefined} alt={order.designerRepresentativeName} />
-                      <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                        {order.designerRepresentativeName.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-lg font-semibold text-foreground">{order.designerRepresentativeName}</span>
-                  </div>
+              {currentUser && (order.designerRepresentativeName || order.crmUserName) && (
+                <div className="space-y-3 p-3 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                  {order.crmUserName && (
+                    <div className="space-y-1">
+                      <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">CR Manager:</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={order.assigneeAvatarUrl || undefined} alt={order.crmUserName} />
+                          <AvatarFallback className="text-[9px] font-medium bg-primary/10 text-primary">
+                            {(order.crmUserName || "").split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-semibold text-foreground">{order.crmUserName}</span>
+                      </div>
+                    </div>
+                  )}
+                  {order.designerRepresentativeName && (
+                    <div className="space-y-1">
+                      <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Assigned Designer:</h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={order.designerRepresentativeAvatarUrl || undefined} alt={order.designerRepresentativeName} />
+                          <AvatarFallback className="text-[9px] font-medium bg-primary/10 text-primary">
+                            {(order.designerRepresentativeName || "").split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-semibold text-foreground">{order.designerRepresentativeName}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">Order Items</h3>
+                <h3 className="text-base font-semibold mb-3 text-foreground flex items-start">Order Items</h3>
                 <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                   <Table>
                     <TableHeader>
@@ -891,13 +909,13 @@ export function OrderDetailsClient({
             )}
             {(!Array.isArray(order.orderItems) || order.orderItems.length === 0) && (<div className="mb-6 p-4 text-center text-muted-foreground border border-dashed border-border/40 rounded-md bg-secondary/30"><Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />No service items specified for this order.</div>)}
             {order.orderNotes && (<div className="mb-8">
-              <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
+              <h3 className="text-base font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80" />Order Notes:</h3>
               <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
             </div>)}
 
             {shouldShowFinancials && allAdvancePaymentRecords.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
+                <h3 className="text-base font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payments History</h3>
                 <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                   <Table>
                     <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Reference/Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
@@ -927,7 +945,7 @@ export function OrderDetailsClient({
             )}
 
             {shouldShowFinancials && (
-              <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
+              <div className="flex justify-end mt-6 pt-4 border-t border-border/30">
                 <div className="w-full max-w-xs sm:max-w-sm relative">
                   <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
                   {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
