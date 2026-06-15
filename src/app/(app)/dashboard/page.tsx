@@ -121,6 +121,10 @@ const chartConfig = {
     label: "Sales",
     color: "hsl(var(--chart-1))",
   },
+  deliveries: {
+    label: "Deliveries",
+    color: "hsl(var(--chart-2))",
+  },
 } satisfies ChartConfig;
 
 const trafficSourcesChartConfig = {
@@ -744,32 +748,50 @@ function DashboardContent() {
       })
     ).length;
 
-    let chartData: Array<{ date: string; sales: number; orders: number; }> = [];
+    let chartData: Array<{ date: string; sales: number; orders: number; deliveries: number; }> = [];
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
-      const hourlyData = new Map<number, { sales: number; orders: number }>();
-      for (let i = 0; i < 24; i++) hourlyData.set(i, { sales: 0, orders: 0 });
+      const hourlyData = new Map<number, { sales: number; orders: number; deliveries: number }>();
+      for (let i = 0; i < 24; i++) hourlyData.set(i, { sales: 0, orders: 0, deliveries: 0 });
 
       filteredOrders.forEach(order => {
         if (order.createdAt) {
           try {
             const hour = getHours(parseISO(order.createdAt));
             const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
-            const existing = hourlyData.get(hour) || { sales: 0, orders: 0 };
-            hourlyData.set(hour, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
+            const existing = hourlyData.get(hour) || { sales: 0, orders: 0, deliveries: 0 };
+            hourlyData.set(hour, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
           } catch (e) { /* ignore */ }
         }
       });
+
+      ordersForDeliveryCount.forEach(order => {
+        (order.statusHistory || []).forEach(log => {
+          if (log.status === deliveredStatusId && log.timestamp) {
+            try {
+              const deliveryDate = parseISO(log.timestamp);
+              if (isWithinInterval(deliveryDate, interval)) {
+                const hour = getHours(deliveryDate);
+                const existing = hourlyData.get(hour);
+                if (existing) {
+                  existing.deliveries += 1;
+                }
+              }
+            } catch (e) { /* ignore */ }
+          }
+        });
+      });
+
       chartData = Array.from(hourlyData.entries())
-        .map(([hour, data]) => ({ date: hour.toString(), sales: data.sales, orders: data.orders }))
+        .map(([hour, data]) => ({ date: hour.toString(), sales: data.sales, orders: data.orders, deliveries: data.deliveries }))
         .sort((a, b) => parseInt(a.date) - parseInt(b.date));
     } else if (selectedDateRange?.from && selectedDateRange?.to) {
       if (chartGranularity === 'monthly') {
-        const monthlyData = new Map<string, { sales: number; orders: number }>();
+        const monthlyData = new Map<string, { sales: number; orders: number; deliveries: number }>();
         let tempDate = startOfMonth(new Date(selectedDateRange.from));
         const endRangeDate = endOfMonth(new Date(selectedDateRange.to));
         
         while (tempDate <= endRangeDate) {
-          monthlyData.set(format(tempDate, 'yyyy-MM'), { sales: 0, orders: 0 });
+          monthlyData.set(format(tempDate, 'yyyy-MM'), { sales: 0, orders: 0, deliveries: 0 });
           tempDate = addDays(endOfMonth(tempDate), 1);
         }
 
@@ -779,20 +801,38 @@ function DashboardContent() {
               const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM');
               if (monthlyData.has(orderDateStr)) {
                 const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
-                const existing = monthlyData.get(orderDateStr) || { sales: 0, orders: 0 };
-                monthlyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
+                const existing = monthlyData.get(orderDateStr) || { sales: 0, orders: 0, deliveries: 0 };
+                monthlyData.set(orderDateStr, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
               }
             } catch (e) { /* ignore */ }
           }
         });
+
+        ordersForDeliveryCount.forEach(order => {
+          (order.statusHistory || []).forEach(log => {
+            if (log.status === deliveredStatusId && log.timestamp) {
+              try {
+                const deliveryDate = parseISO(log.timestamp);
+                if (isWithinInterval(deliveryDate, interval)) {
+                  const deliveryDateStr = format(deliveryDate, 'yyyy-MM');
+                  const existing = monthlyData.get(deliveryDateStr);
+                  if (existing) {
+                    existing.deliveries += 1;
+                  }
+                }
+              } catch (e) { /* ignore */ }
+            }
+          });
+        });
+
         chartData = Array.from(monthlyData.entries())
-          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
+          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders, deliveries: data.deliveries }))
           .sort((a, b) => a.date.localeCompare(b.date));
       } else {
-        const dailyData = new Map<string, { sales: number; orders: number }>();
+        const dailyData = new Map<string, { sales: number; orders: number; deliveries: number }>();
         let tempDate = new Date(selectedDateRange.from);
         while (tempDate <= selectedDateRange.to) {
-          dailyData.set(format(tempDate, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
+          dailyData.set(format(tempDate, 'yyyy-MM-dd'), { sales: 0, orders: 0, deliveries: 0 });
           tempDate = addDays(tempDate, 1);
         }
 
@@ -802,14 +842,32 @@ function DashboardContent() {
               const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
               if (dailyData.has(orderDateStr)) {
                 const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
-                const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
-                dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
+                const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0, deliveries: 0 };
+                dailyData.set(orderDateStr, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
               }
             } catch (e) { /* ignore */ }
           }
         });
+
+        ordersForDeliveryCount.forEach(order => {
+          (order.statusHistory || []).forEach(log => {
+            if (log.status === deliveredStatusId && log.timestamp) {
+              try {
+                const deliveryDate = parseISO(log.timestamp);
+                if (isWithinInterval(deliveryDate, interval)) {
+                  const deliveryDateStr = format(deliveryDate, 'yyyy-MM-dd');
+                  const existing = dailyData.get(deliveryDateStr);
+                  if (existing) {
+                    existing.deliveries += 1;
+                  }
+                }
+              } catch (e) { /* ignore */ }
+            }
+          });
+        });
+
         chartData = Array.from(dailyData.entries())
-          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
+          .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders, deliveries: data.deliveries }))
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       }
     }
@@ -1140,8 +1198,6 @@ function DashboardContent() {
 
   const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const dataPayload = payload.find((p: any) => p.dataKey === chartDataKey);
-
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid grid-cols-1 gap-2">
@@ -1174,19 +1230,27 @@ function DashboardContent() {
                 ) : 'N/A'}
               </span>
             </div>
-            {dataPayload && (
-              <div className="flex flex-col">
-                <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: dataPayload.color }}>
-                  {showAmount ? `Sales (${dataPayload.payload.orders} orders)` : `Sales Count`}
-                </span>
-                <span
-                  className="font-bold"
-                  style={{ color: dataPayload.color }}
-                >
-                  {showAmount ? formatCurrency(dataPayload.value as number) : dataPayload.value}
-                </span>
-              </div>
-            )}
+            {payload.map((p: any) => {
+              let labelText = p.name || p.dataKey;
+              if (p.dataKey === 'sales') {
+                labelText = showAmount ? `Sales (${p.payload.orders} orders)` : 'Sales';
+              } else if (p.dataKey === 'orders') {
+                labelText = 'Sales Count';
+              } else if (p.dataKey === 'deliveries') {
+                labelText = 'Deliveries';
+              }
+              const formattedValue = p.dataKey === 'sales' ? formatCurrency(p.value as number) : p.value;
+              return (
+                <div key={p.dataKey} className="flex flex-col">
+                  <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: p.color }}>
+                    {labelText}
+                  </span>
+                  <span className="font-bold" style={{ color: p.color }}>
+                    {formattedValue}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       );
@@ -1545,6 +1609,7 @@ function DashboardContent() {
                         <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ padding: '10px' }} />
                         <Line
                           dataKey={chartDataKey}
+                          name={chartDataKey === 'sales' ? 'Sales (BDT)' : 'orders'}
                           type="monotone"
                           stroke="var(--color-sales)"
                           strokeWidth={2}
@@ -1561,6 +1626,27 @@ function DashboardContent() {
                             stroke: "hsl(var(--background))",
                           }}
                         />
+                        {!showAmount && (
+                          <Line
+                            dataKey="deliveries"
+                            name="deliveries"
+                            type="monotone"
+                            stroke="var(--color-deliveries)"
+                            strokeWidth={2}
+                            dot={{
+                              r: 4,
+                              fill: "var(--color-deliveries)",
+                              strokeWidth: 2,
+                              stroke: "hsl(var(--background))",
+                            }}
+                            activeDot={{
+                              r: 6,
+                              fill: "var(--color-deliveries)",
+                              strokeWidth: 2,
+                              stroke: "hsl(var(--background))",
+                            }}
+                          />
+                        )}
                       </RechartsLineChart>
                     </ChartContainer>
                   )}

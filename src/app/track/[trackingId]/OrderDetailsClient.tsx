@@ -119,14 +119,6 @@ export function OrderDetailsClient({
   const [noModificationChecked, setNoModificationChecked] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
-  const [approvalStep, setApprovalStep] = useState<1 | 2 | 3>(1);
-  const [payAmount, setPayAmount] = useState<string>('');
-  const [payMethod, setPayMethod] = useState<string>('bKash');
-  const [payNotes, setPayNotes] = useState<string>('');
-  const [payFile, setPayFile] = useState<File | null>(null);
-  const [isUploadingProof, setIsUploadingProof] = useState<boolean>(false);
-  const wasDialogOpen = useRef(false);
-
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
     if (status) {
@@ -185,61 +177,8 @@ export function OrderDetailsClient({
       return;
     }
 
-    const target50Percent = grandTotal * 0.5;
-    const isUnder45Percent = totalAdvancePaid < grandTotal * 0.45;
-
-    if (!isClearance && approvalStep === 1 && isUnder45Percent) {
-      setPayAmount(Math.max(0, target50Percent - totalAdvancePaid).toFixed(2));
-      setApprovalStep(2);
-      return;
-    }
-
-    if (approvalStep === 2) {
-      setApprovalStep(3);
-      return;
-    }
-
     setIsApproving(true);
-
-    let paymentRecord = undefined;
-    if (approvalStep === 3) {
-      let fileUrl = null;
-      if (payFile) {
-        setIsUploadingProof(true);
-        const uploadData = new FormData();
-        uploadData.append('file', payFile);
-        try {
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: uploadData
-          });
-          if (response.ok) {
-            const uploadResult = await response.json();
-            if (uploadResult.success && uploadResult.file_url) {
-              fileUrl = uploadResult.file_url;
-            } else {
-              toast({ title: "Upload Failed", description: uploadResult.message || "Failed to upload proof. Submitting without file.", variant: "destructive" });
-            }
-          } else {
-            toast({ title: "Upload Failed", description: `Server error: ${response.status}. Submitting without file.`, variant: "destructive" });
-          }
-        } catch (err) {
-          console.error("Payment proof upload failed:", err);
-          toast({ title: "Upload Error", description: "Error uploading file. Submitting without file.", variant: "destructive" });
-        } finally {
-          setIsUploadingProof(false);
-        }
-      }
-
-      paymentRecord = {
-        amount: Number(payAmount) || 0,
-        paymentMethod: payMethod,
-        notes: payNotes || 'Payment proof uploaded by client during approval.',
-        documentUrl: fileUrl
-      };
-    }
-
-    const result = await approveOrderAction(order.id, paymentRecord);
+    const result = await approveOrderAction(order.id);
     setIsApproving(false);
 
     if ('error' in result) {
@@ -248,7 +187,6 @@ export function OrderDetailsClient({
       setOrder(result);
       toast({ title: "Order Approved", description: "Thank you! The order has been approved and moved to production." });
       setIsApprovalDialogOpen(false);
-      setApprovalStep(1);
     }
   };
 
@@ -267,20 +205,6 @@ export function OrderDetailsClient({
     return rolesAllowedToViewFinancials?.includes(currentUser.role);
   }, [currentUser, rolesAllowedToViewFinancials, initialOrder.isPublic]);
 
-
-  useEffect(() => {
-    if (isApprovalDialogOpen) {
-      wasDialogOpen.current = true;
-    } else if (wasDialogOpen.current) {
-      setApprovalStep(1);
-      setPayAmount('');
-      setPayMethod('bKash');
-      setPayNotes('');
-      setPayFile(null);
-      setIsUploadingProof(false);
-      wasDialogOpen.current = false;
-    }
-  }, [isApprovalDialogOpen]);
 
   useEffect(() => {
     if (barcodeRef.current && order.id) {
@@ -1051,28 +975,7 @@ export function OrderDetailsClient({
                     height={25}
                     className="h-6 w-auto flex-shrink-0 object-contain"
                   />
-                  <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">
-                    {isApproved ? (
-                      isClearance ? "Terms & Conditions" : "Design & Terms"
-                    ) : approvalStep === 1 ? (
-                      "Terms & Conditions"
-                    ) : approvalStep === 2 ? (
-                      "Required 50% Payment"
-                    ) : (
-                      "Upload Payment Proof"
-                    )}
-                  </CardTitle>
-                  {!isApproved && (
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                      {approvalStep === 1 ? (
-                        "Please review and confirm to proceed."
-                      ) : approvalStep === 2 ? (
-                        "Pay remaining advance to proceed."
-                      ) : (
-                        "Please submit details and proof of your payment."
-                      )}
-                    </p>
-                  )}
+                  <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>
                 </div>
                 <div className="text-center sm:text-right">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Client</p>
@@ -1097,7 +1000,7 @@ export function OrderDetailsClient({
                     </p>
                   </div>
                 </div>
-              ) : approvalStep === 1 ? (
+              ) : (
                 <div className="space-y-4">
                   <label className="flex items-start gap-3.5 cursor-pointer group">
                     <input
@@ -1165,280 +1068,6 @@ export function OrderDetailsClient({
                         </>
                       ) : (
                         "Approve"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : approvalStep === 2 ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-secondary/40 border rounded-xl p-5 space-y-3.5 text-sm shadow-sm flex flex-col justify-center">
-                      <h4 className="font-semibold text-base text-foreground border-b border-border/40 pb-2 mb-1 flex items-center gap-2">
-                        <ReceiptText className="h-4.5 w-4.5 text-primary" />
-                        Advance Calculations
-                      </h4>
-                      <div className="flex justify-between text-muted-foreground"><span>Total Invoice Value:</span><span className="font-semibold text-foreground">{formatCurrency(grandTotal)}</span></div>
-                      <div className="flex justify-between text-muted-foreground"><span>Required 50% Advance:</span><span className="font-semibold text-foreground">{formatCurrency(grandTotal * 0.5)}</span></div>
-                      <div className="flex justify-between text-muted-foreground"><span>Total Previously Paid:</span><span className="font-semibold text-foreground">{formatCurrency(totalAdvancePaid)}</span></div>
-                      <div className="h-px bg-border/50 my-1" />
-                      <div className="flex justify-between text-base font-bold text-primary"><span>Remaining Due (to 50%):</span><span>{formatCurrency(Math.max(0, (grandTotal * 0.5) - totalAdvancePaid))}</span></div>
-                    </div>
-                    <div className="bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-5 space-y-4 text-sm text-amber-800 dark:text-amber-200">
-                      <h4 className="font-semibold text-base text-amber-900 dark:text-amber-100 border-b border-amber-200/50 dark:border-amber-900/40 pb-2 mb-1 flex items-center gap-2">
-                        <Building className="h-4.5 w-4.5 text-amber-700 dark:text-amber-300" />
-                        Payment Instructions
-                      </h4>
-                      <p className="text-xs">Select your payment method below to view payment instructions.</p>
-
-                      <div className="w-full border border-border/40 rounded-xl overflow-hidden bg-background">
-                        {/* UddoktaPay Tabs */}
-                        <div className="flex w-full">
-                          <button
-                            type="button"
-                            className="w-1/3 py-2.5 text-center text-[10px] sm:text-xs font-bold tracking-wider uppercase bg-[#D12053] text-white/50 cursor-not-allowed select-none"
-                            disabled
-                          >
-                            Cards
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPayMethod('bKash')}
-                            className={cn(
-                              "w-1/3 py-2.5 text-center text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer select-none",
-                              (payMethod === 'bKash' || payMethod === 'Nagad') ? "bg-[#0066A6] text-white" : "bg-[#D12053] text-white hover:bg-[#D12053]/90"
-                            )}
-                          >
-                            Mobile Banking
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPayMethod('Bank Transfer')}
-                            className={cn(
-                              "w-1/3 py-2.5 text-center text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer select-none",
-                              payMethod === 'Bank Transfer' ? "bg-[#0066A6] text-white" : "bg-[#D12053] text-white hover:bg-[#D12053]/90"
-                            )}
-                          >
-                            Net Banking
-                          </button>
-                        </div>
-
-                        {/* Tab Content Box */}
-                        <div className="p-4 space-y-4">
-                          {(payMethod === 'bKash' || payMethod === 'Nagad') && (
-                            <div className="grid grid-cols-3 gap-2.5">
-                              <button
-                                type="button"
-                                onClick={() => setPayMethod('bKash')}
-                                className={cn(
-                                  "h-14 sm:h-16 rounded-xl border flex items-center justify-center p-2 transition-all cursor-pointer bg-white dark:bg-zinc-900 hover:scale-[1.02] hover:shadow-sm relative select-none",
-                                  payMethod === 'bKash' ? "border-[#D12053] ring-1 ring-[#D12053]" : "border-border/40"
-                                )}
-                              >
-                                <img
-                                  src="/bkash_payment_logo.png"
-                                  alt="bKash"
-                                  className="h-7 sm:h-8 w-auto object-contain"
-                                />
-                                {payMethod === 'bKash' && (
-                                  <span className="absolute top-1 right-1 h-4 w-4 bg-[#D12053] rounded-full flex items-center justify-center text-[9px] text-white font-bold">✓</span>
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPayMethod('Nagad')}
-                                className={cn(
-                                  "h-14 sm:h-16 rounded-xl border flex items-center justify-center p-2 transition-all cursor-pointer bg-white dark:bg-zinc-900 hover:scale-[1.02] hover:shadow-sm relative select-none",
-                                  payMethod === 'Nagad' ? "border-[#F47321] ring-1 ring-[#F47321]" : "border-border/40"
-                                )}
-                              >
-                                <img
-                                  src="https://upload.wikimedia.org/wikipedia/commons/8/88/Nagad_Logo.svg"
-                                  alt="Nagad"
-                                  className="h-7 sm:h-8 w-auto object-contain"
-                                />
-                                {payMethod === 'Nagad' && (
-                                  <span className="absolute top-1 right-1 h-4 w-4 bg-[#F47321] rounded-full flex items-center justify-center text-[9px] text-white font-bold">✓</span>
-                                )}
-                              </button>
-                              <div className="h-14 sm:h-16 rounded-xl border border-dashed border-border/20 bg-muted/20 flex flex-col items-center justify-center p-2 opacity-40 select-none">
-                                <span className="font-bold text-[10px] text-muted-foreground">Rocket</span>
-                                <span className="text-[8px] text-muted-foreground">Disabled</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {payMethod === 'Bank Transfer' && (
-                            <div className="grid grid-cols-3 gap-2.5">
-                              <button
-                                type="button"
-                                onClick={() => setPayMethod('Bank Transfer')}
-                                className={cn(
-                                  "h-14 sm:h-16 rounded-xl border flex items-center justify-center gap-1.5 p-2 transition-all cursor-pointer bg-white dark:bg-zinc-900 hover:scale-[1.02] hover:shadow-sm relative select-none col-span-1",
-                                  payMethod === 'Bank Transfer' ? "border-blue-500 ring-1 ring-blue-500" : "border-border/40"
-                                )}
-                              >
-                                <Landmark className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                                <span className="font-bold text-[10px] sm:text-xs text-foreground tracking-tight">Bank Transfer</span>
-                                {payMethod === 'Bank Transfer' && (
-                                  <span className="absolute top-1 right-1 h-4 w-4 bg-blue-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold">✓</span>
-                                )}
-                              </button>
-                              <div className="h-14 sm:h-16 rounded-xl border border-dashed border-border/20 bg-muted/20 flex flex-col items-center justify-center p-2 opacity-40 select-none">
-                                <span className="font-bold text-[10px] text-muted-foreground">Card</span>
-                                <span className="text-[8px] text-muted-foreground">Disabled</span>
-                              </div>
-                              <div className="h-14 sm:h-16 rounded-xl border border-dashed border-border/20 bg-muted/20 flex flex-col items-center justify-center p-2 opacity-40 select-none">
-                                <span className="font-bold text-[10px] text-muted-foreground">MFS</span>
-                                <span className="text-[8px] text-muted-foreground">Disabled</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Selected Method Details */}
-                          <div className="p-3 bg-secondary/30 border border-border/30 rounded-xl space-y-1 text-left min-h-[95px] flex flex-col justify-center">
-                            {payMethod === 'bKash' && (
-                              <div className="space-y-1">
-                                <h5 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5 pb-0.5 border-b border-border/20">
-                                  bKash Merchant Account Details
-                                </h5>
-                                <div className="pt-1 text-xs space-y-0.5 text-muted-foreground">
-                                  <div><strong>Merchant Number:</strong> <span className="font-mono text-sm font-bold text-foreground">01919-760626</span></div>
-                                  <div><strong>Payment Type:</strong> Choose Merchant Pay</div>
-                                </div>
-                              </div>
-                            )}
-                            {payMethod === 'Nagad' && (
-                              <div className="space-y-1">
-                                <h5 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5 pb-0.5 border-b border-border/20">
-                                  Nagad Personal Account Details
-                                </h5>
-                                <div className="pt-1 text-xs space-y-0.5 text-muted-foreground">
-                                  <div><strong>Personal Number:</strong> <span className="font-mono text-sm font-bold text-foreground">01919-760626</span></div>
-                                  <div><strong>Payment Type:</strong> Send Money</div>
-                                </div>
-                              </div>
-                            )}
-                            {payMethod === 'Bank Transfer' && (
-                              <div className="space-y-1">
-                                <h5 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-1.5 pb-0.5 border-b border-border/20">
-                                  Bank Transfer Details
-                                </h5>
-                                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs pt-1 text-muted-foreground">
-                                  <div><span className="text-[9px] text-muted-foreground block leading-none">Bank Name</span><span className="font-medium text-foreground">City Bank</span></div>
-                                  <div><span className="text-[9px] text-muted-foreground block leading-none">Branch</span><span className="font-medium text-foreground">Jatrabari Branch</span></div>
-                                  <div className="col-span-2"><span className="text-[9px] text-muted-foreground block leading-none">Account Name</span><span className="font-medium text-foreground">Color Hut</span></div>
-                                  <div className="col-span-2"><span className="text-[9px] text-muted-foreground block leading-none">Account No</span><span className="font-mono font-bold text-foreground">1202456789001</span></div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-
-                  <div className="pt-4 border-t border-border/30 flex justify-end gap-3">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => setApprovalStep(1)}
-                      className="font-medium px-6"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      onClick={handleApproveOrder}
-                      size="lg"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 shadow-md transition-all"
-                    >
-                      I Have Paid, Upload Proof
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="inlinePayMethod" className="text-sm font-medium">Payment Method</Label>
-                        <select
-                          id="inlinePayMethod"
-                          value={payMethod}
-                          onChange={(e) => setPayMethod(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        >
-                          <option value="bKash">bKash</option>
-                          <option value="Nagad">Nagad</option>
-                          <option value="Rocket">Rocket</option>
-                          <option value="Bank Transfer">Bank Transfer</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="inlinePayAmount" className="text-sm font-medium">Amount Paid (BDT)</Label>
-                        <input
-                          id="inlinePayAmount"
-                          type="number"
-                          value={payAmount}
-                          onChange={(e) => setPayAmount(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="inlinePayNotes" className="text-sm font-medium">Transaction ID / Reference Notes</Label>
-                        <input
-                          id="inlinePayNotes"
-                          type="text"
-                          placeholder="e.g. TrxID: 9J87HG65FD"
-                          value={payNotes}
-                          onChange={(e) => setPayNotes(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="inlinePayFile" className="text-sm font-medium">Upload Proof File (Image/PDF)</Label>
-                        <input
-                          id="inlinePayFile"
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) setPayFile(file);
-                          }}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-border/30 flex justify-end gap-3">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => setApprovalStep(2)}
-                      disabled={isApproving || isUploadingProof}
-                      className="font-medium px-6"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      onClick={handleApproveOrder}
-                      disabled={isApproving || isUploadingProof || !payAmount || Number(payAmount) <= 0}
-                      size="lg"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 shadow-md transition-all"
-                    >
-                      {isApproving || isUploadingProof ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {isUploadingProof ? "Uploading Proof..." : "Approving..."}
-                        </>
-                      ) : (
-                        "Submit & Approve"
                       )}
                     </Button>
                   </div>
@@ -1571,372 +1200,91 @@ export function OrderDetailsClient({
             onPointerDownOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
-            {approvalStep === 1 && (
-              <>
-                <DialogTitle className="text-lg font-bold text-foreground">
-                  Terms & Conditions
-                </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground -mt-3">
-                  Please review and confirm to proceed.
-                </DialogDescription>
-                <div className="space-y-4 pt-2">
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={designChecked}
-                      onChange={(e) => setDesignChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                      {isClearance ? (
-                        <>
-                          <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </>
-                      ) : (
-                        <>
-                          <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </>
-                      )}
-                    </span>
-                  </label>
+            <DialogTitle className="text-lg font-bold text-foreground">
+              Terms & Conditions
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground -mt-3">
+              Please review and confirm to proceed.
+            </DialogDescription>
+            <div className="space-y-4 pt-2">
+              <label className="flex items-start gap-3.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={designChecked}
+                  onChange={(e) => setDesignChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                />
+                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                  {isClearance ? (
+                    <>
+                      <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                    </>
+                  )}
+                </span>
+              </label>
 
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={paymentChecked}
-                      onChange={(e) => setPaymentChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                      <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
-                    </span>
-                  </label>
+              <label className="flex items-start gap-3.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={paymentChecked}
+                  onChange={(e) => setPaymentChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                />
+                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                  <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
+                </span>
+              </label>
 
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={noModificationChecked}
-                      onChange={(e) => setNoModificationChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                      {isClearance ? (
-                        <>
-                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
-                        </>
-                      ) : (
-                        <>
-                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
-                        </>
-                      )}
-                    </span>
-                  </label>
+              <label className="flex items-start gap-3.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={noModificationChecked}
+                  onChange={(e) => setNoModificationChecked(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                />
+                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                  {isClearance ? (
+                    <>
+                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
+                    </>
+                  ) : (
+                    <>
+                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                    </>
+                  )}
+                </span>
+              </label>
 
-                  <div className="pt-4 flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsApprovalDialogOpen(false)}
-                      disabled={isApproving}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleApproveOrder}
-                      disabled={isApproving || !designChecked || !paymentChecked || !noModificationChecked}
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-md hover:shadow-primary/30 transition-all duration-200"
-                    >
-                      {isApproving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Approving...
-                        </>
-                      ) : (
-                        "Approve"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {approvalStep === 2 && (
-              <>
-                <DialogTitle className="text-lg font-bold text-foreground">
-                  Required 50% Payment
-                </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground -mt-3">
-                  Pay remaining advance to proceed.
-                </DialogDescription>
-                <div className="space-y-4 pt-2">
-                  <div className="bg-secondary/40 border rounded-lg p-3.5 space-y-2 text-sm">
-                    <div className="flex justify-between text-muted-foreground"><span>Total Invoice Value:</span><span className="font-semibold text-foreground">{formatCurrency(grandTotal)}</span></div>
-                    <div className="flex justify-between text-muted-foreground"><span>Required 50% Advance:</span><span className="font-semibold text-foreground">{formatCurrency(grandTotal * 0.5)}</span></div>
-                    <div className="flex justify-between text-muted-foreground"><span>Total Previously Paid:</span><span className="font-semibold text-foreground">{formatCurrency(totalAdvancePaid)}</span></div>
-                    <div className="h-px bg-border my-1.5" />
-                    <div className="flex justify-between text-md font-bold text-primary"><span>Remaining Due (to 50%):</span><span>{formatCurrency(Math.max(0, (grandTotal * 0.5) - totalAdvancePaid))}</span></div>
-                  </div>
-
-                  <div className="bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200 dark:border-amber-900/30 rounded-lg p-3.5 space-y-3 text-xs text-amber-800 dark:text-amber-200">
-                    <h5 className="font-bold uppercase tracking-wider">Payment Instructions</h5>
-                    <p className="text-[11px] text-amber-700 dark:text-amber-300">Select your payment method below to view payment instructions.</p>
-
-                    <div className="w-full border border-border/40 rounded-lg overflow-hidden bg-background">
-                      {/* UddoktaPay Tabs */}
-                      <div className="flex w-full">
-                        <button
-                          type="button"
-                          className="w-1/3 py-2 text-center text-[9px] sm:text-xs font-bold tracking-wider uppercase bg-[#D12053] text-white/50 cursor-not-allowed select-none"
-                          disabled
-                        >
-                          Cards
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPayMethod('bKash')}
-                          className={cn(
-                            "w-1/3 py-2 text-center text-[9px] sm:text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer select-none",
-                            (payMethod === 'bKash' || payMethod === 'Nagad') ? "bg-[#0066A6] text-white" : "bg-[#D12053] text-white hover:bg-[#D12053]/90"
-                          )}
-                        >
-                          Mobile Banking
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPayMethod('Bank Transfer')}
-                          className={cn(
-                            "w-1/3 py-2 text-center text-[9px] sm:text-xs font-bold tracking-wider uppercase transition-colors cursor-pointer select-none",
-                            payMethod === 'Bank Transfer' ? "bg-[#0066A6] text-white" : "bg-[#D12053] text-white hover:bg-[#D12053]/90"
-                          )}
-                        >
-                          Net Banking
-                        </button>
-                      </div>
-
-                      {/* Tab Content Box */}
-                      <div className="p-3 space-y-3">
-                        {(payMethod === 'bKash' || payMethod === 'Nagad') && (
-                          <div className="grid grid-cols-3 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setPayMethod('bKash')}
-                              className={cn(
-                                "h-12 rounded-lg border flex items-center justify-center p-1.5 transition-all cursor-pointer bg-white dark:bg-zinc-900 hover:scale-[1.02] hover:shadow-sm relative select-none",
-                                payMethod === 'bKash' ? "border-[#D12053] ring-1 ring-[#D12053]" : "border-border/40"
-                              )}
-                            >
-                              <img
-                                src="/bkash_payment_logo.png"
-                                alt="bKash"
-                                className="h-6 w-auto object-contain"
-                              />
-                              {payMethod === 'bKash' && (
-                                <span className="absolute top-0.5 right-0.5 h-3.5 w-3.5 bg-[#D12053] rounded-full flex items-center justify-center text-[8px] text-white font-bold">✓</span>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPayMethod('Nagad')}
-                              className={cn(
-                                "h-12 rounded-lg border flex items-center justify-center p-1.5 transition-all cursor-pointer bg-white dark:bg-zinc-900 hover:scale-[1.02] hover:shadow-sm relative select-none",
-                                payMethod === 'Nagad' ? "border-[#F47321] ring-1 ring-[#F47321]" : "border-border/40"
-                              )}
-                            >
-                              <img
-                                src="https://upload.wikimedia.org/wikipedia/commons/8/88/Nagad_Logo.svg"
-                                alt="Nagad"
-                                className="h-6 w-auto object-contain"
-                              />
-                              {payMethod === 'Nagad' && (
-                                <span className="absolute top-0.5 right-0.5 h-3.5 w-3.5 bg-[#F47321] rounded-full flex items-center justify-center text-[8px] text-white font-bold">✓</span>
-                              )}
-                            </button>
-                            <div className="h-12 rounded-lg border border-dashed border-border/20 bg-muted/20 flex flex-col items-center justify-center p-1.5 opacity-40 select-none">
-                              <span className="font-bold text-[9px] text-muted-foreground leading-none">Rocket</span>
-                              <span className="text-[7px] text-muted-foreground">Disabled</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {payMethod === 'Bank Transfer' && (
-                          <div className="grid grid-cols-3 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setPayMethod('Bank Transfer')}
-                              className={cn(
-                                "h-12 rounded-lg border flex items-center justify-center gap-1 p-1.5 transition-all cursor-pointer bg-white dark:bg-zinc-900 hover:scale-[1.02] hover:shadow-sm relative select-none col-span-1",
-                                payMethod === 'Bank Transfer' ? "border-blue-500 ring-1 ring-blue-500" : "border-border/40"
-                              )}
-                            >
-                              <Landmark className="h-4.5 w-4.5 text-blue-500 flex-shrink-0" />
-                              <span className="font-bold text-[9px] text-foreground tracking-tight leading-none text-center">Bank Transfer</span>
-                              {payMethod === 'Bank Transfer' && (
-                                <span className="absolute top-0.5 right-0.5 h-3.5 w-3.5 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold">✓</span>
-                              )}
-                            </button>
-                            <div className="h-12 rounded-lg border border-dashed border-border/20 bg-muted/20 flex flex-col items-center justify-center p-1.5 opacity-40 select-none">
-                              <span className="font-bold text-[9px] text-muted-foreground leading-none">Card</span>
-                              <span className="text-[7px] text-muted-foreground">Disabled</span>
-                            </div>
-                            <div className="h-12 rounded-lg border border-dashed border-border/20 bg-muted/20 flex flex-col items-center justify-center p-1.5 opacity-40 select-none">
-                              <span className="font-bold text-[9px] text-muted-foreground leading-none">MFS</span>
-                              <span className="text-[7px] text-muted-foreground">Disabled</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Selected Method Details */}
-                        <div className="p-2.5 bg-secondary/30 border border-border/30 rounded-lg space-y-0.5 text-left min-h-[85px] flex flex-col justify-center text-[10px]">
-                          {payMethod === 'bKash' && (
-                            <div className="space-y-0.5">
-                              <h6 className="font-bold text-[9px] uppercase tracking-wider text-primary pb-0.5 border-b border-border/15">
-                                bKash Merchant Account Details
-                              </h6>
-                              <div className="pt-0.5 text-muted-foreground space-y-0.5">
-                                <div><strong>Merchant No:</strong> <span className="font-mono text-xs font-bold text-foreground">01919-760626</span></div>
-                                <div><strong>Type:</strong> Choose Merchant Pay</div>
-                              </div>
-                            </div>
-                          )}
-                          {payMethod === 'Nagad' && (
-                            <div className="space-y-0.5">
-                              <h6 className="font-bold text-[9px] uppercase tracking-wider text-primary pb-0.5 border-b border-border/15">
-                                Nagad Personal Account Details
-                              </h6>
-                              <div className="pt-0.5 text-muted-foreground space-y-0.5">
-                                <div><strong>Personal No:</strong> <span className="font-mono text-xs font-bold text-foreground">01919-760626</span></div>
-                                <div><strong>Type:</strong> Send Money</div>
-                              </div>
-                            </div>
-                          )}
-                          {payMethod === 'Bank Transfer' && (
-                            <div className="space-y-0.5">
-                              <h6 className="font-bold text-[9px] uppercase tracking-wider text-primary pb-0.5 border-b border-border/15">
-                                Bank Transfer Details
-                              </h6>
-                              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-muted-foreground">
-                                <div><span className="text-[8px] text-muted-foreground block leading-none">Bank</span><span className="font-medium text-foreground">City Bank</span></div>
-                                <div><span className="text-[8px] text-muted-foreground block leading-none">Branch</span><span className="font-medium text-foreground">Jatrabari</span></div>
-                                <div className="col-span-2"><span className="text-[8px] text-muted-foreground block leading-none">Name</span><span className="font-medium text-foreground">Color Hut</span></div>
-                                <div className="col-span-2"><span className="text-[8px] text-muted-foreground block leading-none">A/C No</span><span className="font-mono font-bold text-foreground">1202456789001</span></div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setApprovalStep(1)}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      onClick={handleApproveOrder}
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-md transition-all"
-                    >
-                      I Have Paid, Upload Proof
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {approvalStep === 3 && (
-              <>
-                <DialogTitle className="text-lg font-bold text-foreground">
-                  Upload Payment Proof
-                </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground -mt-3">
-                  Please submit details and proof of your payment.
-                </DialogDescription>
-                <div className="space-y-4 pt-2 text-sm">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="payMethod">Payment Method</Label>
-                    <select
-                      id="payMethod"
-                      value={payMethod}
-                      onChange={(e) => setPayMethod(e.target.value)}
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                      <option value="bKash">bKash</option>
-                      <option value="Nagad">Nagad</option>
-                      <option value="Rocket">Rocket</option>
-                      <option value="Bank Transfer">Bank Transfer</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="payAmount">Amount Paid (BDT)</Label>
-                    <input
-                      id="payAmount"
-                      type="number"
-                      value={payAmount}
-                      onChange={(e) => setPayAmount(e.target.value)}
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="payNotes">Transaction ID / Reference Notes</Label>
-                    <input
-                      id="payNotes"
-                      type="text"
-                      placeholder="e.g. TrxID: 9J87HG65FD"
-                      value={payNotes}
-                      onChange={(e) => setPayNotes(e.target.value)}
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="payFile">Upload Proof File (Image/PDF)</Label>
-                    <input
-                      id="payFile"
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) setPayFile(file);
-                      }}
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="pt-4 flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setApprovalStep(2)}
-                      disabled={isApproving || isUploadingProof}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      onClick={handleApproveOrder}
-                      disabled={isApproving || isUploadingProof || !payAmount || Number(payAmount) <= 0}
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-md transition-all"
-                    >
-                      {isApproving || isUploadingProof ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {isUploadingProof ? "Uploading Proof..." : "Approving..."}
-                        </>
-                      ) : (
-                        "Submit & Approve"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
+              <div className="pt-4 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsApprovalDialogOpen(false)}
+                  disabled={isApproving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleApproveOrder}
+                  disabled={isApproving || !designChecked || !paymentChecked || !noModificationChecked}
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-md hover:shadow-primary/30 transition-all duration-200"
+                >
+                  {isApproving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    "Approve"
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}
