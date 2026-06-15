@@ -172,6 +172,11 @@ export function OrderDetailsClient({
   }, [isClearance, isDocsApproved, isDesignApproved]);
 
   const handleApproveOrder = async () => {
+    if (!hasRequiredPayment) {
+      toast({ title: "Insufficient Payment", description: `Required 50% payment for approval. Current payment is ${paymentPercentage.toFixed(1)}%.`, variant: "destructive" });
+      return;
+    }
+
     if (!designChecked || !paymentChecked || !noModificationChecked) {
       toast({ title: "Please accept all terms", description: "You must check all options to approve the order.", variant: "destructive" });
       return;
@@ -590,6 +595,8 @@ export function OrderDetailsClient({
   const amountDue = grandTotal - totalAdvancePaid;
 
   const showPaidBadge = grandTotal > 0 && amountDue <= 0.01;
+  const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
+  const hasRequiredPayment = paymentPercentage >= 45;
 
   const renderStatusHistory = () => {
     if (hideStatusHeader) return null;
@@ -1018,6 +1025,16 @@ export function OrderDetailsClient({
                     </p>
                   </div>
                 </div>
+              ) : !hasRequiredPayment ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-amber-900 dark:text-amber-100">Required 50% payment for approval</h4>
+                      <p className="mt-1">A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid. Please complete the payment to proceed.</p>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <label className="flex items-start gap-3.5 cursor-pointer group">
@@ -1218,91 +1235,122 @@ export function OrderDetailsClient({
             onPointerDownOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
-            <DialogTitle className="text-lg font-bold text-foreground">
-              Terms & Conditions
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground -mt-3">
-              Please review and confirm to proceed.
-            </DialogDescription>
-            <div className="space-y-4 pt-2">
-              <label className="flex items-start gap-3.5 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={designChecked}
-                  onChange={(e) => setDesignChecked(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                />
-                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                  {isClearance ? (
-                    <>
-                      <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                    </>
-                  ) : (
-                    <>
-                      <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                    </>
-                  )}
-                </span>
-              </label>
+            {!hasRequiredPayment ? (
+              <>
+                <DialogTitle className="text-lg font-bold text-foreground">
+                  Required 50% payment for approval
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground -mt-3">
+                  Please complete the payment to proceed.
+                </DialogDescription>
+                <div className="space-y-4 pt-2">
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-amber-900 dark:text-amber-100">Insufficient Payment</h4>
+                      <p className="mt-1">A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid.</p>
+                    </div>
+                  </div>
+                  <div className="pt-4 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsApprovalDialogOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <DialogTitle className="text-lg font-bold text-foreground">
+                  Terms & Conditions
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground -mt-3">
+                  Please review and confirm to proceed.
+                </DialogDescription>
+                <div className="space-y-4 pt-2">
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={designChecked}
+                      onChange={(e) => setDesignChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                    />
+                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                      {isClearance ? (
+                        <>
+                          <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                        </>
+                      ) : (
+                        <>
+                          <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
+                        </>
+                      )}
+                    </span>
+                  </label>
 
-              <label className="flex items-start gap-3.5 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={paymentChecked}
-                  onChange={(e) => setPaymentChecked(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                />
-                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                  <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
-                </span>
-              </label>
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={paymentChecked}
+                      onChange={(e) => setPaymentChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                    />
+                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                      <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
+                    </span>
+                  </label>
 
-              <label className="flex items-start gap-3.5 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={noModificationChecked}
-                  onChange={(e) => setNoModificationChecked(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                />
-                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                  {isClearance ? (
-                    <>
-                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
-                    </>
-                  ) : (
-                    <>
-                      <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
-                    </>
-                  )}
-                </span>
-              </label>
+                  <label className="flex items-start gap-3.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={noModificationChecked}
+                      onChange={(e) => setNoModificationChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                    />
+                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                      {isClearance ? (
+                        <>
+                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
+                        </>
+                      ) : (
+                        <>
+                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                        </>
+                      )}
+                    </span>
+                  </label>
 
-              <div className="pt-4 flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsApprovalDialogOpen(false)}
-                  disabled={isApproving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleApproveOrder}
-                  disabled={isApproving || !designChecked || !paymentChecked || !noModificationChecked}
-                  size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-md hover:shadow-primary/30 transition-all duration-200"
-                >
-                  {isApproving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Approving...
-                    </>
-                  ) : (
-                    "Approve"
-                  )}
-                </Button>
-              </div>
-            </div>
+                  <div className="pt-4 flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsApprovalDialogOpen(false)}
+                      disabled={isApproving}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleApproveOrder}
+                      disabled={isApproving || !designChecked || !paymentChecked || !noModificationChecked}
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 shadow-md hover:shadow-primary/30 transition-all duration-200"
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        "Approve"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       )}
