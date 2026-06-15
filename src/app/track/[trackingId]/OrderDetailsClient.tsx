@@ -982,6 +982,16 @@ export function OrderDetailsClient({
                   ) : (grandTotal > 0 && amountDue > 0.01) && (
                     <><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
                   )}
+
+                  {!hasRequiredPayment && (
+                    <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5 print:hidden">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-triangle-alert h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                      <div>
+                        <h4 className="font-semibold text-amber-900 dark:text-amber-100">Insufficient Payment</h4>
+                        <p className="mt-1">A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
