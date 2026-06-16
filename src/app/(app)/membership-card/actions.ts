@@ -209,7 +209,7 @@ export async function transferGiftToCourierAction(
       ]
     };
 
-    await sendTelegramMessage(telegramMessage, courierReplyMarkup);
+    sendTelegramMessage(telegramMessage, courierReplyMarkup);
 
     revalidatePath("/(app)/membership-card");
 

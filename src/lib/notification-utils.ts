@@ -62,6 +62,9 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
     let allSuccessful = true;
     for (const chatId of chatIds) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -73,9 +76,11 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
             parse_mode: 'HTML',
             reply_markup: sanitizedReplyMarkup,
           }),
-          cache: 'no-store'
+          cache: 'no-store',
+          signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         const responseData = await response.json();
         if (responseData.ok) {
           console.log(`Telegram message sent successfully to chat ID: ${chatId}.`);

@@ -295,7 +295,7 @@ export async function transferToCourierAction(
       ]
     };
 
-    await sendTelegramMessage(telegramMessage, courierReplyMarkup);
+    sendTelegramMessage(telegramMessage, courierReplyMarkup);
 
     revalidatePath("/(app)/projects");
     revalidatePath(`/track/${order.id}`);

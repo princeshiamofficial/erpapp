@@ -363,7 +363,7 @@ export const addOrder = async (orderData: {
         ]
       };
 
-      await sendTelegramMessage(message, paymentReplyMarkup);
+      sendTelegramMessage(message, paymentReplyMarkup);
     }
 
     const mysqlCreatedAt = format(parseISO(finalCreatedAt), 'yyyy-MM-dd HH:mm:ss');
@@ -566,7 +566,7 @@ export async function updateAdvancePaymentStatus(
             ]
           };
 
-          await sendTelegramMessage(message, paymentReplyMarkup);
+          sendTelegramMessage(message, paymentReplyMarkup);
         }
       }
 

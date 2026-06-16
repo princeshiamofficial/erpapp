@@ -408,7 +408,7 @@ export async function updateOrderAction(
         ]
       };
 
-      await sendTelegramMessage(message, paymentReplyMarkup);
+      sendTelegramMessage(message, paymentReplyMarkup);
 
     } else if (updates.advancePayments) {
       finalUpdates.advancePayments = updates.advancePayments;
