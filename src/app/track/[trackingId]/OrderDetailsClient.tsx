@@ -1377,7 +1377,7 @@ export function OrderDetailsClient({
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
                               <Image
-                                src="/pm/bkash.png"
+                                src="/pm/bkash-payment.png"
                                 alt="Payment bKash"
                                 width={22}
                                 height={22}
