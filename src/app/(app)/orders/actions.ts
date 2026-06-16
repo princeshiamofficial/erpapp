@@ -24,6 +24,7 @@ import { addPaymentToHistory } from '@/lib/payment-history-service';
 import { sendTelegramMessage } from "@/lib/notification-utils"; // Import the telegram helper
 import { getIO } from "@/lib/socket-io";
 import { getAppUrl } from "@/lib/server-utils";
+import { getClientPayments, deleteClientPayment, deleteClientPaymentsBatch } from "@/lib/client-payment-service";
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -686,5 +687,25 @@ export async function getClientDetailsAction(clientId: string) {
   } catch (error) {
     console.error("Error in getClientDetailsAction server action:", error);
     return { success: false };
+  }
+}
+
+export async function getClientPaymentsAction(orderId: string) {
+  try {
+    const payments = await getClientPayments(orderId);
+    return { success: true, payments };
+  } catch (error) {
+    console.error("Error in getClientPaymentsAction server action:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch client payments." };
+  }
+}
+
+export async function deleteClientPaymentsBatchAction(ids: string[]) {
+  try {
+    const success = await deleteClientPaymentsBatch(ids);
+    return { success };
+  } catch (error) {
+    console.error("Error in deleteClientPaymentsBatchAction server action:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to delete client payments." };
   }
 }

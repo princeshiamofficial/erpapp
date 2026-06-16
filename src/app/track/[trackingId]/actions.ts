@@ -8,6 +8,8 @@ import type { Comment, TrackingLink, User, UserRole } from "@/types";
 import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered, deleteComment as deleteCommentFromOrder, updateOrder, getOrderById } from "@/lib/order-service";
 import { DELIVERED_STATUS_ID } from '@/lib/status-constants';
 import { v4 as uuidv4 } from 'uuid';
+import { addClientPayment, getClientPayments } from "@/lib/client-payment-service";
+import { getIO } from "@/lib/socket-io";
 
 // For top-level comments from the main form (typically by client or general update)
 export async function submitCommentAction(
@@ -43,6 +45,12 @@ export async function submitCommentAction(
     }
 
     revalidatePath(`/track/${orderId}`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'comment' });
+    }
+
     return updatedOrder;
   } catch (error) {
     console.error("Error in submitCommentAction:", error);
@@ -81,6 +89,12 @@ export async function submitReplyAction(
     }
 
     revalidatePath(`/track/${orderId}`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'reply' });
+    }
+
     return updatedOrder;
   } catch (error) {
     console.error("Error in submitReplyAction (authenticated):", error);
@@ -115,6 +129,12 @@ export async function submitClientReplyAction(
     }
 
     revalidatePath(`/track/${orderId}`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'client-reply' });
+    }
+
     return updatedOrder;
   } catch (error) {
     console.error("Error in submitClientReplyAction:", error);
@@ -153,6 +173,12 @@ export async function toggleOrderCommentReactionAction(
     }
 
     revalidatePath(`/track/${orderId}`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'reaction' });
+    }
+
     return updatedOrder;
   } catch (error) {
     console.error("Error in toggleOrderCommentReactionAction:", error);
@@ -182,6 +208,12 @@ export async function deleteCommentAction(
       return { error: "Failed to delete comment from order." };
     }
     revalidatePath(`/track/${orderId}`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'comment-deleted' });
+    }
+
     return updatedOrder;
   } catch (error) {
     console.error("Error in deleteCommentAction:", error);
@@ -282,9 +314,136 @@ export async function approveOrderAction(orderId: string): Promise<TrackingLink 
 
     revalidatePath(`/track/${orderId}`);
     revalidatePath(`/client`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'approved' });
+      io.emit("project-updated", { id: orderId });
+    }
+
     return updatedOrder;
   } catch (error) {
     console.error("Error in approveOrderAction:", error);
     return { error: error instanceof Error ? error.message : "Failed to approve order." };
   }
 }
+
+export async function submitPaymentProofAction(
+  orderId: string,
+  paymentData: {
+    amount: number;
+    paymentMethod: string;
+    notes: string;
+    documentUrl?: string | null;
+  }
+): Promise<TrackingLink | { error: string }> {
+  try {
+    const order = await getOrderById(orderId);
+    if (!order) {
+      return { error: "Order not found." };
+    }
+
+    // Save payment proof to the separate client_payments table
+    await addClientPayment({
+      orderId,
+      amount: paymentData.amount,
+      paymentMethod: paymentData.paymentMethod,
+      notes: paymentData.notes,
+      documentUrl: paymentData.documentUrl || null,
+      recordedByUserId: 'client-proof',
+      recordedByUserName: 'Client'
+    });
+
+    // Auto-post a comment to notify the team
+    try {
+      const commentText = `Submitted payment proof of BDT ${paymentData.amount.toLocaleString()} via ${paymentData.paymentMethod}. Notes/TrxID: ${paymentData.notes}${paymentData.documentUrl ? ` [View Receipt](${paymentData.documentUrl})` : ''}`;
+      await addCommentToOrder(orderId, {
+        userName: 'Client',
+        userRole: 'Client',
+        text: commentText,
+        isInternal: false,
+      });
+    } catch (commentError) {
+      console.error("Failed to auto-post comment for payment proof:", commentError);
+    }
+
+    const updatedOrder = await getOrderById(orderId);
+    if (!updatedOrder) {
+      return { error: "Failed to fetch updated order." };
+    }
+
+    revalidatePath(`/track/${orderId}`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'payment-proof' });
+    }
+
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in submitPaymentProofAction:", error);
+    return { error: error instanceof Error ? error.message : "Failed to submit payment proof." };
+  }
+}
+
+export async function removeOrderApprovalAction(orderId: string): Promise<TrackingLink | { error: string }> {
+  try {
+    const order = await getOrderById(orderId);
+    if (!order) {
+      return { error: "Order not found." };
+    }
+
+    const updatedHistory = (order.statusHistory || []).filter(
+      entry => entry.changedByUserId !== 'client-approved-docs' && entry.changedByUserId !== 'client-approved-design'
+    );
+
+    const success = await updateOrder(orderId, {
+      statusHistory: updatedHistory
+    });
+
+    if (!success) {
+      return { error: "Failed to update order status." };
+    }
+
+    const updatedOrder = await getOrderById(orderId);
+    if (!updatedOrder) {
+      return { error: "Failed to fetch updated order." };
+    }
+
+    revalidatePath(`/track/${orderId}`);
+    revalidatePath(`/client`);
+
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'approval-removed' });
+      io.emit("project-updated", { id: orderId });
+    }
+
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in removeOrderApprovalAction:", error);
+    return { error: error instanceof Error ? error.message : "Failed to remove order approval." };
+  }
+}
+
+export async function hasPendingClientPaymentAction(orderId: string): Promise<boolean> {
+  try {
+    const payments = await getClientPayments(orderId);
+    return payments.length > 0;
+  } catch (error) {
+    console.error("Error in hasPendingClientPaymentAction:", error);
+    return false;
+  }
+}
+
+export async function getOrderByIdAction(orderId: string): Promise<TrackingLink | null> {
+  try {
+    const order = await getOrderById(orderId);
+    if (!order) return null;
+    return JSON.parse(JSON.stringify(order));
+  } catch (error) {
+    console.error("Error in getOrderByIdAction:", error);
+    return null;
+  }
+}
+

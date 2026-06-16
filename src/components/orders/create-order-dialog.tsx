@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface CreateOrderDialogProps {
   currentUser: User;
@@ -699,109 +700,82 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
             <div className="space-y-3 mt-4 border-t border-border pt-4">
               <Label className="text-lg font-semibold">Order Items *</Label>
-              {orderItems.map((item) => (
-                <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
-                    <div className="space-y-1">
-                      <Label htmlFor={`model-${item.id}`}>Model *</Label>
-                      <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={popoverOpenStates[item.id] || false}
-                            className="w-full justify-between bg-background"
-                            disabled={isLoadingOptions || modelOptions.length === 0}
-                          >
-                            <span className="flex items-center gap-2 flex-1 text-left whitespace-nowrap overflow-hidden">
-                              {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
-                                <Avatar className="h-5 w-5 rounded-sm">
-                                  <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
-                                  <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                                </Avatar>
-                              ) : null}
-                              <span className="truncate">
-                                {item.model
-                                  ? modelOptions.find((option) => option.name === item.model)?.name
-                                  : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
-                              </span>
-                            </span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
-                          <Command>
-                            <CommandInput placeholder="Search model..." />
-                            <CommandList>
-                              <CommandEmpty>No model found.</CommandEmpty>
-                              <CommandGroup>
-                                {modelOptions.map((option) => (
-                                  <CommandItem
-                                    key={option.id}
-                                    value={option.name}
-                                    onSelect={(currentValue) => {
-                                      handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue);
-                                      togglePopover(item.id, false);
-                                    }}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "h-4 w-4 shrink-0",
-                                        item.model === option.name ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <Avatar className="h-8 w-8 rounded-sm shrink-0">
-                                      <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
+              <div className="border rounded-md bg-background overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[45%]">Model *</TableHead>
+                      <TableHead className="w-[15%]">Quantity *</TableHead>
+                      <TableHead className="w-[20%]">Lamination *</TableHead>
+                      <TableHead className="w-[15%] text-right pr-4">Total Price</TableHead>
+                      <TableHead className="w-[5%] text-right"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orderItems.map((item) => (
+                      <TableRow key={item.id} className="hover:bg-muted/30">
+                        <TableCell className="p-2 align-middle">
+                          <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="w-full justify-between bg-background text-sm" disabled={isLoadingOptions || modelOptions.length === 0}>
+                                <span className="flex items-center gap-1.5 flex-1 text-left whitespace-nowrap overflow-hidden">
+                                  {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
+                                    <Avatar className="h-4 w-4 rounded-sm shrink-0">
+                                      <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
                                       <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
                                     </Avatar>
-                                    <span className="flex-1 truncate">{option.name}</span>
-                                    {option.isReadyMade && <span className="text-xs text-green-600 font-semibold">(Stock: {option.stockCount ?? 0})</span>}
-                                    {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`quantity-${item.id}`}>Quantity *</Label>
-                      <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required className="bg-background" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`lamination-${item.id}`}>Lamination *</Label>
-                      <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0}>
-                        <SelectTrigger id={`lamination-${item.id}`} className="bg-background">
-                          <SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {laminationOptions.map(option => (
-                            <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
-                          ))}
-                          {laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Total Price</Label>
-                      <Input value={formatCurrencyBdt(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveItem(item.id)}
-                      disabled={isSubmitting || orderItems.length <= 1}
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive-foreground h-10 w-10"
-                      title="Remove item"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                                  ) : null}
+                                  <span className="truncate">
+                                    {item.model ? modelOptions.find((option) => option.name === item.model)?.name : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                                  </span>
+                                </span>
+                                <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
+                              <Command>
+                                <CommandInput placeholder="Search model..." />
+                                <CommandList>
+                                  <CommandEmpty>No model found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {modelOptions.map((option) => (
+                                      <CommandItem key={option.id} value={option.name} onSelect={(currentValue) => { handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue); togglePopover(item.id, false); }} className="flex items-center gap-2">
+                                        <Check className={cn("h-4 w-4 shrink-0", item.model === option.name ? "opacity-100" : "opacity-0")} />
+                                        <Avatar className="h-8 w-8 rounded-sm shrink-0">
+                                          <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
+                                          <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                        </Avatar>
+                                        <span className="flex-1 truncate">{option.name}</span>
+                                        {option.isReadyMade && <span className="text-xs text-green-600 font-semibold">(Stock: {option.stockCount ?? 0})</span>}
+                                        {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </TableCell>
+                        <TableCell className="p-2 align-middle">
+                          <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required className="bg-background text-sm h-9" />
+                        </TableCell>
+                        <TableCell className="p-2 align-middle">
+                          <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0}>
+                            <SelectTrigger id={`lamination-${item.id}`} className="bg-background text-sm h-9"><SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} /></SelectTrigger>
+                            <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name} className="text-sm">{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations.</div>}</SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="p-2 align-middle text-right pr-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                          {formatCurrencyBdt(item.lineItemTotalPrice)}
+                        </TableCell>
+                        <TableCell className="p-2 align-middle text-right">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isSubmitting || orderItems.length <= 1} className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground" title="Remove item"><Trash2 className="h-4 w-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               {(isLoadingOptions && (orderItems.length === 0 || (modelOptions.length === 0 || laminationOptions.length === 0 || paymentMethodOptions.length === 0))) &&
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

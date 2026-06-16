@@ -22,7 +22,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         const socketInstance = io(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin, {
             path: "/api/socket",
-            transports: ["websocket"],
+            transports: ["polling", "websocket"],
         });
 
         socketInstance.on("connect", () => {

@@ -14,6 +14,9 @@ import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, fo
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { removeOrderApprovalAction } from '@/app/track/[trackingId]/actions';
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -259,10 +262,36 @@ const calculateProgressInfo = (
 };
 
 const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, allUsers, onOpenAssignDrDialog, onViewLead }: ProjectCardProps) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleRemoveApprovalClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentUser?.role !== 'SYSTEM_ADMIN') return;
+
+    if (window.confirm("Are you sure you want to remove the client's approval for this project?")) {
+      try {
+        const result = await removeOrderApprovalAction(project.id);
+        if ('error' in result) {
+          alert(`Failed to remove approval: ${result.error}`);
+        } else {
+          toast({
+            title: "Approval Removed",
+            description: "The client's approval has been successfully removed.",
+          });
+          router.refresh();
+        }
+      } catch (err) {
+        console.error(err);
+        alert("An error occurred while removing approval.");
+      }
+    }
+  };
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
@@ -460,9 +489,21 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
             )}
             <div className="ml-auto flex items-center gap-1 shrink-0">
               {project.isDesignApproved ? (
-                <BadgeCheck className="h-4 w-4 text-white fill-green-600 dark:fill-green-500 dark:text-black shrink-0" />
+                <BadgeCheck 
+                  className={cn(
+                    "h-4 w-4 text-white fill-green-600 dark:fill-green-500 dark:text-black shrink-0",
+                    currentUser?.role === 'SYSTEM_ADMIN' && "cursor-pointer hover:scale-110 transition-transform"
+                  )}
+                  onClick={currentUser?.role === 'SYSTEM_ADMIN' ? handleRemoveApprovalClick : undefined}
+                />
               ) : project.isDocsApproved ? (
-                <BadgeCheck className="h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0" />
+                <BadgeCheck 
+                  className={cn(
+                    "h-4 w-4 text-white fill-black dark:fill-white dark:text-black shrink-0",
+                    currentUser?.role === 'SYSTEM_ADMIN' && "cursor-pointer hover:scale-110 transition-transform"
+                  )}
+                  onClick={currentUser?.role === 'SYSTEM_ADMIN' ? handleRemoveApprovalClick : undefined}
+                />
               ) : null}
               {project.isStarred !== undefined && project.isStarred > 0 && (
                 <div className="flex items-center gap-0.5 shrink-0" title={`${project.isStarred.toFixed(1)} Stars Priority`}>

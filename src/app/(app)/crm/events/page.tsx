@@ -24,6 +24,7 @@ import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, 
   PaginationNext, PaginationPrevious, PaginationEllipsis 
 } from "@/components/ui/pagination";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Loader2, PlusCircle, Check, ChevronsUpDown, 
   Search, Building, Clock, AlertCircle, Eye, Edit, MoreVertical, Trash2
@@ -84,6 +85,7 @@ export default function EventsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [timeFilter, setTimeFilter] = useState<'today' | 'all'>('all');
 
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
@@ -151,7 +153,7 @@ export default function EventsPage() {
   // Reset page number on filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCrmId]);
+  }, [searchTerm, selectedCrmId, timeFilter]);
 
   const handleRemoveEventClick = (lead: Lead) => {
     setEventToRemove(lead);
@@ -217,9 +219,10 @@ export default function EventsPage() {
       if (!lead.schedule) return false;
       try {
         const scheduleDate = parseISO(lead.schedule);
-        const todayEnd = new Date();
-        todayEnd.setHours(23, 59, 59, 999);
-        return scheduleDate.getTime() <= todayEnd.getTime();
+        if (timeFilter === 'today') {
+          return isToday(scheduleDate);
+        }
+        return true;
       } catch (e) {
         return false;
       }
@@ -245,7 +248,7 @@ export default function EventsPage() {
       if (!a.schedule || !b.schedule) return 0;
       return new Date(a.schedule).getTime() - new Date(b.schedule).getTime();
     });
-  }, [leads, selectedCrmId, searchTerm]);
+  }, [leads, selectedCrmId, searchTerm, timeFilter]);
 
   // Pagination calculations for the table view
   const totalPages = Math.ceil(filteredEvents.length / ITEMS_PER_PAGE);
@@ -366,6 +369,18 @@ export default function EventsPage() {
           </div>
           
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            {/* Time Filter Tabs */}
+            <Tabs 
+              value={timeFilter} 
+              onValueChange={(value) => setTimeFilter(value as 'today' | 'all')} 
+              className="w-full sm:w-auto"
+            >
+              <TabsList className="grid w-full grid-cols-2 h-10 bg-muted p-1 rounded-md border border-border/50">
+                <TabsTrigger value="all" className="text-xs font-semibold">All Time</TabsTrigger>
+                <TabsTrigger value="today" className="text-xs font-semibold">Today</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
             {/* Search Input */}
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

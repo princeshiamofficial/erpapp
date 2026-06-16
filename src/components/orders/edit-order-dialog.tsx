@@ -17,9 +17,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceModelItem, ServiceLaminationItem, AdvancePaymentRecord } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { updateOrderAction, getClientDetailsAction } from '@/app/(app)/orders/actions';
+import { updateOrderAction, getClientDetailsAction, getClientPaymentsAction, deleteClientPaymentsBatchAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Star } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Star, Undo2, MoreVertical } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -124,6 +125,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [editingNotes, setEditingNotes] = useState('');
   const amountInputRef = useRef<HTMLInputElement>(null);
 
+  const [clientPayments, setClientPayments] = useState<any[]>([]);
+  const [queuedDeletedClientPaymentIds, setQueuedDeletedClientPaymentIds] = useState<string[]>([]);
+  const [addedClientPaymentsMap, setAddedClientPaymentsMap] = useState<Record<string, string>>({});
+
 
   const fetchDialogOptions = useCallback(async () => {
     setIsLoadingOptions(true);
@@ -201,7 +206,26 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setEditingMethod('');
     setEditingNotes('');
     setIsAutoFilled(false);
+    setClientPayments([]);
+    setQueuedDeletedClientPaymentIds([]);
+    setAddedClientPaymentsMap({});
   }, [order]);
+
+  useEffect(() => {
+    const fetchClientPayments = async () => {
+      if (isOpen && order?.id) {
+        try {
+          const res = await getClientPaymentsAction(order.id);
+          if (res && res.success && res.payments) {
+            setClientPayments(res.payments);
+          }
+        } catch (error) {
+          console.error("Error fetching client payments for dialog:", error);
+        }
+      }
+    };
+    fetchClientPayments();
+  }, [isOpen, order?.id]);
 
   useEffect(() => {
     if (isOpen) fetchDialogOptions();
@@ -444,6 +468,67 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (paymentProofRef.current) paymentProofRef.current.value = "";
   };
 
+  const handleAddClientPaymentToInvoice = (clientPayment: any) => {
+    const newRecordId = uuidv4();
+    const newRecord: AdvancePaymentRecord = {
+      id: newRecordId,
+      amount: clientPayment.amount,
+      date: clientPayment.createdAt ? (typeof clientPayment.createdAt === 'string' ? clientPayment.createdAt : new Date(clientPayment.createdAt).toISOString()) : new Date().toISOString(),
+      paymentMethod: clientPayment.paymentMethod || 'Unknown',
+      notes: clientPayment.notes || 'Added from client submission.',
+      recordedByUserId: clientPayment.recordedByUserId || currentUser.id,
+      recordedByUserName: clientPayment.recordedByUserName || currentUser.name,
+      documentUrl: clientPayment.documentUrl || null,
+      status: 'Approved',
+    };
+
+    setExistingAdvancePayments(prev => [...prev, newRecord]);
+    setQueuedDeletedClientPaymentIds(prev => [...prev, clientPayment.id]);
+    setAddedClientPaymentsMap(prev => ({ ...prev, [clientPayment.id]: newRecordId }));
+    setClientPayments(prev => prev.map(p => p.id === clientPayment.id ? { ...p, isAdded: true } : p));
+
+    toast({
+      title: "Payment Added",
+      description: `Added BDT ${clientPayment.amount} payment to the invoice. Click "Save Changes" to commit.`,
+    });
+  };
+
+  const handleUndoClientPayment = (clientPayment: any) => {
+    const newRecordId = addedClientPaymentsMap[clientPayment.id];
+    if (newRecordId) {
+      setExistingAdvancePayments(prev => prev.filter(p => p.id !== newRecordId));
+      setQueuedDeletedClientPaymentIds(prev => prev.filter(id => id !== clientPayment.id));
+      setAddedClientPaymentsMap(prev => {
+        const copy = { ...prev };
+        delete copy[clientPayment.id];
+        return copy;
+      });
+      setClientPayments(prev => prev.map(p => p.id === clientPayment.id ? { ...p, isAdded: false } : p));
+      toast({
+        title: "Payment Removed",
+        description: `Removed client payment from invoice.`,
+      });
+    }
+  };
+
+  const handleRemoveClientPayment = (clientPayment: any) => {
+    setQueuedDeletedClientPaymentIds(prev => [...prev, clientPayment.id]);
+    setClientPayments(prev => prev.map(p => p.id === clientPayment.id ? { ...p, isRemoved: true } : p));
+    toast({
+      title: "Payment Queued for Removal",
+      description: `Client payment of BDT ${clientPayment.amount} will be deleted when you click "Save Changes".`,
+    });
+  };
+
+  const handleUndoRemoveClientPayment = (clientPayment: any) => {
+    setQueuedDeletedClientPaymentIds(prev => prev.filter(id => id !== clientPayment.id));
+    setClientPayments(prev => prev.map(p => p.id === clientPayment.id ? { ...p, isRemoved: false } : p));
+    toast({
+      title: "Removal Undone",
+      description: `Restored client payment.`,
+    });
+  };
+
 
   const canSubmit = useMemo(() => {
     if (!currentUser || !currentUser.role) return false;
@@ -527,6 +612,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const result = await updateOrderAction(order.id, finalUpdates, currentUser);
     setIsSubmitting(false);
     if (result.success && result.order) {
+      if (queuedDeletedClientPaymentIds.length > 0) {
+        try {
+          await deleteClientPaymentsBatchAction(queuedDeletedClientPaymentIds);
+        } catch (error) {
+          console.error("Failed to delete client payments after successful order update:", error);
+        }
+      }
       onOrderUpdated(result.order);
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not update order.", variant: "destructive" });
@@ -655,61 +747,83 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 </div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting} /></div>
-              <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Order Items *</Label>
-                {orderItems.map((item) => (<div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
-                    <div className="space-y-1"><Label htmlFor={`model-${item.id}`}>Model *</Label>
-                      <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="w-full justify-between bg-background" disabled={isLoadingOptions || modelOptions.length === 0 || isSubmitting}>
-                            <span className="flex items-center gap-2 flex-1 text-left whitespace-nowrap overflow-hidden">
-                              {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
-                                <Avatar className="h-5 w-5 rounded-sm">
-                                  <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
-                                  <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                                </Avatar>
-                              ) : null}
-                              <span className="truncate">
-                                {item.model ? modelOptions.find((option) => option.name === item.model)?.name : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
-                              </span>
-                            </span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
-                          <Command>
-                            <CommandInput placeholder="Search model..." />
-                            <CommandList>
-                              <CommandEmpty>No model found.</CommandEmpty>
-                              <CommandGroup>
-                                {modelOptions.map((option) => (
-                                  <CommandItem key={option.id} value={option.name} onSelect={(currentValue) => { handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue); togglePopover(item.id, false); }} className="flex items-center gap-2">
-                                    <Check className={cn("h-4 w-4 shrink-0", item.model === option.name ? "opacity-100" : "opacity-0")} />
-                                    <Avatar className="h-8 w-8 rounded-sm shrink-0">
-                                      <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
-                                      <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                                    </Avatar>
-                                    <span className="flex-1 truncate">{option.name}</span>
-                                    {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-1"><Label htmlFor={`quantity-${item.id}`}>Quantity *</Label><Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} min="1" required className="bg-background" disabled={isSubmitting} /></div>
-                    <div className="space-y-1"><Label htmlFor={`lamination-${item.id}`}>Lamination *</Label>
-                      <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0 || isSubmitting}>
-                        <SelectTrigger id={`lamination-${item.id}`} className="bg-background"><SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} /></SelectTrigger>
-                        <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1"><Label>Total Price</Label><Input value={formatCurrencyBdt(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" /></div>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isSubmitting || orderItems.length <= 1} className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground" title="Remove item"><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </div>))}
+              <div className="space-y-3 mt-4 border-t border-border pt-4">
+                <Label className="text-lg font-semibold">Order Items *</Label>
+                <div className="border rounded-md bg-background overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[45%]">Model *</TableHead>
+                        <TableHead className="w-[15%]">Quantity *</TableHead>
+                        <TableHead className="w-[20%]">Lamination *</TableHead>
+                        <TableHead className="w-[15%] text-right pr-4">Total Price</TableHead>
+                        <TableHead className="w-[5%] text-right"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orderItems.map((item) => (
+                        <TableRow key={item.id} className="hover:bg-muted/30">
+                          <TableCell className="p-2 align-middle">
+                            <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="w-full justify-between bg-background text-sm" disabled={isLoadingOptions || modelOptions.length === 0 || isSubmitting}>
+                                  <span className="flex items-center gap-1.5 flex-1 text-left whitespace-nowrap overflow-hidden">
+                                    {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
+                                      <Avatar className="h-4 w-4 rounded-sm shrink-0">
+                                        <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
+                                        <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                      </Avatar>
+                                    ) : null}
+                                    <span className="truncate">
+                                      {item.model ? modelOptions.find((option) => option.name === item.model)?.name : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                                    </span>
+                                  </span>
+                                  <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search model..." />
+                                  <CommandList>
+                                    <CommandEmpty>No model found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {modelOptions.map((option) => (
+                                        <CommandItem key={option.id} value={option.name} onSelect={(currentValue) => { handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue); togglePopover(item.id, false); }} className="flex items-center gap-2">
+                                          <Check className={cn("h-4 w-4 shrink-0", item.model === option.name ? "opacity-100" : "opacity-0")} />
+                                          <Avatar className="h-8 w-8 rounded-sm shrink-0">
+                                            <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
+                                            <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                          </Avatar>
+                                          <span className="flex-1 truncate">{option.name}</span>
+                                          {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </TableCell>
+                          <TableCell className="p-2 align-middle">
+                            <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} min="1" required className="bg-background text-sm h-9" disabled={isSubmitting} />
+                          </TableCell>
+                          <TableCell className="p-2 align-middle">
+                            <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0 || isSubmitting}>
+                              <SelectTrigger id={`lamination-${item.id}`} className="bg-background text-sm h-9"><SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} /></SelectTrigger>
+                              <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name} className="text-sm">{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations.</div>}</SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="p-2 align-middle text-right pr-4 font-semibold text-sm text-foreground whitespace-nowrap">
+                            {formatCurrencyBdt(item.lineItemTotalPrice)}
+                          </TableCell>
+                          <TableCell className="p-2 align-middle text-right">
+                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isSubmitting || orderItems.length <= 1} className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground" title="Remove item"><Trash2 className="h-4 w-4" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
                 <Button type="button" variant="outline" onClick={handleAddItem} className="mt-2" disabled={isSubmitting || isLoadingOptions}><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
               </div>
               <Separator className="my-4" />
@@ -790,6 +904,117 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                             )}
                           </TableRow>
                         ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {clientPayments.length > 0 && (
+                <div className="mt-4 space-y-2 border-t border-border pt-4">
+                  <Label className="text-md font-semibold flex items-center text-amber-600 dark:text-amber-400">
+                    <ReceiptText className="mr-2 h-5 w-5 text-amber-500 animate-pulse" />
+                    Client Payments
+                  </Label>
+                  <div className="max-h-40 overflow-y-auto border border-amber-200 dark:border-amber-900/50 rounded-md bg-amber-500/5 p-2 custom-scrollbar">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="h-8 text-xs text-amber-800 dark:text-amber-300">Date</TableHead>
+                          <TableHead className="h-8 text-xs text-amber-800 dark:text-amber-300">Amount</TableHead>
+                          <TableHead className="h-8 text-xs text-amber-800 dark:text-amber-300">Method</TableHead>
+                          <TableHead className="h-8 text-xs text-amber-800 dark:text-amber-300">Reference/Notes</TableHead>
+                          <TableHead className="h-8 text-xs text-amber-800 dark:text-amber-300">Receipt</TableHead>
+                          <TableHead className="h-8 text-right text-xs text-amber-800 dark:text-amber-300">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {clientPayments.map((payment) => {
+                          const isAdded = payment.isAdded;
+                          const isRemoved = payment.isRemoved;
+
+                          return (
+                            <TableRow key={payment.id} className={cn(
+                              "group transition-colors",
+                              isAdded && "bg-emerald-500/10 dark:bg-emerald-500/20",
+                              isRemoved && "opacity-50 bg-red-500/5 dark:bg-red-500/10"
+                            )}>
+                              <TableCell className="text-xs py-1.5 font-medium">{formatDateForDialogInput(payment.createdAt)}</TableCell>
+                              <TableCell className="text-xs py-1.5 font-semibold text-foreground">
+                                {isRemoved ? (
+                                  <span className="line-through text-muted-foreground">{formatCurrencyBdt(payment.amount)}</span>
+                                ) : (
+                                  formatCurrencyBdt(payment.amount)
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs py-1.5">{payment.paymentMethod || 'N/A'}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground py-1.5 max-w-[150px] truncate" title={payment.notes}>
+                                {payment.notes || 'N/A'}
+                              </TableCell>
+                              <TableCell className="text-xs py-1.5">
+                                {payment.documentUrl ? (
+                                  <a
+                                    href={payment.documentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold transition-colors"
+                                  >
+                                    <Paperclip className="h-3 w-3" />
+                                    View Receipt
+                                  </a>
+                                ) : (
+                                  <span className="text-muted-foreground italic">No proof</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right py-1.5">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md hover:bg-muted/80">
+                                      <MoreVertical className="h-4 w-4" />
+                                      <span className="sr-only">Open menu</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-40">
+                                    {isAdded ? (
+                                      <DropdownMenuItem
+                                        onClick={() => handleUndoClientPayment(payment)}
+                                        className="text-xs text-amber-600 dark:text-amber-400 focus:text-amber-600 font-medium cursor-pointer"
+                                      >
+                                        <Undo2 className="mr-2 h-3.5 w-3.5" />
+                                        Undo Add
+                                      </DropdownMenuItem>
+                                    ) : isRemoved ? (
+                                      <DropdownMenuItem
+                                        onClick={() => handleUndoRemoveClientPayment(payment)}
+                                        className="text-xs text-amber-600 dark:text-amber-400 focus:text-amber-600 font-medium cursor-pointer"
+                                      >
+                                        <Undo2 className="mr-2 h-3.5 w-3.5" />
+                                        Undo Remove
+                                      </DropdownMenuItem>
+                                    ) : (
+                                      <>
+                                        <DropdownMenuItem
+                                          onClick={() => handleAddClientPaymentToInvoice(payment)}
+                                          className="text-xs text-emerald-600 dark:text-emerald-400 focus:text-emerald-600 font-medium cursor-pointer"
+                                        >
+                                          <Check className="mr-2 h-3.5 w-3.5" />
+                                          Add to Invoice
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => handleRemoveClientPayment(payment)}
+                                          className="text-xs text-destructive focus:text-destructive font-medium cursor-pointer"
+                                        >
+                                          <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                          Remove
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>

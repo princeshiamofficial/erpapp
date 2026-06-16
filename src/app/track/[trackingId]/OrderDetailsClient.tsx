@@ -8,9 +8,10 @@ import infoAnimation from '../../../../public/info-animation.json';
 import courierAnimation from '../../../../public/courier.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Copy, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X, ArrowLeft, CreditCard, Wallet } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Copy, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X, ArrowLeft, CreditCard, Wallet, Check, UploadCloud } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,10 +19,11 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { getStatusById } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
-import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction, deleteCommentAction, approveOrderAction } from './actions';
+import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction, deleteCommentAction, approveOrderAction, submitPaymentProofAction, removeOrderApprovalAction, hasPendingClientPaymentAction, getOrderByIdAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
+import { useSocket } from '@/contexts/socket-context';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from 'framer-motion';
 import { formatDistanceToNowStrict, parseISO, format as formatDateFns } from 'date-fns';
@@ -84,22 +86,26 @@ export function OrderDetailsClient({
   hideStatusHeader = false
 }: OrderDetailsClientProps) {
   const { currentUser: authContextUser } = useAuth();
+  const { socket } = useSocket();
   const [order, setOrder] = useState(initialOrder);
   const [isClient, setIsClient] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
-  const [dialogStep, setDialogStep] = useState<'summary' | 'payment-methods'>('summary');
+  const [dialogStep, setDialogStep] = useState<'summary' | 'payment-methods' | 'payment-proof' | 'terms'>('summary');
+  const [proofFileUrl, setProofFileUrl] = useState<string | null>(null);
+  const [isUploadingProofFile, setIsUploadingProofFile] = useState(false);
+  const [isSubmittingProof, setIsSubmittingProof] = useState(false);
   const [paymentTab, setPaymentTab] = useState<'wallets' | 'banks'>('wallets');
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const { toast } = useToast();
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  const handleCopy = async (e: React.MouseEvent, text: string) => {
+  const handleCopy = async (e: React.MouseEvent, text: string, id: string) => {
     e.stopPropagation();
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedText(text);
+      setCopiedText(id);
       toast({ title: "Copied!", description: `Number ${text} copied to clipboard.` });
       setTimeout(() => setCopiedText(null), 2000);
     } catch (err) {
@@ -134,6 +140,31 @@ export function OrderDetailsClient({
   const [paymentChecked, setPaymentChecked] = useState(false);
   const [noModificationChecked, setNoModificationChecked] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [hasPendingClientPayment, setHasPendingClientPayment] = useState(false);
+
+  useEffect(() => {
+    if (!socket || !order?.id) return;
+
+    const handleOrderUpdated = async (data: any) => {
+      if (data && data.id === order.id) {
+        console.log(`Order ${order.id} updated remotely. Refreshing details...`);
+        try {
+          const freshOrder = await getOrderByIdAction(order.id);
+          if (freshOrder) {
+            setOrder(freshOrder);
+          }
+        } catch (error) {
+          console.error("Failed to fetch fresh order details on socket update:", error);
+        }
+      }
+    };
+
+    socket.on("order-updated", handleOrderUpdated);
+
+    return () => {
+      socket.off("order-updated", handleOrderUpdated);
+    };
+  }, [socket, order?.id]);
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
@@ -188,7 +219,7 @@ export function OrderDetailsClient({
   }, [isClearance, isDocsApproved, isDesignApproved]);
 
   const handleApproveOrder = async () => {
-    if (!hasRequiredPayment) {
+    if (!hasRequiredPayment && dialogStep !== 'terms') {
       toast({ title: "Insufficient Payment", description: `Required 50% payment for approval. Current payment is ${paymentPercentage.toFixed(1)}%.`, variant: "destructive" });
       return;
     }
@@ -208,6 +239,25 @@ export function OrderDetailsClient({
       setOrder(result);
       toast({ title: "Order Approved", description: "Thank you! The order has been approved and moved to production." });
       setIsApprovalDialogOpen(false);
+    }
+  };
+
+  const handleRemoveApprovalClick = async () => {
+    if (currentUser?.role !== 'SYSTEM_ADMIN') return;
+
+    if (window.confirm("Are you sure you want to remove the client's approval for this order?")) {
+      try {
+        const result = await removeOrderApprovalAction(order.id);
+        if ('error' in result) {
+          toast({ title: 'Failed to remove approval', description: result.error, variant: 'destructive' });
+        } else {
+          setOrder(result);
+          toast({ title: 'Approval Removed', description: "The client's approval has been successfully removed." });
+        }
+      } catch (err) {
+        console.error(err);
+        toast({ title: 'Error', description: "An error occurred while removing approval.", variant: 'destructive' });
+      }
     }
   };
 
@@ -281,6 +331,20 @@ export function OrderDetailsClient({
     fetchPackzyStatus();
 
   }, [initialOrder]);
+
+  useEffect(() => {
+    const checkPendingClientPayment = async () => {
+      if (order?.id) {
+        try {
+          const res = await hasPendingClientPaymentAction(order.id);
+          setHasPendingClientPayment(res);
+        } catch (err) {
+          console.error("Failed to check pending client payments:", err);
+        }
+      }
+    };
+    checkPendingClientPayment();
+  }, [order]);
 
   useEffect(() => {
     if (!isApprovalDialogOpen) {
@@ -659,18 +723,27 @@ export function OrderDetailsClient({
                   <div className="flex-1 pt-px ml-2 sm:ml-3">
                     <div className="flex items-center justify-between w-full gap-3">
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                      {index === 0 && !currentUser && !isApproved && (
-                        entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
-                        entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
-                        entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
-                      ) && (
-                        <Button
-                          onClick={() => setIsApprovalDialogOpen(true)}
-                          size="sm"
-                          className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all"
-                        >
-                          Approve
-                        </Button>
+                      {index === 0 && (
+                        hasPendingClientPayment ? (
+                          <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 gap-1 animate-pulse border border-amber-200 dark:border-amber-900/50">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Payment Processing
+                          </span>
+                        ) : (
+                          !currentUser && !isApproved && (
+                            entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
+                            entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
+                            entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
+                          ) && (
+                            <Button
+                              onClick={() => setIsApprovalDialogOpen(true)}
+                              size="sm"
+                              className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all"
+                            >
+                              Approve
+                            </Button>
+                          )
+                        )
                       )}
                     </div>
                     <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
@@ -756,6 +829,12 @@ export function OrderDetailsClient({
                         >
                           {currentStatusInfo.name}
                         </span>
+                        {hasPendingClientPayment && (
+                          <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 gap-1 animate-pulse border border-amber-200 dark:border-amber-900/50">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Payment Processing
+                          </span>
+                        )}
                       </h3>
                       <div className="text-xs text-muted-foreground mt-2">
                         {isClient ? (
@@ -1038,7 +1117,13 @@ export function OrderDetailsClient({
             <CardContent className="p-6 sm:p-8 space-y-6">
               {isApproved ? (
                 <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg p-4 flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle 
+                    className={cn(
+                      "h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5",
+                      currentUser?.role === 'SYSTEM_ADMIN' && "cursor-pointer hover:scale-110 transition-transform"
+                    )}
+                    onClick={currentUser?.role === 'SYSTEM_ADMIN' ? handleRemoveApprovalClick : undefined}
+                  />
                   <div>
                     <h4 className="font-semibold text-emerald-800 dark:text-emerald-200">
                       {isClearance ? "Documents Already Approved" : "Design Already Approved"}
@@ -1277,8 +1362,229 @@ export function OrderDetailsClient({
             onPointerDownOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
-            {!hasRequiredPayment ? (
-              dialogStep === 'payment-methods' ? (
+            {!hasRequiredPayment && dialogStep !== 'terms' ? (
+              dialogStep === 'payment-proof' ? (
+                <>
+                  <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        setDialogStep('payment-methods');
+                      }}
+                      className="hover:bg-muted p-1.5 rounded-md transition-colors -ml-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
+                    Submit Payment Proof
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground -mt-3">
+                    Upload Receipt / Screenshot
+                  </DialogDescription>
+                  <div className="space-y-4 pt-2">
+
+                    <div className="space-y-3.5">
+                      {/* Screenshot File Upload Dropzone */}
+                      <div className="space-y-1.5">
+                        <div className="w-full">
+                          {!proofFileUrl ? (
+                            <label className={cn(
+                              "flex flex-col items-center justify-center w-full min-h-[140px] border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 select-none",
+                              isUploadingProofFile 
+                                ? "border-primary/40 bg-primary/5 cursor-not-allowed" 
+                                : "border-border hover:border-primary/50 hover:bg-muted/40 bg-muted/20"
+                            )}>
+                              {isUploadingProofFile ? (
+                                <div className="flex flex-col items-center gap-2 text-center text-xs text-muted-foreground p-5">
+                                  <Loader2 className="h-8 w-8 text-primary animate-spin mb-1" />
+                                  <span className="font-semibold text-foreground">Uploading receipt...</span>
+                                  <span>Please wait while the file is being processed.</span>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center gap-2 text-center text-xs text-muted-foreground p-5">
+                                  <div className="h-14 w-36 flex items-center justify-center mb-1.5 hover:scale-105 transition-transform">
+                                    <Image
+                                      src={
+                                        paymentTab === 'banks'
+                                          ? '/pm/ucb.svg'
+                                          : selectedMethod === 'bkash_merchant'
+                                          ? '/pm/bkash-payment.png'
+                                          : selectedMethod === 'bkash_personal'
+                                          ? '/pm/bkash.png'
+                                          : selectedMethod === 'nagad_personal'
+                                          ? '/pm/nagad.png'
+                                          : '/pm/bkash.png'
+                                      }
+                                      alt="Payment Logo"
+                                      width={
+                                        paymentTab === 'banks'
+                                          ? 140
+                                          : selectedMethod === 'bkash_merchant'
+                                          ? 132
+                                          : selectedMethod === 'bkash_personal'
+                                          ? 60
+                                          : selectedMethod === 'nagad_personal'
+                                          ? 72
+                                          : 60
+                                      }
+                                      height={
+                                        paymentTab === 'banks'
+                                          ? 42
+                                          : selectedMethod === 'bkash_merchant'
+                                          ? 36
+                                          : selectedMethod === 'bkash_personal'
+                                          ? 39
+                                          : selectedMethod === 'nagad_personal'
+                                          ? 30
+                                          : 39
+                                      }
+                                      className="object-contain"
+                                      unoptimized
+                                    />
+                                  </div>
+                                  <p className="font-semibold text-foreground text-sm">
+                                    Click to upload receipt
+                                  </p>
+                                  <p className="text-[11px] opacity-80">
+                                    Supports JPG, PNG, WEBP, or PDF
+                                  </p>
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                className="hidden"
+                                disabled={isUploadingProofFile}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setIsUploadingProofFile(true);
+                                  try {
+                                    const formData = new FormData();
+                                    formData.append('file', file);
+                                    const res = await fetch('/api/upload', {
+                                      method: 'POST',
+                                      body: formData,
+                                    });
+                                    const data = await res.json();
+                                    if (data.success && data.file_url) {
+                                      setProofFileUrl(data.file_url);
+                                      toast({ title: 'Success', description: 'File uploaded successfully.' });
+                                    } else {
+                                      toast({ title: 'Upload failed', description: data.message || 'Unknown error', variant: 'destructive' });
+                                    }
+                                  } catch (err) {
+                                    console.error(err);
+                                    toast({ title: 'Upload error', description: 'Failed to upload file.', variant: 'destructive' });
+                                  } finally {
+                                    setIsUploadingProofFile(false);
+                                  }
+                                }}
+                              />
+                            </label>
+                          ) : (
+                            <div className="relative border-2 border-dashed border-green-500/30 dark:border-green-800/40 rounded-xl overflow-hidden min-h-[180px] bg-muted/10 flex flex-col justify-between">
+                              {proofFileUrl.toLowerCase().match(/\.(jpeg|jpg|gif|png|webp)/) ? (
+                                <div className="w-full flex-1 flex items-center justify-center p-2.5 pb-16">
+                                  <img 
+                                    src={proofFileUrl} 
+                                    alt="Receipt Preview" 
+                                    className="max-h-[220px] w-full rounded-lg object-contain bg-background shadow-inner" 
+                                    onError={(e) => {
+                                      const target = e.currentTarget;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center p-6 pb-16 gap-2 text-center">
+                                  <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20 text-green-600 dark:text-green-400">
+                                    <Check className="h-5 w-5" />
+                                  </div>
+                                  <p className="text-sm font-semibold text-foreground">Receipt Uploaded Successfully</p>
+                                </div>
+                              )}
+                              
+                              {/* Bottom Control Bar */}
+                              <div className="absolute bottom-0 left-0 right-0 z-10 bg-muted/80 backdrop-blur-sm dark:bg-muted/90 p-3 flex justify-between items-center gap-2 border-t border-border/40 w-full">
+                                <span className="text-[11px] font-semibold text-green-600 dark:text-green-400 flex items-center gap-1">
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                  Receipt Loaded
+                                </span>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setProofFileUrl(null)}
+                                    className="text-xs h-8 text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 rounded-lg px-2.5"
+                                  >
+                                    Remove / Replace
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 flex justify-end gap-2 border-t border-border/30">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setDialogStep('payment-methods');
+                        }}
+                        disabled={isSubmittingProof}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={isSubmittingProof || isUploadingProofFile || !proofFileUrl}
+                        onClick={async () => {
+                          if (!proofFileUrl) return;
+                          setIsSubmittingProof(true);
+                          const amt = Math.max(0, Math.ceil(remainingForApproval));
+                          const notes = "Payment proof uploaded by client";
+                          const methodLabel = paymentTab === 'banks'
+                            ? 'UCB Bank Transfer'
+                            : selectedMethod === 'bkash_merchant'
+                            ? 'bKash Payment'
+                            : selectedMethod === 'bkash_personal'
+                            ? 'bKash'
+                            : selectedMethod === 'nagad_personal'
+                            ? 'Nagad'
+                            : 'Mobile Wallet';
+
+                          const result = await submitPaymentProofAction(order.id, {
+                            amount: amt,
+                            paymentMethod: methodLabel,
+                            notes: notes,
+                            documentUrl: proofFileUrl
+                          });
+
+                          setIsSubmittingProof(false);
+                          if ('error' in result) {
+                            toast({ title: 'Submission failed', description: result.error, variant: 'destructive' });
+                          } else {
+                            setOrder(result);
+                            toast({ title: 'Proof Submitted!', description: 'Your payment proof has been sent for review.' });
+                            setDialogStep('terms');
+                          }
+                        }}
+                      >
+                        {isSubmittingProof ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          'Next'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : dialogStep === 'payment-methods' ? (
                 <>
                   <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
                     <button 
@@ -1326,8 +1632,8 @@ export function OrderDetailsClient({
                       </button>
 
                       {/* Middle Non-clickable Amount Display */}
-                      <div className="flex-1 py-1.5 px-2 flex items-center justify-center font-extrabold text-foreground text-[11px] sm:text-xs select-none pointer-events-none whitespace-nowrap bg-background rounded-md border border-black dark:border-white shadow-sm">
-                        ৳{Math.round(remainingForApproval).toLocaleString('en-US')}
+                      <div className="flex-1 py-1.5 px-2 flex items-center justify-center font-medium text-white text-[11px] sm:text-xs select-none pointer-events-none whitespace-nowrap bg-orange-500 rounded-md shadow-sm">
+                        BDT {Math.round(remainingForApproval).toLocaleString('en-US')}
                       </div>
 
                       {/* Banks Tab */}
@@ -1363,37 +1669,32 @@ export function OrderDetailsClient({
                             }
                           }}
                           className={cn(
-                            "w-full px-4 py-1.5 border rounded-md flex items-center justify-between transition-all hover:bg-muted/30 relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/40 select-none",
+                            "w-full px-4 border rounded-md flex items-center justify-between transition-all relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-black/40 dark:focus:ring-white/40 select-none",
                             selectedMethod === 'bkash_merchant' 
-                              ? "border-pink-500 bg-pink-500/5 ring-1 ring-pink-500/20 shadow-md shadow-pink-500/5" 
+                              ? "border-black dark:border-white bg-black/5 dark:bg-white/5 ring-1 ring-black/20 dark:ring-white/20 shadow-md shadow-black/5" 
                               : "border-border bg-card shadow-sm"
                           )}
                         >
-                          {/* Ribbon badge overlapping top-left */}
-                          <span className="absolute -top-2 -left-1.5 z-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shadow-md rounded-r-md rounded-tl-sm before:content-[''] before:absolute before:top-full before:left-0 before:border-t-[4px] before:border-t-orange-800 before:border-l-[4px] before:border-l-transparent leading-none">
-                            Payment
-                          </span>
-                          
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-12 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
-                              <Image
-                                src="/pm/bkash-payment.png"
-                                alt="Payment bKash"
-                                width={38}
-                                height={10}
-                                className="object-contain animate-in zoom-in-95 duration-150"
-                                unoptimized
-                              />
-                            </div>
-                            <span className="text-[13px] sm:text-sm font-bold text-foreground">
+                          <div className="w-24 h-10 rounded-md flex items-center justify-center flex-shrink-0">
+                            <Image
+                              src="/pm/bkash-payment.png"
+                              alt="Payment bKash"
+                              width={88}
+                              height={24}
+                              className="object-contain animate-in zoom-in-95 duration-150"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="flex items-center border border-border rounded-md bg-muted/30 pl-2.5 pr-1.5 py-0.5 gap-1">
+                            <span className="text-[13px] sm:text-sm font-medium text-foreground">
                               01860-594270
                             </span>
                             <button
                               type="button"
-                              onClick={(e) => handleCopy(e, "01860-594270")}
-                              className="p-1.5 hover:bg-pink-500/10 text-muted-foreground hover:text-pink-500 rounded-md transition-colors ml-1 flex-shrink-0"
+                              onClick={(e) => handleCopy(e, "01860-594270", "bkash_merchant")}
+                              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 text-muted-foreground hover:text-black dark:hover:text-white rounded transition-colors flex-shrink-0"
                             >
-                              {copiedText === "01860-594270" ? (
+                              {copiedText === "bkash_merchant" ? (
                                 <CheckCircle className="h-3.5 w-3.5 text-green-500 animate-in zoom-in-50 duration-150" />
                               ) : (
                                 <Copy className="h-3.5 w-3.5" />
@@ -1413,37 +1714,32 @@ export function OrderDetailsClient({
                             }
                           }}
                           className={cn(
-                            "w-full px-4 py-1.5 border rounded-md flex items-center justify-between transition-all hover:bg-muted/30 relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/40 select-none",
+                            "w-full px-4 border rounded-md flex items-center justify-between transition-all relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/40 select-none",
                             selectedMethod === 'bkash_personal' 
                               ? "border-pink-500 bg-pink-500/5 ring-1 ring-pink-500/20 shadow-md shadow-pink-500/5" 
                               : "border-border bg-card shadow-sm"
                           )}
                         >
-                          {/* Ribbon badge overlapping top-left */}
-                          <span className="absolute -top-2 -left-1.5 z-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shadow-md rounded-r-md rounded-tl-sm before:content-[''] before:absolute before:top-full before:left-0 before:border-t-[4px] before:border-t-orange-800 before:border-l-[4px] before:border-l-transparent leading-none">
-                            Personal
-                          </span>
-                          
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-12 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
-                              <Image
-                                src="/pm/bkash.png"
-                                alt="Personal bKash"
-                                width={24}
-                                height={16}
-                                className="object-contain animate-in zoom-in-95 duration-150"
-                                unoptimized
-                              />
-                            </div>
-                            <span className="text-[13px] sm:text-sm font-bold text-foreground">
+                          <div className="w-24 h-10 rounded-md flex items-center justify-center flex-shrink-0">
+                            <Image
+                              src="/pm/bkash.png"
+                              alt="Personal bKash"
+                              width={40}
+                              height={26}
+                              className="object-contain animate-in zoom-in-95 duration-150"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="flex items-center border border-border rounded-md bg-muted/30 pl-2.5 pr-1.5 py-0.5 gap-1">
+                            <span className="text-[13px] sm:text-sm font-medium text-foreground">
                               01676-121893
                             </span>
                             <button
                               type="button"
-                              onClick={(e) => handleCopy(e, "01676-121893")}
-                              className="p-1.5 hover:bg-pink-500/10 text-muted-foreground hover:text-pink-500 rounded-md transition-colors ml-1 flex-shrink-0"
+                              onClick={(e) => handleCopy(e, "01676-121893", "bkash_personal")}
+                              className="p-1 hover:bg-pink-500/10 text-muted-foreground hover:text-pink-500 rounded transition-colors flex-shrink-0"
                             >
-                              {copiedText === "01676-121893" ? (
+                              {copiedText === "bkash_personal" ? (
                                 <CheckCircle className="h-3.5 w-3.5 text-green-500 animate-in zoom-in-50 duration-150" />
                               ) : (
                                 <Copy className="h-3.5 w-3.5" />
@@ -1463,37 +1759,32 @@ export function OrderDetailsClient({
                             }
                           }}
                           className={cn(
-                            "w-full px-4 py-1.5 border rounded-md flex items-center justify-between transition-all hover:bg-muted/30 relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/40 select-none",
+                            "w-full px-4 border rounded-md flex items-center justify-between transition-all relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/40 select-none",
                             selectedMethod === 'nagad_personal' 
                               ? "border-orange-500 bg-orange-500/5 ring-1 ring-orange-500/20 shadow-md shadow-orange-500/5" 
                               : "border-border bg-card shadow-sm"
                           )}
                         >
-                          {/* Ribbon badge overlapping top-left */}
-                          <span className="absolute -top-2 -left-1.5 z-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shadow-md rounded-r-md rounded-tl-sm before:content-[''] before:absolute before:top-full before:left-0 before:border-t-[4px] before:border-t-orange-800 before:border-l-[4px] before:border-l-transparent leading-none">
-                            Personal
-                          </span>
-                          
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-12 h-8 rounded-md bg-orange-500/5 border border-orange-500/10 flex items-center justify-center p-1 flex-shrink-0">
-                              <Image
-                                src="/pm/nagad.png"
-                                alt="Personal Nagad"
-                                width={32}
-                                height={14}
-                                className="object-contain animate-in zoom-in-95 duration-150"
-                                unoptimized
-                              />
-                            </div>
-                            <span className="text-[13px] sm:text-sm font-bold text-foreground">
+                          <div className="w-24 h-10 rounded-md flex items-center justify-center flex-shrink-0">
+                            <Image
+                              src="/pm/nagad.png"
+                              alt="Personal Nagad"
+                              width={48}
+                              height={20}
+                              className="object-contain animate-in zoom-in-95 duration-150"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="flex items-center border border-border rounded-md bg-muted/30 pl-2.5 pr-1.5 py-0.5 gap-1">
+                            <span className="text-[13px] sm:text-sm font-medium text-foreground">
                               01676-121893
                             </span>
                             <button
                               type="button"
-                              onClick={(e) => handleCopy(e, "01676-121893")}
-                              className="p-1.5 hover:bg-orange-500/10 text-muted-foreground hover:text-orange-500 rounded-md transition-colors ml-1 flex-shrink-0"
+                              onClick={(e) => handleCopy(e, "01676-121893", "nagad_personal")}
+                              className="p-1 hover:bg-orange-500/10 text-muted-foreground hover:text-orange-500 rounded-md transition-colors ml-1 flex-shrink-0"
                             >
-                              {copiedText === "01676-121893" ? (
+                              {copiedText === "nagad_personal" ? (
                                 <CheckCircle className="h-3.5 w-3.5 text-green-500 animate-in zoom-in-50 duration-150" />
                               ) : (
                                 <Copy className="h-3.5 w-3.5" />
@@ -1507,13 +1798,23 @@ export function OrderDetailsClient({
                     {/* Banks Content */}
                     {paymentTab === 'banks' && (
                       <div className="space-y-2.5 animate-in fade-in-50 slide-in-from-top-2 duration-200 text-xs text-muted-foreground">
-
-                        <div className="p-3 bg-card border border-border rounded-md space-y-1">
-                          <p><strong className="text-foreground">Bank Name:</strong> United Commercial Bank</p>
-                          <p><strong className="text-foreground">Branch:</strong> Dania Branch</p>
-                          <p><strong className="text-foreground">Account Name:</strong> COLOR HEART</p>
-                          <p><strong className="text-foreground">Account Number:</strong> 0872101000007053</p>
-                          <p><strong className="text-foreground">Routing Number:</strong> 245271423</p>
+                        <div className="p-3 bg-card border border-border rounded-md space-y-3">
+                          <div className="flex justify-center py-1 bg-white rounded-md p-1 border border-border/10">
+                            <Image
+                              src="/pm/ucb.svg"
+                              alt="UCB Logo"
+                              width={160}
+                              height={48}
+                              className="object-contain"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="space-y-1 border-t border-border/50 pt-2.5">
+                            <p><strong className="text-foreground">Branch:</strong> Dania Branch</p>
+                            <p><strong className="text-foreground">Account Name:</strong> COLOR HEART</p>
+                            <p><strong className="text-foreground">Account Number:</strong> 0872101000007053</p>
+                            <p><strong className="text-foreground">Routing Number:</strong> 245271423</p>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1545,39 +1846,16 @@ export function OrderDetailsClient({
                             </div>
                           </>
                         )}
-                        {selectedMethod === 'bkash_merchant' && (
-                          <div className="text-xs space-y-1.5 text-muted-foreground">
-                            <div className="p-3 bg-pink-500/5 rounded-md border border-pink-500/10 space-y-1">
-                              <p><strong className="text-foreground">Number:</strong> 01860-594270</p>
-                            </div>
-                            <p className="pt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                              * Reference-এ আপনার প্রতিষ্ঠানের নাম লিখুন।
-                            </p>
-                          </div>
-                        )}
-                        {selectedMethod === 'bkash_personal' && (
-                          <div className="text-xs space-y-1.5 text-muted-foreground">
-                            <div className="p-3 bg-pink-500/5 rounded-md border border-pink-500/10 space-y-1">
-                              <p><strong className="text-foreground">Number:</strong> 01676-121893</p>
-                            </div>
-                            <p className="pt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                              * Reference-এ আপনার প্রতিষ্ঠানের নাম লিখুন।
-                            </p>
-                          </div>
-                        )}
-                        {selectedMethod === 'nagad_personal' && (
-                          <div className="text-xs space-y-1.5 text-muted-foreground">
-                            <div className="p-3 bg-orange-500/5 rounded-md border border-orange-500/10 space-y-1">
-                              <p><strong className="text-foreground">Number:</strong> 01676-121893</p>
-                            </div>
-                            <p className="pt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                              * Reference-এ আপনার প্রতিষ্ঠানের নাম লিখুন।
-                            </p>
-                          </div>
-                        )}
 
                       </div>
                     )}
+
+                    {/* Default Reference Note */}
+                    <div className="text-xs pt-1.5 border-t border-border/30">
+                      <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                        * Reference-এ আপনার প্রতিষ্ঠানের নাম লিখুন।
+                      </p>
+                    </div>
 
                     <div className="pt-4 flex justify-end gap-2">
                       <Button
@@ -1592,9 +1870,13 @@ export function OrderDetailsClient({
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => setIsApprovalDialogOpen(false)}
+                        disabled={paymentTab === 'wallets' && !selectedMethod}
+                        onClick={() => {
+                          setProofFileUrl(null);
+                          setDialogStep('payment-proof');
+                        }}
                       >
-                        Close
+                        Submit Proof
                       </Button>
                     </div>
                   </div>
