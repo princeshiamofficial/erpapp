@@ -1375,12 +1375,12 @@ export function OrderDetailsClient({
                           </span>
                           
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
+                            <div className="w-12 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
                               <Image
                                 src="/pm/bkash-payment.png"
                                 alt="Payment bKash"
-                                width={22}
-                                height={22}
+                                width={38}
+                                height={10}
                                 className="object-contain animate-in zoom-in-95 duration-150"
                                 unoptimized
                               />
@@ -1425,12 +1425,12 @@ export function OrderDetailsClient({
                           </span>
                           
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
+                            <div className="w-12 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
                               <Image
                                 src="/pm/bkash.png"
                                 alt="Personal bKash"
-                                width={22}
-                                height={22}
+                                width={24}
+                                height={16}
                                 className="object-contain animate-in zoom-in-95 duration-150"
                                 unoptimized
                               />
@@ -1475,12 +1475,12 @@ export function OrderDetailsClient({
                           </span>
                           
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-md bg-orange-500/5 border border-orange-500/10 flex items-center justify-center p-1 flex-shrink-0">
+                            <div className="w-12 h-8 rounded-md bg-orange-500/5 border border-orange-500/10 flex items-center justify-center p-1 flex-shrink-0">
                               <Image
                                 src="/pm/nagad.png"
                                 alt="Personal Nagad"
-                                width={26}
-                                height={26}
+                                width={32}
+                                height={14}
                                 className="object-contain animate-in zoom-in-95 duration-150"
                                 unoptimized
                               />
