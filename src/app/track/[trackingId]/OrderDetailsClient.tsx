@@ -1477,7 +1477,7 @@ export function OrderDetailsClient({
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-md bg-orange-500/5 border border-orange-500/10 flex items-center justify-center p-1 flex-shrink-0">
                               <Image
-                                src="/pm/nagad.webp"
+                                src="/pm/nagad.png"
                                 alt="Personal Nagad"
                                 width={26}
                                 height={26}
