@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Copy, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X, ArrowLeft, CreditCard, Wallet } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -89,7 +89,23 @@ export function OrderDetailsClient({
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [dialogStep, setDialogStep] = useState<'summary' | 'payment-methods'>('summary');
+  const [paymentTab, setPaymentTab] = useState<'wallets' | 'banks'>('wallets');
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const { toast } = useToast();
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const handleCopy = async (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      toast({ title: "Copied!", description: `Number ${text} copied to clipboard.` });
+      setTimeout(() => setCopiedText(null), 2000);
+    } catch (err) {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
 
   const [replyingTo, setReplyingTo] = useState<{ parentId: string; targetName: string; formUnderId: string } | null>(null);
   const [currentReplyText, setCurrentReplyText] = useState('');
@@ -265,6 +281,14 @@ export function OrderDetailsClient({
     fetchPackzyStatus();
 
   }, [initialOrder]);
+
+  useEffect(() => {
+    if (!isApprovalDialogOpen) {
+      setDialogStep('summary');
+      setPaymentTab('wallets');
+      setSelectedMethod(null);
+    }
+  }, [isApprovalDialogOpen]);
 
   const getReactorId = useCallback(() => {
     return currentUser?.id || clientReactorId;
@@ -597,6 +621,7 @@ export function OrderDetailsClient({
   const showPaidBadge = grandTotal > 0 && amountDue <= 0.01;
   const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
   const hasRequiredPayment = paymentPercentage >= 45;
+  const remainingForApproval = Math.max(0, (netPayable * 0.5) - totalAdvancePaid);
 
   const renderStatusHistory = () => {
     if (hideStatusHeader) return null;
@@ -982,16 +1007,6 @@ export function OrderDetailsClient({
                   ) : (grandTotal > 0 && amountDue > 0.01) && (
                     <><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
                   )}
-
-                  {!hasRequiredPayment && (
-                    <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5 print:hidden">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-triangle-alert h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
-                      <div>
-                        <h4 className="font-semibold text-amber-900 dark:text-amber-100">Insufficient Payment</h4>
-                        <p className="mt-1">A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid.</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -1038,10 +1053,27 @@ export function OrderDetailsClient({
               ) : !hasRequiredPayment ? (
                 <div className="space-y-4">
                   <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
-                    <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-amber-900 dark:text-amber-100">Required 50% payment for approval</h4>
-                      <p className="mt-1">A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid. Please complete the payment to proceed.</p>
+                    <div className="w-full">
+                      <h4 className="font-semibold text-amber-900 dark:text-amber-100">Insufficient Payment</h4>
+                      <p className="mt-1">A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid.</p>
+                      <div className="mt-3 text-xs space-y-1.5 font-medium max-w-[280px]">
+                        <div className="flex justify-between">
+                          <span className="opacity-80">Net Payable:</span>
+                          <span>{formatCurrency(netPayable)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="opacity-80">Required (50%):</span>
+                          <span>{formatCurrency(netPayable * 0.5)}</span>
+                        </div>
+                        <div className="flex justify-between text-green-600 dark:text-green-400 font-semibold">
+                          <span className="opacity-80">Total Paid:</span>
+                          <span>{formatCurrency(totalAdvancePaid)}</span>
+                        </div>
+                        <div className="flex justify-between text-red-600 dark:text-red-400 font-semibold">
+                          <span className="opacity-80">More Needed:</span>
+                          <span>{formatCurrency(remainingForApproval)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1246,32 +1278,369 @@ export function OrderDetailsClient({
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
             {!hasRequiredPayment ? (
-              <>
-                <DialogTitle className="text-lg font-bold text-foreground">
-                  Required 50% payment for approval
-                </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground -mt-3">
-                  Please complete the payment to proceed.
-                </DialogDescription>
-                <div className="space-y-4 pt-2">
-                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
-                    <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-amber-900 dark:text-amber-100">Insufficient Payment</h4>
-                      <p className="mt-1">A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid.</p>
+              dialogStep === 'payment-methods' ? (
+                <>
+                  <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        setDialogStep('summary');
+                        setSelectedMethod(null);
+                      }}
+                      className="hover:bg-muted p-1.5 rounded-md transition-colors -ml-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </button>
+                    Payment Methods
+                  </DialogTitle>
+                  <DialogDescription asChild>
+                    <div className="text-xs text-muted-foreground -mt-3 space-y-1.5 leading-relaxed bg-amber-500/5 border border-amber-500/10 p-3.5 rounded-md text-amber-900 dark:text-amber-200 animate-in fade-in-50 duration-200">
+                      <p className="font-semibold leading-relaxed flex items-start gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <span>নিচের উল্লেখিত একাউন্ট ব্যতীত অন্য কোনো একাউন্টে লেনদেন করলে COLOR HUT কোনভাবেই দায়ী থাকবে না।</span>
+                      </p>
+                      <div className="pl-5 space-y-1 opacity-90">
+                        <p>• রেফারেন্স অপশনে আপনার প্রতিষ্ঠানের নাম লিখে দিবেন প্লিজ।</p>
+                        <p>• ১০ হাজারের বেশি পেমেন্ট সরাসরি বিকাশ থেকে ব্যাংকে পাঠাতে পারবেন।</p>
+                      </div>
+                    </div>
+                  </DialogDescription>
+                  <div className="space-y-4 pt-2">
+                    {/* Tabs Header */}
+                    <div className="flex bg-muted p-1 rounded-md gap-1 border border-border/10 text-xs font-medium items-center">
+                      {/* Wallets Tab */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentTab('wallets');
+                          setSelectedMethod(null);
+                        }}
+                        className={cn(
+                          "flex-1 py-1.5 px-2 rounded-md transition-all capitalize font-semibold flex items-center justify-center gap-1.5 text-[11px] sm:text-xs whitespace-nowrap overflow-hidden text-ellipsis",
+                          paymentTab === 'wallets'
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Wallet className="h-3.5 w-3.5 text-pink-500 flex-shrink-0" />
+                        <span className="truncate">Wallets</span>
+                      </button>
+
+                      {/* Middle Non-clickable Amount Display */}
+                      <div className="flex-1 py-1.5 px-2 flex items-center justify-center font-extrabold text-foreground text-[11px] sm:text-xs select-none pointer-events-none whitespace-nowrap bg-background rounded-md border border-black dark:border-white shadow-sm">
+                        ৳{Math.round(remainingForApproval).toLocaleString('en-US')}
+                      </div>
+
+                      {/* Banks Tab */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentTab('banks');
+                          setSelectedMethod(null);
+                        }}
+                        className={cn(
+                          "flex-1 py-1.5 px-2 rounded-md transition-all capitalize font-semibold flex items-center justify-center gap-1.5 text-[11px] sm:text-xs whitespace-nowrap overflow-hidden text-ellipsis",
+                          paymentTab === 'banks'
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Landmark className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                        <span className="truncate">Banks</span>
+                      </button>
+                    </div>
+
+                    {/* Wallets Content */}
+                    {paymentTab === 'wallets' && (
+                      <div className="flex flex-col gap-4 pt-3 animate-in fade-in-50 duration-200">
+                        {/* bKash Merchant */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedMethod('bkash_merchant')}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setSelectedMethod('bkash_merchant');
+                            }
+                          }}
+                          className={cn(
+                            "w-full px-4 py-1.5 border rounded-md flex items-center justify-between transition-all hover:bg-muted/30 relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/40 select-none",
+                            selectedMethod === 'bkash_merchant' 
+                              ? "border-pink-500 bg-pink-500/5 ring-1 ring-pink-500/20 shadow-md shadow-pink-500/5" 
+                              : "border-border bg-card shadow-sm"
+                          )}
+                        >
+                          {/* Ribbon badge overlapping top-left */}
+                          <span className="absolute -top-2 -left-1.5 z-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shadow-md rounded-r-md rounded-tl-sm before:content-[''] before:absolute before:top-full before:left-0 before:border-t-[4px] before:border-t-orange-800 before:border-l-[4px] before:border-l-transparent leading-none">
+                            Payment
+                          </span>
+                          
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
+                              <Image
+                                src="/pm/bkash.png"
+                                alt="Payment bKash"
+                                width={22}
+                                height={22}
+                                className="object-contain animate-in zoom-in-95 duration-150"
+                                unoptimized
+                              />
+                            </div>
+                            <span className="text-[13px] sm:text-sm font-bold text-foreground">
+                              01860-594270
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopy(e, "01860-594270")}
+                              className="p-1.5 hover:bg-pink-500/10 text-muted-foreground hover:text-pink-500 rounded-md transition-colors ml-1 flex-shrink-0"
+                            >
+                              {copiedText === "01860-594270" ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-500 animate-in zoom-in-50 duration-150" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* bKash Personal */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedMethod('bkash_personal')}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setSelectedMethod('bkash_personal');
+                            }
+                          }}
+                          className={cn(
+                            "w-full px-4 py-1.5 border rounded-md flex items-center justify-between transition-all hover:bg-muted/30 relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-500/40 select-none",
+                            selectedMethod === 'bkash_personal' 
+                              ? "border-pink-500 bg-pink-500/5 ring-1 ring-pink-500/20 shadow-md shadow-pink-500/5" 
+                              : "border-border bg-card shadow-sm"
+                          )}
+                        >
+                          {/* Ribbon badge overlapping top-left */}
+                          <span className="absolute -top-2 -left-1.5 z-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shadow-md rounded-r-md rounded-tl-sm before:content-[''] before:absolute before:top-full before:left-0 before:border-t-[4px] before:border-t-orange-800 before:border-l-[4px] before:border-l-transparent leading-none">
+                            Personal
+                          </span>
+                          
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-md bg-pink-500/5 border border-pink-500/10 flex items-center justify-center p-1 flex-shrink-0">
+                              <Image
+                                src="/pm/bkash.png"
+                                alt="Personal bKash"
+                                width={22}
+                                height={22}
+                                className="object-contain animate-in zoom-in-95 duration-150"
+                                unoptimized
+                              />
+                            </div>
+                            <span className="text-[13px] sm:text-sm font-bold text-foreground">
+                              01676-121893
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopy(e, "01676-121893")}
+                              className="p-1.5 hover:bg-pink-500/10 text-muted-foreground hover:text-pink-500 rounded-md transition-colors ml-1 flex-shrink-0"
+                            >
+                              {copiedText === "01676-121893" ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-500 animate-in zoom-in-50 duration-150" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Nagad Personal */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedMethod('nagad_personal')}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setSelectedMethod('nagad_personal');
+                            }
+                          }}
+                          className={cn(
+                            "w-full px-4 py-1.5 border rounded-md flex items-center justify-between transition-all hover:bg-muted/30 relative text-left overflow-visible cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/40 select-none",
+                            selectedMethod === 'nagad_personal' 
+                              ? "border-orange-500 bg-orange-500/5 ring-1 ring-orange-500/20 shadow-md shadow-orange-500/5" 
+                              : "border-border bg-card shadow-sm"
+                          )}
+                        >
+                          {/* Ribbon badge overlapping top-left */}
+                          <span className="absolute -top-2 -left-1.5 z-10 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2.5 py-0.5 text-[9px] font-extrabold tracking-wider uppercase shadow-md rounded-r-md rounded-tl-sm before:content-[''] before:absolute before:top-full before:left-0 before:border-t-[4px] before:border-t-orange-800 before:border-l-[4px] before:border-l-transparent leading-none">
+                            Personal
+                          </span>
+                          
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-md bg-orange-500/5 border border-orange-500/10 flex items-center justify-center p-1 flex-shrink-0">
+                              <Image
+                                src="/pm/nagad.webp"
+                                alt="Personal Nagad"
+                                width={26}
+                                height={26}
+                                className="object-contain animate-in zoom-in-95 duration-150"
+                                unoptimized
+                              />
+                            </div>
+                            <span className="text-[13px] sm:text-sm font-bold text-foreground">
+                              01676-121893
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopy(e, "01676-121893")}
+                              className="p-1.5 hover:bg-orange-500/10 text-muted-foreground hover:text-orange-500 rounded-md transition-colors ml-1 flex-shrink-0"
+                            >
+                              {copiedText === "01676-121893" ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-500 animate-in zoom-in-50 duration-150" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Banks Content */}
+                    {paymentTab === 'banks' && (
+                      <div className="space-y-2.5 animate-in fade-in-50 slide-in-from-top-2 duration-200 text-xs text-muted-foreground">
+
+                        <div className="p-3 bg-card border border-border rounded-md space-y-1">
+                          <p><strong className="text-foreground">Bank Name:</strong> United Commercial Bank</p>
+                          <p><strong className="text-foreground">Branch:</strong> Dania Branch</p>
+                          <p><strong className="text-foreground">Account Name:</strong> COLOR HEART</p>
+                          <p><strong className="text-foreground">Account Number:</strong> 0872101000007053</p>
+                          <p><strong className="text-foreground">Routing Number:</strong> 245271423</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dynamic Guides */}
+                    {selectedMethod && (
+                      <div className="space-y-2.5 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+                        {selectedMethod === 'visa_master' && (
+                          <>
+                            <h4 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-blue-500" />
+                              Visa/Mastercard Gateway
+                            </h4>
+                            <div className="text-xs space-y-1 text-muted-foreground">
+                              <p>Direct payment integration will allow online payment processing.</p>
+                              <p className="font-semibold text-yellow-600 dark:text-yellow-400 mt-1.5">Note: Interactive gateway flow is coming soon.</p>
+                            </div>
+                          </>
+                        )}
+                        {selectedMethod === 'nexus' && (
+                          <>
+                            <h4 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                              DBBL Nexus Card Gateway
+                            </h4>
+                            <div className="text-xs space-y-1 text-muted-foreground">
+                              <p>Pay instantly using your Dutch-Bangla Bank Nexus Debit card PIN and OTP.</p>
+                              <p className="font-semibold text-yellow-600 dark:text-yellow-400 mt-1.5">Note: Interactive gateway flow is coming soon.</p>
+                            </div>
+                          </>
+                        )}
+                        {selectedMethod === 'bkash_merchant' && (
+                          <div className="text-xs space-y-1.5 text-muted-foreground">
+                            <div className="p-3 bg-pink-500/5 rounded-md border border-pink-500/10 space-y-1">
+                              <p><strong className="text-foreground">Number:</strong> 01860-594270</p>
+                            </div>
+                            <p className="pt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                              * Reference-এ আপনার প্রতিষ্ঠানের নাম লিখুন।
+                            </p>
+                          </div>
+                        )}
+                        {selectedMethod === 'bkash_personal' && (
+                          <div className="text-xs space-y-1.5 text-muted-foreground">
+                            <div className="p-3 bg-pink-500/5 rounded-md border border-pink-500/10 space-y-1">
+                              <p><strong className="text-foreground">Number:</strong> 01676-121893</p>
+                            </div>
+                            <p className="pt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                              * Reference-এ আপনার প্রতিষ্ঠানের নাম লিখুন।
+                            </p>
+                          </div>
+                        )}
+                        {selectedMethod === 'nagad_personal' && (
+                          <div className="text-xs space-y-1.5 text-muted-foreground">
+                            <div className="p-3 bg-orange-500/5 rounded-md border border-orange-500/10 space-y-1">
+                              <p><strong className="text-foreground">Number:</strong> 01676-121893</p>
+                            </div>
+                            <p className="pt-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                              * Reference-এ আপনার প্রতিষ্ঠানের নাম লিখুন।
+                            </p>
+                          </div>
+                        )}
+
+                      </div>
+                    )}
+
+                    <div className="pt-4 flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setDialogStep('summary');
+                          setSelectedMethod(null);
+                        }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setIsApprovalDialogOpen(false)}
+                      >
+                        Close
+                      </Button>
                     </div>
                   </div>
-                  <div className="pt-4 flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsApprovalDialogOpen(false)}
-                    >
-                      Close
-                    </Button>
+                </>
+              ) : (
+                <>
+                  <DialogTitle className="text-lg font-bold text-foreground">
+                    Insufficient Payment
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground -mt-3">
+                    A minimum of 50% advance payment is required to approve this order for production. Currently, only {paymentPercentage.toFixed(1)}% has been paid.
+                  </DialogDescription>
+                  <div className="space-y-4 pt-2">
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-md text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                      <div className="w-full">
+                        <div className="text-xs space-y-1.5 font-medium max-w-[280px]">
+                          <div className="flex justify-between">
+                            <span className="opacity-80">Net Payable:</span>
+                            <span>{formatCurrency(netPayable)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="opacity-80">Required (50%):</span>
+                            <span>{formatCurrency(netPayable * 0.5)}</span>
+                          </div>
+                          <div className="flex justify-between text-green-600 dark:text-green-400 font-semibold">
+                            <span className="opacity-80">Total Paid:</span>
+                            <span>{formatCurrency(totalAdvancePaid)}</span>
+                          </div>
+                          <div className="flex justify-between text-red-600 dark:text-red-400 font-semibold">
+                            <span className="opacity-80">More Needed:</span>
+                            <span>{formatCurrency(remainingForApproval)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-4 flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => setDialogStep('payment-methods')}
+                      >
+                        Pay {formatCurrency(remainingForApproval)}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </>
+                </>
+              )
             ) : (
               <>
                 <DialogTitle className="text-lg font-bold text-foreground">
