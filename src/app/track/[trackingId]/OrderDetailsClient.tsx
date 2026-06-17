@@ -1113,7 +1113,7 @@ export function OrderDetailsClient({
                     height={25}
                     className="h-6 w-auto flex-shrink-0 object-contain"
                   />
-                  <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Terms & Conditions</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">প্রিয় গ্রাহক</CardTitle>
                 </div>
                 <div className="text-center sm:text-right">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Client</p>
@@ -2062,10 +2062,10 @@ export function OrderDetailsClient({
             ) : (
               <>
                 <DialogTitle className="text-lg font-bold text-foreground">
-                  Terms & Conditions
+                  প্রিয় গ্রাহক
                 </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground -mt-3">
-                  Please review and confirm to proceed.
+                <DialogDescription className="text-sm text-muted-foreground -mt-3 leading-relaxed">
+                  আপনার মেনু ডিজাইন কাজটি সঠিক ও দ্রুত সম্পন্ন করার জন্য অনুগ্রহ করে নিচের বিষয়গুলো যাচাই করে অনুমোদন প্রদান করুন:
                 </DialogDescription>
                 <div className="space-y-5 -mt-3 pt-0">
                   {isClearance ? (
