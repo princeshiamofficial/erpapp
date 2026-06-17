@@ -1202,15 +1202,11 @@ export function OrderDetailsClient({
                             </li>
                             <li className="flex items-start gap-2.5">
                               <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
-                              <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার গ্রাহকের থাকবে।</span>
+                              <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার আমার থাকবে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
                               <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>সকল তথ্য, মূল্য, ছবি, লোগো এবং কনটেন্ট পূর্বেই জমা ও অনুমোদন করা হয়েছে।</span>
-                            </li>
-                            <li className="flex items-start gap-2.5">
-                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
-                              <span>আমার প্রজেক্টের জন্য ডিজাইনার অ্যাসাইন করা হয়েছে এবং ডিজাইন কার্যক্রম শুরু হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
                               <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
@@ -2085,15 +2081,11 @@ export function OrderDetailsClient({
                             </li>
                             <li className="flex items-start gap-2">
                               <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
-                              <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার গ্রাহকের থাকবে।</span>
+                              <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার আমার থাকবে।</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>সকল তথ্য, মূল্য, ছবি, লোগো এবং কনটেন্ট পূর্বেই জমা ও অনুমোদন করা হয়েছে।</span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
-                              <span>আমার প্রজেক্টের জন্য ডিজাইনার অ্যাসাইন করা হয়েছে এবং ডিজাইন কার্যক্রম শুরু হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
