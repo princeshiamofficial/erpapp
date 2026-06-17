@@ -196,14 +196,14 @@ export async function updateStatus(
   }
 };
 
-export const deleteStatus = async (id: string): Promise<boolean> => {
+export const deleteStatus = async (id: string, actingUserRole?: UserRole): Promise<boolean> => {
   try {
     const statusToDelete = await getStatusById(id);
     if (!statusToDelete) {
       throw new Error(`Status with ID "${id}" not found for deletion.`);
     }
-    if (statusToDelete.isSystemStatus) {
-      throw new Error("System statuses cannot be deleted.");
+    if (statusToDelete.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
+      throw new Error("System statuses can only be deleted by System Administrators.");
     }
     await query(`DELETE FROM ${STATUSES_TABLE} WHERE id = ?`, [id]);
     return true;

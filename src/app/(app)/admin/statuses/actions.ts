@@ -50,9 +50,9 @@ export async function updateStatusAction(
   }
 }
 
-export async function deleteStatusAction(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteStatusAction(id: string, actingUserRole: UserRole): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await deleteStatus(id);
+    const success = await deleteStatus(id, actingUserRole);
     if (success) {
       revalidatePath("/(app)/admin/statuses");
       revalidatePath("/(app)/orders");

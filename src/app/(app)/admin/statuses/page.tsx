@@ -129,8 +129,8 @@ export default function AdminStatusesPage() {
   };
 
   const openDeleteDialog = (status: CustomStatus) => {
-    if (status.isSystemStatus) {
-      toast({ title: "Action Denied", description: "System statuses cannot be deleted.", variant: "destructive" });
+    if (status.isSystemStatus && currentUser?.role !== 'SYSTEM_ADMIN') {
+      toast({ title: "Action Denied", description: "System statuses can only be deleted by System Administrators.", variant: "destructive" });
       return;
     }
     setStatusToDelete(status);
@@ -138,9 +138,9 @@ export default function AdminStatusesPage() {
   };
 
   const handleDeleteStatus = async () => {
-    if (!statusToDelete) return;
+    if (!statusToDelete || !currentUser) return;
     setIsSubmitting(true);
-    const result = await deleteStatusAction(statusToDelete.id);
+    const result = await deleteStatusAction(statusToDelete.id, currentUser.role);
     if (result.success) {
       toast({ title: "Success", description: `Status "${statusToDelete.name}" deleted.` });
       setIsDeleteDialogOpen(false);
@@ -346,7 +346,7 @@ export default function AdminStatusesPage() {
                             onClick={() => openDeleteDialog(status)}
                             title="Delete Status"
                             className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                            disabled={status.isSystemStatus}
+                            disabled={status.isSystemStatus && currentUser?.role !== 'SYSTEM_ADMIN'}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
