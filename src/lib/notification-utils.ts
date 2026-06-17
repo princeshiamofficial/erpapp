@@ -32,7 +32,10 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
       return false;
     }
 
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const apiProxy = process.env.TELEGRAM_API_PROXY || '';
+    const mainUrl = apiProxy 
+      ? `${apiProxy.replace(/\/+$/, '')}/bot${token}/sendMessage`
+      : `https://api.telegram.org/bot${token}/sendMessage`;
 
     const redirectDomain = settings.telegramRedirectDomain || 'https://app.colorhutbd.xyz';
 
@@ -61,11 +64,15 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
 
     let allSuccessful = true;
     for (const chatId of chatIds) {
+      let attemptSuccessful = false;
+      let lastError = '';
+
+      // 1. Try primary request (either direct or configured proxy)
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
 
-        const response = await fetch(url, {
+        const response = await fetch(mainUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -83,16 +90,55 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
         clearTimeout(timeoutId);
         const responseData = await response.json();
         if (responseData.ok) {
+          attemptSuccessful = true;
           console.log(`Telegram message sent successfully to chat ID: ${chatId}.`);
         } else {
-          allSuccessful = false;
-          const errorMsg = `Failed to send Telegram message to chat ID: ${chatId}: ${responseData.description}`;
-          console.error(errorMsg);
-          writeTelegramLog(errorMsg);
+          lastError = responseData.description || 'Unknown error';
         }
       } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+        console.warn(`Primary Telegram request failed for chat ID ${chatId}: ${lastError}`);
+      }
+
+      // 2. If primary failed and NO custom proxy was configured, fallback to public proxy
+      if (!attemptSuccessful && !apiProxy) {
+        const fallbackUrl = `https://api.telegram.org.dog/bot${token}/sendMessage`;
+        try {
+          console.log(`Retrying Telegram message via public proxy for chat ID: ${chatId}...`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
+
+          const response = await fetch(fallbackUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: sanitizedMessage,
+              parse_mode: 'HTML',
+              reply_markup: sanitizedReplyMarkup,
+            }),
+            cache: 'no-store',
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+          const responseData = await response.json();
+          if (responseData.ok) {
+            attemptSuccessful = true;
+            console.log(`Telegram message sent successfully via public proxy to chat ID: ${chatId}.`);
+          } else {
+            lastError = `Proxy failed: ${responseData.description || 'Unknown error'}`;
+          }
+        } catch (error) {
+          lastError = `Proxy failed with error: ${error instanceof Error ? error.message : String(error)}`;
+        }
+      }
+
+      if (!attemptSuccessful) {
         allSuccessful = false;
-        const errorMsg = `Error sending Telegram message to chat ID: ${chatId}: ${error instanceof Error ? error.stack : error}`;
+        const errorMsg = `Failed to send Telegram message to chat ID: ${chatId}. Last error: ${lastError}`;
         console.error(errorMsg);
         writeTelegramLog(errorMsg);
       }
