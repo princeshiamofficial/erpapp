@@ -690,7 +690,7 @@ export function OrderDetailsClient({
     return (
       <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-            <div className="flex items-center space-x-3 sm:space-x-4"><Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
+            <div className="flex items-center space-x-3 sm:space-x-4"><Info className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" /><CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle></div>
             <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-zinc-400 dark:border-zinc-600 ml-2 sm:ml-3">
