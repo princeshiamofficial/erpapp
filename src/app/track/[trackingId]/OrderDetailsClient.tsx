@@ -1280,8 +1280,10 @@ export function OrderDetailsClient({
                     <>
                       {/* Final Design & Print Approval in Bengali */}
                       <div className="bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 space-y-4 text-foreground/80">
-                        <p className="text-sm sm:text-base font-bold text-foreground leading-relaxed">
-                          Final Design & Print Approval (চূড়ান্ত অনুমোদন)
+                        <p className="text-sm sm:text-base font-semibold text-foreground leading-relaxed">
+                          প্রিয় গ্রাহক,
+                          <br />
+                          আপনার মেনু ডিজাইন কাজটি সঠিক ও দ্রুত সম্পন্ন করার জন্য অনুগ্রহ করে নিচের বিষয়গুলো যাচাই করে অনুমোদন প্রদান করুন:
                         </p>
                         
                         <div className="space-y-3 pl-1">
@@ -2173,8 +2175,10 @@ export function OrderDetailsClient({
                     <>
                       {/* Final Design & Print Approval in Bengali */}
                       <div className="bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 space-y-3.5 text-foreground/80 max-h-[40vh] overflow-y-auto">
-                        <p className="text-xs sm:text-sm font-bold text-foreground leading-relaxed">
-                          Final Design & Print Approval (চূড়ান্ত অনুমোদন)
+                        <p className="text-xs sm:text-sm font-semibold text-foreground leading-relaxed">
+                          প্রিয় গ্রাহক,
+                          <br />
+                          আপনার মেনু ডিজাইন কাজটি সঠিক ও দ্রুত সম্পন্ন করার জন্য অনুগ্রহ করে নিচের বিষয়গুলো যাচাই করে অনুমোদন প্রদান করুন:
                         </p>
                         
                         <div className="space-y-2.5 pl-1">
