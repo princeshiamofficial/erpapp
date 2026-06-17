@@ -206,7 +206,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setEditingMethod('');
     setEditingNotes('');
     setIsAutoFilled(false);
-    setClientPayments([]);
     setQueuedDeletedClientPaymentIds([]);
     setAddedClientPaymentsMap({});
   }, [order]);
@@ -214,6 +213,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   useEffect(() => {
     const fetchClientPayments = async () => {
       if (isOpen && order?.id) {
+        setClientPayments([]);
         try {
           const res = await getClientPaymentsAction(order.id);
           if (res && res.success && res.payments) {
