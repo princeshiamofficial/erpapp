@@ -100,11 +100,11 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
         console.warn(`Primary Telegram request failed for chat ID ${chatId}: ${lastError}`);
       }
 
-      // 2. If primary failed and NO custom proxy was configured, fallback to public proxy
+      // 2. If primary failed and NO custom proxy was configured, fallback to workers proxy
       if (!attemptSuccessful && !apiProxy) {
-        const fallbackUrl = `https://api.telegram.org.dog/bot${token}/sendMessage`;
+        const fallbackUrl = `https://telegram.colorhut-official.workers.dev/bot${token}/sendMessage`;
         try {
-          console.log(`Retrying Telegram message via public proxy for chat ID: ${chatId}...`);
+          console.log(`Retrying Telegram message via Workers proxy for chat ID: ${chatId}...`);
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
 
@@ -127,7 +127,7 @@ export async function sendTelegramMessage(message: string, replyMarkup?: any): P
           const responseData = await response.json();
           if (responseData.ok) {
             attemptSuccessful = true;
-            console.log(`Telegram message sent successfully via public proxy to chat ID: ${chatId}.`);
+            console.log(`Telegram message sent successfully via Workers proxy to chat ID: ${chatId}.`);
           } else {
             lastError = `Proxy failed: ${responseData.description || 'Unknown error'}`;
           }
