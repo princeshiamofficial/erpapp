@@ -386,17 +386,6 @@ export function OrderDetailsClient({
       );
     };
 
-    if (statusInfoToUse.name.toLowerCase().includes("design")) return renderInfoLottie();
-    if (statusInfoToUse.name.toLowerCase().includes("production")) return renderInfoLottie();
-    if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) {
-      return <CheckCircle className={commonClasses} style={{ color: statusInfoToUse.color }} />;
-    }
-    if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) {
-      return <Clock className={commonClasses} style={{ color: statusInfoToUse.color }} />;
-    }
-    if (statusInfoToUse.name.toLowerCase().includes("cancelled")) {
-      return <Info className={commonClasses} style={{ color: statusInfoToUse.color }} />;
-    }
     return renderInfoLottie();
   };
 
@@ -724,7 +713,7 @@ export function OrderDetailsClient({
                     }}
                   >
                     {index === 0 ? (
-                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: entryStatusInfo.textColor }} />
+                      <Info className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: entryStatusInfo.textColor }} />
                     ) : (
                       getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0", true)
                     )}
