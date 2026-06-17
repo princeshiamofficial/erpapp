@@ -1083,99 +1083,105 @@ export default function AttendancePage() {
                 </CardContent>
             </Card>
 
-            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                <CardHeader className="p-6 border-b">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                    <CardHeader className="p-6 border-b">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <Button className="bg-black text-white hover:bg-gray-800" onClick={() => setIsAttendanceTypeDialogOpen(true)} disabled>
+                                    Attendance Type
+                                </Button>
+                                <Button>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Button className="bg-black text-white hover:bg-gray-800" onClick={() => setIsAttendanceTypeDialogOpen(true)} disabled>
-                                Attendance Type
-                            </Button>
-                            <Button>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi
-                            </Button>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[50px]">#</TableHead>
+                                        <TableHead>IP</TableHead>
+                                        <TableHead>Wifi Name</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center h-24 text-gray-500">
+                                            No IP/Wifi details is available
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px]">#</TableHead>
-                                <TableHead>IP</TableHead>
-                                <TableHead>Wifi Name</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center h-24 text-gray-500">
-                                    No IP/Wifi details is available
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
 
-            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                <CardHeader className="p-6 border-b">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Holidays</CardTitle>
+                <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                    <CardHeader className="p-6 border-b">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Holidays</CardTitle>
+                            </div>
+                            <Button onClick={openAddHolidayDialog}><PlusCircle className="mr-2 h-4 w-4" /> Add Holiday</Button>
                         </div>
-                        <Button onClick={openAddHolidayDialog}><PlusCircle className="mr-2 h-4 w-4" /> Add Holiday</Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px]">#</TableHead>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Holiday Date</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {holidays.length > 0 ? holidays.map((holiday, index) => (
-                                <TableRow key={holiday.id}>
-                                    <TableCell>{index + 1}</TableCell>
-                                    <TableCell>{holiday.title}</TableCell>
-                                    <TableCell>{holiday.date}</TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => openEditHolidayDialog(holiday)}>
-                                                    <Edit className="mr-2 h-4 w-4" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            )) : (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="text-center h-24 text-gray-500">
-                                        No holidays defined yet.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[50px]">#</TableHead>
+                                        <TableHead>Title</TableHead>
+                                        <TableHead>Holiday Date</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {holidays.length > 0 ? holidays.map((holiday, index) => (
+                                        <TableRow key={holiday.id}>
+                                            <TableCell>{index + 1}</TableCell>
+                                            <TableCell>{holiday.title}</TableCell>
+                                            <TableCell>{holiday.date}</TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => openEditHolidayDialog(holiday)}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center h-24 text-gray-500">
+                                                No holidays defined yet.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
         </div>
     );
