@@ -1278,40 +1278,73 @@ export function OrderDetailsClient({
                     </>
                   ) : (
                     <>
-                      {/* Standard Design Approval Checkboxes (original) */}
-                      <label className="flex items-start gap-3.5 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={designChecked}
-                          onChange={(e) => setDesignChecked(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                        />
-                        <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                          <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </span>
-                      </label>
+                      {/* Final Design & Print Approval in Bengali */}
+                      <div className="bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 space-y-4 text-foreground/80">
+                        <p className="text-sm sm:text-base font-bold text-foreground leading-relaxed">
+                          Final Design & Print Approval (চূড়ান্ত অনুমোদন)
+                        </p>
+                        
+                        <div className="space-y-3 pl-1">
+                          <p className="text-xs sm:text-sm font-semibold text-foreground/90">আমি নিশ্চিত করছি যে—</p>
+                          <ul className="space-y-2.5 text-xs sm:text-sm">
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
+                              <span>মেনুর সকল আইটেম, মূল্য, বানান, ছবি এবং তথ্য আমি নিজে যাচাই করেছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
+                              <span>Final Proof (PDF/JPG) আমি দেখে অনুমোদন প্রদান করেছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
+                              <span>মেনুর প্রতিটি পেজে আইটেম সংখ্যা, ফন্ট সাইজ, ছবি এবং ডিজাইন লেআউট সম্পর্কে আমি অবগত আছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
+                              <span>আমি বুঝতে পারছি যে একটি কার্যকর Menu Design-এর জন্য প্রতি পেজে সীমিত সংখ্যক আইটেম রাখা, পর্যাপ্ত স্পেস রাখা এবং খাবারের ছবি বড় আকারে প্রদর্শন করা প্রয়োজন।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
+                              <span>আমার অনুরোধে অতিরিক্ত আইটেম, অতিরিক্ত ছবি বা অতিরিক্ত তথ্য যুক্ত করার ফলে ফন্ট ছোট হওয়া, ছবি ছোট হওয়া বা ডিজাইনের ভারসাম্য পরিবর্তিত হতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
+                              <span>প্রিন্টিং শুরু হওয়ার পর কোনো মূল্য, বানান, আইটেম, ছবি, ডিজাইন বা তথ্যগত পরিবর্তনের দায় Color Hut বহন করবে না।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
+                              <span>প্রিন্টিং সম্পন্ন হওয়ার পর "প্রাইস খেয়াল করিনি", "এই আইটেম বাদ দিতে হবে", "লেখা বড় করতে হবে", "ছবি আরও বড় চাই" ইত্যাদি কারণে রিফান্ড, রিপ্রিন্ট বা ফ্রি রিডিজাইন প্রযোজ্য হবে না।</span>
+                            </li>
+                          </ul>
+                        </div>
 
-                      <label className="flex items-start gap-3.5 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={paymentChecked}
-                          onChange={(e) => setPaymentChecked(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                        />
-                        <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                          <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
-                        </span>
-                      </label>
+                        <Separator className="bg-zinc-200 dark:bg-zinc-800/80 my-2" />
 
-                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <p className="text-sm font-semibold text-foreground/90 leading-relaxed">
+                          আমি Final Proof দেখে প্রিন্টের জন্য চূড়ান্ত অনুমোদন প্রদান করছি।
+                        </p>
+
+                        <div className="text-xs bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-200">
+                          <p className="leading-relaxed">
+                            আমাদের অভিজ্ঞতা অনুযায়ী প্রতি পেজে সর্বোচ্চ ১০-১৫টি আইটেম রাখা এবং নির্বাচিত খাবারের ছবি বড় আকারে প্রদর্শন করা বিক্রয় বৃদ্ধিতে সহায়ক। অতিরিক্ত আইটেম বা অতিরিক্ত ছবি যুক্ত করার অনুরোধ গ্রাহকের নিজস্ব সিদ্ধান্ত হিসেবে গণ্য হবে এবং এর ফলে ডিজাইনের পাঠযোগ্যতা বা ভিজ্যুয়াল কার্যকারিতা কমে গেলে Color Hut দায়ী থাকবে না।
+                          </p>
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-3.5 cursor-pointer group pt-2 select-none">
                         <input
                           type="checkbox"
-                          checked={noModificationChecked}
-                          onChange={(e) => setNoModificationChecked(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                          checked={designChecked && paymentChecked && noModificationChecked}
+                          onChange={(e) => {
+                            const val = e.target.checked;
+                            setDesignChecked(val);
+                            setPaymentChecked(val);
+                            setNoModificationChecked(val);
+                          }}
+                          className="h-5 w-5 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer transition-all duration-200"
                         />
-                        <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                        <span className="text-sm sm:text-base font-semibold text-foreground/90 group-hover:text-primary transition-colors">
+                          অনুমোদন: <span className="text-primary font-bold underline decoration-wavy decoration-primary/45 underline-offset-4">হ্যাঁ, আমি সম্মতি প্রদান করছি।</span>
                         </span>
                       </label>
                     </>
@@ -2138,40 +2171,73 @@ export function OrderDetailsClient({
                     </>
                   ) : (
                     <>
-                      {/* Standard Design Approval Checkboxes (original) */}
-                      <label className="flex items-start gap-3.5 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={designChecked}
-                          onChange={(e) => setDesignChecked(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                        />
-                        <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                          <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </span>
-                      </label>
+                      {/* Final Design & Print Approval in Bengali */}
+                      <div className="bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 space-y-3.5 text-foreground/80 max-h-[40vh] overflow-y-auto">
+                        <p className="text-xs sm:text-sm font-bold text-foreground leading-relaxed">
+                          Final Design & Print Approval (চূড়ান্ত অনুমোদন)
+                        </p>
+                        
+                        <div className="space-y-2.5 pl-1">
+                          <p className="text-[11px] sm:text-xs font-semibold text-foreground/90">আমি নিশ্চিত করছি যে—</p>
+                          <ul className="space-y-2 text-[11px] sm:text-xs">
+                            <li className="flex items-start gap-2">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
+                              <span>মেনুর সকল আইটেম, মূল্য, বানান, ছবি এবং তথ্য আমি নিজে যাচাই করেছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
+                              <span>Final Proof (PDF/JPG) আমি দেখে অনুমোদন প্রদান করেছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
+                              <span>মেনুর প্রতিটি পেজে আইটেম সংখ্যা, ফন্ট সাইজ, ছবি এবং ডিজাইন লেআউট সম্পর্কে আমি অবগত আছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
+                              <span>আমি বুঝতে পারছি যে একটি কার্যকর Menu Design-এর জন্য প্রতি পেজে সীমিত সংখ্যক আইটেম রাখা, পর্যাপ্ত স্পেস রাখা এবং খাবারের ছবি বড় আকারে প্রদর্শন করা প্রয়োজন।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
+                              <span>আমার অনুরোধে অতিরিক্ত আইটেম, অতিরিক্ত ছবি বা অতিরিক্ত তথ্য যুক্ত করার ফলে ফন্ট ছোট হওয়া, ছবি ছোট হওয়া বা ডিজাইনের ভারসাম্য পরিবর্তিত হতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
+                              <span>প্রিন্টিং শুরু হওয়ার পর কোনো মূল্য, বানান, আইটেম, ছবি, ডিজাইন বা তথ্যগত পরিবর্তনের দায় Color Hut বহন করবে না।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
+                              <span>প্রিন্টিং সম্পন্ন হওয়ার পর "প্রাইস খেয়াল করিনি", "এই আইটেম বাদ দিতে হবে", "লেখা বড় করতে হবে", "ছবি আরও বড় চাই" ইত্যাদি কারণে রিফান্ড, রিপ্রিন্ট বা ফ্রি রিডিজাইন প্রযোজ্য হবে না।</span>
+                            </li>
+                          </ul>
+                        </div>
 
-                      <label className="flex items-start gap-3.5 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={paymentChecked}
-                          onChange={(e) => setPaymentChecked(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                        />
-                        <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                          <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
-                        </span>
-                      </label>
+                        <Separator className="bg-zinc-200 dark:bg-zinc-800/80 my-1.5" />
 
-                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <p className="text-xs font-semibold text-foreground/90 leading-relaxed">
+                          আমি Final Proof দেখে প্রিন্টের জন্য চূড়ান্ত অনুমোদন প্রদান করছি।
+                        </p>
+
+                        <div className="text-[11px] bg-amber-50/50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-200">
+                          <p className="leading-relaxed">
+                            আমাদের অভিজ্ঞতা অনুযায়ী প্রতি পেজে সর্বোচ্চ ১০-১৫টি আইটেম রাখা এবং নির্বাচিত খাবারের ছবি বড় আকারে প্রদর্শন করা বিক্রয় বৃদ্ধিতে সহায়ক। অতিরিক্ত আইটেম বা অতিরিক্ত ছবি যুক্ত করার অনুরোধ গ্রাহকের নিজস্ব সিদ্ধান্ত হিসেবে গণ্য হবে এবং এর ফলে ডিজাইনের পাঠযোগ্যতা বা ভিজ্যুয়াল কার্যকারিতা কমে গেলে Color Hut দায়ী থাকবে না।
+                          </p>
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-3 cursor-pointer group pt-1.5 select-none">
                         <input
                           type="checkbox"
-                          checked={noModificationChecked}
-                          onChange={(e) => setNoModificationChecked(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                          checked={designChecked && paymentChecked && noModificationChecked}
+                          onChange={(e) => {
+                            const val = e.target.checked;
+                            setDesignChecked(val);
+                            setPaymentChecked(val);
+                            setNoModificationChecked(val);
+                          }}
+                          className="h-4.5 w-4.5 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer transition-all duration-200"
                         />
-                        <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
+                        <span className="text-xs sm:text-sm font-semibold text-foreground/90 group-hover:text-primary transition-colors">
+                          অনুমোদন: <span className="text-primary font-bold underline decoration-wavy decoration-primary/45 underline-offset-4">হ্যাঁ, আমি সম্মতি প্রদান করছি।</span>
                         </span>
                       </label>
                     </>
