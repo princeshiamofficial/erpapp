@@ -226,6 +226,8 @@ const ALL_PROJECT_STATUSES_CONFIG: Array<{ title: string; status: ProjectStatusT
   { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #4ade80)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
   { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d', gradient: 'linear-gradient(to right, #65a30d, #84cc16)', shadow: '0 4px 15px 0 rgba(101, 163, 13, 0.4)' },
   { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444', gradient: 'linear-gradient(to right, #ef4444, #f87171)', shadow: '0 4px 15px 0 rgba(239, 68, 68, 0.4)' },
+  { title: 'Docs Pending', status: 'Docs Pending', icon: ClipboardList, color: '#4f46e5', gradient: 'linear-gradient(to right, #4f46e5, #818cf8)', shadow: '0 4px 15px 0 rgba(79, 70, 229, 0.4)' },
+  { title: 'Business Closed', status: 'Business Closed', icon: ClipboardX, color: '#52525b', gradient: 'linear-gradient(to right, #52525b, #71717a)', shadow: '0 4px 15px 0 rgba(82, 82, 91, 0.4)' },
 ];
 
 const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; color: string; gradient: string; shadow: string; }> = [
@@ -592,6 +594,7 @@ function DashboardContent() {
   const projectCounts = useMemo(() => {
     const counts: Record<ProjectStatusType, number> = {
       'CR Clearance': 0, 'CO Clearance': 0, 'Cancel': 0, 'On Design': 0, 'On Hold': 0, 'Logistics': 0, 'Courier': 0, 'Delivered': 0,
+      'Docs Pending': 0, 'Business Closed': 0,
     };
 
     let projectsToCount = filteredProjects;

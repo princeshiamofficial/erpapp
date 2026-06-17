@@ -265,7 +265,7 @@ export interface ExpenseLoggingPermissions {
   allowedUserIds: string[];
 }
 
-export type ProjectStatusType = 'CR Clearance' | 'CO Clearance' | 'Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier' | 'Delivered';
+export type ProjectStatusType = 'CR Clearance' | 'CO Clearance' | 'Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier' | 'Delivered' | 'Docs Pending' | 'Business Closed';
 
 export interface RoleBasedTarget {
   CRM: number;
@@ -417,6 +417,8 @@ export interface Project {
   logisticsAt?: string;
   courierAt?: string;
   deliveredAt?: string;
+  docsPendingAt?: string | null;
+  businessClosedAt?: string | null;
 
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;

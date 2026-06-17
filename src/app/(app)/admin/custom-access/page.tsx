@@ -67,7 +67,7 @@ const getInitials = (name: string | undefined): string => {
   return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 };
 
-const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
+const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered', 'Docs Pending', 'Business Closed'];
 
 const getStageBadgeClass = (stage: ProjectStatusType) => {
   switch (stage) {
@@ -79,6 +79,8 @@ const getStageBadgeClass = (stage: ProjectStatusType) => {
     case 'Courier': return 'bg-green-600 text-green-50 hover:bg-green-600/80';
     case 'Delivered': return 'bg-emerald-600 text-emerald-50 hover:bg-emerald-600/80';
     case 'Cancel': return 'bg-red-600 text-red-50 hover:bg-red-600/80';
+    case 'Docs Pending': return 'bg-indigo-600 text-indigo-50 hover:bg-indigo-600/80';
+    case 'Business Closed': return 'bg-zinc-600 text-zinc-50 hover:bg-zinc-600/80';
     default: return 'bg-muted text-muted-foreground';
   }
 };

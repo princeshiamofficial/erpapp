@@ -24,6 +24,8 @@ const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
   'Logistics': ['SYSTEM_ADMIN', 'ADMIN', 'DESIGNER_REPRESENTATIVE', 'LR'],
   'Courier': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
   'Delivered': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
+  'Docs Pending': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'Business Closed': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
 };
 
 const DEFAULT_LEAD_CATEGORY_ACCESS: Record<LeadCategory, LeadCategoryAccessSettings> = {
@@ -91,7 +93,15 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
       const data = typeof results[0].settings_json === 'string' ? JSON.parse(results[0].settings_json) : results[0].settings_json;
       // Note: Full merging logic from Firestore is replaced by a simple spread for brevity, 
       // but in production, you'd want to ensure all keys exist.
-      return { ...DEFAULT_GLOBAL_SETTINGS, ...data };
+      const mergedProjectStageAccess = {
+        ...DEFAULT_PROJECT_STAGE_ACCESS,
+        ...(data.projectStageAccess || {})
+      };
+      return {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        ...data,
+        projectStageAccess: mergedProjectStageAccess
+      };
     } else {
       await query(`INSERT INTO ${GLOBAL_SETTINGS_TABLE} (id, settings_json) VALUES (?, ?)`, [MAIN_SETTINGS_ID, JSON.stringify(DEFAULT_GLOBAL_SETTINGS)]);
       return DEFAULT_GLOBAL_SETTINGS;

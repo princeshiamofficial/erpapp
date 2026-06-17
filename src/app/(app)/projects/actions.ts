@@ -92,6 +92,8 @@ export async function updateProjectStatusAction(
         case 'CR Clearance': targetOrderStatusId = ORDER_SUBMITTED_ID; statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`; break;
         case 'CO Clearance': targetOrderStatusId = 'co-clearance'; statusUpdateNote = `Order moved to CO Clearance by ${actingUser.name}.`; break;
         case 'Delivered': targetOrderStatusId = DELIVERED_STATUS_ID; statusUpdateNote = `Order marked as delivered via project board by ${actingUser.name}.`; break;
+        case 'Docs Pending': targetOrderStatusId = 'docs-pending'; statusUpdateNote = `Order moved to Docs Pending by ${actingUser.name}.`; break;
+        case 'Business Closed': targetOrderStatusId = 'business-closed'; statusUpdateNote = `Order moved to Business Closed by ${actingUser.name}.`; break;
       }
 
 
