@@ -17,6 +17,7 @@ const DEFAULT_EXPENSE_LOGGING_PERMISSIONS: ExpenseLoggingPermissions = {
 
 const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
   'CR Clearance': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'Docs Pending': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
   'CO Clearance': ['SYSTEM_ADMIN', 'ADMIN', 'CO'],
   'Cancel': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
   'On Design': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
@@ -24,7 +25,6 @@ const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
   'Logistics': ['SYSTEM_ADMIN', 'ADMIN', 'DESIGNER_REPRESENTATIVE', 'LR'],
   'Courier': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
   'Delivered': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
-  'Docs Pending': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
   'Business Closed': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
 };
 

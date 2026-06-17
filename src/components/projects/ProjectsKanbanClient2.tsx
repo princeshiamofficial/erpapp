@@ -72,6 +72,7 @@ const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').th
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: LucideIcon; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
+  { title: 'Docs Pending', status: 'Docs Pending', icon: ClipboardList, headerBgClass: 'bg-indigo-600', headerTextClass: 'text-indigo-50' },
   { title: 'CO Clearance', status: 'CO Clearance', icon: ClipboardList, headerBgClass: 'bg-teal-600', headerTextClass: 'text-teal-50' },
   { title: 'On Design', status: 'On Design', icon: DraftingCompass, headerBgClass: 'bg-purple-600', headerTextClass: 'text-purple-50' },
   { title: 'On Hold', status: 'On Hold', icon: PauseCircle, headerBgClass: 'bg-yellow-500', headerTextClass: 'text-yellow-950' },
@@ -79,7 +80,6 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
   { title: 'Courier', status: 'Courier', icon: CheckCircle, headerBgClass: 'bg-green-600', headerTextClass: 'text-green-50' },
   { title: 'Delivered', status: 'Delivered', icon: PackageCheck, headerBgClass: 'bg-emerald-600', headerTextClass: 'text-emerald-50' },
   { title: 'Cancel', status: 'Cancel', icon: ClipboardX, headerBgClass: 'bg-red-600', headerTextClass: 'text-red-50' },
-  { title: 'Docs Pending', status: 'Docs Pending', icon: ClipboardList, headerBgClass: 'bg-indigo-600', headerTextClass: 'text-indigo-50' },
   { title: 'Business Closed', status: 'Business Closed', icon: ClipboardX, headerBgClass: 'bg-zinc-600', headerTextClass: 'text-zinc-50' },
 ];
 
@@ -583,9 +583,9 @@ export function ProjectsKanbanClient() {
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
-      'CR Clearance': [], 'CO Clearance': [], 'Cancel': [], 'On Design': [],
+      'CR Clearance': [], 'Docs Pending': [], 'CO Clearance': [], 'Cancel': [], 'On Design': [],
       'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
-      'Docs Pending': [], 'Business Closed': [],
+      'Business Closed': [],
     };
 
     const sorted = [...filteredProjects].sort((a, b) => {

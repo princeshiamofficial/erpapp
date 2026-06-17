@@ -67,7 +67,7 @@ const getInitials = (name: string | undefined): string => {
   return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 };
 
-const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered', 'Docs Pending', 'Business Closed'];
+const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'Docs Pending', 'CO Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered', 'Business Closed'];
 
 const getStageBadgeClass = (stage: ProjectStatusType) => {
   switch (stage) {
