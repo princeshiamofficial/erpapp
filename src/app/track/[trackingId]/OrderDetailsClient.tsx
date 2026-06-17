@@ -733,24 +733,24 @@ export function OrderDetailsClient({
                     <div className="flex items-center justify-between w-full gap-3">
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                       {index === 0 && (
-                        hasPendingClientPayment ? (
-                          <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 gap-1 animate-pulse border border-amber-200 dark:border-amber-900/50">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Payment Processing
-                          </span>
+                        !currentUser && !isApproved && (
+                          entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
+                          entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
+                          entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
+                        ) ? (
+                          <Button
+                            onClick={() => setIsApprovalDialogOpen(true)}
+                            size="sm"
+                            className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all"
+                          >
+                            Approve
+                          </Button>
                         ) : (
-                          !currentUser && !isApproved && (
-                            entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
-                            entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
-                            entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
-                          ) && (
-                            <Button
-                              onClick={() => setIsApprovalDialogOpen(true)}
-                              size="sm"
-                              className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-md shadow-md transition-all"
-                            >
-                              Approve
-                            </Button>
+                          hasPendingClientPayment && (
+                            <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 gap-1 animate-pulse border border-amber-200 dark:border-amber-900/50">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Payment Processing
+                            </span>
                           )
                         )
                       )}
@@ -1138,7 +1138,7 @@ export function OrderDetailsClient({
                     </p>
                   </div>
                 </div>
-              ) : !hasRequiredPayment ? (
+              ) : !(hasRequiredPayment || hasPendingClientPayment) ? (
                 <div className="space-y-4">
                   <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
                     <div className="w-full">
@@ -1476,7 +1476,7 @@ export function OrderDetailsClient({
             onPointerDownOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
-            {!hasRequiredPayment && dialogStep !== 'terms' ? (
+            {!(hasRequiredPayment || hasPendingClientPayment) && dialogStep !== 'terms' ? (
               dialogStep === 'payment-proof' ? (
                 <>
                   <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
