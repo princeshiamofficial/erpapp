@@ -117,6 +117,7 @@ export interface CustomStatus {
   isSystemStatus?: boolean;
   isVisible?: boolean;
   allowedRoles?: UserRole[];
+  isDeleted?: boolean;
 }
 
 export interface OrderLogEntry {

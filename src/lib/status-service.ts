@@ -43,6 +43,7 @@ const mapRowToStatus = (row: any): CustomStatus => ({
   isVisible: Boolean(row.is_visible),
   allowedRoles: typeof row.allowed_roles === 'string' ? JSON.parse(row.allowed_roles) : (row.allowed_roles || []),
   xid: row.xid || row.id,
+  isDeleted: Boolean(row.is_deleted),
 });
 
 export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
@@ -85,12 +86,31 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
 
 export const getStatuses = async (): Promise<CustomStatus[]> => {
   try {
-    const results = await query<any[]>(`SELECT * FROM ${STATUSES_TABLE}`);
-
-    if (results.length === 0) {
-      console.log("No statuses found, seeding defaults.");
-      return await seedDefaultStatuses();
+    // Check and add is_deleted column if missing
+    try {
+      const cols = await query<any[]>(`SHOW COLUMNS FROM ${STATUSES_TABLE} LIKE 'is_deleted'`);
+      if (cols.length === 0) {
+        await query(`ALTER TABLE ${STATUSES_TABLE} ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE`);
+      }
+    } catch (err) {
+      console.error("Failed to migrate order_statuses is_deleted column:", err);
     }
+
+    // Check total count of statuses in database
+    const totalCountResult = await query<any[]>(`SELECT COUNT(*) as count FROM ${STATUSES_TABLE}`);
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    if (totalCount === 0) {
+      console.log("No statuses found, seeding defaults.");
+      const seeded = await seedDefaultStatuses();
+      return seeded.sort((a, b) => {
+        if (a.isSystemStatus && !b.isSystemStatus) return -1;
+        if (!a.isSystemStatus && b.isSystemStatus) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    const results = await query<any[]>(`SELECT * FROM ${STATUSES_TABLE} WHERE is_deleted = FALSE`);
 
     return results.map(mapRowToStatus).sort((a, b) => {
       if (a.isSystemStatus && !b.isSystemStatus) return -1;
@@ -205,10 +225,53 @@ export const deleteStatus = async (id: string, actingUserRole?: UserRole): Promi
     if (statusToDelete.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
       throw new Error("System statuses can only be deleted by System Administrators.");
     }
-    await query(`DELETE FROM ${STATUSES_TABLE} WHERE id = ?`, [id]);
+    await query(`UPDATE ${STATUSES_TABLE} SET is_deleted = TRUE WHERE id = ?`, [id]);
     return true;
   } catch (error) {
     console.error("Error deleting status from MySQL:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+export const getDeletedStatuses = async (): Promise<CustomStatus[]> => {
+  try {
+    const results = await query<any[]>(`SELECT * FROM ${STATUSES_TABLE} WHERE is_deleted = TRUE`);
+    return results.map(mapRowToStatus).sort((a, b) => {
+      if (a.isSystemStatus && !b.isSystemStatus) return -1;
+      if (!a.isSystemStatus && b.isSystemStatus) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  } catch (error) {
+    console.error("Error fetching deleted statuses from MySQL:", error);
+    return [];
+  }
+};
+
+export const permanentDeleteStatus = async (id: string, actingUserRole?: UserRole): Promise<boolean> => {
+  try {
+    const statusToDelete = await getStatusById(id);
+    if (!statusToDelete) {
+      throw new Error(`Status with ID "${id}" not found for deletion.`);
+    }
+    if (statusToDelete.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
+      throw new Error("System statuses can only be deleted by System Administrators.");
+    }
+    await query(`DELETE FROM ${STATUSES_TABLE} WHERE id = ?`, [id]);
+    return true;
+  } catch (error) {
+    console.error("Error permanently deleting status from MySQL:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+export const restoreStatus = async (id: string): Promise<boolean> => {
+  try {
+    await query(`UPDATE ${STATUSES_TABLE} SET is_deleted = FALSE WHERE id = ?`, [id]);
+    return true;
+  } catch (error) {
+    console.error("Error restoring status from MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }

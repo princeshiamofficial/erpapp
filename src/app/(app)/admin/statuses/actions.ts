@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { CustomStatus, UserRole } from "@/types";
-import { addStatus, updateStatus, deleteStatus } from '@/lib/status-service';
+import { addStatus, updateStatus, deleteStatus, getDeletedStatuses, permanentDeleteStatus, restoreStatus } from '@/lib/status-service';
 
 export async function addStatusAction(
   name: string, 
@@ -63,5 +63,47 @@ export async function deleteStatusAction(id: string, actingUserRole: UserRole): 
   } catch (error) {
     console.error("Error in deleteStatusAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred while deleting status." };
+  }
+}
+
+export async function getDeletedStatusesAction(): Promise<{ success: boolean; statuses?: CustomStatus[]; error?: string }> {
+  try {
+    const statuses = await getDeletedStatuses();
+    return { success: true, statuses };
+  } catch (error) {
+    console.error("Error in getDeletedStatusesAction server action:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to fetch deleted statuses." };
+  }
+}
+
+export async function permanentDeleteStatusAction(id: string, actingUserRole: UserRole): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await permanentDeleteStatus(id, actingUserRole);
+    if (success) {
+      revalidatePath("/(app)/admin/statuses");
+      revalidatePath("/(app)/orders");
+      revalidatePath("/(app)/all-orders");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to permanently delete status." };
+  } catch (error) {
+    console.error("Error in permanentDeleteStatusAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function restoreStatusAction(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await restoreStatus(id);
+    if (success) {
+      revalidatePath("/(app)/admin/statuses");
+      revalidatePath("/(app)/orders");
+      revalidatePath("/(app)/all-orders");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to restore status." };
+  } catch (error) {
+    console.error("Error in restoreStatusAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
