@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox'; // For selecting roles
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const AVAILABLE_ROLES_FOR_STATUS_ASSIGNMENT: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'ADMIN', 'VENDOR', 'LR'];
 
@@ -238,19 +239,40 @@ export default function AdminStatusesPage() {
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-6 space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-md border border-border/30">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-6 w-6 rounded-md" />
-                    <Skeleton className="h-5 w-32 rounded" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-8 w-8 rounded-md" />
-                    <Skeleton className="h-8 w-8 rounded-md" />
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px] text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-6">Color</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Visibility</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Allowed Roles</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground pr-6">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="py-4 pl-6"><Skeleton className="h-6 w-6 rounded-md" /></TableCell>
+                      <TableCell className="py-4"><Skeleton className="h-5 w-32 rounded" /></TableCell>
+                      <TableCell className="py-4"><Skeleton className="h-5 w-16 rounded" /></TableCell>
+                      <TableCell className="py-4 text-center">
+                        <div className="flex justify-center">
+                          <Skeleton className="h-5 w-20 rounded" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4"><Skeleton className="h-5 w-48 rounded" /></TableCell>
+                      <TableCell className="text-right py-4 pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <Skeleton className="h-8 w-8 rounded-md" />
+                          <Skeleton className="h-8 w-8 rounded-md" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : statuses.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground">
@@ -258,45 +280,83 @@ export default function AdminStatusesPage() {
               No custom statuses found. Add one to get started!
             </div>
           ) : (
-            <ul className="divide-y divide-border/50">
-              {statuses.map((status) => (
-                <li key={status.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 hover:bg-muted/30 transition-colors gap-3 sm:gap-0">
-                  <div className="flex items-center gap-3 flex-grow">
-                    <StatusColorPreview color={status.color} />
-                    <div>
-                      <span className="font-medium text-foreground">{status.name}</span>
-                      {status.isSystemStatus && (
-                        <span className="ml-2 text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm border border-border">System</span>
-                      )}
-                      {status.isVisible !== false ? (
-                        <span title="Visible in dropdowns"><Eye className="h-4 w-4 text-green-500 ml-2 inline-block" /></span>
-                      ) : (
-                        <span title="Hidden in dropdowns"><EyeOff className="h-4 w-4 text-muted-foreground ml-2 inline-block" /></span>
-                      )}
-                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5" />
-                        Allowed: {status.allowedRoles && status.allowedRoles.length > 0 ? status.allowedRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'All Permitted'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 self-end sm:self-center">
-                    <Button variant="outline" size="icon" onClick={() => openEditDialog(status)} title="Edit Status" className="h-9 w-9">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openDeleteDialog(status)}
-                      title="Delete Status"
-                      className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                      disabled={status.isSystemStatus}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px] text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-6">Color</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">Visibility</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Allowed Roles</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground pr-6">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {statuses.map((status) => (
+                    <TableRow key={status.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="py-3.5 pl-6">
+                        <StatusColorPreview color={status.color} />
+                      </TableCell>
+                      <TableCell className="font-semibold text-foreground py-3.5">
+                        {status.name}
+                      </TableCell>
+                      <TableCell className="py-3.5">
+                        {status.isSystemStatus ? (
+                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30">
+                            System
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-750">
+                            Custom
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center py-3.5">
+                        {status.isVisible !== false ? (
+                          <span className="inline-flex items-center text-xs font-medium text-green-600 dark:text-green-400 gap-1.5 justify-center w-full animate-in fade-in-50 duration-200" title="Visible in dropdowns">
+                            <Eye className="h-4 w-4 text-green-500" />
+                            <span className="text-[11px] font-semibold">Visible</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-xs font-medium text-muted-foreground gap-1.5 justify-center w-full animate-in fade-in-50 duration-200" title="Hidden in dropdowns">
+                            <EyeOff className="h-4 w-4" />
+                            <span className="text-[11px]">Hidden</span>
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-3.5 text-xs text-foreground/80 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span>
+                            {status.allowedRoles && status.allowedRoles.length > 0 
+                              ? status.allowedRoles.map(r => r.replace(/_/g, ' ')).join(', ') 
+                              : 'All Permitted'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right py-3.5 pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="outline" size="icon" onClick={() => openEditDialog(status)} title="Edit Status" className="h-8 w-8 hover:bg-muted/80">
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDeleteDialog(status)}
+                            title="Delete Status"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                            disabled={status.isSystemStatus}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
