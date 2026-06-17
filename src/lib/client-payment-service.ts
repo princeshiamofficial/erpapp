@@ -91,8 +91,8 @@ export const getClientPayments = async (orderId: string): Promise<any[]> => {
       status: row.status,
       recordedByUserId: row.recorded_by_user_id,
       recordedByUserName: row.recorded_by_user_name,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
+      createdAt: row.created_at ? (row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)) : null,
+      updatedAt: row.updated_at ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at)) : null
     }));
   } catch (error) {
     console.error("Error fetching client payments:", error);
