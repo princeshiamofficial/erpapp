@@ -79,8 +79,8 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
   { title: 'Courier', status: 'Courier', icon: CheckCircle, headerBgClass: 'bg-green-600', headerTextClass: 'text-green-50' },
   { title: 'Delivered', status: 'Delivered', icon: PackageCheck, headerBgClass: 'bg-emerald-600', headerTextClass: 'text-emerald-50' },
   { title: 'Cancel', status: 'Cancel', icon: ClipboardX, headerBgClass: 'bg-red-600', headerTextClass: 'text-red-50' },
-  { title: 'Docs Pending', status: 'Docs Pending', icon: ClipboardList, headerBgClass: 'bg-indigo-650', headerTextClass: 'text-indigo-50' },
-  { title: 'Business Closed', status: 'Business Closed', icon: ClipboardX, headerBgClass: 'bg-zinc-650', headerTextClass: 'text-zinc-50' },
+  { title: 'Docs Pending', status: 'Docs Pending', icon: ClipboardList, headerBgClass: 'bg-indigo-600', headerTextClass: 'text-indigo-50' },
+  { title: 'Business Closed', status: 'Business Closed', icon: ClipboardX, headerBgClass: 'bg-zinc-600', headerTextClass: 'text-zinc-50' },
 ];
 
 function KanbanSkeleton() {

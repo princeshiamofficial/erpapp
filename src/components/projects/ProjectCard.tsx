@@ -148,7 +148,7 @@ const calculateProgressInfo = (
   let showProgressBar = true;
   let progressColorClass = 'progress-indicator-gradient';
 
-  if (status === 'Cancel' || status === 'Delivered') {
+  if (status === 'Cancel' || status === 'Delivered' || status === 'Docs Pending' || status === 'Business Closed') {
     showProgressBar = false;
     return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "", stageTargetDate: endDate ? parseISO(endDate).toLocaleDateString() : 'N/A' };
   }
