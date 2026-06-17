@@ -77,6 +77,7 @@ export default function AdminStatusesPage() {
   const [newStatusColor, setNewStatusColor] = useState('#0EA5E9');
   const [newStatusIsVisible, setNewStatusIsVisible] = useState(true);
   const [newStatusAllowedRoles, setNewStatusAllowedRoles] = useState<UserRole[]>([]);
+  const [newStatusIsSystemStatus, setNewStatusIsSystemStatus] = useState(false);
 
 
   const [editingStatus, setEditingStatus] = useState<CustomStatus | null>(null);
@@ -116,7 +117,7 @@ export default function AdminStatusesPage() {
       return;
     }
     setIsSubmitting(true);
-    const result = await addStatusAction(newStatusName, newStatusColor, newStatusIsVisible, newStatusAllowedRoles);
+    const result = await addStatusAction(newStatusName, newStatusColor, newStatusIsVisible, newStatusAllowedRoles, newStatusIsSystemStatus);
     if (result.success && result.status) {
       toast({ title: "Success", description: `Status "${result.status.name}" added.` });
       setIsAddDialogOpen(false);
@@ -124,6 +125,7 @@ export default function AdminStatusesPage() {
       setNewStatusColor('#0EA5E9');
       setNewStatusIsVisible(true);
       setNewStatusAllowedRoles([]);
+      setNewStatusIsSystemStatus(false);
       await fetchStatuses();
     } else {
       toast({ title: "Error", description: result.error || "Could not add status.", variant: "destructive" });
@@ -137,6 +139,7 @@ export default function AdminStatusesPage() {
     setNewStatusColor(status.color);
     setNewStatusIsVisible(status.isVisible !== false);
     setNewStatusAllowedRoles(status.allowedRoles || []);
+    setNewStatusIsSystemStatus(status.isSystemStatus || false);
     setIsEditDialogOpen(true);
   };
 
@@ -151,11 +154,12 @@ export default function AdminStatusesPage() {
       return;
     }
     setIsSubmitting(true);
-    const result = await updateStatusAction(editingStatus.id, newStatusName, newStatusColor, newStatusIsVisible, newStatusAllowedRoles, currentUser.role);
+    const result = await updateStatusAction(editingStatus.id, newStatusName, newStatusColor, newStatusIsVisible, newStatusAllowedRoles, currentUser.role, newStatusIsSystemStatus);
     if (result.success) {
       toast({ title: "Success", description: `Status "${editingStatus.name}" updated.` });
       setIsEditDialogOpen(false);
       setEditingStatus(null);
+      setNewStatusIsSystemStatus(false);
       await fetchStatuses();
     } else {
       toast({ title: "Error updating status", description: result.error || "Could not update status.", variant: "destructive" });
@@ -472,9 +476,17 @@ export default function AdminStatusesPage() {
               <Input id="newStatusColor" type="color" value={newStatusColor} onChange={(e) => setNewStatusColor(e.target.value)} className="w-20 h-10 p-1" required disabled={isSubmitting} />
               <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: newStatusColor }} />
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch id="newStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
-              <Label htmlFor="newStatusIsVisible">Visible in dropdowns</Label>
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center space-x-2">
+                <Switch id="newStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
+                <Label htmlFor="newStatusIsVisible">Visible in dropdowns</Label>
+              </div>
+              {currentUser?.role === 'SYSTEM_ADMIN' && (
+                <div className="flex items-center space-x-2">
+                  <Switch id="newStatusIsSystemStatus" checked={newStatusIsSystemStatus} onCheckedChange={setNewStatusIsSystemStatus} disabled={isSubmitting} />
+                  <Label htmlFor="newStatusIsSystemStatus">System Status</Label>
+                </div>
+              )}
             </div>
             <Separator />
             {renderAllowedRolesCheckboxes(false)}
@@ -512,9 +524,17 @@ export default function AdminStatusesPage() {
                 <Input id="editStatusColor" type="color" value={newStatusColor} onChange={(e) => setNewStatusColor(e.target.value)} className="w-20 h-10 p-1" required disabled={isSubmitting} />
                 <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: newStatusColor }} />
               </div>
-              <div className="flex items-center space-x-2">
-                <Switch id="editStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
-                <Label htmlFor="editStatusIsVisible">Visible in dropdowns</Label>
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex items-center space-x-2">
+                  <Switch id="editStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
+                  <Label htmlFor="editStatusIsVisible">Visible in dropdowns</Label>
+                </div>
+                {currentUser?.role === 'SYSTEM_ADMIN' && (
+                  <div className="flex items-center space-x-2">
+                    <Switch id="editStatusIsSystemStatus" checked={newStatusIsSystemStatus} onCheckedChange={setNewStatusIsSystemStatus} disabled={isSubmitting} />
+                    <Label htmlFor="editStatusIsSystemStatus">System Status</Label>
+                  </div>
+                )}
               </div>
               <Separator />
               {renderAllowedRolesCheckboxes(true)}

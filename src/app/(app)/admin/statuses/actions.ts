@@ -9,10 +9,11 @@ export async function addStatusAction(
   name: string, 
   color: string, 
   isVisible: boolean,
-  allowedRoles: UserRole[] // New parameter
+  allowedRoles: UserRole[],
+  isSystemStatus?: boolean
 ): Promise<{ success: boolean; status?: CustomStatus; error?: string }> {
   try {
-    const newStatus = await addStatus(name, color, isVisible, allowedRoles); // Pass allowedRoles
+    const newStatus = await addStatus(name, color, isVisible, allowedRoles, isSystemStatus);
     if (newStatus) {
       revalidatePath("/(app)/admin/statuses");
       revalidatePath("/(app)/orders"); 
@@ -31,11 +32,12 @@ export async function updateStatusAction(
   name: string, 
   color: string, 
   isVisible: boolean,
-  allowedRoles: UserRole[], // New parameter
-  actingUserRole: UserRole 
+  allowedRoles: UserRole[],
+  actingUserRole: UserRole,
+  isSystemStatus?: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateStatus(id, name, color, isVisible, allowedRoles, actingUserRole); // Pass allowedRoles & actingUserRole
+    const success = await updateStatus(id, name, color, isVisible, allowedRoles, actingUserRole, isSystemStatus);
     if (success) {
       revalidatePath("/(app)/admin/statuses");
       revalidatePath("/(app)/orders");

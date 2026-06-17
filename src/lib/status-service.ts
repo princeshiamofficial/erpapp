@@ -137,7 +137,7 @@ export const getStatusById = async (id: string): Promise<CustomStatus | undefine
   }
 };
 
-export const addStatus = async (name: string, color: string, isVisible: boolean, allowedRoles: UserRole[] = []): Promise<CustomStatus | null> => {
+export const addStatus = async (name: string, color: string, isVisible: boolean, allowedRoles: UserRole[] = [], isSystemStatus: boolean = false): Promise<CustomStatus | null> => {
   if (!name.trim()) {
     throw new Error("Status name cannot be empty.");
   }
@@ -147,7 +147,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
     await query(
       `INSERT INTO ${STATUSES_TABLE} (id, name, color, is_system_status, is_visible, allowed_roles, xid) 
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [customDocId, name.trim(), color, false, isVisible, JSON.stringify(allowedRoles), customDocId]
+      [customDocId, name.trim(), color, isSystemStatus, isVisible, JSON.stringify(allowedRoles), customDocId]
     );
 
     return {
@@ -155,7 +155,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
       xid: customDocId,
       name: name.trim(),
       color,
-      isSystemStatus: false,
+      isSystemStatus,
       isVisible,
       allowedRoles,
     };
@@ -172,7 +172,8 @@ export async function updateStatus(
   color: string,
   isVisible: boolean,
   allowedRoles: UserRole[],
-  actingUserRole?: UserRole
+  actingUserRole?: UserRole,
+  isSystemStatus?: boolean
 ): Promise<boolean> {
   try {
     const existingStatus = await getStatusById(id);
@@ -181,17 +182,35 @@ export async function updateStatus(
     }
 
     const updates: { [key: string]: any } = {};
+    const effectiveIsSystem = isSystemStatus !== undefined ? isSystemStatus : existingStatus.isSystemStatus;
+
     if (name !== existingStatus.name) {
       if (existingStatus.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
         throw new Error("Only System Administrators can change the name of system statuses.");
       }
       updates.name = name;
-      if (!existingStatus.isSystemStatus) {
+      if (!effectiveIsSystem) {
         updates.xid = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      } else {
+        updates.xid = id;
       }
     }
     if (color !== existingStatus.color) { updates.color = color; }
     if (isVisible !== existingStatus.isVisible) { updates.is_visible = isVisible; }
+    
+    if (isSystemStatus !== undefined && isSystemStatus !== existingStatus.isSystemStatus) {
+      if (actingUserRole !== 'SYSTEM_ADMIN') {
+        throw new Error("Only System Administrators can change status type between custom and system.");
+      }
+      updates.is_system_status = isSystemStatus;
+      if (name === existingStatus.name) {
+        if (isSystemStatus) {
+          updates.xid = id;
+        } else {
+          updates.xid = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        }
+      }
+    }
 
     const sortedNewRoles = [...allowedRoles].sort();
     const sortedExistingRoles = [...(existingStatus.allowedRoles || [])].sort();
@@ -214,7 +233,7 @@ export async function updateStatus(
     if (error instanceof Error) throw error;
     return false;
   }
-};
+}
 
 export const deleteStatus = async (id: string, actingUserRole?: UserRole): Promise<boolean> => {
   try {
