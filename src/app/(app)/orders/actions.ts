@@ -389,6 +389,7 @@ export async function updateOrderAction(
 <b>Company:</b> ${finalUpdates.companyName || existingOrder.companyName}
 <b>Amount:</b> ${formatAmountForNotification(newAdvanceRecord.amount)}
 <b>Method:</b> ${newAdvanceRecord.paymentMethod}
+<b>Reference:</b> ${newAdvanceRecord.notes || 'N/A'}
 <b>Recorded By:</b> ${currentUser.name}
       `;
 

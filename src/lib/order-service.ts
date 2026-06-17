@@ -344,6 +344,7 @@ export const addOrder = async (orderData: {
 <b>Company:</b> ${combinedCompanyName}
 <b>Amount:</b> ${orderData.advancePaymentAmount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
 <b>Method:</b> ${newPayment.paymentMethod}
+<b>Reference:</b> ${newPayment.notes || 'N/A'}
 <b>Recorded By:</b> ${orderData.crmUserName}
       `;
 
@@ -551,6 +552,7 @@ export async function updateAdvancePaymentStatus(
 <b>Company:</b> ${order.companyName}
 <b>Amount:</b> ${payment.amount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' })}
 <b>Method:</b> ${payment.paymentMethod}
+<b>Reference:</b> ${payment.notes || 'N/A'}
 <b>Recorded By:</b> ${payment.recordedByUserName}
           `;
 
