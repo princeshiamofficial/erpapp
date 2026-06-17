@@ -200,6 +200,15 @@ export function OrderDetailsClient({
       statusId.includes("co clearance");
   }, [currentStatusInfo, order.currentStatus]);
 
+  const isCoClearance = useMemo(() => {
+    const statusName = currentStatusInfo.name.toLowerCase();
+    const statusId = order.currentStatus.toLowerCase();
+    return statusName.includes("co clearance") ||
+      statusId.includes("co_clearance") ||
+      statusId.includes("co-clearance") ||
+      statusId.includes("co clearance");
+  }, [currentStatusInfo, order.currentStatus]);
+
   const isDocsApproved = useMemo(() => {
     return order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved-docs');
   }, [order.statusHistory]);
@@ -684,7 +693,7 @@ export function OrderDetailsClient({
 
   const showPaidBadge = grandTotal > 0 && amountDue <= 0.01;
   const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
-  const hasRequiredPayment = paymentPercentage >= 45;
+  const hasRequiredPayment = isCoClearance ? true : (paymentPercentage >= 45);
   const remainingForApproval = Math.max(0, (netPayable * 0.5) - totalAdvancePaid);
 
   const renderStatusHistory = () => {
