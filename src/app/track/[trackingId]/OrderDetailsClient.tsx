@@ -838,12 +838,6 @@ export function OrderDetailsClient({
                         >
                           {currentStatusInfo.name}
                         </span>
-                        {hasPendingClientPayment && (
-                          <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 gap-1 animate-pulse border border-amber-200 dark:border-amber-900/50">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Payment Processing
-                          </span>
-                        )}
                       </h3>
                       <div className="text-xs text-muted-foreground mt-2">
                         {isClient ? (
