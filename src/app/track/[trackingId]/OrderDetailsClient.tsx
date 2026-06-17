@@ -2032,7 +2032,7 @@ export function OrderDetailsClient({
                 <DialogDescription className="text-sm text-muted-foreground -mt-3">
                   Please review and confirm to proceed.
                 </DialogDescription>
-                <div className="space-y-5 pt-2">
+                <div className="space-y-5 -mt-3 pt-0">
                   {isClearance ? (
                     <>
                       {/* Document Approval Terms and Conditions in Bengali */}
