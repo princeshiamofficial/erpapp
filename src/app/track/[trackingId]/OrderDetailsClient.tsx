@@ -1187,47 +1187,47 @@ export function OrderDetailsClient({
                           <p className="text-xs sm:text-sm font-bold text-foreground/90 uppercase tracking-wider">আমি নিশ্চিত করছি যে—</p>
                           <ul className="space-y-2.5 text-xs sm:text-sm">
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>মেনুর সকল আইটেম, মূল্য, বানান, অফার ও তথ্য আমি যাচাই করেছি।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>প্রয়োজনীয় সকল ছবি, লোগো, ব্র্যান্ড গাইডলাইন এবং ডকুমেন্ট Color Hut-কে প্রদান করা হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>পরবর্তীতে আমার পক্ষ থেকে নতুন তথ্য, আইটেম বা বড় ধরনের পরিবর্তন যোগ হলে অতিরিক্ত সময় ও চার্জ প্রযোজ্য হতে পারে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>প্রদত্ত তথ্য ও ডকুমেন্ট অনুযায়ী ডিজাইন কাজ শুরু করা যাবে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>ডিজাইন চলাকালীন সম্পূর্ণ নতুন কনসেপ্ট, নতুন মেনু স্ট্রাকচার বা অতিরিক্ত কনটেন্ট যুক্ত করার অনুরোধ করলে কাজের সময়সীমা পরিবর্তিত হতে পারে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার গ্রাহকের থাকবে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>সকল তথ্য, মূল্য, ছবি, লোগো এবং কনটেন্ট পূর্বেই জমা ও অনুমোদন করা হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>আমার প্রজেক্টের জন্য ডিজাইনার অ্যাসাইন করা হয়েছে এবং ডিজাইন কার্যক্রম শুরু হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>এই পর্যায়ের পর নতুন আইটেম, নতুন পেজ, নতুন ছবি, নতুন ক্যাটাগরি, নতুন মূল্য তালিকা অথবা বড় ধরনের কনটেন্ট পরিবর্তনকে অতিরিক্ত কাজ (Additional Work) হিসেবে গণ্য করা হবে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>আমার পক্ষ থেকে দেরিতে তথ্য প্রদান, তথ্য পরিবর্তন বা নতুন নির্দেশনার কারণে ডেলিভারি সময় বৃদ্ধি পেতে পারে।</span>
                             </li>
                             <li className="flex items-start gap-2.5">
-                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-1 select-none font-bold text-sm sm:text-base">&bull;</span>
                               <span>এই অনুমোদনের পর কাজের পরিধি (Scope of Work) লক করা হয়েছে বলে আমি সম্মতি প্রদান করছি।</span>
                             </li>
                           </ul>
@@ -2047,47 +2047,47 @@ export function OrderDetailsClient({
                           <p className="text-[11px] sm:text-xs font-bold text-foreground/90 uppercase tracking-wider">আমি নিশ্চিত করছি যে—</p>
                           <ul className="space-y-2 text-[11px] sm:text-xs">
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>মেনুর সকল আইটেম, মূল্য, বানান, অফার ও তথ্য আমি যাচাই করেছি।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>প্রয়োজনীয় সকল ছবি, লোগো, ব্র্যান্ড গাইডলাইন এবং ডকুমেন্ট Color Hut-কে প্রদান করা হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>পরবর্তীতে আমার পক্ষ থেকে নতুন তথ্য, আইটেম বা বড় ধরনের পরিবর্তন যোগ হলে অতিরিক্ত সময় ও চার্জ প্রযোজ্য হতে পারে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>প্রদত্ত তথ্য ও ডকুমেন্ট অনুযায়ী ডিজাইন কাজ শুরু করা যাবে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>ডিজাইন চলাকালীন সম্পূর্ণ নতুন কনসেপ্ট, নতুন মেনু স্ট্রাকচার বা অতিরিক্ত কনটেন্ট যুক্ত করার অনুরোধ করলে কাজের সময়সীমা পরিবর্তিত হতে পারে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার গ্রাহকের থাকবে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>সকল তথ্য, মূল্য, ছবি, লোগো এবং কনটেন্ট পূর্বেই জমা ও অনুমোদন করা হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>আমার প্রজেক্টের জন্য ডিজাইনার অ্যাসাইন করা হয়েছে এবং ডিজাইন কার্যক্রম শুরু হয়েছে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>এই পর্যায়ের পর নতুন আইটেম, নতুন পেজ, নতুন ছবি, নতুন ক্যাটাগরি, নতুন মূল্য তালিকা অথবা বড় ধরনের কনটেন্ট পরিবর্তনকে অতিরিক্ত কাজ (Additional Work) হিসেবে গণ্য করা হবে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>আমার পক্ষ থেকে দেরিতে তথ্য প্রদান, তথ্য পরিবর্তন বা নতুন নির্দেশনার কারণে ডেলিভারি সময় বৃদ্ধি পেতে পারে।</span>
                             </li>
                             <li className="flex items-start gap-2">
-                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span className="text-zinc-400 dark:text-zinc-650 flex-shrink-0 mt-0.5 select-none font-bold text-xs sm:text-sm">&bull;</span>
                               <span>এই অনুমোদনের পর কাজের পরিধি (Scope of Work) লক করা হয়েছে বলে আমি সম্মতি প্রদান করছি।</span>
                             </li>
                           </ul>
