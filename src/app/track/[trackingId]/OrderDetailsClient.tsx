@@ -1163,58 +1163,150 @@ export function OrderDetailsClient({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={designChecked}
-                      onChange={(e) => setDesignChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                      {isClearance ? (
-                        <>
-                          <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </>
-                      ) : (
-                        <>
+                <div className="space-y-5">
+                  {isClearance ? (
+                    <>
+                      {/* Document Approval Terms and Conditions in Bengali */}
+                      <div className="bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 space-y-4 text-foreground/80">
+                        <p className="text-sm sm:text-base font-semibold text-foreground leading-relaxed">
+                          প্রিয় গ্রাহক,
+                          <br />
+                          আপনার মেনু ডিজাইন কাজটি সঠিক ও দ্রুত সম্পন্ন করার জন্য অনুগ্রহ করে নিচের বিষয়গুলো যাচাই করে অনুমোদন প্রদান করুন:
+                        </p>
+                        
+                        <div className="space-y-3 pl-1">
+                          <p className="text-xs sm:text-sm font-bold text-foreground/90 uppercase tracking-wider">আমি নিশ্চিত করছি যে—</p>
+                          <ul className="space-y-2.5 text-xs sm:text-sm">
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>মেনুর সকল আইটেম, মূল্য, বানান, অফার ও তথ্য আমি যাচাই করেছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>প্রয়োজনীয় সকল ছবি, লোগো, ব্র্যান্ড গাইডলাইন এবং ডকুমেন্ট Color Hut-কে প্রদান করা হয়েছে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>পরবর্তীতে আমার পক্ষ থেকে নতুন তথ্য, আইটেম বা বড় ধরনের পরিবর্তন যোগ হলে অতিরিক্ত সময় ও চার্জ প্রযোজ্য হতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>প্রদত্ত তথ্য ও ডকুমেন্ট অনুযায়ী ডিজাইন কাজ শুরু করা যাবে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>ডিজাইন চলাকালীন সম্পূর্ণ নতুন কনসেপ্ট, নতুন মেনু স্ট্রাকচার বা অতিরিক্ত কনটেন্ট যুক্ত করার অনুরোধ করলে কাজের সময়সীমা পরিবর্তিত হতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার গ্রাহকের থাকবে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>সকল তথ্য, মূল্য, ছবি, লোগো এবং কনটেন্ট পূর্বেই জমা ও অনুমোদন করা হয়েছে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>আমার প্রজেক্টের জন্য ডিজাইনার অ্যাসাইন করা হয়েছে এবং ডিজাইন কার্যক্রম শুরু হয়েছে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>এই পর্যায়ের পর নতুন আইটেম, নতুন পেজ, নতুন ছবি, নতুন ক্যাটাগরি, নতুন মূল্য তালিকা অথবা বড় ধরনের কনটেন্ট পরিবর্তনকে অতিরিক্ত কাজ (Additional Work) হিসেবে গণ্য করা হবে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>আমার পক্ষ থেকে দেরিতে তথ্য প্রদান, তথ্য পরিবর্তন বা নতুন নির্দেশনার কারণে ডেলিভারি সময় বৃদ্ধি পেতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                              <span className="text-emerald-500 flex-shrink-0 mt-0.5">✅</span>
+                              <span>এই অনুমোদনের পর কাজের পরিধি (Scope of Work) লক করা হয়েছে বলে আমি সম্মতি প্রদান করছি।</span>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <Separator className="bg-zinc-200 dark:bg-zinc-800/80 my-2" />
+
+                        <p className="text-sm font-semibold text-foreground/90 leading-relaxed">
+                          আমি উপরোক্ত সকল শর্ত বুঝে ডিজাইন কাজ চালিয়ে যাওয়ার জন্য চূড়ান্ত অনুমোদন প্রদান করছি।
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white dark:bg-zinc-950/40 p-4 rounded-xl border border-zinc-150 dark:border-zinc-850">
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+                            <span>১–২টি ছোট সংশোধন = <span className="font-semibold text-blue-600 dark:text-blue-400">Free</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-purple-500 flex-shrink-0" />
+                            <span>নতুন পেজ যোগ = <span className="font-semibold text-purple-600 dark:text-purple-400">Extra Charge</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+                            <span>২০% এর বেশি কনটেন্ট পরিবর্তন = <span className="font-semibold text-amber-600 dark:text-amber-400">New Revision Charge</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />
+                            <span>ডিজাইনার অ্যাসাইনের পর সম্পূর্ণ নতুন মেনু স্ট্রাকচার = <span className="font-semibold text-red-600 dark:text-red-400">New Project Scope</span></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-3.5 cursor-pointer group pt-2 select-none">
+                        <input
+                          type="checkbox"
+                          checked={designChecked && paymentChecked && noModificationChecked}
+                          onChange={(e) => {
+                            const val = e.target.checked;
+                            setDesignChecked(val);
+                            setPaymentChecked(val);
+                            setNoModificationChecked(val);
+                          }}
+                          className="h-5 w-5 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer transition-all duration-200"
+                        />
+                        <span className="text-sm sm:text-base font-semibold text-foreground/90 group-hover:text-primary transition-colors">
+                          অনুমোদন: <span className="text-primary font-bold underline decoration-wavy decoration-primary/45 underline-offset-4">হ্যাঁ, আমি সম্মতি প্রদান করছি।</span>
+                        </span>
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      {/* Standard Design Approval Checkboxes (original) */}
+                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={designChecked}
+                          onChange={(e) => setDesignChecked(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                        />
+                        <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
                           <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </>
-                      )}
-                    </span>
-                  </label>
+                        </span>
+                      </label>
 
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={paymentChecked}
-                      onChange={(e) => setPaymentChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                      <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
-                    </span>
-                  </label>
+                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={paymentChecked}
+                          onChange={(e) => setPaymentChecked(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                        />
+                        <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
+                          <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
+                        </span>
+                      </label>
 
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={noModificationChecked}
-                      onChange={(e) => setNoModificationChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
-                      {isClearance ? (
-                        <>
-                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
-                        </>
-                      ) : (
-                        <>
+                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={noModificationChecked}
+                          onChange={(e) => setNoModificationChecked(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                        />
+                        <span className="text-sm sm:text-base text-foreground/80 group-hover:text-foreground transition-colors">
                           <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
-                        </>
-                      )}
-                    </span>
-                  </label>
+                        </span>
+                      </label>
+                    </>
+                  )}
 
                   <div className="pt-4 flex justify-end">
                     <Button
@@ -1931,58 +2023,150 @@ export function OrderDetailsClient({
                 <DialogDescription className="text-sm text-muted-foreground -mt-3">
                   Please review and confirm to proceed.
                 </DialogDescription>
-                <div className="space-y-4 pt-2">
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={designChecked}
-                      onChange={(e) => setDesignChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                      {isClearance ? (
-                        <>
-                          <strong>Menu List & Price Chart Confirmation</strong>: I confirm that I have reviewed the menu list, price chart details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </>
-                      ) : (
-                        <>
+                <div className="space-y-5 pt-2">
+                  {isClearance ? (
+                    <>
+                      {/* Document Approval Terms and Conditions in Bengali */}
+                      <div className="bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 space-y-3.5 text-foreground/80 max-h-[40vh] overflow-y-auto">
+                        <p className="text-xs sm:text-sm font-semibold text-foreground leading-relaxed">
+                          প্রিয় গ্রাহক,
+                          <br />
+                          আপনার মেনু ডিজাইন কাজটি সঠিক ও দ্রুত সম্পন্ন করার জন্য অনুগ্রহ করে নিচের বিষয়গুলো যাচাই করে অনুমোদন প্রদান করুন:
+                        </p>
+                        
+                        <div className="space-y-2.5 pl-1">
+                          <p className="text-[11px] sm:text-xs font-bold text-foreground/90 uppercase tracking-wider">আমি নিশ্চিত করছি যে—</p>
+                          <ul className="space-y-2 text-[11px] sm:text-xs">
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>মেনুর সকল আইটেম, মূল্য, বানান, অফার ও তথ্য আমি যাচাই করেছি।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>প্রয়োজনীয় সকল ছবি, লোগো, ব্র্যান্ড গাইডলাইন এবং ডকুমেন্ট Color Hut-কে প্রদান করা হয়েছে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>পরবর্তীতে আমার পক্ষ থেকে নতুন তথ্য, আইটেম বা বড় ধরনের পরিবর্তন যোগ হলে অতিরিক্ত সময় ও চার্জ প্রযোজ্য হতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>প্রদত্ত তথ্য ও ডকুমেন্ট অনুযায়ী ডিজাইন কাজ শুরু করা যাবে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>ডিজাইন চলাকালীন সম্পূর্ণ নতুন কনসেপ্ট, নতুন মেনু স্ট্রাকচার বা অতিরিক্ত কনটেন্ট যুক্ত করার অনুরোধ করলে কাজের সময়সীমা পরিবর্তিত হতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>চূড়ান্ত প্রুফ (Final Proof) অনুমোদনের পর বানান, মূল্য বা তথ্যগত ভুলের দায়ভার গ্রাহকের থাকবে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>সকল তথ্য, মূল্য, ছবি, লোগো এবং কনটেন্ট পূর্বেই জমা ও অনুমোদন করা হয়েছে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>আমার প্রজেক্টের জন্য ডিজাইনার অ্যাসাইন করা হয়েছে এবং ডিজাইন কার্যক্রম শুরু হয়েছে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>এই পর্যায়ের পর নতুন আইটেম, নতুন পেজ, নতুন ছবি, নতুন ক্যাটাগরি, নতুন মূল্য তালিকা অথবা বড় ধরনের কনটেন্ট পরিবর্তনকে অতিরিক্ত কাজ (Additional Work) হিসেবে গণ্য করা হবে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>আমার পক্ষ থেকে দেরিতে তথ্য প্রদান, তথ্য পরিবর্তন বা নতুন নির্দেশনার কারণে ডেলিভারি সময় বৃদ্ধি পেতে পারে।</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <span className="text-emerald-500 flex-shrink-0">✅</span>
+                              <span>এই অনুমোদনের পর কাজের পরিধি (Scope of Work) লক করা হয়েছে বলে আমি সম্মতি প্রদান করছি।</span>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <Separator className="bg-zinc-200 dark:bg-zinc-800/80 my-1.5" />
+
+                        <p className="text-xs font-semibold text-foreground/90 leading-relaxed">
+                          আমি উপরোক্ত সকল শর্ত বুঝে ডিজাইন কাজ চালিয়ে যাওয়ার জন্য চূড়ান্ত অনুমোদন প্রদান করছি।
+                        </p>
+
+                        <div className="grid grid-cols-1 gap-2 text-[11px] bg-white dark:bg-zinc-950/40 p-3 rounded-lg border border-zinc-150 dark:border-zinc-850">
+                          <div className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                            <span>১–২টি ছোট সংশোধন = <span className="font-semibold text-blue-600 dark:text-blue-400">Free</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-purple-500 flex-shrink-0" />
+                            <span>নতুন পেজ যোগ = <span className="font-semibold text-purple-600 dark:text-purple-400">Extra Charge</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                            <span>২০% এর বেশি কনটেন্ট পরিবর্তন = <span className="font-semibold text-amber-600 dark:text-amber-400">New Revision Charge</span></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                            <span>ডিজাইনার অ্যাসাইনের পর সম্পূর্ণ নতুন মেনু স্ট্রাকচার = <span className="font-semibold text-red-600 dark:text-red-400">New Project Scope</span></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-3 cursor-pointer group pt-1.5 select-none">
+                        <input
+                          type="checkbox"
+                          checked={designChecked && paymentChecked && noModificationChecked}
+                          onChange={(e) => {
+                            const val = e.target.checked;
+                            setDesignChecked(val);
+                            setPaymentChecked(val);
+                            setNoModificationChecked(val);
+                          }}
+                          className="h-4.5 w-4.5 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer transition-all duration-200"
+                        />
+                        <span className="text-xs sm:text-sm font-semibold text-foreground/90 group-hover:text-primary transition-colors">
+                          অনুমোদন: <span className="text-primary font-bold underline decoration-wavy decoration-primary/45 underline-offset-4">হ্যাঁ, আমি সম্মতি প্রদান করছি।</span>
+                        </span>
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      {/* Standard Design Approval Checkboxes (original) */}
+                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={designChecked}
+                          onChange={(e) => setDesignChecked(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                        />
+                        <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
                           <strong>Design & Specs Confirmation</strong>: I confirm that I have reviewed the design details, items list, quantities, sizes, and pricing in the invoice above and they are all correct.
-                        </>
-                      )}
-                    </span>
-                  </label>
+                        </span>
+                      </label>
 
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={paymentChecked}
-                      onChange={(e) => setPaymentChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                      <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
-                    </span>
-                  </label>
+                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={paymentChecked}
+                          onChange={(e) => setPaymentChecked(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                        />
+                        <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
+                          <strong>Payment Acceptance</strong>: I agree to the payment terms (50% advance payment required to begin production, and the remaining balance settled before delivery).
+                        </span>
+                      </label>
 
-                  <label className="flex items-start gap-3.5 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={noModificationChecked}
-                      onChange={(e) => setNoModificationChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
-                    />
-                    <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                      {isClearance ? (
-                        <>
-                          <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no menu list, price chart modifications, changes, or cancellations can be made after approval.
-                        </>
-                      ) : (
-                        <>
+                      <label className="flex items-start gap-3.5 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={noModificationChecked}
+                          onChange={(e) => setNoModificationChecked(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+                        />
+                        <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">
                           <strong>No Modification Agreement</strong>: I understand that since products are custom manufactured, no design modifications, changes, or cancellations can be made after approval.
-                        </>
-                      )}
-                    </span>
-                  </label>
+                        </span>
+                      </label>
+                    </>
+                  )}
 
                   <div className="pt-4 flex justify-end gap-2">
                     <Button
