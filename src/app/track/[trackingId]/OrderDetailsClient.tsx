@@ -33,6 +33,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import NextLink from 'next/link';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ClientInvoicePDF } from '@/components/invoices/ClientInvoicePDF';
 
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
@@ -883,7 +884,8 @@ export function OrderDetailsClient({
         </div>
 
         {!hideStatusHeader && (
-          <div ref={invoiceRef} className="p-4 sm:p-6 bg-card border border-border/40 rounded-xl shadow-2xl">
+          currentUser ? (
+            <div ref={invoiceRef} className="p-4 sm:p-6 bg-card border border-border/40 rounded-xl shadow-2xl">
             <div className="flex flex-col sm:flex-row justify-between items-start mb-4 pb-4 border-b border-border/30">
               <div>
                 <div className="mb-2">
@@ -1082,6 +1084,9 @@ export function OrderDetailsClient({
               </div>
             )}
           </div>
+          ) : (
+            <ClientInvoicePDF order={order} allStatuses={allStatuses} />
+          )
         )}
 
         {hideStatusHeader && (

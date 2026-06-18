@@ -98,8 +98,7 @@ export async function updateTrackingLinkAction(
     revalidatePath(`/track/${orderId}`);
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
-    revalidatePath("/(app)/deliveries/monthly");
-    revalidatePath("/(app)/deliveries/weekly");
+    revalidatePath("/(app)/deliveries");
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {

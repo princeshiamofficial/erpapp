@@ -977,6 +977,52 @@ export const getClientById = async (id: string): Promise<any | null> => {
   }
 };
 
+export const getDeliveredOrdersByDateRange = async (
+  startDate: string,
+  endDate: string,
+  deliveredStatusId: string,
+  limit: number,
+  offset: number
+): Promise<{ orders: TrackingLink[]; total: number }> => {
+  try {
+    const countResults = await query<any[]>(`
+      SELECT COUNT(*) as total
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      WHERE o.is_deleted = FALSE 
+        AND o.current_status = ?
+        AND CONVERT_TZ(STR_TO_DATE(LEFT(JSON_UNQUOTE(JSON_EXTRACT(o.status_history, CONCAT('$[', JSON_LENGTH(o.status_history) - 1, '].timestamp'))), 19), '%Y-%m-%dT%H:%i:%s'), '+00:00', '+06:00') BETWEEN ? AND ?
+    `, [deliveredStatusId, startDate, endDate]);
+    const total = countResults[0]?.total || 0;
+
+    const results = await query<any[]>(`
+      SELECT o.*, c.company_name, c.phone_number, c.address,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name,
+             JSON_UNQUOTE(JSON_EXTRACT(o.status_history, CONCAT('$[', JSON_LENGTH(o.status_history) - 1, '].timestamp'))) as delivered_at
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
+      WHERE o.is_deleted = FALSE 
+        AND o.current_status = ?
+        AND CONVERT_TZ(STR_TO_DATE(LEFT(JSON_UNQUOTE(JSON_EXTRACT(o.status_history, CONCAT('$[', JSON_LENGTH(o.status_history) - 1, '].timestamp'))), 19), '%Y-%m-%dT%H:%i:%s'), '+00:00', '+06:00') BETWEEN ? AND ?
+      ORDER BY delivered_at DESC
+      LIMIT ? OFFSET ?
+    `, [deliveredStatusId, startDate, endDate, limit, offset]);
+
+    return {
+      orders: results.map(mapRowToOrder),
+      total
+    };
+  } catch (error) {
+    console.error("Error fetching delivered orders by date range from MySQL:", error);
+    return { orders: [], total: 0 };
+  }
+};
+
 
 
 

@@ -712,7 +712,7 @@ export default function CustomAccessPage() {
 
       {/* Role Management Dialog */}
       <Dialog open={isAddEditRoleDialogOpen} onOpenChange={setIsAddEditRoleDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onFocusOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{roleToEdit ? 'Edit Role' : 'Add Custom Role'}</DialogTitle>
             <DialogDescription>

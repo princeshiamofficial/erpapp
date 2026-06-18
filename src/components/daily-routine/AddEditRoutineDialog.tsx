@@ -103,7 +103,7 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onFocusOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit' : 'Add'} Daily Routine</DialogTitle>
           <DialogDescription>

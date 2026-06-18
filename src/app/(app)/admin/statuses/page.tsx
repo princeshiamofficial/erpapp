@@ -228,14 +228,11 @@ export default function AdminStatusesPage() {
     setIsSubmitting(false);
   };
 
-  const handleAllowedRoleChange = (role: UserRole, checked: boolean | "indeterminate", isEditing: boolean) => {
-    const currentRoles = isEditing ? newStatusAllowedRoles : newStatusAllowedRoles;
-    const setter = isEditing ? setNewStatusAllowedRoles : setNewStatusAllowedRoles;
-
+  const handleAllowedRoleChange = (role: UserRole, checked: boolean | "indeterminate") => {
     if (checked === true) {
-      setter([...currentRoles, role]);
+      setNewStatusAllowedRoles(prev => [...prev, role]);
     } else {
-      setter(currentRoles.filter(r => r !== role));
+      setNewStatusAllowedRoles(prev => prev.filter(r => r !== role));
     }
   };
 
@@ -267,7 +264,7 @@ export default function AdminStatusesPage() {
               <Checkbox
                 id={`${isEditingDialog ? 'edit' : 'add'}-role-${role}`}
                 checked={currentSelectedRoles.includes(role)}
-                onCheckedChange={(checked) => handleAllowedRoleChange(role, checked, isEditingDialog)}
+                onCheckedChange={(checked) => handleAllowedRoleChange(role, checked)}
                 disabled={isSubmitting || disabledForNonSysAdminOnSystemStatus}
               />
               <Label htmlFor={`${isEditingDialog ? 'edit' : 'add'}-role-${role}`} className="text-sm font-normal">
@@ -461,7 +458,7 @@ export default function AdminStatusesPage() {
 
       {/* Add Status Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg" onFocusOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Add New Order Status</DialogTitle>
             <DialogDescription>Define properties for the new status.</DialogDescription>
@@ -501,7 +498,7 @@ export default function AdminStatusesPage() {
       {/* Edit Status Dialog */}
       {editingStatus && currentUser && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg" onFocusOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>Edit Order Status: {editingStatus.name}</DialogTitle>
               <DialogDescription>Update properties for this status.</DialogDescription>

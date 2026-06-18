@@ -472,8 +472,7 @@ export async function updateOrderAction(
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
     revalidatePath("/(app)/orders/monthly");
-    revalidatePath("/(app)/deliveries/monthly");
-    revalidatePath("/(app)/deliveries/weekly");
+    revalidatePath("/(app)/deliveries");
     revalidatePath("/(app)/projects");
     revalidatePath("/(app)/admin/model-management");
     revalidatePath("/(app)/crm/sow");
@@ -570,8 +569,7 @@ export async function assignDrToOrderAction(
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
     revalidatePath(`/track/${orderId}`);
-    revalidatePath("/(app)/deliveries/monthly");
-    revalidatePath("/(app)/deliveries/weekly");
+    revalidatePath("/(app)/deliveries");
     revalidatePath("/(app)/orders/monthly");
     revalidatePath("/(app)/projects");
 
@@ -631,8 +629,7 @@ export async function deleteOrderAction(
       revalidatePath("/(app)/dashboard");
       revalidatePath("/(app)/active-orders");
       revalidatePath("/(app)/orders/monthly");
-      revalidatePath("/(app)/deliveries/monthly");
-      revalidatePath("/(app)/deliveries/weekly");
+      revalidatePath("/(app)/deliveries");
       revalidatePath("/(app)/projects");
 
       revalidatePath("/(app)/admin/model-management");

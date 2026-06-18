@@ -128,8 +128,7 @@ export async function updateProjectStatusAction(
     revalidatePath("/(app)/projects");
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/active-orders");
-    revalidatePath("/(app)/deliveries/monthly");
-    revalidatePath("/(app)/deliveries/weekly");
+    revalidatePath("/(app)/deliveries");
     revalidatePath(`/track/${project.id}`);
     revalidatePath("/(app)/invoice/[orderId]", "page");
 
@@ -191,18 +190,14 @@ export async function transferToCourierAction(
       packzyPayload.note = sanitizeForPackzy(courierNote.trim());
     }
 
-    const urlEncodedBody = Object.entries(packzyPayload)
-      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-      .join('&');
-
     const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
       method: 'POST',
       headers: {
         'Api-Key': 'vfei2q49dhy1rxqxjs6xntkkvc2odeax',
         'Secret-Key': 'n4wr4fhdohq0x3gmm8xg3pp1',
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: urlEncodedBody,
+      body: JSON.stringify(packzyPayload),
     });
 
     const responseText = await response.text();
