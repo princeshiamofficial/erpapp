@@ -33,7 +33,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import NextLink from 'next/link';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-
+import { ClientInvoicePDF } from '@/components/invoices/ClientInvoicePDF';
 
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
@@ -90,6 +90,7 @@ export function OrderDetailsClient({
   const { socket } = useSocket();
   const [order, setOrder] = useState(initialOrder);
   const [isClient, setIsClient] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
@@ -275,16 +276,15 @@ export function OrderDetailsClient({
   const currentUser = useMemo(() => authContextUser || initialCurrentUser, [authContextUser, initialCurrentUser]);
 
   const shouldShowFinancials = useMemo(() => {
-    if (!currentUser) {
-      // If no user is logged in, public orders show everything.
-      // Private orders are blocked server-side so this case isn't hit for them.
-      return initialOrder.isPublic;
+    if (!currentUser || currentUser.role === 'Client') {
+      // Clients tracking their order should see financials.
+      return true;
     }
     // For logged-in users, check their role against the permission list
     // System Admins always see everything
     if (currentUser.role === 'SYSTEM_ADMIN') return true;
     return rolesAllowedToViewFinancials?.includes(currentUser.role);
-  }, [currentUser, rolesAllowedToViewFinancials, initialOrder.isPublic]);
+  }, [currentUser, rolesAllowedToViewFinancials]);
 
 
   useEffect(() => {
@@ -293,19 +293,25 @@ export function OrderDetailsClient({
         JsBarcode(barcodeRef.current, order.id, {
           format: "CODE128",
           displayValue: false,
-          width: 1.4,
-          height: 30,
-          margin: 2,
+          width: (currentUser || isDesktop) ? 1.4 : 0.7,
+          height: (currentUser || isDesktop) ? 30 : 15,
+          margin: (currentUser || isDesktop) ? 2 : 1,
         });
       } catch (e) {
         console.error("JsBarcode error:", e);
       }
     }
-  }, [order.id]);
+  }, [order.id, currentUser, isDesktop]);
 
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
+
+    const checkViewport = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
 
     let storedReactorId = localStorage.getItem('CLIENT_REACTOR_ID_KEY');
     if (!storedReactorId) {
@@ -339,6 +345,10 @@ export function OrderDetailsClient({
       }
     };
     fetchPackzyStatus();
+
+    return () => {
+      window.removeEventListener('resize', checkViewport);
+    };
   }, [initialOrder]);
 
   useEffect(() => {
@@ -886,7 +896,8 @@ export function OrderDetailsClient({
         </div>
 
         {!hideStatusHeader && (
-          <div ref={invoiceRef} className="p-4 sm:p-6 bg-card border border-border/40 rounded-xl shadow-2xl">
+          (currentUser || isDesktop) ? (
+            <div ref={invoiceRef} className="p-4 sm:p-6 bg-card border border-border/40 rounded-xl shadow-2xl">
             <div className="flex flex-col sm:flex-row justify-between items-start mb-4 pb-4 border-b border-border/30">
               <div>
                 <div className="mb-2">
@@ -905,21 +916,36 @@ export function OrderDetailsClient({
                   <span className="hidden sm:inline text-muted-foreground/50">|</span>
                   <span>+8801919-760626</span>
                 </p>
-                <div className="text-xs text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-3.5 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-3.5 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+                {(currentUser || isDesktop) && (
+                  <div className="text-xs text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-3.5 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-3.5 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+                )}
               </div>
               <div className="text-left sm:text-right mt-4 sm:mt-0 w-full sm:w-auto">
-                <p className="text-base font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-                <div className="text-xs text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-3.5 w-56"><Skeleton className="h-full w-full" /></div>}</div>
-                {order.acceptedDeliveryDate && (
-                  <div className="text-xs text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-3.5 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                {(currentUser || isDesktop) ? (
+                  <>
+                    <p className="text-base font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                    <div className="text-xs text-muted-foreground">Order Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-3.5 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                    {order.acceptedDeliveryDate && (
+                      <div className="text-xs text-muted-foreground">Accepted Delivery Date: {isClient ? formatDate(order.acceptedDeliveryDate, false, false) : <div className="h-3.5 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+                    )}
+                    <div className="mt-1.5"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
+                  </>
+                ) : (
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 sm:gap-2 mt-1.5">
+                    <div className="text-left sm:text-right">
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">Order Date: {isClient ? formatDate(order.createdAt, false, false) : <div className="h-3.5 w-40"><Skeleton className="h-full w-full" /></div>}</div>
+                    </div>
+                    <div className="flex-shrink-0 mt-0 sm:mt-1.5">
+                      <svg ref={barcodeRef} className="object-contain h-[17px] sm:h-[34px] w-auto" data-ai-hint="barcode scan"></svg>
+                    </div>
+                  </div>
                 )}
-                <div className="mt-1.5"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
               </div>
             </div>
 
             <div className={cn(
               "grid gap-6 mb-6",
-              (order.designerRepresentativeName || order.crmUserName) ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+              (currentUser || isDesktop) && (order.designerRepresentativeName || order.crmUserName) ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
             )}>
               <div className="space-y-1 p-3 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
                 <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4" />Bill To:</h4>
@@ -927,7 +953,7 @@ export function OrderDetailsClient({
                 <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>
                 <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{order.phoneNumber}</p>
               </div>
-              {(order.designerRepresentativeName || order.crmUserName) && (
+              {(currentUser || isDesktop) && (order.designerRepresentativeName || order.crmUserName) && (
                 <div className="space-y-3 p-3 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
                   {order.crmUserName && (
                     <div className="space-y-1">
@@ -1088,6 +1114,9 @@ export function OrderDetailsClient({
               </div>
             )}
           </div>
+          ) : (
+            <ClientInvoicePDF order={order} allStatuses={allStatuses} />
+          )
         )}
 
         {hideStatusHeader && (
