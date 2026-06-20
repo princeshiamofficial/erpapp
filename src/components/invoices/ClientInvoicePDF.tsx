@@ -798,9 +798,10 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
             className="w-auto"
           >
             {({ blob, url, loading, error }) => (
-              <Button
-                disabled={loading}
-                className="w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-2 h-10 px-5 shadow-sm hover:shadow transition-all"
+              <span
+                className={`inline-flex items-center justify-center gap-2 h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-md shadow-sm hover:shadow transition-all text-sm select-none ${
+                  loading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+                }`}
               >
                 {loading ? (
                   <>
@@ -813,7 +814,7 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
                     Download Invoice
                   </>
                 )}
-              </Button>
+              </span>
             )}
           </PDFDownloadLink>
         </div>
