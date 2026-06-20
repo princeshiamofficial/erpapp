@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createOrderAction, getClientDetailsAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, UploadCloud, Paperclip, XCircle, Star } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, UploadCloud, Paperclip, XCircle, Star, Gift } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -41,6 +41,7 @@ interface DialogOrderItem {
   lamination: string;
   unitPrice: number | null;
   lineItemTotalPrice: number | null;
+  isGift?: boolean;
 }
 
 const formatCurrencyBdt = (value: number | null | undefined): string => {
@@ -55,6 +56,7 @@ const initialOrderItemState: DialogOrderItem = {
   lamination: '',
   unitPrice: null,
   lineItemTotalPrice: null,
+  isGift: false,
 };
 
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children, allOrders, isOpen, onOpenChange, initialData }: CreateOrderDialogProps) {
@@ -206,7 +208,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   }, [isOpen, availableStatuses, initialStatusId]);
 
   useEffect(() => {
-    const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
     setOrderItemsTotal(currentItemsTotal);
 
     let discountNum = 0;
@@ -372,6 +374,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   };
 
+  const handleToggleGift = (itemId: string) => {
+    setOrderItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId ? { ...item, isGift: !item.isGift } : item
+      )
+    );
+  };
+
   const togglePopover = (itemId: string, open?: boolean) => {
     setPopoverOpenStates(prev => ({ ...prev, [itemId]: open === undefined ? !prev[itemId] : open }));
   };
@@ -513,7 +523,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       createdAt: currentOrderDate!.toISOString(),
-      orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10) })),
+      orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), isGift: item.isGift || false })),
       advancePaymentAmount: parseFloat(advancePaymentAmount) || null,
       advancePaymentMethod: advancePaymentMethod.trim() ? (advancePaymentMethod.toLowerCase() === 'other' ? customPaymentMethodText.trim() : advancePaymentMethod.trim()) : null,
       advancePaymentDocumentUrl: uploadedProofUrl,
@@ -538,6 +548,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       window.open(`/track/${result.id}`, '_blank');
     }
   };
+
+  const giftTotal = orderItems.reduce((sum, item) => sum + (item.isGift ? (item.lineItemTotalPrice || 0) : 0), 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -765,8 +777,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                             <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name} className="text-sm">{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations.</div>}</SelectContent>
                           </Select>
                         </TableCell>
-                        <TableCell className="p-2 align-middle text-right pr-4 font-semibold text-sm text-foreground whitespace-nowrap">
-                          {formatCurrencyBdt(item.lineItemTotalPrice)}
+                        <TableCell 
+                          className="p-2 align-middle text-right pr-4 font-semibold text-sm whitespace-nowrap cursor-pointer select-none"
+                          onDoubleClick={() => handleToggleGift(item.id)}
+                        >
+                          <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
+                            {formatCurrencyBdt(item.lineItemTotalPrice)}
+                          </span>
+                          {item.isGift && " (Gift)"}
                         </TableCell>
                         <TableCell className="p-2 align-middle text-right">
                           <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isSubmitting || orderItems.length <= 1} className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground" title="Remove item"><Trash2 className="h-4 w-4" /></Button>
@@ -897,6 +915,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 <span className="text-muted-foreground">Order Items Total:</span>
                 <span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span>
               </div>
+              {giftTotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center">
+                    <Gift className="h-4 w-4 mr-1 text-yellow-500" />
+                    Gift Value:
+                  </span>
+                  <span className="font-medium text-yellow-500">{formatCurrencyBdt(giftTotal)}</span>
+                </div>
+              )}
               {(calculatedDiscountAmount || 0) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Special Client Discount:</span>

@@ -137,6 +137,7 @@ export interface OrderItem {
   lamination: string;
   unitPrice: number;
   lineItemTotalPrice: number;
+  isGift?: boolean;
 }
 
 export interface AdvancePaymentRecord {

@@ -46,6 +46,43 @@ const PhoneIcon = () => (
   </Svg>
 );
 
+const GiftIcon = () => (
+  <Svg width="10" height="10" viewBox="0 0 24 24" style={{ marginRight: 4 }}>
+    <Path 
+      d="M3 11h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V11z" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    <Path 
+      d="M12 2v20" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    <Path 
+      d="M2 11h20" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    <Path 
+      d="M7.5 7.5a2.5 2.5 0 0 1 0-5C10 2.5 12 7.5 12 7.5s2-5 4.5-5a2.5 2.5 0 0 1 0 5c0 0-2 5-4.5 5s-4.5-5-4.5-5z" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+  </Svg>
+);
+
 // Register Bangla font support
 Font.register({
   family: 'Hind Siliguri',
@@ -258,6 +295,11 @@ const styles = StyleSheet.create({
     marginRight: 4,
     fontWeight: 'bold',
   },
+  giftValue: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#CA8A04',
+  },
   stamp: {
     position: 'absolute',
     left: -130,
@@ -298,7 +340,8 @@ interface QuotationPDFProps {
 }
 
 export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
-  const subtotal = quotation.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+  const subtotal = quotation.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
+  const giftTotal = quotation.orderItems.reduce((acc, item) => acc + (item.isGift ? (item.lineItemTotalPrice || 0) : 0), 0);
   const discount = quotation.specialClientDiscount || 0;
   const shipping = quotation.shippingCharge || 0;
   const total = subtotal - discount + shipping;
@@ -392,7 +435,20 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
                 <View style={styles.colQty}><Text style={styles.tableCell}>{item.quantity}</Text></View>
                 <View style={styles.colLam}><Text style={styles.tableCell}>{item.lamination || 'None'}</Text></View>
                 <View style={styles.colPrice}><Text style={styles.tableCell}>BDT {item.unitPrice.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text></View>
-                <View style={styles.colTotal}><Text style={[styles.tableCell, { fontWeight: 'bold' }]}>BDT {item.lineItemTotalPrice.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text></View>
+                <View style={styles.colTotal}>
+                  {item.isGift ? (
+                    <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>
+                      <Text style={{ textDecoration: 'line-through', color: '#6B7280' }}>
+                        BDT {item.lineItemTotalPrice.toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                      </Text>
+                      <Text style={{ color: '#334155' }}> (Gift)</Text>
+                    </Text>
+                  ) : (
+                    <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>
+                      BDT {item.lineItemTotalPrice.toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                    </Text>
+                  )}
+                </View>
               </View>
             ))}
           </View>
@@ -422,6 +478,16 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
                 <Text style={styles.summaryLabel}>Items Total:</Text>
                 <Text style={styles.summaryValue}>BDT {subtotal.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text>
               </View>
+              
+              {giftTotal > 0 && (
+                <View style={styles.summaryRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <GiftIcon />
+                    <Text style={[styles.summaryLabel, { color: '#CA8A04' }]}>Gift Value:</Text>
+                  </View>
+                  <Text style={styles.giftValue}>BDT {giftTotal.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text>
+                </View>
+              )}
               
               {discount > 0 && (
                 <View style={styles.summaryRow}>

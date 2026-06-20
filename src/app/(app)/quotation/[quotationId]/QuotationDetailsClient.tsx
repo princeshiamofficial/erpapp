@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User } from "lucide-react";
+import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User, Gift } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { CustomStatus, TrackingLink, User as UserType, AdvancePaymentRecord } from "@/types";
 import { Separator } from "@/components/ui/separator";
@@ -62,7 +62,10 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
 
   const lastEditedByEntry = quotation.updatedAt && quotation.updatedByUserName ? { timestamp: quotation.updatedAt, changedByUserName: quotation.updatedByUserName } : null;
   const orderSubtotal = Array.isArray(quotation.orderItems)
-    ? quotation.orderItems.reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0)
+    ? quotation.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
+    : 0;
+  const giftTotal = Array.isArray(quotation.orderItems)
+    ? quotation.orderItems.reduce((acc, item) => acc + (item.isGift ? (Number(item.lineItemTotalPrice) || 0) : 0), 0)
     : 0;
   const effectiveDiscount = Number(quotation.specialClientDiscount) || 0;
   const netPayable = orderSubtotal - effectiveDiscount;
@@ -143,7 +146,15 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
           <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
             <Table><TableHeader><TableRow><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead></TableRow></TableHeader>
               <TableBody>{quotation.orderItems.map((item, index) => (<TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
-                <TableCell className="font-medium text-card-foreground">{item.model}</TableCell><TableCell className="text-center text-card-foreground">{item.quantity}</TableCell><TableCell className="text-card-foreground">{item.lamination}</TableCell><TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell><TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
+                <TableCell className="font-medium text-card-foreground">{item.model}</TableCell><TableCell className="text-center text-card-foreground">{item.quantity}</TableCell><TableCell className="text-card-foreground">{item.lamination}</TableCell><TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
+                <TableCell 
+                  className="text-right font-semibold text-card-foreground"
+                >
+                  <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
+                    {formatCurrency(item.lineItemTotalPrice)}
+                  </span>
+                  {item.isGift && " (Gift)"}
+                </TableCell>
               </TableRow>))}</TableBody></Table>
           </div>
         </div>
@@ -179,6 +190,17 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
       <div className="flex justify-end mt-8 pt-6 border-t border-border/30 print:mt-4 print:pt-4">
         <div className="w-full max-w-xs sm:max-w-sm relative">
           <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
+          {giftTotal > 0 && (
+            <div className="flex justify-between mb-1">
+              <span className="text-md text-muted-foreground flex items-center">
+                <Gift className="h-4 w-4 mr-1 text-yellow-500" />
+                Gift Value:
+              </span>
+              <span className="text-md font-medium text-yellow-500">
+                {formatCurrency(giftTotal)}
+              </span>
+            </div>
+          )}
           {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
           <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
 

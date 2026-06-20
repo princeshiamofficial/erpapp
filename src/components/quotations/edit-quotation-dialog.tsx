@@ -20,7 +20,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateQuotationAction } from '@/app/(app)/quotation/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, XCircle, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, XCircle, Edit, Gift } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -47,6 +47,7 @@ interface DialogOrderItem {
   lamination: string;
   unitPrice: number | null;
   lineItemTotalPrice: number | null;
+  isGift?: boolean;
 }
 
 const formatCurrencyBdt = (value: number | null | undefined): string => {
@@ -175,7 +176,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
   }, [isOpen, quotation, isLoadingOptions, resetForm]);
 
   useEffect(() => {
-    const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
     setOrderItemsTotal(currentItemsTotal);
 
     let discountNum = 0;
@@ -256,8 +257,15 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
     }));
   };
 
-  const handleAddItem = () => setOrderItems(prev => [...prev, { id: uuidv4(), model: '', quantity: '1', lamination: '', unitPrice: null, lineItemTotalPrice: null }]);
+  const handleAddItem = () => setOrderItems(prev => [...prev, { id: uuidv4(), model: '', quantity: '1', lamination: '', unitPrice: null, lineItemTotalPrice: null, isGift: false }]);
   const handleRemoveItem = (id: string) => { if (orderItems.length > 1) setOrderItems(prev => prev.filter(item => item.id !== id)); };
+  const handleToggleGift = (itemId: string) => {
+    setOrderItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId ? { ...item, isGift: !item.isGift } : item
+      )
+    );
+  };
   const togglePopover = (itemId: string, open?: boolean) => setPopoverOpenStates(prev => ({ ...prev, [itemId]: open === undefined ? !prev[itemId] : open }));
 
   const handleNewAdvancePaymentMethodChange = (value: string) => {
@@ -357,7 +365,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
       createdAt: createdAt.toISOString(),
       specialClientDiscountString: specialClientDiscount.trim() || null,
       orderNotes: orderNotes.trim() || null,
-      orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
+      orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice!, isGift: item.isGift || false })),
       advancePayments: [...existingAdvancePayments],
     };
 
@@ -382,6 +390,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
       toast({ title: "Update Failed", description: result.error || "Could not update quotation.", variant: "destructive" });
     }
   };
+  const giftTotal = orderItems.reduce((sum, item) => sum + (item.isGift ? (item.lineItemTotalPrice || 0) : 0), 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -422,60 +431,87 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
             </div>
             <div className="space-y-1"><Label htmlFor="edit-orderNotes">Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting} /></div>
             <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Quotation Items</Label>
-              {orderItems.map((item) => (<div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
-                  <div className="space-y-1"><Label htmlFor={`model-${item.id}`}>Model</Label>
-                    <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="w-full justify-between bg-background" disabled={isLoadingOptions || modelOptions.length === 0 || isSubmitting}>
-                          <span className="flex items-center gap-2 flex-1 text-left whitespace-nowrap overflow-hidden">
-                            {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
-                              <Avatar className="h-5 w-5 rounded-sm">
-                                <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
-                                <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                              </Avatar>
-                            ) : null}
-                            <span className="truncate">
-                              {item.model ? modelOptions.find((option) => option.name === item.model)?.name : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
-                            </span>
+              <div className="border rounded-md bg-background overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[45%]">Model *</TableHead>
+                      <TableHead className="w-[15%]">Quantity *</TableHead>
+                      <TableHead className="w-[20%]">Lamination *</TableHead>
+                      <TableHead className="w-[15%] text-right pr-4">Total Price</TableHead>
+                      <TableHead className="w-[5%] text-right"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orderItems.map((item) => (
+                      <TableRow key={item.id} className="hover:bg-muted/30">
+                        <TableCell className="p-2 align-middle">
+                          <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="w-full justify-between bg-background text-sm" disabled={isLoadingOptions || modelOptions.length === 0 || isSubmitting}>
+                                <span className="flex items-center gap-1.5 flex-1 text-left whitespace-nowrap overflow-hidden">
+                                  {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
+                                    <Avatar className="h-4 w-4 rounded-sm shrink-0">
+                                      <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
+                                      <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                    </Avatar>
+                                  ) : null}
+                                  <span className="truncate">
+                                    {item.model ? modelOptions.find((option) => option.name === item.model)?.name : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                                  </span>
+                                </span>
+                                <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
+                              <Command>
+                                <CommandInput placeholder="Search model..." />
+                                <CommandList>
+                                  <CommandEmpty>No model found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {modelOptions.map((option) => (
+                                      <CommandItem key={option.id} value={option.name} onSelect={(currentValue) => { handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue); togglePopover(item.id, false); }} className="flex items-center gap-2">
+                                        <Check className={cn("h-4 w-4 shrink-0", item.model === option.name ? "opacity-100" : "opacity-0")} />
+                                        <Avatar className="h-8 w-8 rounded-sm shrink-0">
+                                          <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
+                                          <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                        </Avatar>
+                                        <span className="flex-1 truncate">{option.name}</span>
+                                        {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </TableCell>
+                        <TableCell className="p-2 align-middle">
+                          <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required className="bg-background text-sm h-9" disabled={isSubmitting} />
+                        </TableCell>
+                        <TableCell className="p-2 align-middle">
+                          <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0 || isSubmitting}>
+                            <SelectTrigger id={`lamination-${item.id}`} className="bg-background text-sm h-9"><SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} /></SelectTrigger>
+                            <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name} className="text-sm">{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations.</div>}</SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell 
+                          className="p-2 align-middle text-right pr-4 font-semibold text-sm whitespace-nowrap cursor-pointer select-none"
+                          onDoubleClick={() => handleToggleGift(item.id)}
+                        >
+                          <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
+                            {formatCurrencyBdt(item.lineItemTotalPrice)}
                           </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
-                        <Command>
-                          <CommandInput placeholder="Search model..." />
-                          <CommandList>
-                            <CommandEmpty>No model found.</CommandEmpty>
-                            <CommandGroup>
-                              {modelOptions.map((option) => (
-                                <CommandItem key={option.id} value={option.name} onSelect={(currentValue) => { handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue); togglePopover(item.id, false); }} className="flex items-center gap-2">
-                                  <Check className={cn("h-4 w-4 shrink-0", item.model === option.name ? "opacity-100" : "opacity-0")} />
-                                  <Avatar className="h-8 w-8 rounded-sm shrink-0">
-                                    <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
-                                    <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                                  </Avatar>
-                                  <span className="flex-1 truncate">{option.name}</span>
-                                  {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-1"><Label htmlFor={`quantity-${item.id}`}>Quantity</Label><Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} min="1" required className="bg-background" disabled={isSubmitting} /></div>
-                  <div className="space-y-1"><Label htmlFor={`lamination-${item.id}`}>Lamination</Label>
-                    <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0 || isSubmitting}>
-                      <SelectTrigger id={`lamination-${item.id}`} className="bg-background"><SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} /></SelectTrigger>
-                      <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1"><Label>Total Price</Label><Input value={formatCurrencyBdt(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" /></div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isSubmitting || orderItems.length <= 1} className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground" title="Remove item"><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </div>))}
+                          {item.isGift && " (Gift)"}
+                        </TableCell>
+                        <TableCell className="p-2 align-middle text-right">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isSubmitting || orderItems.length <= 1} className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground" title="Remove item"><Trash2 className="h-4 w-4" /></Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               <Button type="button" variant="outline" onClick={handleAddItem} className="mt-2" disabled={isSubmitting || isLoadingOptions}><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
             </div>
             <Separator className="my-4" />
@@ -573,6 +609,15 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
             <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
               <h4 className="text-md font-semibold text-foreground mb-2">Quotation Summary</h4>
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Items Total:</span><span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span></div>
+              {giftTotal > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center">
+                    <Gift className="h-4 w-4 mr-1 text-yellow-500" />
+                    Gift Value:
+                  </span>
+                  <span className="font-medium text-yellow-500">{formatCurrencyBdt(giftTotal)}</span>
+                </div>
+              )}
               {(calculatedDiscountAmount || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Discount:</span><span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span></div>)}
               <div className="flex justify-between text-sm font-semibold"><span className="text-foreground">Net Payable:</span><span className="text-foreground">{formatCurrencyBdt(netPayable)}</span></div>
               {(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0)) > 0 && (<div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border"><span className="text-muted-foreground">Total Paid:</span><span className="font-medium text-green-600">- {formatCurrencyBdt(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0))}</span></div>)}

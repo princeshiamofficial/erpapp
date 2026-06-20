@@ -34,6 +34,7 @@ interface CreateQuotationDialogFormData {
     lamination: string;
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
+    isGift?: boolean;
   }>;
   advancePaymentAmount?: number | null;
   advancePaymentMethod?: string | null;
@@ -94,8 +95,9 @@ export async function createQuotationAction(
         lamination: lamination,
         unitPrice: unitPrice,
         lineItemTotalPrice: lineItemTotalPrice,
+        isGift: item.isGift || false,
       });
-      orderItemsTotal += lineItemTotalPrice;
+      orderItemsTotal += (item.isGift ? 0 : lineItemTotalPrice);
     }
 
     if (data.specialClientDiscount !== null && data.specialClientDiscount !== undefined && data.specialClientDiscount < 0) {
@@ -183,7 +185,7 @@ export async function updateQuotationAction(
     const existingQuotation = await getQuotationById(quotationId);
     if (!existingQuotation) return { success: false, error: `Quotation with ID ${quotationId} not found.` };
 
-    let currentOrderItemsTotal = (updates.orderItems || existingQuotation.orderItems).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    let currentOrderItemsTotal = (updates.orderItems || existingQuotation.orderItems).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
 
     const finalUpdates: any = { ...updates };
     delete finalUpdates.newAdvancePaymentAmount;

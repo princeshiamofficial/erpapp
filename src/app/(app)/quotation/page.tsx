@@ -507,7 +507,9 @@ export default function QuotationsPage() {
                     return (
                       <TableRow key={quotation.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-mono text-primary font-bold">
-                          {quotation.id}
+                          <Link href={`/quotation/${quotation.id}`} className="hover:underline">
+                            {quotation.id}
+                          </Link>
                         </TableCell>
                         <TableCell className="text-card-foreground font-medium">{contactPerson}</TableCell>
                         <TableCell className="text-card-foreground">{companyName}</TableCell>

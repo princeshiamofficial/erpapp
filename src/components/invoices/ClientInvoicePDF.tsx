@@ -53,6 +53,43 @@ const Barcode = ({ value, width = 100, height = 30 }: { value: string; width?: n
 };
 
 // SVG Icons
+const GiftIcon = () => (
+  <Svg width="10" height="10" viewBox="0 0 24 24" style={{ marginRight: 4 }}>
+    <Path 
+      d="M3 11h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V11z" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    <Path 
+      d="M12 2v20" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    <Path 
+      d="M2 11h20" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+    <Path 
+      d="M7.5 7.5a2.5 2.5 0 0 1 0-5C10 2.5 12 7.5 12 7.5s2-5 4.5-5a2.5 2.5 0 0 1 0 5c0 0-2 5-4.5 5s-4.5-5-4.5-5z" 
+      fill="none" 
+      stroke="#CA8A04" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+    />
+  </Svg>
+);
+
 const BuildingIcon = () => (
   <Svg width="10" height="10" viewBox="0 0 24 24" style={{ marginRight: 6 }}>
     <Path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z" fill="#94A3B8" />
@@ -317,6 +354,11 @@ const styles = StyleSheet.create({
     marginRight: 4,
     fontWeight: 'bold',
   },
+  giftValue: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#CA8A04',
+  },
   stamp: {
     position: 'absolute',
     left: -130,
@@ -352,7 +394,10 @@ interface InvoicePageProps {
 
 const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
   const orderSubtotal = Array.isArray(order.orderItems)
-    ? order.orderItems.reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0)
+    ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
+    : 0;
+  const giftTotal = Array.isArray(order.orderItems)
+    ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? (Number(item.lineItemTotalPrice) || 0) : 0), 0)
     : 0;
   const effectiveDiscount = Number(order.specialClientDiscount) || 0;
   const netPayable = orderSubtotal - effectiveDiscount;
@@ -575,7 +620,20 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
               <View style={styles.colQty}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{item.quantity}</Text></View>
               <View style={styles.colLam}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{item.lamination || 'None'}</Text></View>
               <View style={styles.colPrice}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>BDT {Number(item.unitPrice).toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text></View>
-              <View style={styles.colTotal}><Text style={[styles.tableCell, { fontWeight: 'bold', fontSize: cellFontSize }]}>BDT {Number(item.lineItemTotalPrice).toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text></View>
+              <View style={styles.colTotal}>
+                {item.isGift ? (
+                  <Text style={[styles.tableCell, { fontWeight: 'bold', fontSize: cellFontSize }]}>
+                    <Text style={{ textDecoration: 'line-through', color: '#6B7280' }}>
+                      BDT {Number(item.lineItemTotalPrice).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                    </Text>
+                    <Text style={{ color: '#334155' }}> (Gift)</Text>
+                  </Text>
+                ) : (
+                  <Text style={[styles.tableCell, { fontWeight: 'bold', fontSize: cellFontSize }]}>
+                    BDT {Number(item.lineItemTotalPrice).toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                  </Text>
+                )}
+              </View>
             </View>
           ))}
         </View>
@@ -633,6 +691,16 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
               <Text style={[styles.summaryLabel, { fontSize: baseFontSize }]}>Order Items Total:</Text>
               <Text style={[styles.summaryValue, { fontSize: baseFontSize }]}>BDT {orderSubtotal.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text>
             </View>
+            
+            {giftTotal > 0 && (
+              <View style={styles.summaryRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <GiftIcon />
+                  <Text style={[styles.summaryLabel, { color: '#CA8A04', fontSize: baseFontSize }]}>Gift Value:</Text>
+                </View>
+                <Text style={[styles.giftValue, { fontSize: baseFontSize }]}>BDT {giftTotal.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text>
+              </View>
+            )}
             
             {effectiveDiscount > 0 && (
               <View style={styles.summaryRow}>

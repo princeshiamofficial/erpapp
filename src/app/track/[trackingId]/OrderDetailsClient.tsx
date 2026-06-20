@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Copy, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X, ArrowLeft, CreditCard, Wallet, Check, UploadCloud } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Copy, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X, ArrowLeft, CreditCard, Wallet, Check, UploadCloud, Gift } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -653,7 +653,10 @@ export function OrderDetailsClient({
   }, 0);
 
   const orderSubtotal = Array.isArray(order.orderItems)
-    ? order.orderItems.reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0)
+    ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
+    : 0;
+  const giftTotal = Array.isArray(order.orderItems)
+    ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? (Number(item.lineItemTotalPrice) || 0) : 0), 0)
     : 0;
   const effectiveDiscount = Number(order.specialClientDiscount) || 0;
   const netPayable = orderSubtotal - effectiveDiscount;
@@ -1002,7 +1005,14 @@ export function OrderDetailsClient({
                           {shouldShowFinancials && (
                             <>
                               <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
-                              <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
+                              <TableCell 
+                                className="text-right font-semibold text-card-foreground"
+                              >
+                                <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
+                                  {formatCurrency(item.lineItemTotalPrice)}
+                                </span>
+                                {item.isGift && " (Gift)"}
+                              </TableCell>
                             </>
                           )}
                         </TableRow>
@@ -1053,6 +1063,17 @@ export function OrderDetailsClient({
               <div className="flex justify-end mt-6 pt-4 border-t border-border/30">
                 <div className="w-full max-w-xs sm:max-w-sm relative">
                   <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
+                  {giftTotal > 0 && (
+                    <div className="flex justify-between mb-1">
+                      <span className="text-md text-muted-foreground flex items-center">
+                        <Gift className="h-4 w-4 mr-1 text-yellow-500" />
+                        Gift Value:
+                      </span>
+                      <span className="text-md font-medium text-yellow-500">
+                        {formatCurrency(giftTotal)}
+                      </span>
+                    </div>
+                  )}
                   {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
                   <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
                   {shippingCharge <= 0 && (

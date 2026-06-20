@@ -39,6 +39,7 @@ interface CreateOrderDialogFormData {
     lamination: string;
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
+    isGift?: boolean;
   }>;
   advancePaymentAmount?: number | null;
   advancePaymentMethod?: string | null;
@@ -107,8 +108,9 @@ export async function createOrderAction(
         lamination: lamination,
         unitPrice: unitPrice,
         lineItemTotalPrice: lineItemTotalPrice,
+        isGift: item.isGift || false,
       });
-      orderItemsTotal += lineItemTotalPrice;
+      orderItemsTotal += (item.isGift ? 0 : lineItemTotalPrice);
     }
 
     if (data.specialClientDiscount !== null && data.specialClientDiscount !== undefined && data.specialClientDiscount < 0) {
@@ -248,7 +250,7 @@ export async function updateOrderAction(
     delete finalUpdates.newAdvancePaymentDocumentUrl;
     delete finalUpdates.specialClientDiscountString;
 
-    let currentOrderItemsTotal = (updates.orderItems || existingOrder.orderItems).reduce((sum, item) => sum + (Number(item.lineItemTotalPrice) || 0), 0);
+    let currentOrderItemsTotal = (updates.orderItems || existingOrder.orderItems).reduce((sum, item) => sum + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0);
 
     if (updates.createdAt) {
       try {

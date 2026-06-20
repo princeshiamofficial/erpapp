@@ -19,7 +19,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction, getClientDetailsAction, getClientPaymentsAction, deleteClientPaymentsBatchAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Star, Undo2, MoreVertical } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle, Save, X, Star, Undo2, MoreVertical, Gift } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -50,6 +50,7 @@ interface DialogOrderItem {
   lamination: string;
   unitPrice: number | null;
   lineItemTotalPrice: number | null;
+  isGift?: boolean;
 }
 
 const formatCurrencyBdt = (value: number | null | undefined): string => {
@@ -313,7 +314,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   }, [jobIdInput, allOrders, toast, isOpen, isAutoFilled]);
 
   useEffect(() => {
-    const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
     setOrderItemsTotal(currentItemsTotal);
 
     let discountNum = 0;
@@ -403,8 +404,15 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }));
   };
 
-  const handleAddItem = () => setOrderItems(prev => [...prev, { id: uuidv4(), model: '', quantity: '1', lamination: '', unitPrice: null, lineItemTotalPrice: null }]);
+  const handleAddItem = () => setOrderItems(prev => [...prev, { id: uuidv4(), model: '', quantity: '1', lamination: '', unitPrice: null, lineItemTotalPrice: null, isGift: false }]);
   const handleRemoveItem = (id: string) => { if (orderItems.length > 1) setOrderItems(prev => prev.filter(item => item.id !== id)); };
+  const handleToggleGift = (itemId: string) => {
+    setOrderItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId ? { ...item, isGift: !item.isGift } : item
+      )
+    );
+  };
   const togglePopover = (itemId: string, open?: boolean) => setPopoverOpenStates(prev => ({ ...prev, [itemId]: open === undefined ? !prev[itemId] : open }));
 
   const handleNewAdvancePaymentMethodChange = (value: string) => {
@@ -597,7 +605,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       specialClientDiscountString: specialClientDiscount.trim() || null,
       shippingCharge: parseFloat(shippingCharge) || 0,
       orderNotes: orderNotes.trim() || null,
-      orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
+      orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice!, isGift: item.isGift || false })),
       advancePayments: [...existingAdvancePayments],
       isStarred,
     };
@@ -632,6 +640,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }
   };
 
+
+  const giftTotal = orderItems.reduce((sum, item) => sum + (item.isGift ? (item.lineItemTotalPrice || 0) : 0), 0);
 
   return (
     <>
@@ -813,8 +823,14 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                               <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name} className="text-sm">{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations.</div>}</SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="p-2 align-middle text-right pr-4 font-semibold text-sm text-foreground whitespace-nowrap">
-                            {formatCurrencyBdt(item.lineItemTotalPrice)}
+                          <TableCell 
+                            className="p-2 align-middle text-right pr-4 font-semibold text-sm whitespace-nowrap cursor-pointer select-none"
+                            onDoubleClick={() => handleToggleGift(item.id)}
+                          >
+                            <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
+                              {formatCurrencyBdt(item.lineItemTotalPrice)}
+                            </span>
+                            {item.isGift && " (Gift)"}
                           </TableCell>
                           <TableCell className="p-2 align-middle text-right">
                             <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} disabled={isSubmitting || orderItems.length <= 1} className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground" title="Remove item"><Trash2 className="h-4 w-4" /></Button>
@@ -1041,6 +1057,15 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
                 <h4 className="text-md font-semibold text-foreground mb-2">Order Summary</h4>
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Order Items Total:</span><span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span></div>
+                {giftTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center">
+                      <Gift className="h-4 w-4 mr-1 text-yellow-500" />
+                      Gift Value:
+                    </span>
+                    <span className="font-medium text-yellow-500">{formatCurrencyBdt(giftTotal)}</span>
+                  </div>
+                )}
                 {(calculatedDiscountAmount || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Discount:</span><span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span></div>)}
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Net Payable:</span><span className="font-semibold text-foreground">{formatCurrencyBdt(netPayable)}</span></div>
                 {(parseFloat(shippingCharge) || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Shipping Charge:</span><span className="font-medium text-foreground">+ {formatCurrencyBdt(parseFloat(shippingCharge))}</span></div>)}
