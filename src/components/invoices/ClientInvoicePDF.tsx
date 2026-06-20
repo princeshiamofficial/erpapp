@@ -779,9 +779,9 @@ interface ClientInvoicePDFProps {
 
 export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) {
   return (
-    <Card className="shadow-2xl border border-border/40 bg-card rounded-xl overflow-hidden mt-6 print:hidden">
-      <CardHeader className="bg-muted/30 p-6 border-b border-border/40 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div>
+    <Card className="shadow-none border-0 bg-transparent rounded-none overflow-visible mt-6 print:hidden md:shadow-2xl md:border md:border-border/40 md:bg-card md:rounded-xl md:overflow-hidden">
+      <CardHeader className="bg-transparent p-0 border-b-0 flex flex-col sm:flex-row justify-between items-center gap-4 md:bg-muted/30 md:p-6 md:border-b md:border-border/40">
+        <div className="hidden md:block">
           <CardTitle className="text-xl font-bold flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
             Official Invoice Document
@@ -791,16 +791,16 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
           </CardDescription>
         </div>
         
-        <div className="flex gap-2 w-full sm:w-auto justify-end">
+        <div className="flex gap-2 w-auto justify-end">
           <PDFDownloadLink
             document={<ClientInvoiceDocument orders={[order]} allStatuses={allStatuses} />}
             fileName={`Invoice_${order.id}.pdf`}
-            className="w-full sm:w-auto"
+            className="w-auto"
           >
             {({ blob, url, loading, error }) => (
               <Button
                 disabled={loading}
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-2 h-10 px-5 shadow-sm hover:shadow transition-all"
+                className="w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold flex items-center justify-center gap-2 h-10 px-5 shadow-sm hover:shadow transition-all"
               >
                 {loading ? (
                   <>
@@ -810,7 +810,7 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
                 ) : (
                   <>
                     <Download className="h-4 w-4" />
-                    Download Invoice PDF
+                    Download Invoice
                   </>
                 )}
               </Button>
@@ -818,7 +818,7 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
           </PDFDownloadLink>
         </div>
       </CardHeader>
-      <CardContent className="p-0 bg-secondary/10 flex justify-center items-center h-[600px] sm:h-[750px]">
+      <CardContent className="hidden md:flex p-0 bg-secondary/10 justify-center items-center h-[600px] sm:h-[750px]">
         <div className="w-full h-full hidden md:block">
           <PDFViewer width="100%" height="100%" className="border-0" showToolbar={false}>
             <ClientInvoiceDocument orders={[order]} allStatuses={allStatuses} />

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Copy, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, X, ArrowLeft, CreditCard, Wallet, Check, UploadCloud, Gift } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Copy, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Paperclip, FileImage, FileText, X, ArrowLeft, CreditCard, Wallet, Check, UploadCloud, Gift } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -274,6 +274,7 @@ export function OrderDetailsClient({
 
   // Combine server-passed user and client-side user for the most up-to-date state
   const currentUser = useMemo(() => authContextUser || initialCurrentUser, [authContextUser, initialCurrentUser]);
+  const isClientViewer = !currentUser || currentUser.role === 'Client';
 
   const shouldShowFinancials = useMemo(() => {
     if (!currentUser || currentUser.role === 'Client') {
@@ -1117,6 +1118,46 @@ export function OrderDetailsClient({
           ) : (
             <ClientInvoicePDF order={order} allStatuses={allStatuses} />
           )
+        )}
+
+        {isClientViewer && (
+          <Card className="mt-6 border border-border/40 bg-card/60 backdrop-blur-md rounded-xl shadow-xl p-5 sm:p-6 hover:shadow-2xl transition-all duration-300 print:hidden">
+            <CardHeader className="p-0 pb-3 mb-3 border-b border-border/30 flex flex-row items-center gap-3">
+              <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg border border-amber-500/20">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-foreground">Terms & Conditions</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">Important guidelines for our clients</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 space-y-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <div className="flex gap-2.5 items-start">
+                <span className="font-semibold text-primary/80 mt-0.5">•</span>
+                <p>
+                  <strong>Advance Payment:</strong> A minimum of 50% advance payment is required to process and lock the order. The remaining balance must be paid before or upon delivery.
+                </p>
+              </div>
+              <div className="flex gap-2.5 items-start">
+                <span className="font-semibold text-primary/80 mt-0.5">•</span>
+                <p>
+                  <strong>Design & Changes:</strong> Once the design is approved by the client, it will proceed directly to the production queue. No alterations can be made post-approval.
+                </p>
+              </div>
+              <div className="flex gap-2.5 items-start">
+                <span className="font-semibold text-primary/80 mt-0.5">•</span>
+                <p>
+                  <strong>Delivery & Timelines:</strong> While we strive to meet all estimated delivery dates, shipping delays caused by couriers, weather, or unexpected circumstances are beyond our control.
+                </p>
+              </div>
+              <div className="flex gap-2.5 items-start">
+                <span className="font-semibold text-primary/80 mt-0.5">•</span>
+                <p>
+                  <strong>Cancellations:</strong> Custom order requests cannot be cancelled or refunded once production has begun.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {hideStatusHeader && (
