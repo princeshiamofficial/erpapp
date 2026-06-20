@@ -149,6 +149,11 @@ type Toast = Omit<ToasterToast, "id">
 async function playToastSound() {
   if (typeof window === 'undefined') return;
 
+  if (window.location.pathname.startsWith('/track')) {
+    console.log("Toast sound: Disabled on tracking page.");
+    return;
+  }
+
   try {
     const settings = await getGlobalSettings();
     const soundUrlToPlay = settings.toastSoundUrl ?? DEFAULT_TOAST_SOUND_URL;
