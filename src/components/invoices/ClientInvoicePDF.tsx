@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Page, Text, View, Document, StyleSheet, Image, Font, Svg, Path, PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
 import type { TrackingLink, AdvancePaymentRecord, CustomStatus } from '@/types';
 import JsBarcode from 'jsbarcode';
@@ -777,7 +777,32 @@ interface ClientInvoicePDFProps {
   allStatuses: CustomStatus[];
 }
 
+function DownloadTrigger({ url, loading, fileName, onComplete }: { url: string | null; loading: boolean; fileName: string; onComplete: () => void }) {
+  useEffect(() => {
+    if (!loading && url) {
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+      onComplete();
+    }
+  }, [url, loading, fileName, onComplete]);
+
+  return (
+    <span
+      className="inline-flex items-center justify-center gap-2 h-10 px-5 bg-primary/85 text-primary-foreground font-semibold rounded-md shadow-sm transition-all text-sm select-none cursor-wait"
+    >
+      <Loader2 className="h-4 w-4 animate-spin" />
+      Preparing PDF...
+    </span>
+  );
+}
+
 export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) {
+  const [shouldDownload, setShouldDownload] = useState(false);
+
   return (
     <Card className="shadow-none border-0 bg-transparent rounded-none overflow-visible mt-6 print:hidden md:shadow-2xl md:border md:border-border/40 md:bg-card md:rounded-xl md:overflow-hidden">
       <CardHeader className="bg-transparent p-0 border-b-0 flex flex-col sm:flex-row justify-between items-center gap-4 md:bg-muted/30 md:p-6 md:border-b md:border-border/40">
@@ -792,31 +817,30 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
         </div>
         
         <div className="flex gap-2 w-auto justify-end">
-          <PDFDownloadLink
-            document={<ClientInvoiceDocument orders={[order]} allStatuses={allStatuses} />}
-            fileName={`Invoice_${order.id}.pdf`}
-            className="w-auto"
-          >
-            {({ blob, url, loading, error }) => (
-              <span
-                className={`inline-flex items-center justify-center gap-2 h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-md shadow-sm hover:shadow transition-all text-sm select-none ${
-                  loading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Preparing PDF...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" />
-                    Download Invoice
-                  </>
-                )}
-              </span>
-            )}
-          </PDFDownloadLink>
+          {!shouldDownload ? (
+            <span
+              onClick={() => setShouldDownload(true)}
+              className="inline-flex items-center justify-center gap-2 h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-md shadow-sm hover:shadow transition-all text-sm select-none cursor-pointer"
+            >
+              <Download className="h-4 w-4" />
+              Download Invoice
+            </span>
+          ) : (
+            <PDFDownloadLink
+              document={<ClientInvoiceDocument orders={[order]} allStatuses={allStatuses} />}
+              fileName={`Invoice_${order.id}.pdf`}
+              className="w-auto"
+            >
+              {({ blob, url, loading }) => (
+                <DownloadTrigger
+                  url={url}
+                  loading={loading}
+                  fileName={`Invoice_${order.id}.pdf`}
+                  onComplete={() => setShouldDownload(false)}
+                />
+              )}
+            </PDFDownloadLink>
+          )}
         </div>
       </CardHeader>
       <CardContent className="hidden md:flex p-0 bg-secondary/10 justify-center items-center h-[600px] sm:h-[750px]">

@@ -10,6 +10,8 @@ import { DELIVERED_STATUS_ID } from '@/lib/status-constants';
 import { v4 as uuidv4 } from 'uuid';
 import { addClientPayment, getClientPayments } from "@/lib/client-payment-service";
 import { getIO } from "@/lib/socket-io";
+import { sendTelegramMessage, sendTelegramPhoto } from "@/lib/notification-utils";
+import { getAppUrl } from "@/lib/server-utils";
 
 // For top-level comments from the main form (typically by client or general update)
 export async function submitCommentAction(
@@ -365,6 +367,43 @@ export async function submitPaymentProofAction(
       });
     } catch (commentError) {
       console.error("Failed to auto-post comment for payment proof:", commentError);
+    }
+
+    // Send Telegram Notification to @chclientpay
+    try {
+      const formattedAmount = paymentData.amount.toLocaleString('en-IN', { style: 'currency', currency: 'BDT' });
+      const captionText = `<b>🔔 New Client Payment Submitted!</b>\n\n` +
+        `<b>Order ID:</b> <code>${orderId}</code>\n` +
+        `<b>Company:</b> ${order.companyName}\n` +
+        `<b>Amount:</b> ${formattedAmount}\n` +
+        `<b>Method:</b> ${paymentData.paymentMethod}\n\n` +
+        `Please review and approve this payment in the admin panel.`;
+
+      const appUrl = await getAppUrl();
+      const inlineKeyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "📄 View Order",
+              url: `${appUrl}/track/${orderId}`
+            },
+            {
+              text: "💰 Payment History",
+              url: `${appUrl}/admin/payment-history`
+            }
+          ]
+        ]
+      };
+
+      const hasImage = paymentData.documentUrl && /\.(jpg|jpeg|png|webp|gif|bmp)$/i.test(paymentData.documentUrl);
+
+      if (hasImage && paymentData.documentUrl) {
+        await sendTelegramPhoto(paymentData.documentUrl, captionText, inlineKeyboard, '@chclientpay');
+      } else {
+        await sendTelegramMessage(captionText, inlineKeyboard, '@chclientpay');
+      }
+    } catch (telegramError) {
+      console.error("Failed to send Telegram notification for payment proof:", telegramError);
     }
 
     const updatedOrder = await getOrderById(orderId);
