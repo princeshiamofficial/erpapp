@@ -13,6 +13,7 @@ Font.register({
   family: 'Hind Siliguri',
   fonts: [
     { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/hindsiliguri/HindSiliguri-Regular.ttf' },
+    { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/hindsiliguri/HindSiliguri-Medium.ttf', fontWeight: 500 },
     { src: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/hindsiliguri/HindSiliguri-Bold.ttf', fontWeight: 'bold' },
   ],
 });
@@ -110,7 +111,7 @@ const PhoneIcon = () => (
 
 const ReceiptTextIcon = () => (
   <Svg width="12" height="12" viewBox="0 0 24 24" style={{ marginRight: 6 }}>
-    <Path d="M18 17H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2zM3 22l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20z" fill="#94A3B8" />
+    <Path d="M18 17H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2zM3 22l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20z" fill="#F97316" />
   </Svg>
 );
 
@@ -120,20 +121,20 @@ const StickyNoteIcon = () => (
   </Svg>
 );
 
-const AvatarFallback = ({ name }: { name: string }) => {
+const AvatarFallback = ({ name, size = 14 }: { name: string; size?: number }) => {
   if (!name) return null;
   const initials = name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase();
   return (
     <View style={{
-      width: 14,
-      height: 14,
-      borderRadius: 7,
+      width: size,
+      height: size,
+      borderRadius: Math.round(size / 2),
       backgroundColor: '#FFEAD2', 
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 6,
     }}>
-      <Text style={{ fontSize: 6, fontWeight: 'bold', color: '#FF8000' }}>{initials}</Text>
+      <Text style={{ fontSize: size * 0.4, fontWeight: 'bold', color: '#FF8000' }}>{initials}</Text>
     </View>
   );
 };
@@ -254,11 +255,16 @@ const styles = StyleSheet.create({
   table: {
     width: '100%',
   },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
@@ -329,9 +335,6 @@ const styles = StyleSheet.create({
     width: 200,
     paddingVertical: 8,
     marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    borderTopStyle: 'dashed',
   },
   amountDueLabel: {
     fontSize: 11,
@@ -384,6 +387,14 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: '#92400E',
     lineHeight: 1.5,
+  },
+  dottedSeparator: {
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    borderTopStyle: 'dashed',
+    width: 200,
+    marginTop: 4,
+    marginBottom: 4,
   },
 });
 
@@ -438,6 +449,27 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
     }
   };
 
+  const formatDateReference = (dateStr: string | undefined, includeTime = true) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      const day = date.getDate();
+      const month = date.toLocaleString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      if (!includeTime) {
+        return `${day} ${month} ${year}`;
+      }
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
 
   const getStatusName = (statusId: string) => {
@@ -475,6 +507,7 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
   let barcodeWidth = 140;
   let itemRowHeight = 24;
   let paymentRowHeight = 20;
+  let avatarSize = 18;
 
   if (totalItemCount > 8 || (totalItemCount > 5 && hasNotes)) {
     baseFontSize = 7.2;
@@ -491,6 +524,7 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
     barcodeWidth = 110;
     itemRowHeight = 15;
     paymentRowHeight = 13;
+    avatarSize = 12;
   } else if (totalItemCount > 4 || (totalItemCount > 2 && hasNotes)) {
     baseFontSize = 8.2;
     cellFontSize = 7.8;
@@ -506,6 +540,7 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
     barcodeWidth = 125;
     itemRowHeight = 19;
     paymentRowHeight = 16;
+    avatarSize = 15;
   }
 
   const baseFixedHeights = 350 + cardPadding * 2 + marginTopNormal * 2;
@@ -529,34 +564,39 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
             <Text style={[styles.companyAddress, { marginTop: 2, fontSize: baseFontSize - 1 }]}>
               colorhut.official@gmail.com | +8801919-760626
             </Text>
+            {lastEditedByEntry ? (
+              <Text style={[styles.companyAddress, { marginTop: 6, fontSize: baseFontSize - 1, color: '#94A3B8' }]}>
+                Last Updated: {lastEditedByEntry.changedByUserName} {formatDateReference(lastEditedByEntry.timestamp)}
+              </Text>
+            ) : (
+              <Text style={[styles.companyAddress, { marginTop: 6, fontSize: baseFontSize - 1, color: '#94A3B8' }]}>
+                Order Placed by: {order.crmUserName}
+              </Text>
+            )}
           </View>
 
           <View style={styles.headerRight}>
             <View style={styles.headerRightTop}>
-              <Text style={[styles.invoiceNo, { fontSize: titleFontSize + 1 }]}>Invoice #: {order.id}</Text>
-              <Text style={[styles.dateText, { fontSize: baseFontSize - 1 }]}>Order Date: {formatDateFull(order.createdAt)}</Text>
+              <Text style={[styles.invoiceNo, { fontSize: titleFontSize + 1 }]}>Invoice #: {order.projectIdDisplay || order.id}</Text>
+              <Text style={[styles.dateText, { fontSize: baseFontSize - 1 }]}>Order Date: {formatDateReference(order.createdAt)}</Text>
               {order.acceptedDeliveryDate && (
-                <Text style={[styles.dateText, { fontSize: baseFontSize - 1 }]}>Accepted Delivery: {formatDateFull(order.acceptedDeliveryDate)}</Text>
+                <Text style={[styles.dateText, { fontSize: baseFontSize - 1 }]}>Accepted Delivery Date: {formatDateReference(order.acceptedDeliveryDate, false)}</Text>
               )}
-              {lastEditedByEntry ? (
-                <Text style={[styles.dateText, { fontSize: baseFontSize - 1 }]}>Last Updated: {lastEditedByEntry.changedByUserName} ({formatDateFull(lastEditedByEntry.timestamp)})</Text>
-              ) : (
-                <Text style={[styles.dateText, { fontSize: baseFontSize - 1 }]}>Order Placed by: {order.crmUserName}</Text>
-              )}
-              <Text style={[styles.dateText, { fontSize: baseFontSize - 1, fontWeight: 'bold', color: '#FF8000' }]}>Status: {currentStatusName}</Text>
             </View>
             <Barcode value={order.id} width={barcodeWidth} height={barcodeHeight} />
           </View>
         </View>
 
-        {/* Bill To & Team Assigned Info */}
+        {/* Bill To & Assigned Team Info */}
         <View style={styles.billingAndRepContainer}>
           <View style={[styles.billToSection, { padding: cardPadding }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <BuildingIcon />
               <Text style={[styles.billToLabel, { marginLeft: 2, marginBottom: 0, fontSize: baseFontSize - 1 }]}>BILL TO:</Text>
             </View>
-            <Text style={[styles.billToText, { fontWeight: 'bold', fontSize: baseFontSize + 1.5, marginBottom: marginTopSmall - 5 > 2 ? marginTopSmall - 5 : 2 }]}>{order.companyName}</Text>
+            <Text style={[styles.billToText, { fontWeight: 500, fontSize: baseFontSize + 1.5, marginBottom: marginTopSmall - 5 > 2 ? marginTopSmall - 5 : 2 }]}>
+              {order.companyName}
+            </Text>
             <View style={styles.billToItem}>
               <MapPinIcon />
               <Text style={[styles.billToText, { marginLeft: 2, fontSize: baseFontSize }]}>{order.address}</Text>
@@ -569,30 +609,29 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
 
           {(order.crmUserName || order.designerRepresentativeName) && (
             <View style={[styles.repSection, { padding: cardPadding }]}>
-              <Text style={[styles.repLabel, { fontSize: baseFontSize - 1, marginBottom: 6 }]}>TEAM ASSIGNED:</Text>
               {order.crmUserName && (
-                <View style={[styles.repItem, { marginBottom: order.designerRepresentativeName ? 6 : 0 }]}>
-                  <Text style={[styles.billToLabel, { fontSize: baseFontSize - 2, textTransform: 'uppercase' }]}>CR Manager:</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={[styles.repLabel, { fontSize: baseFontSize - 1, marginBottom: 4, textTransform: 'uppercase' }]}>CR MANAGER:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {order.assigneeAvatarUrl ? (
-                      <Image src={order.assigneeAvatarUrl} style={{ width: 14, height: 14, borderRadius: 7, marginRight: 6 }} />
+                      <Image src={order.assigneeAvatarUrl} style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, marginRight: 6 }} />
                     ) : (
-                      <AvatarFallback name={order.crmUserName} />
+                      <AvatarFallback name={order.crmUserName} size={avatarSize} />
                     )}
-                    <Text style={[styles.repName, { fontSize: baseFontSize }]}>{order.crmUserName}</Text>
+                    <Text style={[styles.repName, { fontSize: baseFontSize, fontWeight: 500 }]}>{order.crmUserName}</Text>
                   </View>
                 </View>
               )}
               {order.designerRepresentativeName && (
-                <View style={styles.repItem}>
-                  <Text style={[styles.billToLabel, { fontSize: baseFontSize - 2, textTransform: 'uppercase' }]}>Assigned Designer:</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <View>
+                  <Text style={[styles.repLabel, { fontSize: baseFontSize - 1, marginBottom: 4, textTransform: 'uppercase' }]}>ASSIGNED DESIGNER:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {order.designerRepresentativeAvatarUrl ? (
-                      <Image src={order.designerRepresentativeAvatarUrl} style={{ width: 14, height: 14, borderRadius: 7, marginRight: 6 }} />
+                      <Image src={order.designerRepresentativeAvatarUrl} style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, marginRight: 6 }} />
                     ) : (
-                      <AvatarFallback name={order.designerRepresentativeName} />
+                      <AvatarFallback name={order.designerRepresentativeName} size={avatarSize} />
                     )}
-                    <Text style={[styles.repName, { fontSize: baseFontSize }]}>{order.designerRepresentativeName}</Text>
+                    <Text style={[styles.repName, { fontSize: baseFontSize, fontWeight: 500 }]}>{order.designerRepresentativeName}</Text>
                   </View>
                 </View>
               )}
@@ -605,7 +644,7 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
           <Text style={[styles.sectionTitle, { fontSize: titleFontSize, marginTop: 0, marginBottom: 0 }]}>Order Items</Text>
         </View>
         
-        <View style={styles.table}>
+        <View style={styles.tableContainer}>
           <View style={styles.tableHeader}>
             <View style={styles.colModel}><Text style={[styles.tableHeaderText, { fontSize: headerFontSize }]}>MODEL</Text></View>
             <View style={styles.colQty}><Text style={[styles.tableHeaderText, { textAlign: 'center', fontSize: headerFontSize }]}>QUANTITY</Text></View>
@@ -615,7 +654,13 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
           </View>
 
           {Array.isArray(order.orderItems) && order.orderItems.map((item, index) => (
-            <View key={index} style={[styles.tableRow, { paddingVertical: itemPadding }]}>
+            <View key={index} style={[
+              styles.tableRow, 
+              { 
+                paddingVertical: itemPadding,
+                borderBottomWidth: index === order.orderItems.length - 1 ? 0 : 1
+              }
+            ]}>
               <View style={styles.colModel}><Text style={[styles.tableCell, { fontWeight: 'bold', fontSize: cellFontSize }]}>{item.model}</Text></View>
               <View style={styles.colQty}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{item.quantity}</Text></View>
               <View style={styles.colLam}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{item.lamination || 'None'}</Text></View>
@@ -658,20 +703,26 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
               <ReceiptTextIcon />
               <Text style={[styles.sectionTitle, { fontSize: titleFontSize, marginTop: 0, marginBottom: 0 }]}>Payments History</Text>
             </View>
-            <View style={styles.table}>
+            <View style={styles.tableContainer}>
               <View style={styles.tableHeader}>
                 <View style={styles.colPayDate}><Text style={[styles.tableHeaderText, { fontSize: headerFontSize }]}>Date</Text></View>
                 <View style={styles.colPayAmount}><Text style={[styles.tableHeaderText, { fontSize: headerFontSize }]}>Amount</Text></View>
                 <View style={styles.colPayMethod}><Text style={[styles.tableHeaderText, { fontSize: headerFontSize }]}>Method</Text></View>
-                <View style={styles.colPayNotes}><Text style={[styles.tableHeaderText, { fontSize: headerFontSize }]}>Notes</Text></View>
+                <View style={styles.colPayNotes}><Text style={[styles.tableHeaderText, { fontSize: headerFontSize }]}>Reference/Notes</Text></View>
                 <View style={styles.colPayBy}><Text style={[styles.tableHeaderText, { fontSize: headerFontSize }]}>Recorded By</Text></View>
               </View>
 
               {sortedPaymentRecords.map((record, index) => (
-                <View key={index} style={[styles.tableRow, { paddingVertical: itemPadding - 1 > 3 ? itemPadding - 1 : 3 }]}>
-                  <View style={styles.colPayDate}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{formatDateFull(record.date)}</Text></View>
+                <View key={index} style={[
+                  styles.tableRow, 
+                  { 
+                    paddingVertical: itemPadding - 1 > 3 ? itemPadding - 1 : 3,
+                    borderBottomWidth: index === sortedPaymentRecords.length - 1 ? 0 : 1
+                  }
+                ]}>
+                  <View style={styles.colPayDate}><Text style={[styles.tableCell, { fontSize: cellFontSize, color: '#64748B' }]}>{formatDateReference(record.date)}</Text></View>
                   <View style={styles.colPayAmount}><Text style={[styles.tableCell, { fontWeight: 'bold', color: '#16A34A', fontSize: cellFontSize }]}>BDT {Number(record.amount).toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text></View>
-                  <View style={styles.colPayMethod}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{record.paymentMethod || 'N/A'}</Text></View>
+                  <View style={styles.colPayMethod}><Text style={[styles.tableCell, { fontSize: cellFontSize, color: '#1E293B' }]}>{record.paymentMethod || 'N/A'}</Text></View>
                   <View style={styles.colPayNotes}><Text style={[styles.tableCell, { color: '#64748B', fontSize: cellFontSize }]}>{record.notes || 'N/A'}</Text></View>
                   <View style={styles.colPayBy}><Text style={[styles.tableCell, { color: '#64748B', fontSize: cellFontSize }]}>{record.recordedByUserName || 'N/A'}</Text></View>
                 </View>
@@ -714,8 +765,10 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
               </View>
             )}
 
-            <View style={styles.netPayableRow}>
-              <Text style={[styles.summaryLabel, { fontWeight: 'bold', fontSize: baseFontSize }]}>Net Payable:</Text>
+            <View style={styles.dottedSeparator} />
+
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { fontWeight: 'bold', fontSize: baseFontSize, color: '#1E293B' }]}>Net Payable:</Text>
               <Text style={[styles.summaryValue, { fontSize: baseFontSize }]}>BDT {netPayable.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text>
             </View>
 
@@ -734,6 +787,8 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
               </View>
             )}
 
+            <View style={styles.dottedSeparator} />
+
             {totalAdvancePaid > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { fontSize: baseFontSize }]}>{showPaidBadge ? "Total Paid:" : "Total Advance Paid:"}</Text>
@@ -749,20 +804,13 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
             )}
           </View>
         </View>
-
-        {/* Footer Note */}
-        <View style={{ marginTop: 'auto', paddingTop: 6 }}>
-           <Text style={{ fontSize: 7, color: '#94A3B8', textAlign: 'center' }}>
-             This is a system generated invoice by Color Hut ERP.
-           </Text>
-        </View>
       </View>
     </Page>
   );
 };
 
 // Document wrapper containing the custom client pages
-const ClientInvoiceDocument = ({ orders, allStatuses }: { orders: TrackingLink[]; allStatuses: CustomStatus[] }) => {
+export const ClientInvoiceDocument = ({ orders, allStatuses }: { orders: TrackingLink[]; allStatuses: CustomStatus[] }) => {
   return (
     <Document>
       {orders.map((order) => (

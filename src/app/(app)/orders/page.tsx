@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard, Star } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard, Star, Download } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useSocket } from "@/contexts/socket-context";
 import Link from "next/link";
@@ -57,6 +57,7 @@ import type { DateRange } from "react-day-picker";
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog), { ssr: false });
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog), { ssr: false });
 const EditOrderDialog = dynamic(() => import('@/components/orders/edit-order-dialog').then(mod => mod.EditOrderDialog), { ssr: false });
+const InvoiceDownloadTrigger = dynamic(() => import('@/components/orders/invoice-download-trigger').then(mod => mod.InvoiceDownloadTrigger), { ssr: false });
 import { TrashDialog } from '@/components/shared/trash-dialog';
 
 
@@ -106,6 +107,7 @@ export default function OrdersPage() {
   const [deletedOrders, setDeletedOrders] = useState<TrackingLink[]>([]);
   const [isTrashLoading, setIsTrashLoading] = useState(false);
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
+  const [orderToDownload, setOrderToDownload] = useState<TrackingLink | null>(null);
 
 
 
@@ -681,6 +683,12 @@ export default function OrdersPage() {
                                 <Eye className="mr-2 h-4 w-4" /> View Details
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => setOrderToDownload(order)}
+                              className="cursor-pointer"
+                            >
+                              <Download className="mr-2 h-4 w-4" /> Invoice
+                            </DropdownMenuItem>
                             {canDeleteOrder && (
                               <>
                                 <DropdownMenuSeparator />
@@ -839,6 +847,14 @@ export default function OrdersPage() {
         onRestore={handleRestoreOrder}
         onDeletePermanently={handlePermanentlyDeleteOrder}
       />
+
+      {orderToDownload && (
+        <InvoiceDownloadTrigger
+          order={orderToDownload}
+          allStatuses={allStatuses}
+          onComplete={() => setOrderToDownload(null)}
+        />
+      )}
     </div>
   );
 }
