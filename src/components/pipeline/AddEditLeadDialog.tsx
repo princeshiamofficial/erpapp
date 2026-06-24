@@ -19,7 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Lead, User, CustomerType, LeadCategory, LeadStatusType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { addLeadAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
+import { addLeadAction, updateLeadAction, getLeadByPhoneAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from "date-fns";
 import { cn } from '@/lib/utils';
@@ -50,8 +50,11 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [notes, setNotes] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
+  const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
+  const [foundExistingLead, setFoundExistingLead] = useState<Lead | null>(null);
   const { toast } = useToast();
-  const contactNameInputRef = useRef<HTMLInputElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = !!lead;
 
@@ -79,6 +82,9 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
 
   useEffect(() => {
     if (isOpen) {
+      setIsDatePopoverOpen(false);
+      setIsSchedulePopoverOpen(false);
+      setFoundExistingLead(null);
       if (isEditMode && lead) {
         setDate(parseISO(lead.date));
         setSchedule(lead.schedule ? parseISO(lead.schedule) : undefined);
@@ -108,10 +114,44 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setPhoneError(null);
       }
       setTimeout(() => {
-        contactNameInputRef.current?.focus();
+        phoneInputRef.current?.focus();
       }, 100);
     }
   }, [isOpen, lead, isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode) return;
+
+    const checkPhoneAndAutofill = async () => {
+      const isLocal = phone.startsWith('0') && phone.length === 11;
+      const isIntl = phone.startsWith('+') && phone.length >= 10 && phone.length <= 15;
+      
+      if (isLocal || isIntl) {
+        try {
+          const existingLead = await getLeadByPhoneAction(phone);
+          if (existingLead) {
+            setFoundExistingLead(existingLead);
+            setContactName(existingLead.contactName || '');
+            setBusinessName(existingLead.businessName || '');
+            setDivision(existingLead.division || '');
+            setTimeout(() => {
+              setDistrict(existingLead.district || '');
+              setThana(existingLead.thana || '');
+            }, 100);
+          } else {
+            setFoundExistingLead(null);
+          }
+        } catch (error) {
+          console.error("Error checking phone and autofilling:", error);
+          setFoundExistingLead(null);
+        }
+      } else {
+        setFoundExistingLead(null);
+      }
+    };
+
+    checkPhoneAndAutofill();
+  }, [phone, isEditMode, toast]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
@@ -187,8 +227,14 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
     };
     
     let result;
-    if (isEditMode && lead) {
-      result = await updateLeadAction(lead.id, leadData);
+    const targetLead = isEditMode ? lead : foundExistingLead;
+    if (targetLead) {
+      const updateData = {
+        ...leadData,
+        crmId: currentUser.id,
+        crmName: currentUser.name,
+      };
+      result = await updateLeadAction(targetLead.id, updateData, currentUser);
       if (result.success && result.lead) {
         onLeadSaved(result.lead, true);
       }
@@ -203,15 +249,32 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
     setIsSubmitting(false);
 
     if (result.success) {
-      toast({ title: `Lead ${isEditMode ? 'Updated' : 'Added'}`, description: `Lead for "${contactName}" has been saved.` });
+      toast({ title: `Lead ${isEditMode || foundExistingLead ? 'Updated' : 'Added'}`, description: `Lead for "${contactName}" has been saved.` });
     } else {
-      toast({ title: "Error", description: result.error || `Could not ${isEditMode ? 'update' : 'add'} lead.`, variant: "destructive" });
+      toast({ title: "Error", description: result.error || `Could not ${isEditMode || foundExistingLead ? 'update' : 'add'} lead.`, variant: "destructive" });
     }
   };
 
+  const isFormInvalid = 
+    !date || 
+    !contactName.trim() || 
+    !businessName.trim() || 
+    !phone.trim() || 
+    !source || 
+    !division || 
+    !district || 
+    !thana.trim() || 
+    !customerType || 
+    !!phoneError;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent 
+        className="sm:max-w-lg"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Lead' : 'Add New Lead'}</DialogTitle>
           <DialogDescription>
@@ -219,54 +282,13 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="date">Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="schedule">Schedule (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {schedule ? format(schedule, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={schedule}
-                      onSelect={setSchedule}
-                      disabled={{ before: new Date() }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div className="space-y-1">
-                <Label htmlFor="contactName">Contact Name *</Label>
-                <Input id="contactName" ref={contactNameInputRef} value={contactName} onChange={(e) => setContactName(e.target.value)} required />
-              </div>
-            <div className="space-y-1">
-              <Label htmlFor="businessName">Business Name *</Label>
-              <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Color Hut"/>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="phone">Phone *</Label>
+          <div className="grid gap-1 py-2 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_0.9fr] gap-1">
+              <div className="space-y-0.5">
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                     id="phone"
+                    ref={phoneInputRef}
                     type="tel"
                     value={phone}
                     onChange={handlePhoneChange}
@@ -277,8 +299,8 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                 />
                 {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="source">Source *</Label>
+              <div className="space-y-0.5">
+                <Label htmlFor="source">Source</Label>
                 <Select value={source} onValueChange={setSource} required>
                   <SelectTrigger id="source">
                     <SelectValue placeholder="Select a source" />
@@ -289,10 +311,80 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_0.9fr] gap-1">
+              <div className="space-y-0.5">
+                <Label htmlFor="contactName">Contact Name</Label>
+                <Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} required />
+              </div>
+              <div className="space-y-0.5">
+                <Label htmlFor="customerType">Lead Type</Label>
+                <Select value={customerType} onValueChange={(value) => setCustomerType(value as CustomerType)} required>
+                  <SelectTrigger id="customerType">
+                    <SelectValue placeholder="Select a lead type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WARM">WARM</SelectItem>
+                    <SelectItem value="COLD">COLD</SelectItem>
+                    <SelectItem value="Order Lock">Order Lock</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <Label htmlFor="businessName">Business Name</Label>
+              <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Color Hut"/>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+              <div className="space-y-0.5">
+                <Label htmlFor="date">Date</Label>
+                <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar 
+                      mode="single" 
+                      selected={date} 
+                      onSelect={(newDate) => {
+                        setDate(newDate);
+                        setIsDatePopoverOpen(false);
+                      }} 
+                      initialFocus 
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-0.5">
+                <Label htmlFor="schedule">Schedule (Optional)</Label>
+                <Popover open={isSchedulePopoverOpen} onOpenChange={setIsSchedulePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {schedule ? format(schedule, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={schedule}
+                      onSelect={(newDate) => {
+                        setSchedule(newDate);
+                        setIsSchedulePopoverOpen(false);
+                      }}
+                      disabled={{ before: new Date() }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
             
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                    <Label htmlFor="division">Division *</Label>
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-1">
+                <div className="space-y-0.5">
+                    <Label htmlFor="division">Division</Label>
                     <Select value={division} onValueChange={handleDivisionChange}>
                         <SelectTrigger id="division"><SelectValue placeholder="Select Division" /></SelectTrigger>
                         <SelectContent>
@@ -300,8 +392,8 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="space-y-1">
-                    <Label htmlFor="district">District *</Label>
+                 <div className="space-y-0.5">
+                    <Label htmlFor="district">District</Label>
                     <Select value={district} onValueChange={setDistrict} disabled={!division}>
                         <SelectTrigger id="district"><SelectValue placeholder="Select District" /></SelectTrigger>
                         <SelectContent>
@@ -309,33 +401,20 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                         </SelectContent>
                     </Select>
                 </div>
+                <div className="space-y-0.5">
+                    <Label htmlFor="thana">Thana</Label>
+                    <Input id="thana" value={thana} onChange={(e) => setThana(e.target.value)} placeholder="Enter Thana/Upazila" required/>
+                </div>
             </div>
-             <div className="space-y-1">
-                <Label htmlFor="thana">Thana *</Label>
-                <Input id="thana" value={thana} onChange={(e) => setThana(e.target.value)} placeholder="Enter Thana/Upazila" required/>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="customerType">Customer Type *</Label>
-              <Select value={customerType} onValueChange={(value) => setCustomerType(value as CustomerType)} required>
-                <SelectTrigger id="customerType">
-                  <SelectValue placeholder="Select a customer type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="WARM">WARM</SelectItem>
-                  <SelectItem value="COLD">COLD</SelectItem>
-                  <SelectItem value="Order Lock">Order Lock</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               <Label htmlFor="notes">Notes (Optional)</Label>
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || !!phoneError}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Add Lead')}
+            <Button type="submit" disabled={isSubmitting || isFormInvalid}>
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode || foundExistingLead ? 'Save Changes' : 'Add Lead')}
             </Button>
           </DialogFooter>
         </form>

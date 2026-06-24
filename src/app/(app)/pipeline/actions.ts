@@ -215,7 +215,8 @@ export async function addLeadsBatchAction(
 
 export async function updateLeadAction(
   leadId: string,
-  updates: Partial<Omit<Lead, 'id'>>
+  updates: Partial<Omit<Lead, 'id'>>,
+  currentUser?: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
     if (updates.phone) {
@@ -230,9 +231,45 @@ export async function updateLeadAction(
       }
     }
 
-    const finalUpdates: any = { ...updates, updatedAt: new Date().toISOString() };
-    if (updates.category) {
-      finalUpdates.categoryUpdatedAt = new Date().toISOString();
+    const currentLead = await getLeadById(leadId);
+    if (!currentLead) {
+      return { success: false, error: "Lead not found." };
+    }
+
+    const finalUpdates: any = { 
+      ...updates, 
+      date: new Date().toISOString(),
+      categoryUpdatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString() 
+    };
+
+    // Check if notes or CRM owner changed
+    const activitiesToAdd: LeadActivity[] = [];
+
+    if (updates.notes !== undefined && updates.notes !== currentLead.notes) {
+      activitiesToAdd.push({
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        activity: "Note Updated",
+        notes: updates.notes,
+        changedByUserId: currentUser?.id || "SYSTEM",
+        changedByUserName: currentUser?.name || "System",
+      });
+    }
+
+    if (updates.crmId !== undefined && updates.crmId !== currentLead.crmId) {
+      activitiesToAdd.push({
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        activity: "Lead Reassigned",
+        notes: `Lead assigned to ${updates.crmName || 'a new owner'}`,
+        changedByUserId: currentUser?.id || "SYSTEM",
+        changedByUserName: currentUser?.name || "System",
+      });
+    }
+
+    if (activitiesToAdd.length > 0) {
+      finalUpdates.activityHistory = [...(currentLead.activityHistory || []), ...activitiesToAdd];
     }
 
     const success = await updateLead(leadId, finalUpdates);
@@ -432,5 +469,14 @@ export async function transferSelectedLeadsAction(
     console.error("Error in transferSelectedLeadsAction:", error);
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
     return { success: false, transferredCount: 0, error: errorMessage };
+  }
+}
+
+export async function getLeadByPhoneAction(phone: string): Promise<Lead | null> {
+  try {
+    return await getLeadByPhone(phone);
+  } catch (error) {
+    console.error("Error in getLeadByPhoneAction:", error);
+    return null;
   }
 }
