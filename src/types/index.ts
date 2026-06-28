@@ -410,14 +410,14 @@ export interface Project {
   createdAt?: string;
   updatedAt?: string;
 
-  crClearanceAt?: string;
-  coClearanceAt?: string;
-  cancelAt?: string;
-  onDesignAt?: string;
-  onHoldAt?: string;
-  logisticsAt?: string;
-  courierAt?: string;
-  deliveredAt?: string;
+  crClearanceAt?: string | null;
+  coClearanceAt?: string | null;
+  cancelAt?: string | null;
+  onDesignAt?: string | null;
+  onHoldAt?: string | null;
+  logisticsAt?: string | null;
+  courierAt?: string | null;
+  deliveredAt?: string | null;
   docsPendingAt?: string | null;
   businessClosedAt?: string | null;
 

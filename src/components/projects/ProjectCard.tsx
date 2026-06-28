@@ -123,7 +123,7 @@ const calculateProgressInfo = (
     crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, cancelAt, deliveredAt
   } = project;
 
-  let effectiveStartDateIso: string | undefined;
+  let effectiveStartDateIso: string | null | undefined;
 
   if (status === 'CR Clearance') effectiveStartDateIso = crClearanceAt;
   else if (status === 'On Design') effectiveStartDateIso = onDesignAt;

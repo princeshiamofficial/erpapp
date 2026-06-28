@@ -594,7 +594,7 @@ export function ProjectsKanbanClient() {
 
       // Helper to get stage-specific timestamp
       const getStageTimestamp = (p: Project) => {
-        let ts: string | undefined;
+        let ts: string | null | undefined;
         switch (p.status) {
           case 'CR Clearance': ts = p.crClearanceAt; break;
           case 'CO Clearance': ts = p.coClearanceAt || p.onDesignAt; break;

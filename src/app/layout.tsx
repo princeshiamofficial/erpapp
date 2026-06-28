@@ -40,6 +40,32 @@ export default function RootLayout({
               event.preventDefault();
             }
           }, { passive: false });
+
+          window.addEventListener('error', function(event) {
+            var errorText = event.message || (event.error && event.error.message) || '';
+            if (errorText.indexOf('ChunkLoadError') !== -1 || errorText.indexOf('Loading chunk') !== -1) {
+              var lastReload = null;
+              try { lastReload = sessionStorage.getItem('last-chunk-reload'); } catch (e) {}
+              var now = Date.now();
+              if (!lastReload || (now - parseInt(lastReload, 10)) > 10000) {
+                try { sessionStorage.setItem('last-chunk-reload', now.toString()); } catch (e) {}
+                window.location.reload();
+              }
+            }
+          });
+
+          window.addEventListener('unhandledrejection', function(event) {
+            var errorText = (event.reason && event.reason.message) || '';
+            if (errorText.indexOf('ChunkLoadError') !== -1 || errorText.indexOf('Loading chunk') !== -1) {
+              var lastReload = null;
+              try { lastReload = sessionStorage.getItem('last-chunk-reload'); } catch (e) {}
+              var now = Date.now();
+              if (!lastReload || (now - parseInt(lastReload, 10)) > 10000) {
+                try { sessionStorage.setItem('last-chunk-reload', now.toString()); } catch (e) {}
+                window.location.reload();
+              }
+            }
+          });
         ` }} />
       </body>
     </html>
