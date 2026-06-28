@@ -13,7 +13,8 @@ import {
   SHIPPED_STATUS_ID,
   DELIVERED_STATUS_ID,
   ORDER_SUBMITTED_ID,
-  READY_FOR_DESIGN_STATUS_ID
+  READY_FOR_DESIGN_STATUS_ID,
+  PROJECT_PENDING_STATUS_ID
 } from '@/lib/status-constants';
 import { v4 as uuidv4 } from 'uuid';
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -89,6 +90,7 @@ export async function updateProjectStatusAction(
         case 'Logistics': targetOrderStatusId = LOGISTICS_STATUS_ID; statusUpdateNote = `File upload confirmed by ${actingUser.name}. Confirmation details: ${notes || 'N/A'}.`; break;
         case 'Courier': targetOrderStatusId = SHIPPED_STATUS_ID; statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}.`; break;
         case 'On Design': targetOrderStatusId = READY_FOR_DESIGN_STATUS_ID; statusUpdateNote = `Order moved to 'On Design' via project board by ${actingUser.name}.`; break;
+        case 'Project Pending': targetOrderStatusId = PROJECT_PENDING_STATUS_ID; statusUpdateNote = `Order moved to Project Pending from project board by ${actingUser.name}.`; break;
         case 'CR Clearance': targetOrderStatusId = ORDER_SUBMITTED_ID; statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`; break;
         case 'CO Clearance': targetOrderStatusId = 'co-clearance'; statusUpdateNote = `Order moved to CO Clearance by ${actingUser.name}.`; break;
         case 'Delivered': targetOrderStatusId = DELIVERED_STATUS_ID; statusUpdateNote = `Order marked as delivered via project board by ${actingUser.name}.`; break;

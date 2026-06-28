@@ -100,8 +100,14 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
 
 
     if (statusId) {
-      if (statusId === 'CR Clearance') {
-        whereClauseParts.push(`o.current_status NOT IN ('cancelled', 'delivered', 'shipped', 'on-hold', 'logistics', 'co-clearance', 'ready-for-design') AND o.current_status NOT LIKE '%design%'`);
+      if (statusId === 'Project Pending') {
+        whereClauseParts.push(`o.current_status = 'project-pending'`);
+      } else if (statusId === 'Docs Pending') {
+        whereClauseParts.push(`o.current_status = 'docs-pending'`);
+      } else if (statusId === 'Business Closed') {
+        whereClauseParts.push(`o.current_status = 'business-closed'`);
+      } else if (statusId === 'CR Clearance') {
+        whereClauseParts.push(`o.current_status NOT IN ('cancelled', 'delivered', 'shipped', 'on-hold', 'logistics', 'co-clearance', 'ready-for-design', 'docs-pending', 'business-closed', 'project-pending') AND o.current_status NOT LIKE '%design%'`);
       } else if (statusId === 'CO Clearance') {
         whereClauseParts.push(`o.current_status = 'co-clearance'`);
       } else if (statusId === 'On Design') {

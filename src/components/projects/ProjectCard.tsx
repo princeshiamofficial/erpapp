@@ -90,13 +90,14 @@ interface ProgressInfo {
 }
 
 const STAGE_WEIGHTS: Record<string, number> = {
+  'Project Pending': 1.0,
   'CR Clearance': 1.0,
   'On Design': 2.0,
   'CO Clearance': 1.0,
   'Logistics': 1.0,
   'Courier': 0.25,
 };
-const TOTAL_WEIGHT = 5.25;
+const TOTAL_WEIGHT = 6.25;
 
 const formatSlaHours = (hours: number): string => {
   const d = Math.floor(hours / 24);
@@ -214,6 +215,10 @@ const calculateProgressInfo = (
     }
   } else {
     switch (status) {
+      case 'Project Pending':
+        effectiveTargetDate = addHours(effectiveStartDate, 24);
+        slaStageName = ` (${formatSlaHours(24)})`;
+        break;
       case 'CR Clearance':
         effectiveTargetDate = addHours(effectiveStartDate, 24);
         slaStageName = ` (${formatSlaHours(24)})`;
@@ -365,7 +370,7 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
       currentUser?.role === 'CRM' ||
       (currentUser?.role === 'DESIGNER_REPRESENTATIVE' && currentUser.isLeader));
 
-  const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design' || project.status === 'CO Clearance');
+  const canOpenDialogFromProjectCard = (project.status === 'Project Pending' || project.status === 'CR Clearance' || project.status === 'On Design' || project.status === 'CO Clearance');
 
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;

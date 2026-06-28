@@ -64,6 +64,7 @@ export const getProjects = async (): Promise<Project[]> => {
         else if (order.currentStatus === 'co-clearance') projectStatus = 'CO Clearance';
         else if (order.currentStatus === 'docs-pending') projectStatus = 'Docs Pending';
         else if (order.currentStatus === 'business-closed') projectStatus = 'Business Closed';
+        else if (order.currentStatus === 'project-pending') projectStatus = 'Project Pending';
         else if (order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design')) projectStatus = 'On Design';
         else projectStatus = 'CR Clearance';
 
@@ -160,6 +161,7 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
       else if (order.currentStatus === 'co-clearance') projectStatus = 'CO Clearance';
       else if (order.currentStatus === 'docs-pending') projectStatus = 'Docs Pending';
       else if (order.currentStatus === 'business-closed') projectStatus = 'Business Closed';
+      else if (order.currentStatus === 'project-pending') projectStatus = 'Project Pending';
       else if (order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design')) projectStatus = 'On Design';
       else projectStatus = 'CR Clearance';
 

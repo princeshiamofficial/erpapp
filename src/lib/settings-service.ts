@@ -16,6 +16,7 @@ const DEFAULT_EXPENSE_LOGGING_PERMISSIONS: ExpenseLoggingPermissions = {
 };
 
 const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
+  'Project Pending': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
   'CR Clearance': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
   'Docs Pending': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
   'CO Clearance': ['SYSTEM_ADMIN', 'ADMIN', 'CO'],

@@ -6,3 +6,4 @@ export const LOGISTICS_STATUS_ID = 'logistics';
 export const QUALITY_CHECK_STATUS_ID = 'quality-check';
 export const SHIPPED_STATUS_ID = 'shipped';
 export const DELIVERED_STATUS_ID = 'delivered';
+export const PROJECT_PENDING_STATUS_ID = 'project-pending';

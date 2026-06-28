@@ -14,7 +14,8 @@ import {
   LOGISTICS_STATUS_ID,
   QUALITY_CHECK_STATUS_ID,
   SHIPPED_STATUS_ID,
-  DELIVERED_STATUS_ID
+  DELIVERED_STATUS_ID,
+  PROJECT_PENDING_STATUS_ID
 } from './status-constants';
 
 
@@ -33,6 +34,7 @@ const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'i
   { id: DELIVERED_STATUS_ID, name: 'Delivered', color: '#65A30D', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
   { id: CANCELLED_STATUS_ID, name: 'Cancelled', color: '#71717A', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { id: ON_HOLD_STATUS_ID, name: 'On Hold', color: '#A1A1AA', allowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { id: PROJECT_PENDING_STATUS_ID, name: 'Project Pending', color: '#D97706', allowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
 ];
 
 const mapRowToStatus = (row: any): CustomStatus => ({
@@ -100,14 +102,9 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
     const totalCountResult = await query<any[]>(`SELECT COUNT(*) as count FROM ${STATUSES_TABLE}`);
     const totalCount = totalCountResult[0]?.count || 0;
 
-    if (totalCount === 0) {
-      console.log("No statuses found, seeding defaults.");
-      const seeded = await seedDefaultStatuses();
-      return seeded.sort((a, b) => {
-        if (a.isSystemStatus && !b.isSystemStatus) return -1;
-        if (!a.isSystemStatus && b.isSystemStatus) return 1;
-        return a.name.localeCompare(b.name);
-      });
+    if (totalCount < defaultStatusesData.length) {
+      console.log("Some default statuses are missing, seeding defaults.");
+      await seedDefaultStatuses();
     }
 
     const results = await query<any[]>(`SELECT * FROM ${STATUSES_TABLE} WHERE is_deleted = FALSE`);
