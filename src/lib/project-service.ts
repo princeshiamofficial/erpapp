@@ -77,6 +77,16 @@ export const getProjects = async (): Promise<Project[]> => {
           ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved-design')
           : false;
 
+        const deliveredLog = order.statusHistory && Array.isArray(order.statusHistory)
+          ? [...order.statusHistory].reverse().find((entry: any) => entry.status === 'delivered')
+          : null;
+        const projectDeliveredAt = deliveredLog ? deliveredLog.timestamp : (persistentData.deliveredAt || (order.currentStatus === 'delivered' ? order.updatedAt : null));
+
+        const cancelLog = order.statusHistory && Array.isArray(order.statusHistory)
+          ? [...order.statusHistory].reverse().find((entry: any) => entry.status === 'cancelled')
+          : null;
+        const projectCancelAt = cancelLog ? cancelLog.timestamp : (persistentData.cancelAt || (order.currentStatus === 'cancelled' ? order.updatedAt : null));
+
         const dynamicProject: Project = {
           ...persistentData,
           id: order.id,
@@ -94,6 +104,8 @@ export const getProjects = async (): Promise<Project[]> => {
           createdAt: projectCreatedAt,
           updatedAt: order.updatedAt || projectCreatedAt,
           endDate: projectEndDate,
+          deliveredAt: projectDeliveredAt,
+          cancelAt: projectCancelAt,
           isStarred: order.isStarred || 0,
           isDocsApproved,
           isDesignApproved,
@@ -159,6 +171,16 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
         ? order.statusHistory.some((entry: any) => entry.changedByUserId === 'client-approved-design')
         : false;
 
+      const deliveredLog = order.statusHistory && Array.isArray(order.statusHistory)
+        ? [...order.statusHistory].reverse().find((entry: any) => entry.status === 'delivered')
+        : null;
+      const projectDeliveredAt = deliveredLog ? deliveredLog.timestamp : (order.currentStatus === 'delivered' ? order.updatedAt : null);
+
+      const cancelLog = order.statusHistory && Array.isArray(order.statusHistory)
+        ? [...order.statusHistory].reverse().find((entry: any) => entry.status === 'cancelled')
+        : null;
+      const projectCancelAt = cancelLog ? cancelLog.timestamp : (order.currentStatus === 'cancelled' ? order.updatedAt : null);
+
       return {
         id: order.id,
         projectIdDisplay: order.id,
@@ -175,6 +197,8 @@ export const getProjectById = async (projectId: string): Promise<Project | null>
         createdAt: projectCreatedAt,
         updatedAt: order.updatedAt || projectCreatedAt,
         endDate: projectEndDate,
+        deliveredAt: projectDeliveredAt,
+        cancelAt: projectCancelAt,
         isStarred: order.isStarred || 0,
         isDocsApproved,
         isDesignApproved,

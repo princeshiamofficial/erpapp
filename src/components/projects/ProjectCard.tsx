@@ -150,7 +150,36 @@ const calculateProgressInfo = (
 
   if (status === 'Cancel' || status === 'Delivered' || status === 'Docs Pending' || status === 'Business Closed') {
     showProgressBar = false;
-    return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "", stageTargetDate: endDate ? parseISO(endDate).toLocaleDateString() : 'N/A' };
+    let stageTargetDate = 'N/A';
+    if (status === 'Delivered') {
+      const dateToUse = deliveredAt || endDate || updatedAt || createdAt;
+      if (dateToUse) {
+        try {
+          stageTargetDate = parseISO(dateToUse).toLocaleDateString();
+        } catch (e) {
+          stageTargetDate = 'N/A';
+        }
+      }
+    } else if (status === 'Cancel') {
+      const dateToUse = cancelAt || endDate || updatedAt || createdAt;
+      if (dateToUse) {
+        try {
+          stageTargetDate = parseISO(dateToUse).toLocaleDateString();
+        } catch (e) {
+          stageTargetDate = 'N/A';
+        }
+      }
+    } else {
+      const dateToUse = endDate || updatedAt || createdAt;
+      if (dateToUse) {
+        try {
+          stageTargetDate = parseISO(dateToUse).toLocaleDateString();
+        } catch (e) {
+          stageTargetDate = 'N/A';
+        }
+      }
+    }
+    return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "", stageTargetDate };
   }
 
   if (endDate) {
@@ -399,10 +428,13 @@ const ProjectCardComponent = function ProjectCard({ project, isOverlay = false, 
             title="View Public Tracking Page"
           >
             <div className={cn(
-              "inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/30"
+              "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors",
+              project.status === 'Delivered'
+                ? "border-emerald-500/30 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/30"
+                : "border-destructive/30 bg-destructive/20 text-destructive hover:bg-destructive/30"
             )}>
               <CalendarDays className="mr-1.5 h-3 w-3" />
-              Target: {progressInfo.stageTargetDate}
+              {project.status === 'Delivered' ? 'Delivered' : project.status === 'Cancel' ? 'Cancelled' : 'Target'}: {progressInfo.stageTargetDate}
             </div>
           </NextLink>
 
@@ -547,6 +579,8 @@ export const ProjectCard = React.memo(ProjectCardComponent, (prevProps, nextProp
     prevProps.project.updatedAt === nextProps.project.updatedAt &&
     prevProps.project.name === nextProps.project.name &&
     prevProps.project.endDate === nextProps.project.endDate &&
+    prevProps.project.deliveredAt === nextProps.project.deliveredAt &&
+    prevProps.project.cancelAt === nextProps.project.cancelAt &&
     prevProps.project.isStarred === nextProps.project.isStarred &&
     prevProps.project.isDocsApproved === nextProps.project.isDocsApproved &&
     prevProps.project.isDesignApproved === nextProps.project.isDesignApproved &&
