@@ -583,10 +583,10 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                                 <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
-                              <Command>
+                            <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0 max-h-[var(--radix-popover-content-available-height)] flex flex-col">
+                              <Command className="max-h-[var(--radix-popover-content-available-height)]">
                                 <CommandInput placeholder="Search model..." />
-                                <CommandList className="max-h-[250px] overflow-y-auto">
+                                <CommandList className="max-h-[200px] overflow-y-auto">
                                   <CommandEmpty>No model found.</CommandEmpty>
                                   <CommandGroup>
                                     {modelOptions.map((option) => (
