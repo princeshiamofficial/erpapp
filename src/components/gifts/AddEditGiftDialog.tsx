@@ -311,7 +311,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" portal={false}>
                   <Command>
                     <CommandInput placeholder="Search gift..." />
-                    <CommandList className="max-h-[200px] overflow-y-auto">
+                    <CommandList className="max-h-80 overflow-y-auto">
                       <CommandEmpty>No gift option found.</CommandEmpty>
                       <CommandGroup>
                         {combinedGiftOptions.map((option, idx) => (

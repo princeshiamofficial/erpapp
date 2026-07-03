@@ -745,9 +745,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0" portal={false}>
-                              <Command className="max-h-60 overflow-hidden flex flex-col">
+                              <Command className="max-h-96 overflow-hidden flex flex-col">
                                 <CommandInput placeholder="Search model..." />
-                                <CommandList className="max-h-48 overflow-y-auto">
+                                <CommandList className="max-h-80 overflow-y-auto">
                                   <CommandEmpty>No model found.</CommandEmpty>
                                   <CommandGroup>
                                     {modelOptions.map((option) => (

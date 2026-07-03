@@ -512,7 +512,7 @@
   }
 
   [cmdk-list] {
-    max-height: 220px !important;
+    max-height: 320px !important;
     overflow-y: auto !important;
   }
 }
