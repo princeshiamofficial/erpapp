@@ -510,4 +510,9 @@
     font-weight: 600;
     text-shadow: 0.5px 0.5px 0px rgba(0, 0, 0, 0.1);
   }
+
+  [cmdk-list] {
+    max-height: 220px !important;
+    overflow-y: auto !important;
+  }
 }
