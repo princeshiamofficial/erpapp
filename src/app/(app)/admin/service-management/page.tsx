@@ -196,53 +196,54 @@ export default function ServiceManagementPage() {
 
   const renderItemList = (items: { id: string; name: string }[], type: ItemType, title: string, Icon: React.ElementType) => {
     return (
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
-        <CardHeader className="border-b p-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary" />{title}</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
-            </div>
-            <Button size="sm" onClick={() => openAddDialog(type)} className="h-9 w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New
-            </Button>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5">
+          <div>
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Icon className="h-5 w-5 text-primary" /> {title}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage available {title.toLowerCase()} options for orders.
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="p-0 max-h-[400px] overflow-y-auto">
-          {isLoading ? (
-            <div className="p-4 space-y-3">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
-            </div>
-          ) : items.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground">
-              <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
-              No {title.toLowerCase()} found.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:bg-muted/30 hover:shadow-sm transition-all bg-transparent">
-                  <span className="font-semibold text-foreground flex-1 whitespace-pre-wrap break-words pr-2 text-sm" title={item.name}>{item.name}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openDeleteDialog(item, type)}
-                      title={`Delete ${type}`}
-                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+          <Button onClick={() => openAddDialog(type)} className="h-9 w-full sm:w-auto">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg bg-card/50">
+            <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
+            No {title.toLowerCase()} found.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {items.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:bg-muted/30 hover:shadow-sm transition-all bg-card">
+                <span className="font-semibold text-foreground flex-1 whitespace-pre-wrap break-words pr-2 text-sm" title={item.name}>{item.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openDeleteDialog(item, type)}
+                    title={`Delete ${type}`}
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     )
   };
 
