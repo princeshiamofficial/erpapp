@@ -44,7 +44,8 @@ import {
   ClipboardList,
   TrendingUp, // For Assets icon
   Target, // For Target icon
-  LineChart as LineChartIcon
+  LineChart as LineChartIcon,
+  Gift
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -621,13 +622,15 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
 
-  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount, giftValue, giftCount } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0, invoicePayment: 0, invoicePaymentCount: 0, totalExpenses: 0, totalExpensesCount: 0 };
+      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0, invoicePayment: 0, invoicePaymentCount: 0, totalExpenses: 0, totalExpensesCount: 0, giftValue: 0, giftCount: 0 };
     }
 
     let currentTotalSales = 0;
+    let currentGiftValue = 0;
+    let currentGiftCount = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
     let currentTotalPurchaseItemQuantity = 0;
@@ -684,6 +687,10 @@ function DashboardContent() {
 
         if (Array.isArray(order.orderItems)) {
           order.orderItems.forEach((item: OrderItem) => {
+            if (item.isGift) {
+              currentGiftValue += (Number(item.lineItemTotalPrice) || 0);
+              currentGiftCount += (Number(item.quantity) || 0);
+            }
             const modelDetails = allModels.find(m => m.name === item.model);
             if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
               currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
@@ -920,6 +927,8 @@ function DashboardContent() {
       invoicePaymentCount: currentInvoicePaymentCount,
       totalExpenses: currentTotalExpenses,
       totalExpensesCount: currentTotalExpensesCount,
+      giftValue: currentGiftValue,
+      giftCount: currentGiftCount,
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity, allTransactions]);
 
@@ -1171,8 +1180,13 @@ function DashboardContent() {
         value: showAmount ? formatCurrency(totalExpenses) : totalExpensesCount.toString(), 
         icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
+      { 
+        title: "Gift's Value", 
+        value: showAmount ? formatCurrency(giftValue) : giftCount.toString(), 
+        icon: Gift, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      },
     ];
-  }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials, invoicePayment, invoicePaymentCount]);
+  }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount, giftValue, giftCount]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
