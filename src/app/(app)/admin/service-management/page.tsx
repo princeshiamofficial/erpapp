@@ -57,6 +57,7 @@ export default function ServiceManagementPage() {
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ItemType | null>(null);
+  const [activeTab, setActiveTab] = useState<ItemType>('lamination');
 
 
   const fetchData = useCallback(async () => {
@@ -196,20 +197,7 @@ export default function ServiceManagementPage() {
 
   const renderItemList = (items: { id: string; name: string }[], type: ItemType, title: string, Icon: React.ElementType) => {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5">
-          <div>
-            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Icon className="h-5 w-5 text-primary" /> {title}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage available {title.toLowerCase()} options for orders.
-            </p>
-          </div>
-          <Button onClick={() => openAddDialog(type)} className="h-9 w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New
-          </Button>
-        </div>
+      <div className="space-y-4">
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -251,21 +239,26 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <Tabs defaultValue="lamination" className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full max-w-3xl gap-2 mb-6">
-          <TabsTrigger value="lamination" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
-            <ShieldHalf className="h-4 w-4" /> Laminations
-          </TabsTrigger>
-          <TabsTrigger value="paymentMethod" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
-            <CreditCard className="h-4 w-4" /> Payment Methods
-          </TabsTrigger>
-          <TabsTrigger value="gift" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
-            <Gift className="h-4 w-4" /> Gifts
-          </TabsTrigger>
-          <TabsTrigger value="courierNote" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
-            <ClipboardList className="h-4 w-4" /> Courier Notes
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="lamination" onValueChange={(value) => setActiveTab(value as ItemType)} className="w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full max-w-3xl gap-2">
+            <TabsTrigger value="lamination" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
+              <ShieldHalf className="h-4 w-4" /> Laminations
+            </TabsTrigger>
+            <TabsTrigger value="paymentMethod" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
+              <CreditCard className="h-4 w-4" /> Payment Methods
+            </TabsTrigger>
+            <TabsTrigger value="gift" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
+              <Gift className="h-4 w-4" /> Gifts
+            </TabsTrigger>
+            <TabsTrigger value="courierNote" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
+              <ClipboardList className="h-4 w-4" /> Courier Notes
+            </TabsTrigger>
+          </TabsList>
+          <Button onClick={() => openAddDialog(activeTab)} className="h-9 w-full sm:w-auto shrink-0 shadow-md">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New
+          </Button>
+        </div>
         <TabsContent value="lamination" className="mt-0">
           {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
         </TabsContent>
