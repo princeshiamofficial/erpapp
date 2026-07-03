@@ -46,6 +46,32 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
   const isEditMode = !!gift;
 
+  const combinedGiftOptions = useMemo(() => {
+    const optionsMap = new Map<string, { id: string; name: string }>();
+    
+    // Add standard gift options
+    giftOptions.forEach(opt => {
+      optionsMap.set(opt.name.trim().toLowerCase(), { id: opt.id, name: opt.name });
+    });
+
+    // If an order is matched, find it in allOrders and temporarily add its items to the selectable list
+    if (orderId && allOrders.length > 0) {
+      const matchedOrder = allOrders.find(o => o.id === orderId);
+      if (matchedOrder && matchedOrder.orderItems) {
+        matchedOrder.orderItems.forEach((item, idx) => {
+          if (item.model) {
+            const key = item.model.trim().toLowerCase();
+            if (!optionsMap.has(key)) {
+              optionsMap.set(key, { id: `order-item-${idx}`, name: item.model.trim() });
+            }
+          }
+        });
+      }
+    }
+
+    return Array.from(optionsMap.values());
+  }, [giftOptions, orderId, allOrders]);
+
   const resetForm = useCallback(() => {
     if (gift && isEditMode) {
       setSelectedGiftItems(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : (gift.giftItemName ? [gift.giftItemName] : []));
@@ -284,7 +310,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
                     <CommandList>
                       <CommandEmpty>No gift option found.</CommandEmpty>
                       <CommandGroup>
-                        {giftOptions.map((option, idx) => (
+                        {combinedGiftOptions.map((option, idx) => (
                           <CommandItem key={`${option.id}-${idx}`} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
                             <Check className={cn("mr-2 h-4 w-4", selectedGiftItems.includes(option.name) ? "opacity-100" : "opacity-0")} />
                             {option.name}
