@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 
 type ItemType = 'lamination' | 'paymentMethod' | 'gift' | 'courierNote';
@@ -249,14 +250,34 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
-        {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)}
-        {renderItemList(gifts, 'gift', 'Gifts', Gift)}
-        {renderItemList(courierNotes, 'courierNote', 'Courier Notes', ClipboardList)}
-      </div>
+      <Tabs defaultValue="lamination" className="w-full">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full max-w-3xl gap-2 mb-6">
+          <TabsTrigger value="lamination" className="flex items-center gap-2">
+            <ShieldHalf className="h-4 w-4" /> Laminations
+          </TabsTrigger>
+          <TabsTrigger value="paymentMethod" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" /> Payment Methods
+          </TabsTrigger>
+          <TabsTrigger value="gift" className="flex items-center gap-2">
+            <Gift className="h-4 w-4" /> Gifts
+          </TabsTrigger>
+          <TabsTrigger value="courierNote" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" /> Courier Notes
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="lamination" className="mt-0">
+          {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
+        </TabsContent>
+        <TabsContent value="paymentMethod" className="mt-0">
+          {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)}
+        </TabsContent>
+        <TabsContent value="gift" className="mt-0">
+          {renderItemList(gifts, 'gift', 'Gifts', Gift)}
+        </TabsContent>
+        <TabsContent value="courierNote" className="mt-0">
+          {renderItemList(courierNotes, 'courierNote', 'Courier Notes', ClipboardList)}
+        </TabsContent>
+      </Tabs>
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
