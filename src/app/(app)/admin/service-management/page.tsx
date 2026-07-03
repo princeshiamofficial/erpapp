@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
@@ -275,14 +276,27 @@ export default function ServiceManagementPage() {
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
             <div>
-              <Input 
-                id="itemName" 
-                placeholder={currentType === 'courierNote' ? 'Note' : 'Name'} 
-                value={itemName} 
-                onChange={(e) => setItemName(e.target.value)} 
-                required 
-                disabled={isSubmitting} 
-              />
+              {currentType === 'courierNote' ? (
+                <Textarea
+                  id="itemName"
+                  placeholder="Note"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                  className="min-h-[120px] text-sm resize-none whitespace-pre-wrap"
+                  rows={5}
+                />
+              ) : (
+                <Input
+                  id="itemName"
+                  placeholder="Name"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              )}
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
