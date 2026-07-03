@@ -244,6 +244,8 @@ export default function ServiceManagementPage() {
     )
   };
 
+  const currentType = editingItem?.type || itemTypeToAdd;
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
 
@@ -260,18 +262,27 @@ export default function ServiceManagementPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {
-              (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' :
-                (editingItem?.type || itemTypeToAdd) === 'paymentMethod' ? 'Payment Method' :
-                  (editingItem?.type || itemTypeToAdd) === 'gift' ? 'Gift' :
+              currentType === 'lamination' ? 'Lamination' :
+                currentType === 'paymentMethod' ? 'Payment Method' :
+                  currentType === 'gift' ? 'Gift' :
                     'Courier Note'
             }</DialogTitle>
             <DialogDescription>
-              {editingItem ? 'Update the name of this option.' : 'Enter the name for the new option.'}
+              {editingItem 
+                ? `Update the ${currentType === 'courierNote' ? 'note' : 'name'} of this option.` 
+                : `Enter the ${currentType === 'courierNote' ? 'note' : 'name'} for the new option.`}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
             <div>
-              <Input id="itemName" placeholder="Name" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+              <Input 
+                id="itemName" 
+                placeholder={currentType === 'courierNote' ? 'Note' : 'Name'} 
+                value={itemName} 
+                onChange={(e) => setItemName(e.target.value)} 
+                required 
+                disabled={isSubmitting} 
+              />
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
