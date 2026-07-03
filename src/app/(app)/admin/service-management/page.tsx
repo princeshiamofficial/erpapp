@@ -221,7 +221,7 @@ export default function ServiceManagementPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
               {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:bg-muted/30 hover:shadow-sm transition-all bg-card">
+                <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:bg-muted/30 hover:shadow-sm transition-all bg-transparent">
                   <span className="font-semibold text-foreground flex-1 whitespace-pre-wrap break-words pr-2 text-sm" title={item.name}>{item.name}</span>
                   <div className="flex items-center gap-2 shrink-0">
                     <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
