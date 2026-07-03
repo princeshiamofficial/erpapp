@@ -188,10 +188,10 @@ export function GiftCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
                   <SelectTrigger id="predefined-note" className="col-span-2 h-8">
                     <SelectValue placeholder="Choose a note (Optional)" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                     <SelectItem value="none_selected">None</SelectItem>
                     {courierNotesOptions.map((note) => (
-                      <SelectItem key={note.id} value={note.name}>
+                      <SelectItem key={note.id} value={note.name} className="whitespace-normal break-words">
                         {note.name}
                       </SelectItem>
                     ))}
