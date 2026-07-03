@@ -289,7 +289,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
                 <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/50 min-h-[40px]">
                   {selectedGiftItems.map((item, idx) => (
                     <Badge key={`${item}-${idx}`} variant="secondary" className="gap-1.5 py-1">
-                      {item}
+                      {item.length > 16 ? item.substring(0, 16) + '...' : item}
                       <button type="button" onClick={() => handleGiftSelect(item)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
                         <X className="h-3 w-3 text-destructive" />
                       </button>
