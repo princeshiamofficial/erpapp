@@ -219,11 +219,11 @@ export default function ServiceManagementPage() {
               No {title.toLowerCase()} found.
             </div>
           ) : (
-            <ul className="divide-y divide-border/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
               {items.map((item) => (
-                <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                  <span className="font-medium text-foreground flex-1 whitespace-nowrap overflow-hidden text-ellipsis" title={item.name}>{item.name}</span>
-                  <div className="flex items-center gap-2 ml-4">
+                <div key={item.id} className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:bg-muted/30 hover:shadow-sm transition-all bg-card">
+                  <span className="font-semibold text-foreground flex-1 whitespace-pre-wrap break-words pr-2 text-sm" title={item.name}>{item.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -237,9 +237,9 @@ export default function ServiceManagementPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </CardContent>
       </Card>
