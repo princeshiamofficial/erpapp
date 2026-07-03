@@ -22,12 +22,13 @@ import { sendTelegramMessage } from "@/lib/notification-utils";
 import { getIO } from "@/lib/socket-io";
 import { getAppUrl } from "@/lib/server-utils";
 
-const sanitizeForPackzy = (input: string | null | undefined): string => {
+const sanitizeForPackzy = (input: string | null | undefined, maxLength?: number): string => {
   if (!input) return '';
-  return input
+  const sanitized = input
     .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
+  return maxLength ? sanitized.slice(0, maxLength) : sanitized;
 };
 
 
@@ -181,15 +182,15 @@ export async function transferToCourierAction(
     const recipientAddressRaw = customRecipientAddress || order.address;
 
     const packzyPayload: Record<string, any> = {
-      invoice: sanitizeForPackzy(order.id),
-      recipient_name: sanitizeForPackzy(recipientNameRaw),
+      invoice: sanitizeForPackzy(order.id, 100),
+      recipient_name: sanitizeForPackzy(recipientNameRaw, 100),
       recipient_phone: sanitizeForPackzy(order.phoneNumber),
-      recipient_address: sanitizeForPackzy(recipientAddressRaw),
+      recipient_address: sanitizeForPackzy(recipientAddressRaw, 250),
       cod_amount: totalCodAmount,
     };
 
     if (courierNote && courierNote.trim()) {
-      packzyPayload.note = sanitizeForPackzy(courierNote.trim());
+      packzyPayload.note = sanitizeForPackzy(courierNote.trim(), 480);
     }
 
     const urlEncodedBody = Object.entries(packzyPayload)
@@ -215,7 +216,7 @@ export async function transferToCourierAction(
         responseData = JSON.parse(responseText);
         return { success: false, error: `SteadFast API Error: ${responseData.message || 'Failed to create consignment.'}` };
       } catch (e) {
-        return { success: false, error: `SteadFast API returned an error page. Please check the recipient details for invalid characters. Status: ${response.status}.` };
+        return { success: false, error: `SteadFast API returned an error page. Please check that recipient details (max 100 chars), address (max 250 chars), and courier note (max 480 chars) do not exceed character limits. Status: ${response.status}.` };
       }
     }
 

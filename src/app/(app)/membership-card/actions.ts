@@ -12,12 +12,13 @@ import {
 import { sendTelegramMessage } from "@/lib/notification-utils";
 import { getIO } from "@/lib/socket-io";
 
-const sanitizeForPackzy = (input: string | null | undefined): string => {
+const sanitizeForPackzy = (input: string | null | undefined, maxLength?: number): string => {
   if (!input) return '';
-  return input
+  const sanitized = input
     .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
+  return maxLength ? sanitized.slice(0, maxLength) : sanitized;
 };
 
 export async function getGifts(): Promise<Gift[]> {
@@ -116,15 +117,15 @@ export async function transferGiftToCourierAction(
     const recipientAddressRaw = customRecipientAddress || existingGift.recipientAddress;
 
     const packzyPayload: Record<string, any> = {
-      invoice: sanitizeForPackzy(existingGift.giftIdDisplay),
-      recipient_name: sanitizeForPackzy(recipientNameRaw),
+      invoice: sanitizeForPackzy(existingGift.giftIdDisplay, 100),
+      recipient_name: sanitizeForPackzy(recipientNameRaw, 100),
       recipient_phone: sanitizeForPackzy(existingGift.recipientPhone),
-      recipient_address: sanitizeForPackzy(recipientAddressRaw),
+      recipient_address: sanitizeForPackzy(recipientAddressRaw, 250),
       cod_amount: totalCodAmount,
     };
 
     if (courierNote && courierNote.trim()) {
-      packzyPayload.note = sanitizeForPackzy(courierNote.trim());
+      packzyPayload.note = sanitizeForPackzy(courierNote.trim(), 480);
     }
 
     const urlEncodedBody = Object.entries(packzyPayload)
@@ -150,7 +151,7 @@ export async function transferGiftToCourierAction(
         responseData = JSON.parse(responseText);
         return { success: false, error: `SteadFast API Error: ${responseData.message || 'Failed to create consignment.'}` };
       } catch (e) {
-        return { success: false, error: `SteadFast API returned an error page. Status: ${response.status}.` };
+        return { success: false, error: `SteadFast API returned an error page. Please check that recipient details (max 100 chars), address (max 250 chars), and courier note (max 480 chars) do not exceed character limits. Status: ${response.status}.` };
       }
     }
 
