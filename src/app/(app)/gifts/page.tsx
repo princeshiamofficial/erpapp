@@ -12,6 +12,7 @@ import { useSocket } from "@/contexts/socket-context";
 import { useRouter } from "next/navigation";
 import type { Gift, User, ServiceGiftItem, TrackingLink } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 import { getGifts as fetchGifts, deleteGift as deleteGiftAction } from './actions';
 import { getGifts as getGiftOptions } from '@/lib/service-options-service';
@@ -49,6 +50,7 @@ export default function GiftsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
   const [giftToEdit, setGiftToEdit] = useState<Gift | null>(null);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -332,18 +334,52 @@ export default function GiftsPage() {
                    {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
                      <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
                        <TableCell className="pl-6 font-mono text-primary font-bold">{gift.giftIdDisplay}</TableCell>
-                       <TableCell className="font-mono text-muted-foreground text-sm">
-                         {gift.orderId ? (() => {
-                           const linkedOrder = allOrders.find(o => o.id === gift.orderId);
-                           const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : gift.orderId;
-                           const orderDisplay = linkedOrder?.projectIdDisplay || linkedOrder?.id;
-                           return (
-                             <span className="text-muted-foreground">
-                               {orderDisplay ? `${displayId} (${orderDisplay})` : displayId}
-                             </span>
-                           );
-                         })() : '—'}
-                       </TableCell>
+                        <TableCell className="font-mono text-muted-foreground text-sm">
+                          {gift.orderId ? (() => {
+                            const linkedOrder = allOrders.find(o => o.id === gift.orderId);
+                            const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : gift.orderId;
+                            const orderDisplay = linkedOrder?.projectIdDisplay || linkedOrder?.id;
+                            return (
+                              <div className="flex items-center gap-1.5">
+                                <span>{displayId}</span>
+                                {orderDisplay && (
+                                  <TooltipProvider>
+                                    <Tooltip 
+                                      open={openTooltipId === gift.id} 
+                                      onOpenChange={(open) => {
+                                        if (!open && openTooltipId === gift.id) {
+                                          setOpenTooltipId(null);
+                                        }
+                                      }}
+                                    >
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setOpenTooltipId(openTooltipId === gift.id ? null : gift.id);
+                                          }}
+                                          className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors font-bold text-[10px] leading-none cursor-pointer"
+                                        >
+                                          ...
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent 
+                                        side="top" 
+                                        align="center"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="font-mono bg-black text-white dark:bg-white dark:text-black border-none px-2.5 py-1 text-xs"
+                                      >
+                                        {orderDisplay}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
+                            );
+                          })() : '—'}
+                        </TableCell>
                         <TableCell className="font-medium">
                           {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName || ''])
                             .map(name => {
