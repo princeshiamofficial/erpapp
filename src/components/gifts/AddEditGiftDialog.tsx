@@ -117,9 +117,16 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       if (allOrders.length > 0) {
         const found = allOrders.find(order => {
           const displayId = (order.id || '').trim().toLowerCase();
+          const projDisplay = (order.projectIdDisplay || '').trim().toLowerCase();
           const companyPrefix = (order.companyName || '').split(' • ')[0].trim().toLowerCase();
           const inputLower = trimmedJobId.toLowerCase();
-          return displayId === inputLower || companyPrefix === inputLower || displayId.includes(inputLower);
+          return (
+            displayId === inputLower ||
+            projDisplay === inputLower ||
+            companyPrefix === inputLower ||
+            displayId.includes(inputLower) ||
+            (projDisplay && projDisplay.includes(inputLower))
+          );
         });
 
         if (found) {
@@ -130,6 +137,24 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
           setRecipientName(actualName);
           setRecipientPhone(found.phoneNumber);
           setRecipientAddress(found.address);
+
+          // Auto-select gift items from the invoice's order items
+          if (found.orderItems && found.orderItems.length > 0) {
+            const giftsFromOrder = found.orderItems
+              .filter(item => {
+                if (item.isGift) return true;
+                const modelNameLower = (item.model || '').trim().toLowerCase();
+                return giftOptions.some(opt => opt.name.trim().toLowerCase() === modelNameLower);
+              })
+              .map(item => {
+                const matchedOption = giftOptions.find(opt => opt.name.trim().toLowerCase() === (item.model || '').trim().toLowerCase());
+                return matchedOption ? matchedOption.name : item.model;
+              });
+
+            if (giftsFromOrder.length > 0) {
+              setSelectedGiftItems(giftsFromOrder);
+            }
+          }
         } else {
           setOrderId(null);
         }

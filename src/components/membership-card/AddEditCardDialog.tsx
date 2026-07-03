@@ -123,9 +123,16 @@ export function AddEditCardDialog({ isOpen, onOpenChange, onCardSaved, card, cur
       if (allOrders.length > 0) {
         const found = allOrders.find(order => {
           const displayId = (order.id || '').trim().toLowerCase();
+          const projDisplay = (order.projectIdDisplay || '').trim().toLowerCase();
           const companyPrefix = (order.companyName || '').split(' • ')[0].trim().toLowerCase();
           const inputLower = trimmedJobId.toLowerCase();
-          return displayId === inputLower || companyPrefix === inputLower || displayId.includes(inputLower);
+          return (
+            displayId === inputLower ||
+            projDisplay === inputLower ||
+            companyPrefix === inputLower ||
+            displayId.includes(inputLower) ||
+            (projDisplay && projDisplay.includes(inputLower))
+          );
         });
 
         if (found) {
