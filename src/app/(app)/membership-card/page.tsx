@@ -351,21 +351,13 @@ export default function MembershipCardPage() {
                                 <span>{displayId}</span>
                                 {orderDisplay && (
                                   <TooltipProvider>
-                                    <Tooltip 
-                                      open={openTooltipId === cardItem.id} 
-                                      onOpenChange={(open) => {
-                                        if (!open && openTooltipId === cardItem.id) {
-                                          setOpenTooltipId(null);
-                                        }
-                                      }}
-                                    >
+                                    <Tooltip>
                                       <TooltipTrigger asChild>
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            setOpenTooltipId(openTooltipId === cardItem.id ? null : cardItem.id);
                                           }}
                                           className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors font-bold text-[10px] leading-none cursor-pointer"
                                         >
@@ -375,7 +367,6 @@ export default function MembershipCardPage() {
                                       <TooltipContent 
                                         side="top" 
                                         align="center"
-                                        onClick={(e) => e.stopPropagation()}
                                         className="font-mono bg-black text-white dark:bg-white dark:text-black border-none px-2.5 py-1 text-xs"
                                       >
                                         {orderDisplay}
