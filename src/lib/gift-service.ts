@@ -8,10 +8,14 @@ const GIFTS_TABLE = 'client_gifts';
 
 export const getGifts = async (): Promise<Gift[]> => {
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${GIFTS_TABLE}`);
-    const gifts = rows.map(row => ({
-      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
-    } as Gift));
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${GIFTS_TABLE}`);
+    const gifts = rows.map(row => {
+      const parsed = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return {
+        id: row.id,
+        ...parsed
+      } as Gift;
+    });
 
     // Sort by createdAt DESC to show latest data on top
     return gifts.sort((a, b) => {
@@ -28,9 +32,13 @@ export const getGifts = async (): Promise<Gift[]> => {
 export const getGiftById = async (id: string): Promise<Gift | null> => {
   if (!id) return null;
   try {
-    const rows = await query<any[]>(`SELECT data_json FROM ${GIFTS_TABLE} WHERE id = ?`, [id]);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${GIFTS_TABLE} WHERE id = ?`, [id]);
     if (rows.length > 0) {
-      return { ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as Gift;
+      const parsed = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+      return {
+        id: rows[0].id,
+        ...parsed
+      } as Gift;
     }
   } catch (error) {
     console.error(`Error fetching gift by ID ${id} from MySQL:`, error);

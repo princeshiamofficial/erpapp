@@ -27,10 +27,14 @@ export const initMembershipCardsTable = async () => {
 export const getGifts = async (): Promise<Card[]> => {
   try {
     await initMembershipCardsTable();
-    const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME}`);
-    const cards = rows.map(row => ({
-      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
-    } as Card));
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME}`);
+    const cards = rows.map(row => {
+      const parsed = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return {
+        id: row.id,
+        ...parsed
+      } as Card;
+    });
 
     // Sort by createdAt DESC to show latest data on top
     return cards.sort((a, b) => {
@@ -48,9 +52,13 @@ export const getGiftById = async (id: string): Promise<Card | null> => {
   if (!id) return null;
   try {
     await initMembershipCardsTable();
-    const rows = await query<any[]>(`SELECT data_json FROM ${TABLE_NAME} WHERE id = ?`, [id]);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} WHERE id = ?`, [id]);
     if (rows.length > 0) {
-      return { ...(typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json) } as Card;
+      const parsed = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+      return {
+        id: rows[0].id,
+        ...parsed
+      } as Card;
     }
   } catch (error) {
     console.error(`Error fetching membership card by ID ${id} from MySQL:`, error);
