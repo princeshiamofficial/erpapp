@@ -163,7 +163,7 @@ const generateSowData = (orders: TrackingLink[], sowEntries: SowDataEntry[], glo
         }
         
         const totalAmount = group.orders.reduce((sum, order) => {
-            const orderTotal = (order.orderItems || []).reduce((itemSum, item) => itemSum + (item.lineItemTotalPrice || 0), 0);
+            const orderTotal = (order.orderItems || []).reduce((itemSum, item) => itemSum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
             return sum + orderTotal;
         }, 0);
         

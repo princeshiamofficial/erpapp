@@ -50,7 +50,7 @@ export async function updateProjectStatusAction(
     if (newStatus === 'Logistics' && settings.isPaymentValidationEnabled && actingUser.role !== 'ADMIN' && actingUser.role !== 'SYSTEM_ADMIN') {
       const orderForValidation = await getOrderById(project.id);
       if (orderForValidation) {
-        const orderSubtotal = (orderForValidation.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+        const orderSubtotal = (orderForValidation.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0);
         const effectiveDiscount = Number(orderForValidation.specialClientDiscount) || 0;
         const netPayable = orderSubtotal - effectiveDiscount;
         const totalAdvancePaid = (orderForValidation.advancePayments || []).reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
@@ -168,7 +168,7 @@ export async function transferToCourierAction(
       return { success: false, error: `Order with ID ${project.id} not found.` };
     }
 
-    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0);
     const effectiveDiscount = Number(order.specialClientDiscount) || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
     const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + (Number(record.amount) || 0), 0);

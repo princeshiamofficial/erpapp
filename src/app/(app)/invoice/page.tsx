@@ -337,7 +337,7 @@ export default function InvoiceListPage() {
   
 
   const getOrderFinancials = useCallback((order: TrackingLink) => {
-    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0);
+    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0);
     const effectiveDiscount = Number(order.specialClientDiscount) || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
     const shippingCharge = Number(order.shippingCharge) || 0;

@@ -506,7 +506,7 @@ function DashboardContent() {
       }
 
       const divisionName = longestMatch ? longestMatch.division : "Unknown";
-      const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+      const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
       salesByDivision[divisionName] = (salesByDivision[divisionName] || 0) + orderTotal;
       totalSalesAllDivisions += orderTotal;
     });
@@ -677,7 +677,7 @@ function DashboardContent() {
       const orderCreatedAt = parseISO(order.createdAt);
       // Sales, Purchase, Due calculations based on orders *created* in the date range
       if (isWithinInterval(orderCreatedAt, interval)) {
-        const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
         const effectiveDiscount = order.specialClientDiscount || 0;
         const netPayable = orderTotal - effectiveDiscount;
         currentTotalSales += netPayable;
@@ -761,7 +761,7 @@ function DashboardContent() {
         if (order.createdAt) {
           try {
             const hour = getHours(parseISO(order.createdAt));
-            const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
+            const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0) - (order.specialClientDiscount || 0);
             const existing = hourlyData.get(hour) || { sales: 0, orders: 0, deliveries: 0 };
             hourlyData.set(hour, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
           } catch (e) { /* ignore */ }
@@ -804,7 +804,7 @@ function DashboardContent() {
             try {
               const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM');
               if (monthlyData.has(orderDateStr)) {
-                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
+                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0) - (order.specialClientDiscount || 0);
                 const existing = monthlyData.get(orderDateStr) || { sales: 0, orders: 0, deliveries: 0 };
                 monthlyData.set(orderDateStr, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
               }
@@ -845,7 +845,7 @@ function DashboardContent() {
             try {
               const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
               if (dailyData.has(orderDateStr)) {
-                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0) - (order.specialClientDiscount || 0);
+                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0) - (order.specialClientDiscount || 0);
                 const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0, deliveries: 0 };
                 dailyData.set(orderDateStr, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
               }

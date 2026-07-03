@@ -368,7 +368,7 @@ export function ProjectsKanbanClient() {
         return;
       }
 
-      const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+      const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
       const effectiveDiscount = order.specialClientDiscount || 0;
       const netPayable = orderSubtotal - effectiveDiscount;
       const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);

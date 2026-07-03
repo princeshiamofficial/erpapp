@@ -385,7 +385,7 @@ export function ReportPageClient() {
       order.orderItems.forEach(item => {
         let productName = item.model;
         let quantity = item.quantity;
-        let sales = item.lineItemTotalPrice || 0;
+        let sales = item.isGift ? 0 : (item.lineItemTotalPrice || 0);
   
         if (productViewMode === 'category') {
           const matchingFilter = filters.find(filter =>
@@ -429,7 +429,7 @@ export function ReportPageClient() {
         if (!salesByCrm[order.crmUserId]) {
           salesByCrm[order.crmUserId] = { totalSales: 0 };
         }
-        const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
         salesByCrm[order.crmUserId].totalSales += orderTotal;
       }
     });
@@ -462,7 +462,7 @@ export function ReportPageClient() {
           salesByDayAndCrm[dateKey][crmName] = { salesCount: 0, totalSale: 0 };
         }
         salesByDayAndCrm[dateKey][crmName].salesCount += 1;
-        salesByDayAndCrm[dateKey][crmName].totalSale += order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        salesByDayAndCrm[dateKey][crmName].totalSale += order.orderItems.reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
       } catch (e) {
         // ignore invalid dates
       }

@@ -92,7 +92,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
 
   const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
   const orderSubtotal = Array.isArray(order.orderItems)
-    ? order.orderItems.reduce((acc, item) => acc + (Number(item.lineItemTotalPrice) || 0), 0)
+    ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
     : 0;
   const effectiveDiscount = Number(order.specialClientDiscount) || 0;
   const netPayable = orderSubtotal - effectiveDiscount;

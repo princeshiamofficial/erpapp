@@ -83,7 +83,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers, displayMode = '
         const orderDate = parseISO(order.createdAt);
         if (getYear(orderDate) === selectedYear && order.crmUserId) {
           const monthIndex = getMonth(orderDate);
-          const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+          const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
           months[monthIndex].sales += orderTotal;
           months[monthIndex].orders += 1;
 
