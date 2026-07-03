@@ -791,7 +791,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                   <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
+                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0" portal={false}>
                                 <Command className="max-h-60 overflow-hidden flex flex-col">
                                   <CommandInput placeholder="Search model..." />
                                   <CommandList className="max-h-48 overflow-y-auto">
