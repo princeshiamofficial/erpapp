@@ -271,8 +271,7 @@ export default function ServiceManagementPage() {
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
             <div>
-              <Label htmlFor="itemName">Name</Label>
-              <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+              <Input id="itemName" placeholder="Name" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>

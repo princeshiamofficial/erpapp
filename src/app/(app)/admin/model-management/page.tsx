@@ -398,8 +398,7 @@ export default function ModelManagementPage() {
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
             <div className="space-y-1">
-              <Label htmlFor="itemName">Name</Label>
-              <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+              <Input id="itemName" placeholder="Name" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
