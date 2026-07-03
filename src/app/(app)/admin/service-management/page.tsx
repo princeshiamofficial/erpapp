@@ -277,16 +277,25 @@ export default function ServiceManagementPage() {
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
             <div>
               {currentType === 'courierNote' ? (
-                <Textarea
-                  id="itemName"
-                  placeholder="Note"
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                  className="min-h-[120px] text-sm resize-none whitespace-pre-wrap"
-                  rows={5}
-                />
+                <div className="space-y-1">
+                  <Textarea
+                    id="itemName"
+                    placeholder="Note"
+                    value={itemName}
+                    onChange={(e) => setItemName(e.target.value)}
+                    required
+                    disabled={isSubmitting}
+                    maxLength={480}
+                    className="min-h-[120px] text-sm resize-none whitespace-pre-wrap"
+                    rows={5}
+                  />
+                  <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
+                    <span>SteadFast API Limit</span>
+                    <span className={cn(itemName.length >= 450 && "text-destructive font-semibold")}>
+                      {itemName.length}/480
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <Input
                   id="itemName"
@@ -295,6 +304,7 @@ export default function ServiceManagementPage() {
                   onChange={(e) => setItemName(e.target.value)}
                   required
                   disabled={isSubmitting}
+                  maxLength={100}
                 />
               )}
             </div>
