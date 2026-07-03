@@ -332,13 +332,14 @@ export default function GiftsPage() {
                    {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
                      <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
                        <TableCell className="pl-6 font-mono text-primary font-bold">{gift.giftIdDisplay}</TableCell>
-                       <TableCell className="font-mono text-muted-foreground">
+                       <TableCell className="font-mono text-muted-foreground text-sm">
                          {gift.orderId ? (() => {
                            const linkedOrder = allOrders.find(o => o.id === gift.orderId);
                            const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : gift.orderId;
+                           const orderDisplay = linkedOrder?.projectIdDisplay;
                            return (
                              <span className="text-muted-foreground">
-                               {displayId}
+                               {orderDisplay ? `${displayId} (${orderDisplay})` : displayId}
                              </span>
                            );
                          })() : '—'}

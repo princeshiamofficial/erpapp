@@ -339,13 +339,14 @@ export default function MembershipCardPage() {
                    {!isLoading && paginatedCards.length > 0 && paginatedCards.map((cardItem, index) => (
                      <TableRow key={cardItem.id || `card-${index}`} className="hover:bg-muted/50">
                        <TableCell className="pl-6 font-mono text-primary font-bold">{cardItem.giftIdDisplay}</TableCell>
-                       <TableCell className="font-mono text-muted-foreground">
+                       <TableCell className="font-mono text-muted-foreground text-sm">
                          {cardItem.orderId ? (() => {
                            const linkedOrder = allOrders.find(o => o.id === cardItem.orderId);
                            const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : cardItem.orderId;
+                           const orderDisplay = linkedOrder?.projectIdDisplay;
                            return (
                              <span className="text-muted-foreground">
-                               {displayId}
+                               {orderDisplay ? `${displayId} (${orderDisplay})` : displayId}
                              </span>
                            );
                          })() : '—'}
