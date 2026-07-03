@@ -336,7 +336,7 @@ export default function GiftsPage() {
                          {gift.orderId ? (() => {
                            const linkedOrder = allOrders.find(o => o.id === gift.orderId);
                            const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : gift.orderId;
-                           const orderDisplay = linkedOrder?.projectIdDisplay;
+                           const orderDisplay = linkedOrder?.projectIdDisplay || linkedOrder?.id;
                            return (
                              <span className="text-muted-foreground">
                                {orderDisplay ? `${displayId} (${orderDisplay})` : displayId}

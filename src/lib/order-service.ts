@@ -32,6 +32,7 @@ ensureStarredColumnExists();
 
 const mapRowToOrder = (row: any): TrackingLink => ({
   id: row.id,
+  projectIdDisplay: row.id,
   clientId: row.client_id,
   companyName: row.company_name ? `${row.client_id} • ${row.company_name}` : row.client_id,
   address: row.address,

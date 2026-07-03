@@ -343,7 +343,7 @@ export default function MembershipCardPage() {
                          {cardItem.orderId ? (() => {
                            const linkedOrder = allOrders.find(o => o.id === cardItem.orderId);
                            const displayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim() : cardItem.orderId;
-                           const orderDisplay = linkedOrder?.projectIdDisplay;
+                           const orderDisplay = linkedOrder?.projectIdDisplay || linkedOrder?.id;
                            return (
                              <span className="text-muted-foreground">
                                {orderDisplay ? `${displayId} (${orderDisplay})` : displayId}
