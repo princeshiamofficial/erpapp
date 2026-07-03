@@ -253,16 +253,16 @@ export default function ServiceManagementPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Tabs defaultValue="lamination" className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full max-w-3xl gap-2 mb-6">
-          <TabsTrigger value="lamination" className="flex items-center gap-2">
+          <TabsTrigger value="lamination" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
             <ShieldHalf className="h-4 w-4" /> Laminations
           </TabsTrigger>
-          <TabsTrigger value="paymentMethod" className="flex items-center gap-2">
+          <TabsTrigger value="paymentMethod" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
             <CreditCard className="h-4 w-4" /> Payment Methods
           </TabsTrigger>
-          <TabsTrigger value="gift" className="flex items-center gap-2">
+          <TabsTrigger value="gift" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
             <Gift className="h-4 w-4" /> Gifts
           </TabsTrigger>
-          <TabsTrigger value="courierNote" className="flex items-center gap-2">
+          <TabsTrigger value="courierNote" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
             <ClipboardList className="h-4 w-4" /> Courier Notes
           </TabsTrigger>
         </TabsList>
