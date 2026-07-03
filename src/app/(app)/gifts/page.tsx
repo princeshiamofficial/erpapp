@@ -346,7 +346,7 @@ export default function GiftsPage() {
                        </TableCell>
                         <TableCell className="font-medium">
                           {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName || ''])
-                            .map(name => name.length > 16 ? name.substring(0, 16) + '...' : name)
+                            .map(name => name.length > 18 ? name.substring(0, 18) + '...' : name)
                             .join(', ')}
                         </TableCell>
                        <TableCell>
