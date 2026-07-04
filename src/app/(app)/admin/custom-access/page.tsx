@@ -91,20 +91,32 @@ const getStageBadgeClass = (stage: ProjectStatusType) => {
 
 const getProjectStageName = (statusId: string, statusName: string): string => {
   const lowerId = statusId.toLowerCase();
+  
+  if (lowerId === 'cancelled') return 'Cancel';
+  if (lowerId === 'delivered') return 'Delivered';
+  if (lowerId === 'shipped') return 'Courier';
+  if (lowerId === 'on-hold') return 'On Hold';
+  if (lowerId === 'logistics') return 'Logistics';
+  if (lowerId === 'co-clearance') return 'CO Clearance';
+  if (lowerId === 'docs-pending') return 'Docs Pending';
+  if (lowerId === 'business-closed') return 'Business Closed';
+  if (lowerId === 'project-pending') return 'Project Pending';
+  if (lowerId === 'ready-for-design' || lowerId === 'design-in-progress' || lowerId === 'pending-client-approval' || lowerId === 'changes-requested' || lowerId.includes('design')) return 'On Design';
+
   const lowerName = statusName.toLowerCase();
-  
-  if (lowerId === 'cancelled' || lowerName === 'cancelled' || lowerName === 'cancel') return 'Cancel';
-  if (lowerId === 'delivered' || lowerName === 'delivered') return 'Delivered';
-  if (lowerId === 'shipped' || lowerName === 'shipped' || lowerName === 'courier') return 'Courier';
-  if (lowerId === 'on-hold' || lowerName === 'on hold') return 'On Hold';
-  if (lowerId === 'logistics' || lowerName === 'logistics') return 'Logistics';
-  if (lowerId === 'co-clearance' || lowerName === 'co clearance') return 'CO Clearance';
-  if (lowerId === 'docs-pending' || lowerName === 'docs pending') return 'Docs Pending';
-  if (lowerId === 'business-closed' || lowerName === 'business closed') return 'Business Closed';
-  if (lowerId === 'project-pending' || lowerName === 'order submitted' || lowerName === 'project pending') return 'Project Pending';
-  if (lowerId === 'ready-for-design' || lowerName === 'dr assigned' || lowerName === 'on design' || lowerId.includes('design') || lowerName.includes('design')) return 'On Design';
-  
-  return statusName;
+  if (lowerName === 'cancelled' || lowerName === 'cancel') return 'Cancel';
+  if (lowerName === 'delivered') return 'Delivered';
+  if (lowerName === 'shipped' || lowerName === 'courier') return 'Courier';
+  if (lowerName === 'on hold' || lowerName === 'on-hold') return 'On Hold';
+  if (lowerName === 'logistics') return 'Logistics';
+  if (lowerName === 'co clearance' || lowerName === 'co-clearance') return 'CO Clearance';
+  if (lowerName === 'docs pending' || lowerName === 'docs-pending') return 'Docs Pending';
+  if (lowerName === 'business closed' || lowerName === 'business-closed') return 'Business Closed';
+  if (lowerName === 'project pending' || lowerName === 'project-pending' || lowerName === 'order submitted') return 'Project Pending';
+  if (lowerName === 'ready for design' || lowerName === 'design in progress' || lowerName === 'pending client approval' || lowerName === 'changes requested' || lowerName.includes('design') || lowerName.includes('dr assigned')) return 'On Design';
+
+  // Fallback to 'CR Clearance' as defined in project-service.ts
+  return 'CR Clearance';
 };
 
 export default function CustomAccessPage() {
