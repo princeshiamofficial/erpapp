@@ -89,6 +89,24 @@ const getStageBadgeClass = (stage: ProjectStatusType) => {
   }
 };
 
+const getProjectStageName = (statusId: string, statusName: string): string => {
+  const lowerId = statusId.toLowerCase();
+  const lowerName = statusName.toLowerCase();
+  
+  if (lowerId === 'cancelled' || lowerName === 'cancelled' || lowerName === 'cancel') return 'Cancel';
+  if (lowerId === 'delivered' || lowerName === 'delivered') return 'Delivered';
+  if (lowerId === 'shipped' || lowerName === 'shipped' || lowerName === 'courier') return 'Courier';
+  if (lowerId === 'on-hold' || lowerName === 'on hold') return 'On Hold';
+  if (lowerId === 'logistics' || lowerName === 'logistics') return 'Logistics';
+  if (lowerId === 'co-clearance' || lowerName === 'co clearance') return 'CO Clearance';
+  if (lowerId === 'docs-pending' || lowerName === 'docs pending') return 'Docs Pending';
+  if (lowerId === 'business-closed' || lowerName === 'business closed') return 'Business Closed';
+  if (lowerId === 'project-pending' || lowerName === 'order submitted' || lowerName === 'project pending') return 'Project Pending';
+  if (lowerId === 'ready-for-design' || lowerName === 'dr assigned' || lowerName === 'on design' || lowerId.includes('design') || lowerName.includes('design')) return 'On Design';
+  
+  return statusName;
+};
+
 export default function CustomAccessPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
@@ -713,7 +731,7 @@ export default function CustomAccessPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-border/50">
-                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Order Status</TableHead>
+                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Project Stage</TableHead>
                       <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Design Approval</TableHead>
                       <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Document Approval</TableHead>
                     </TableRow>
@@ -736,7 +754,7 @@ export default function CustomAccessPage() {
                         <TableRow key={status.id} className="hover:bg-muted/30">
                           <TableCell className="pl-6 font-medium flex items-center gap-2 h-12">
                             <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
-                            <span className="text-sm font-medium text-card-foreground">{status.name}</span>
+                            <span className="text-sm font-medium text-card-foreground">{getProjectStageName(status.id, status.name)}</span>
                           </TableCell>
                           <TableCell className="text-center">
                             <Checkbox
@@ -744,7 +762,7 @@ export default function CustomAccessPage() {
                               checked={designApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
                               disabled={isSubmittingAllApprovalStatuses}
-                              aria-label={`Allow Design Approval for ${status.name}`}
+                              aria-label={`Allow Design Approval for ${getProjectStageName(status.id, status.name)}`}
                             />
                           </TableCell>
                           <TableCell className="text-center">
@@ -753,7 +771,7 @@ export default function CustomAccessPage() {
                               checked={docsApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
                               disabled={isSubmittingAllApprovalStatuses}
-                              aria-label={`Allow Document Approval for ${status.name}`}
+                              aria-label={`Allow Document Approval for ${getProjectStageName(status.id, status.name)}`}
                             />
                           </TableCell>
                         </TableRow>
