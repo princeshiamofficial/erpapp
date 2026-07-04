@@ -523,73 +523,65 @@ export default function CustomAccessPage() {
                 <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Shield className="h-6 w-6 text-primary" /> Role Permissions Management</CardTitle>
                 <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure global access controls for editing, deletion, and financials visibility.</CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b border-border/50">
-                        <TableHead className="pl-6 w-[200px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Role</TableHead>
-                        <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Edit Order</TableHead>
-                        <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Delete Order</TableHead>
-                        <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Financial</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        [...Array(4)].map((_, i) => (
-                          <TableRow key={`perm-skel-row-${i}`}>
-                            <TableCell className="pl-6"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
-                            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        defaultManageableRoles.map((role) => (
-                          <TableRow key={role.id} className="hover:bg-muted/30">
-                            <TableCell className="pl-6 font-medium">
-                              <Badge
-                                style={{
-                                  backgroundColor: role.color || '#6b7280',
-                                  color: getContrastTextColor(role.color || '#6b7280')
-                                }}
-                                className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
-                              >
-                                {role.name}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Checkbox
-                                id={`role-edit-perm-${role.id}`}
-                                checked={rolesAllowedToEdit.has(role.id as UserRole)}
-                                onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)}
-                                disabled={isSubmittingAllPermissions}
-                                aria-label={`Allow ${role.name} to edit orders`}
-                              />
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Checkbox
-                                id={`role-delete-perm-${role.id}`}
-                                checked={rolesAllowedToDelete.has(role.id as UserRole)}
-                                onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)}
-                                disabled={isSubmittingAllPermissions}
-                                aria-label={`Allow ${role.name} to delete orders`}
-                              />
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Checkbox
-                                id={`role-financial-perm-${role.id}`}
-                                checked={rolesAllowedToViewFinancials.has(role.id as UserRole)}
-                                onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)}
-                                disabled={isSubmittingAllPermissions}
-                                aria-label={`Allow ${role.name} to view financials`}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {isLoading ? (
+                    [...Array(6)].map((_, i) => (
+                      <div key={`skel-perm-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
+                        <Skeleton className="h-5 w-24 rounded" />
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    defaultManageableRoles.map((role) => (
+                      <div key={role.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 hover:bg-muted/20 transition-colors flex flex-col justify-between space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            style={{
+                              backgroundColor: role.color || '#6b7280',
+                              color: getContrastTextColor(role.color || '#6b7280')
+                            }}
+                            className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
+                          >
+                            {role.name}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`role-edit-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Edit Order</Label>
+                            <Checkbox
+                              id={`role-edit-perm-${role.id}`}
+                              checked={rolesAllowedToEdit.has(role.id as UserRole)}
+                              onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)}
+                              disabled={isSubmittingAllPermissions}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`role-delete-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Delete Order</Label>
+                            <Checkbox
+                              id={`role-delete-perm-${role.id}`}
+                              checked={rolesAllowedToDelete.has(role.id as UserRole)}
+                              onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)}
+                              disabled={isSubmittingAllPermissions}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`role-financial-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Financial</Label>
+                            <Checkbox
+                              id={`role-financial-perm-${role.id}`}
+                              checked={rolesAllowedToViewFinancials.has(role.id as UserRole)}
+                              onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)}
+                              disabled={isSubmittingAllPermissions}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="border-t p-4 flex justify-end">
