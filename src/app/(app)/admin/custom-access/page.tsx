@@ -89,36 +89,6 @@ const getStageBadgeClass = (stage: ProjectStatusType) => {
   }
 };
 
-const getProjectStageName = (statusId: string, statusName: string): string => {
-  const lowerId = statusId.toLowerCase();
-  
-  if (lowerId === 'cancelled') return 'Cancel';
-  if (lowerId === 'delivered') return 'Delivered';
-  if (lowerId === 'shipped') return 'Courier';
-  if (lowerId === 'on-hold') return 'On Hold';
-  if (lowerId === 'logistics') return 'Logistics';
-  if (lowerId === 'co-clearance') return 'CO Clearance';
-  if (lowerId === 'docs-pending') return 'Docs Pending';
-  if (lowerId === 'business-closed') return 'Business Closed';
-  if (lowerId === 'project-pending') return 'Project Pending';
-  if (lowerId === 'ready-for-design' || lowerId === 'design-in-progress' || lowerId === 'pending-client-approval' || lowerId === 'changes-requested' || lowerId.includes('design')) return 'On Design';
-
-  const lowerName = statusName.toLowerCase();
-  if (lowerName === 'cancelled' || lowerName === 'cancel') return 'Cancel';
-  if (lowerName === 'delivered') return 'Delivered';
-  if (lowerName === 'shipped' || lowerName === 'courier') return 'Courier';
-  if (lowerName === 'on hold' || lowerName === 'on-hold') return 'On Hold';
-  if (lowerName === 'logistics') return 'Logistics';
-  if (lowerName === 'co clearance' || lowerName === 'co-clearance') return 'CO Clearance';
-  if (lowerName === 'docs pending' || lowerName === 'docs-pending') return 'Docs Pending';
-  if (lowerName === 'business closed' || lowerName === 'business-closed') return 'Business Closed';
-  if (lowerName === 'project pending' || lowerName === 'project-pending' || lowerName === 'order submitted') return 'Project Pending';
-  if (lowerName === 'ready for design' || lowerName === 'design in progress' || lowerName === 'pending client approval' || lowerName === 'changes requested' || lowerName.includes('design') || lowerName.includes('dr assigned')) return 'On Design';
-
-  // Fallback to 'CR Clearance' as defined in project-service.ts
-  return 'CR Clearance';
-};
-
 export default function CustomAccessPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
@@ -406,6 +376,18 @@ export default function CustomAccessPage() {
       user.email.toLowerCase().includes(lowerCaseSearch)
     );
   }, [crmUsers, crmSearchTerm]);
+
+  const filteredApprovalStatuses = useMemo(() => {
+    return allStatuses.filter(status => {
+      const normalizedName = status.name.toLowerCase().trim();
+      return PROJECT_STAGES.some(stage => {
+        const normalizedStage = stage.toLowerCase().trim();
+        if (normalizedStage === 'cancel' && normalizedName === 'cancelled') return true;
+        if (normalizedStage === 'cancelled' && normalizedName === 'cancel') return true;
+        return normalizedStage === normalizedName;
+      });
+    });
+  }, [allStatuses]);
 
   // Role Management handlers
   const handleOpenAddRole = () => {
@@ -743,7 +725,7 @@ export default function CustomAccessPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-border/50">
-                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Project Stage</TableHead>
+                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Order Status</TableHead>
                       <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Design Approval</TableHead>
                       <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Document Approval</TableHead>
                     </TableRow>
@@ -757,16 +739,16 @@ export default function CustomAccessPage() {
                           <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
                         </TableRow>
                       ))
-                    ) : allStatuses.length === 0 ? (
+                    ) : filteredApprovalStatuses.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No order statuses found.</TableCell>
                       </TableRow>
                     ) : (
-                      allStatuses.map((status) => (
+                      filteredApprovalStatuses.map((status) => (
                         <TableRow key={status.id} className="hover:bg-muted/30">
                           <TableCell className="pl-6 font-medium flex items-center gap-2 h-12">
                             <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
-                            <span className="text-sm font-medium text-card-foreground">{getProjectStageName(status.id, status.name)}</span>
+                            <span className="text-sm font-medium text-card-foreground">{status.name}</span>
                           </TableCell>
                           <TableCell className="text-center">
                             <Checkbox
@@ -774,7 +756,7 @@ export default function CustomAccessPage() {
                               checked={designApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
                               disabled={isSubmittingAllApprovalStatuses}
-                              aria-label={`Allow Design Approval for ${getProjectStageName(status.id, status.name)}`}
+                              aria-label={`Allow Design Approval for ${status.name}`}
                             />
                           </TableCell>
                           <TableCell className="text-center">
@@ -783,7 +765,7 @@ export default function CustomAccessPage() {
                               checked={docsApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
                               disabled={isSubmittingAllApprovalStatuses}
-                              aria-label={`Allow Document Approval for ${getProjectStageName(status.id, status.name)}`}
+                              aria-label={`Allow Document Approval for ${status.name}`}
                             />
                           </TableCell>
                         </TableRow>
