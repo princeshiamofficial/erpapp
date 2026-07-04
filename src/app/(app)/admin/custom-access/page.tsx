@@ -518,84 +518,84 @@ export default function CustomAccessPage() {
           </Button>
         </div>
 
-        <TabsContent value="permissions" className="space-y-8 outline-none">
-            <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-              <CardHeader className="border-b p-5">
-                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Shield className="h-6 w-6 text-primary" /> Role Permissions Management</CardTitle>
-                <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure global access controls for editing, deletion, and financials visibility.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {isLoading ? (
-                    [...Array(6)].map((_, i) => (
-                      <div key={`skel-perm-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
-                        <Skeleton className="h-5 w-24 rounded" />
-                        <div className="space-y-2 pt-2 border-t">
-                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
-                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
-                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    defaultManageableRoles.map((role) => (
-                      <div key={role.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 flex flex-col justify-between space-y-4">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            style={{
-                              backgroundColor: role.color || '#6b7280',
-                              color: getContrastTextColor(role.color || '#6b7280')
-                            }}
-                            className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
-                          >
-                            {role.name}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor={`role-edit-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Edit Order</Label>
-                            <Checkbox
-                              id={`role-edit-perm-${role.id}`}
-                              checked={rolesAllowedToEdit.has(role.id as UserRole)}
-                              onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)}
-                              disabled={isSubmittingAllPermissions}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor={`role-delete-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Delete Order</Label>
-                            <Checkbox
-                              id={`role-delete-perm-${role.id}`}
-                              checked={rolesAllowedToDelete.has(role.id as UserRole)}
-                              onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)}
-                              disabled={isSubmittingAllPermissions}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor={`role-financial-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Financial</Label>
-                            <Checkbox
-                              id={`role-financial-perm-${role.id}`}
-                              checked={rolesAllowedToViewFinancials.has(role.id as UserRole)}
-                              onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)}
-                              disabled={isSubmittingAllPermissions}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
+        <TabsContent value="permissions" className="space-y-6 outline-none">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Shield className="h-6 w-6 text-primary" /> Role Permissions Management</h3>
+              <p className="text-muted-foreground text-sm mt-0.5">Configure global access controls for editing, deletion, and financials visibility.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              [...Array(6)].map((_, i) => (
+                <div key={`skel-perm-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
+                  <Skeleton className="h-5 w-24 rounded" />
+                  <div className="space-y-2 pt-2 border-t">
+                    <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                    <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                    <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                  </div>
                 </div>
-              </CardContent>
-              <CardFooter className="border-t p-4 flex justify-end">
-                <Button onClick={handleSaveAllPermissions} disabled={isLoading || isSubmittingAllPermissions}>
-                  {isSubmittingAllPermissions ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving Permissions...
-                    </>
-                  ) : "Save Permissions"}
-                </Button>
-              </CardFooter>
-            </Card>
+              ))
+            ) : (
+              defaultManageableRoles.map((role) => (
+                <div key={role.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 flex flex-col justify-between space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      style={{
+                        backgroundColor: role.color || '#6b7280',
+                        color: getContrastTextColor(role.color || '#6b7280')
+                      }}
+                      className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
+                    >
+                      {role.name}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`role-edit-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Edit Order</Label>
+                      <Checkbox
+                        id={`role-edit-perm-${role.id}`}
+                        checked={rolesAllowedToEdit.has(role.id as UserRole)}
+                        onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)}
+                        disabled={isSubmittingAllPermissions}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`role-delete-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Delete Order</Label>
+                      <Checkbox
+                        id={`role-delete-perm-${role.id}`}
+                        checked={rolesAllowedToDelete.has(role.id as UserRole)}
+                        onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)}
+                        disabled={isSubmittingAllPermissions}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`role-financial-perm-${role.id}`} className="text-xs text-muted-foreground cursor-pointer">Financial</Label>
+                      <Checkbox
+                        id={`role-financial-perm-${role.id}`}
+                        checked={rolesAllowedToViewFinancials.has(role.id as UserRole)}
+                        onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)}
+                        disabled={isSubmittingAllPermissions}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex justify-end pt-4 border-t">
+            <Button onClick={handleSaveAllPermissions} disabled={isLoading || isSubmittingAllPermissions}>
+              {isSubmittingAllPermissions ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Permissions...
+                </>
+              ) : "Save Permissions"}
+            </Button>
+          </div>
 
           {showPipelineAccess && (
             <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
@@ -734,73 +734,73 @@ export default function CustomAccessPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="approvals" className="space-y-8 outline-none">
-          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Palette className="h-6 w-6 text-primary" /> Client Approval Statuses</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure which order statuses allow the client to approve designs or documents.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {isLoading ? (
-                  [...Array(6)].map((_, i) => (
-                    <div key={`skel-appr-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
-                      <Skeleton className="h-5 w-24 rounded" />
-                      <div className="space-y-2 pt-2 border-t">
-                        <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
-                        <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
-                      </div>
+        <TabsContent value="approvals" className="space-y-6 outline-none">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Palette className="h-6 w-6 text-primary" /> Client Approval Statuses</h3>
+              <p className="text-muted-foreground text-sm mt-0.5">Configure which order statuses allow the client to approve designs or documents.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              [...Array(6)].map((_, i) => (
+                <div key={`skel-appr-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
+                  <Skeleton className="h-5 w-24 rounded" />
+                  <div className="space-y-2 pt-2 border-t">
+                    <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                    <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                  </div>
+                </div>
+              ))
+            ) : filteredApprovalStatuses.length === 0 ? (
+              <p className="text-muted-foreground text-sm col-span-3 text-center py-6">No project stages found.</p>
+            ) : (
+              filteredApprovalStatuses.map((status) => (
+                <div key={status.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 flex flex-col justify-between space-y-4">
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
+                    <span className="text-sm font-semibold text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
+                  </div>
+                  <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`design-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Design Approval</Label>
+                      <Checkbox
+                        id={`design-appr-perm-${status.id}`}
+                        checked={designApprovalStatusIds.has(status.id)}
+                        onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
+                        disabled={isSubmittingAllApprovalStatuses || docsApprovalStatusIds.has(status.id)}
+                      />
                     </div>
-                  ))
-                ) : filteredApprovalStatuses.length === 0 ? (
-                  <p className="text-muted-foreground text-sm col-span-3 text-center py-6">No project stages found.</p>
-                ) : (
-                  filteredApprovalStatuses.map((status) => (
-                    <div key={status.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 flex flex-col justify-between space-y-4">
-                      <div className="flex items-center gap-2">
-                        <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
-                        <span className="text-sm font-semibold text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
-                      </div>
-                      <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor={`design-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Design Approval</Label>
-                          <Checkbox
-                            id={`design-appr-perm-${status.id}`}
-                            checked={designApprovalStatusIds.has(status.id)}
-                            onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
-                            disabled={isSubmittingAllApprovalStatuses || docsApprovalStatusIds.has(status.id)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor={`docs-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Document Approval</Label>
-                          <Checkbox
-                            id={`docs-appr-perm-${status.id}`}
-                            checked={docsApprovalStatusIds.has(status.id)}
-                            onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
-                            disabled={isSubmittingAllApprovalStatuses || designApprovalStatusIds.has(status.id)}
-                          />
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`docs-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Document Approval</Label>
+                      <Checkbox
+                        id={`docs-appr-perm-${status.id}`}
+                        checked={docsApprovalStatusIds.has(status.id)}
+                        onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
+                        disabled={isSubmittingAllApprovalStatuses || designApprovalStatusIds.has(status.id)}
+                      />
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="border-t p-4 flex justify-end">
-              <Button onClick={handleSaveAllApprovalStatuses} disabled={isLoading || isSubmittingAllApprovalStatuses}>
-                {isSubmittingAllApprovalStatuses ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving Statuses...
-                  </>
-                ) : "Save Approval Statuses"}
-              </Button>
-            </CardFooter>
-          </Card>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex justify-end pt-4 border-t">
+            <Button onClick={handleSaveAllApprovalStatuses} disabled={isLoading || isSubmittingAllApprovalStatuses}>
+              {isSubmittingAllApprovalStatuses ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Statuses...
+                </>
+              ) : "Save Approval Statuses"}
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-6 outline-none">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border rounded-lg p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <div>
               <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</h3>
               <p className="text-muted-foreground text-sm mt-0.5">Drag cards to change role priority. System roles cannot be deleted.</p>
@@ -845,67 +845,67 @@ export default function CustomAccessPage() {
           </DndContext>
         </TabsContent>
 
-        <TabsContent value="stages" className="space-y-8 outline-none">
-          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Project Stage Access</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can view and move projects to each Kanban stage.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="pl-6 font-semibold">Stage</TableHead>
+        <TabsContent value="stages" className="space-y-6 outline-none">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> Project Stage Access</h3>
+              <p className="text-muted-foreground text-sm mt-0.5">Define which user roles can view and move projects to each Kanban stage.</p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto border rounded-lg bg-card">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="pl-6 font-semibold h-12">Stage</TableHead>
+                  {defaultManageableRoles.map(role => (
+                    <TableHead key={role.id} className="text-center h-12">{role.name}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  PROJECT_STAGES.map(stage => (
+                    <TableRow key={`skel-stage-${stage}`}>
+                      <TableCell className="pl-6"><Skeleton className="h-5 w-32" /></TableCell>
                       {defaultManageableRoles.map(role => (
-                        <TableHead key={role.id} className="text-center">{role.name}</TableHead>
+                        <TableCell key={`skel-cell-${stage}-${role.id}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                       ))}
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      PROJECT_STAGES.map(stage => (
-                        <TableRow key={`skel-stage-${stage}`}>
-                          <TableCell className="pl-6"><Skeleton className="h-5 w-32" /></TableCell>
-                          {defaultManageableRoles.map(role => (
-                            <TableCell key={`skel-cell-${stage}-${role.id}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      PROJECT_STAGES.map(stage => {
-                        return (
-                          <TableRow key={stage} className="hover:bg-muted/30">
-                            <TableCell className="pl-6 font-medium">
-                              <Badge className={cn("border-transparent font-medium rounded", getStageBadgeClass(stage))}>
-                                {stage}
-                              </Badge>
-                            </TableCell>
-                            {defaultManageableRoles.map(role => (
-                              <TableCell key={`${stage}-${role.id}`} className="text-center">
-                                <Checkbox
-                                  id={`perm-${stage}-${role.id}`}
-                                  checked={projectStageAccess[stage]?.includes(role.id as UserRole) || false}
-                                  onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role.id as UserRole, checked)}
-                                  disabled={isSubmittingProjectStageAccess}
-                                  aria-label={`Allow ${role.name} for ${stage} stage`}
-                                />
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t p-5 flex justify-end">
-              <Button onClick={handleSaveProjectStageAccess} disabled={isLoading || isSubmittingProjectStageAccess}>
-                {isSubmittingProjectStageAccess ? "Saving Permissions..." : "Save Stage Permissions"}
-              </Button>
-            </CardFooter>
-          </Card>
+                  ))
+                ) : (
+                  PROJECT_STAGES.map(stage => {
+                    return (
+                      <TableRow key={stage} className="hover:bg-muted/30">
+                        <TableCell className="pl-6 font-medium">
+                          <Badge className={cn("border-transparent font-medium rounded", getStageBadgeClass(stage))}>
+                            {stage}
+                          </Badge>
+                        </TableCell>
+                        {defaultManageableRoles.map(role => (
+                          <TableCell key={`${stage}-${role.id}`} className="text-center">
+                            <Checkbox
+                              id={`perm-${stage}-${role.id}`}
+                              checked={projectStageAccess[stage]?.includes(role.id as UserRole) || false}
+                              onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role.id as UserRole, checked)}
+                              disabled={isSubmittingProjectStageAccess}
+                              aria-label={`Allow ${role.name} for ${stage} stage`}
+                            />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex justify-end pt-4 border-t">
+            <Button onClick={handleSaveProjectStageAccess} disabled={isLoading || isSubmittingProjectStageAccess}>
+              {isSubmittingProjectStageAccess ? "Saving Stage Permissions..." : "Save Stage Permissions"}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
 
