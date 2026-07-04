@@ -534,7 +534,7 @@ export default function CustomAccessPage() {
               ))
             ) : (
               defaultManageableRoles.map((role) => (
-                <div key={role.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 flex flex-col justify-between space-y-4">
+                <div key={role.id} className="border border-border/40 rounded-lg p-5 bg-card flex flex-col justify-between space-y-4">
                   <div className="flex items-center gap-2">
                     <Badge
                       style={{
@@ -737,7 +737,7 @@ export default function CustomAccessPage() {
               <p className="text-muted-foreground text-sm col-span-3 text-center py-6">No project stages found.</p>
             ) : (
               filteredApprovalStatuses.map((status) => (
-                <div key={status.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 flex flex-col justify-between space-y-4">
+                <div key={status.id} className="border border-border/40 rounded-lg p-5 bg-card flex flex-col justify-between space-y-4">
                   <div className="flex items-center gap-2">
                     <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
                     <span className="text-sm font-semibold text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
