@@ -755,7 +755,7 @@ export default function CustomAccessPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {isLoading ? (
               [...Array(6)].map((_, i) => (
-                <div key={`skel-appr-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
+                <div key={`skel-approval-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
                   <Skeleton className="h-5 w-24 rounded" />
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
@@ -774,18 +774,18 @@ export default function CustomAccessPage() {
                   </div>
                   <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={`design-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Design Approval</Label>
+                      <Label htmlFor={`design-approval-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Design Approval</Label>
                       <Checkbox
-                        id={`design-appr-perm-${status.id}`}
+                        id={`design-approval-perm-${status.id}`}
                         checked={designApprovalStatusIds.has(status.id)}
                         onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
                         disabled={isSubmittingAllApprovalStatuses || docsApprovalStatusIds.has(status.id)}
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={`docs-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Document Approval</Label>
+                      <Label htmlFor={`docs-approval-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Document Approval</Label>
                       <Checkbox
-                        id={`docs-appr-perm-${status.id}`}
+                        id={`docs-approval-perm-${status.id}`}
                         checked={docsApprovalStatusIds.has(status.id)}
                         onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
                         disabled={isSubmittingAllApprovalStatuses || designApprovalStatusIds.has(status.id)}
