@@ -782,7 +782,7 @@ export default function CustomAccessPage() {
                               id={`design-appr-perm-${status.id}`}
                               checked={designApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
-                              disabled={isSubmittingAllApprovalStatuses}
+                              disabled={isSubmittingAllApprovalStatuses || docsApprovalStatusIds.has(status.id)}
                               aria-label={`Allow Design Approval for ${status.name}`}
                             />
                           </TableCell>
@@ -791,7 +791,7 @@ export default function CustomAccessPage() {
                               id={`docs-appr-perm-${status.id}`}
                               checked={docsApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
-                              disabled={isSubmittingAllApprovalStatuses}
+                              disabled={isSubmittingAllApprovalStatuses || designApprovalStatusIds.has(status.id)}
                               aria-label={`Allow Document Approval for ${status.name}`}
                             />
                           </TableCell>
