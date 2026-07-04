@@ -498,15 +498,13 @@ export default function CustomAccessPage() {
 
 
       <Tabs defaultValue="permissions" className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <TabsList className="flex flex-wrap md:inline-flex h-auto w-full md:w-auto gap-1 bg-muted p-1 rounded-lg">
-            <TabsTrigger value="permissions" className="data-[state=active]:bg-background">Permissions</TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-background">General Settings</TabsTrigger>
-            <TabsTrigger value="approvals" className="data-[state=active]:bg-background">Approval Statuses</TabsTrigger>
-            <TabsTrigger value="roles" className="data-[state=active]:bg-background">User Roles</TabsTrigger>
-            <TabsTrigger value="stages" className="data-[state=active]:bg-background">Project Stages</TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList className="flex flex-wrap md:inline-flex h-auto w-full md:w-auto gap-1 bg-muted p-1 rounded-lg mb-6">
+          <TabsTrigger value="permissions" className="data-[state=active]:bg-background">Permissions</TabsTrigger>
+          <TabsTrigger value="settings" className="data-[state=active]:bg-background">General Settings</TabsTrigger>
+          <TabsTrigger value="approvals" className="data-[state=active]:bg-background">Approval Statuses</TabsTrigger>
+          <TabsTrigger value="roles" className="data-[state=active]:bg-background">User Roles</TabsTrigger>
+          <TabsTrigger value="stages" className="data-[state=active]:bg-background">Project Stages</TabsTrigger>
+        </TabsList>
 
         <TabsContent value="permissions" className="space-y-6 outline-none">
           <div className="flex justify-end mb-4">
