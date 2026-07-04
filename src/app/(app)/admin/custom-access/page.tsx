@@ -741,51 +741,49 @@ export default function CustomAccessPage() {
               <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure which order statuses allow the client to approve designs or documents.</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative pr-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {isLoading ? (
-                    [...Array(6)].map((_, i) => (
-                      <div key={`skel-appr-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
-                        <Skeleton className="h-5 w-24 rounded" />
-                        <div className="space-y-2 pt-2 border-t">
-                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
-                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {isLoading ? (
+                  [...Array(6)].map((_, i) => (
+                    <div key={`skel-appr-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
+                      <Skeleton className="h-5 w-24 rounded" />
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                        <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                      </div>
+                    </div>
+                  ))
+                ) : filteredApprovalStatuses.length === 0 ? (
+                  <p className="text-muted-foreground text-sm col-span-3 text-center py-6">No project stages found.</p>
+                ) : (
+                  filteredApprovalStatuses.map((status) => (
+                    <div key={status.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 hover:bg-muted/20 transition-colors flex flex-col justify-between space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
+                        <span className="text-sm font-semibold text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
+                      </div>
+                      <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`design-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Design Approval</Label>
+                          <Checkbox
+                            id={`design-appr-perm-${status.id}`}
+                            checked={designApprovalStatusIds.has(status.id)}
+                            onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
+                            disabled={isSubmittingAllApprovalStatuses || docsApprovalStatusIds.has(status.id)}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`docs-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Document Approval</Label>
+                          <Checkbox
+                            id={`docs-appr-perm-${status.id}`}
+                            checked={docsApprovalStatusIds.has(status.id)}
+                            onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
+                            disabled={isSubmittingAllApprovalStatuses || designApprovalStatusIds.has(status.id)}
+                          />
                         </div>
                       </div>
-                    ))
-                  ) : filteredApprovalStatuses.length === 0 ? (
-                    <p className="text-muted-foreground text-sm col-span-3 text-center py-6">No project stages found.</p>
-                  ) : (
-                    filteredApprovalStatuses.map((status) => (
-                      <div key={status.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 hover:bg-muted/20 transition-colors flex flex-col justify-between space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
-                          <span className="text-sm font-semibold text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
-                        </div>
-                        <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor={`design-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Design Approval</Label>
-                            <Checkbox
-                              id={`design-appr-perm-${status.id}`}
-                              checked={designApprovalStatusIds.has(status.id)}
-                              onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
-                              disabled={isSubmittingAllApprovalStatuses || docsApprovalStatusIds.has(status.id)}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Label htmlFor={`docs-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Document Approval</Label>
-                            <Checkbox
-                              id={`docs-appr-perm-${status.id}`}
-                              checked={docsApprovalStatusIds.has(status.id)}
-                              onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
-                              disabled={isSubmittingAllApprovalStatuses || designApprovalStatusIds.has(status.id)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
             <CardFooter className="border-t p-4 flex justify-end">
@@ -812,41 +810,39 @@ export default function CustomAccessPage() {
             </Button>
           </div>
 
-          <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative pr-2">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {isLoading ? (
-                  [...Array(6)].map((_, i) => (
-                    <div key={`skel-role-${i}`} className="border border-border/30 rounded-lg p-5 space-y-3 bg-card shadow-sm">
-                      <div className="flex justify-between"><Skeleton className="h-6 w-24 rounded-full" /><Skeleton className="h-5 w-5" /></div>
-                      <div className="space-y-2 pt-2 border-t">
-                        <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-20" /></div>
-                        <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-16" /></div>
-                      </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isLoading ? (
+                [...Array(6)].map((_, i) => (
+                  <div key={`skel-role-${i}`} className="border border-border/30 rounded-lg p-5 space-y-3 bg-card shadow-sm">
+                    <div className="flex justify-between"><Skeleton className="h-6 w-24 rounded-full" /><Skeleton className="h-5 w-5" /></div>
+                    <div className="space-y-2 pt-2 border-t">
+                      <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-20" /></div>
+                      <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-16" /></div>
                     </div>
-                  ))
-                ) : (
-                  <SortableContext
-                    items={allRoles.map(r => r.id)}
-                    strategy={rectSortingStrategy}
-                  >
-                    {allRoles.map(role => (
-                      <SortableRoleCard
-                        key={role.id}
-                        role={role}
-                        onEdit={handleOpenEditRole}
-                        onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
-                      />
-                    ))}
-                  </SortableContext>
-                )}
-              </div>
-            </DndContext>
-          </div>
+                  </div>
+                ))
+              ) : (
+                <SortableContext
+                  items={allRoles.map(r => r.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  {allRoles.map(role => (
+                    <SortableRoleCard
+                      key={role.id}
+                      role={role}
+                      onEdit={handleOpenEditRole}
+                      onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
+                    />
+                  ))}
+                </SortableContext>
+              )}
+            </div>
+          </DndContext>
         </TabsContent>
 
         <TabsContent value="stages" className="space-y-8 outline-none">
