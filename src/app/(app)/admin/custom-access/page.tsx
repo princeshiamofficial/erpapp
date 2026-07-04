@@ -801,57 +801,52 @@ export default function CustomAccessPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="roles" className="space-y-8 outline-none">
-          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
-                  <CardDescription className="text-muted-foreground text-sm mt-0.5">Drag rows to change role priority. System roles cannot be deleted.</CardDescription>
-                </div>
-                <Button onClick={handleOpenAddRole} size="sm">
-                  <Plus className="h-4 w-4 mr-2" /> Add Custom Role
-                </Button>
+        <TabsContent value="roles" className="space-y-6 outline-none">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border rounded-lg p-5 shadow-sm">
+            <div>
+              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</h3>
+              <p className="text-muted-foreground text-sm mt-0.5">Drag cards to change role priority. System roles cannot be deleted.</p>
+            </div>
+            <Button onClick={handleOpenAddRole} size="sm">
+              <Plus className="h-4 w-4 mr-2" /> Add Custom Role
+            </Button>
+          </div>
+
+          <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative pr-2">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {isLoading ? (
+                  [...Array(6)].map((_, i) => (
+                    <div key={`skel-role-${i}`} className="border border-border/30 rounded-lg p-5 space-y-3 bg-card shadow-sm">
+                      <div className="flex justify-between"><Skeleton className="h-6 w-24 rounded-full" /><Skeleton className="h-5 w-5" /></div>
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-20" /></div>
+                        <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-16" /></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <SortableContext
+                    items={allRoles.map(r => r.id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    {allRoles.map(role => (
+                      <SortableRoleCard
+                        key={role.id}
+                        role={role}
+                        onEdit={handleOpenEditRole}
+                        onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
+                      />
+                    ))}
+                  </SortableContext>
+                )}
               </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative pr-2">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {isLoading ? (
-                      [...Array(6)].map((_, i) => (
-                        <div key={`skel-role-${i}`} className="border border-border/30 rounded-lg p-5 space-y-3 bg-card shadow-sm">
-                          <div className="flex justify-between"><Skeleton className="h-6 w-24 rounded-full" /><Skeleton className="h-5 w-5" /></div>
-                          <div className="space-y-2 pt-2 border-t">
-                            <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-20" /></div>
-                            <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-16" /></div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <SortableContext
-                        items={allRoles.map(r => r.id)}
-                        strategy={rectSortingStrategy}
-                      >
-                        {allRoles.map(role => (
-                          <SortableRoleCard
-                            key={role.id}
-                            role={role}
-                            onEdit={handleOpenEditRole}
-                            onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
-                          />
-                        ))}
-                      </SortableContext>
-                    )}
-                  </div>
-                </DndContext>
-              </div>
-            </CardContent>
-          </Card>
+            </DndContext>
+          </div>
         </TabsContent>
 
         <TabsContent value="stages" className="space-y-8 outline-none">
