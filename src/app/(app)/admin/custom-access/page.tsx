@@ -559,7 +559,7 @@ export default function CustomAccessPage() {
 
         <TabsContent value="permissions" className="space-y-6 outline-none">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {isLoading ? (
               [...Array(6)].map((_, i) => (
                 <div key={`skel-perm-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
@@ -752,7 +752,7 @@ export default function CustomAccessPage() {
 
         <TabsContent value="approvals" className="space-y-6 outline-none">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {isLoading ? (
               [...Array(6)].map((_, i) => (
                 <div key={`skel-appr-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
@@ -807,7 +807,7 @@ export default function CustomAccessPage() {
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {isLoading ? (
                 [...Array(6)].map((_, i) => (
                   <div key={`skel-role-${i}`} className="border border-border/30 rounded-lg p-5 space-y-3 bg-card shadow-sm">
