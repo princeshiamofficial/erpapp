@@ -725,7 +725,7 @@ export default function CustomAccessPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-border/50">
-                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Order Status</TableHead>
+                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Project Stage</TableHead>
                       <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Design Approval</TableHead>
                       <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Document Approval</TableHead>
                     </TableRow>
