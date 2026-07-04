@@ -401,9 +401,11 @@ const styles = StyleSheet.create({
 interface InvoicePageProps {
   order: TrackingLink;
   allStatuses: CustomStatus[];
+  designApprovalStatusIds?: string[];
+  docsApprovalStatusIds?: string[];
 }
 
-const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
+const ClientInvoicePage = ({ order, allStatuses, designApprovalStatusIds = [], docsApprovalStatusIds = [] }: InvoicePageProps) => {
   const orderSubtotal = Array.isArray(order.orderItems)
     ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
     : 0;
@@ -477,14 +479,27 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
     return status ? status.name : statusId;
   };
 
-  const hasDocsApprovedLog = order.statusHistory && order.statusHistory.some(entry => entry.status === 'co-clearance' && entry.notes === 'Terms accepted and documents approved by client.');
+  const isDocsStatus = docsApprovalStatusIds && docsApprovalStatusIds.length > 0
+    ? docsApprovalStatusIds.includes(order.currentStatus)
+    : order.currentStatus === 'co-clearance';
+  const hasDocsApprovedLog = order.statusHistory && order.statusHistory.some(entry => {
+    const entryIsDocs = docsApprovalStatusIds && docsApprovalStatusIds.length > 0
+      ? docsApprovalStatusIds.includes(entry.status)
+      : entry.status === 'co-clearance';
+    return entryIsDocs && entry.notes === 'Terms accepted and documents approved by client.';
+  });
   const hasDesignApprovedLog = order.statusHistory && order.statusHistory.some(entry => entry.notes === 'Terms accepted and design approved by client.');
 
   let currentStatusName = getStatusName(order.currentStatus);
-  if (order.currentStatus === 'co-clearance' && hasDocsApprovedLog) {
+  if (isDocsStatus && hasDocsApprovedLog) {
     currentStatusName = 'Docs Approved';
-  } else if (hasDesignApprovedLog && (currentStatusName === 'DR Assigned' || currentStatusName === 'On Design' || order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design') || order.currentStatus === 'on-hold')) {
-    currentStatusName = 'Design Approved';
+  } else if (hasDesignApprovedLog) {
+    const isDesignStatus = designApprovalStatusIds && designApprovalStatusIds.length > 0
+      ? designApprovalStatusIds.includes(order.currentStatus)
+      : (currentStatusName === 'DR Assigned' || currentStatusName === 'On Design' || order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design') || order.currentStatus === 'on-hold');
+    if (isDesignStatus) {
+      currentStatusName = 'Design Approved';
+    }
   }
 
   const numItems = Array.isArray(order.orderItems) ? order.orderItems.length : 0;
@@ -810,11 +825,27 @@ const ClientInvoicePage = ({ order, allStatuses }: InvoicePageProps) => {
 };
 
 // Document wrapper containing the custom client pages
-export const ClientInvoiceDocument = ({ orders, allStatuses }: { orders: TrackingLink[]; allStatuses: CustomStatus[] }) => {
+export const ClientInvoiceDocument = ({
+  orders,
+  allStatuses,
+  designApprovalStatusIds = [],
+  docsApprovalStatusIds = [],
+}: {
+  orders: TrackingLink[];
+  allStatuses: CustomStatus[];
+  designApprovalStatusIds?: string[];
+  docsApprovalStatusIds?: string[];
+}) => {
   return (
     <Document>
       {orders.map((order) => (
-        <ClientInvoicePage key={order.id} order={order} allStatuses={allStatuses} />
+        <ClientInvoicePage
+          key={order.id}
+          order={order}
+          allStatuses={allStatuses}
+          designApprovalStatusIds={designApprovalStatusIds}
+          docsApprovalStatusIds={docsApprovalStatusIds}
+        />
       ))}
     </Document>
   );
@@ -823,6 +854,8 @@ export const ClientInvoiceDocument = ({ orders, allStatuses }: { orders: Trackin
 interface ClientInvoicePDFProps {
   order: TrackingLink;
   allStatuses: CustomStatus[];
+  designApprovalStatusIds?: string[];
+  docsApprovalStatusIds?: string[];
 }
 
 function DownloadTrigger({ url, loading, fileName, onComplete }: { url: string | null; loading: boolean; fileName: string; onComplete: () => void }) {
@@ -848,7 +881,7 @@ function DownloadTrigger({ url, loading, fileName, onComplete }: { url: string |
   );
 }
 
-export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) {
+export function ClientInvoicePDF({ order, allStatuses, designApprovalStatusIds = [], docsApprovalStatusIds = [] }: ClientInvoicePDFProps) {
   const [shouldDownload, setShouldDownload] = useState(false);
 
   return (
@@ -875,7 +908,14 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
             </span>
           ) : (
             <PDFDownloadLink
-              document={<ClientInvoiceDocument orders={[order]} allStatuses={allStatuses} />}
+              document={
+                <ClientInvoiceDocument
+                  orders={[order]}
+                  allStatuses={allStatuses}
+                  designApprovalStatusIds={designApprovalStatusIds}
+                  docsApprovalStatusIds={docsApprovalStatusIds}
+                />
+              }
               fileName={`Invoice_${order.id}.pdf`}
               className="w-auto"
             >
@@ -894,7 +934,12 @@ export function ClientInvoicePDF({ order, allStatuses }: ClientInvoicePDFProps) 
       <CardContent className="hidden md:flex p-0 bg-secondary/10 justify-center items-center h-[600px] sm:h-[750px]">
         <div className="w-full h-full hidden md:block">
           <PDFViewer width="100%" height="100%" className="border-0" showToolbar={false}>
-            <ClientInvoiceDocument orders={[order]} allStatuses={allStatuses} />
+            <ClientInvoiceDocument
+              orders={[order]}
+              allStatuses={allStatuses}
+              designApprovalStatusIds={designApprovalStatusIds}
+              docsApprovalStatusIds={docsApprovalStatusIds}
+            />
           </PDFViewer>
         </div>
         <div className="md:hidden p-8 text-center space-y-4">

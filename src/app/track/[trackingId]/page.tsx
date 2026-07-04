@@ -134,6 +134,8 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
           areCommentsVisible={areCommentsVisible}
           rolesAllowedToViewFinancials={plainGlobalSettings.rolesAllowedToViewFinancials ?? []}
           currentUser={currentUser}
+          designApprovalStatusIds={plainGlobalSettings.designApprovalStatusIds ?? []}
+          docsApprovalStatusIds={plainGlobalSettings.docsApprovalStatusIds ?? []}
         />
       </Suspense>
 

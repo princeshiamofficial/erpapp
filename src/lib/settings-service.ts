@@ -84,6 +84,8 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   transactionCategories: DEFAULT_TRANSACTION_CATEGORIES,
   telegramRedirectDomain: 'https://app.colorhutbd.xyz',
   isCourierNoteVisible: true,
+  designApprovalStatusIds: [],
+  docsApprovalStatusIds: [],
 };
 
 export async function getGlobalSettings(): Promise<GlobalSettings> {
@@ -220,4 +222,12 @@ export async function setTransactionCategories(categories: any[]): Promise<boole
 
 export async function setCourierNoteVisibility(isVisible: boolean): Promise<boolean> {
   return updateSettings({ isCourierNoteVisible: isVisible });
+}
+
+export async function setDesignApprovalStatusIds(statusIds: string[]): Promise<boolean> {
+  return updateSettings({ designApprovalStatusIds: statusIds });
+}
+
+export async function setDocsApprovalStatusIds(statusIds: string[]): Promise<boolean> {
+  return updateSettings({ docsApprovalStatusIds: statusIds });
 }

@@ -12,6 +12,7 @@ import { addClientPayment, getClientPayments } from "@/lib/client-payment-servic
 import { getIO } from "@/lib/socket-io";
 import { sendTelegramMessage, sendTelegramPhoto } from "@/lib/notification-utils";
 import { getAppUrl } from "@/lib/server-utils";
+import { getGlobalSettings } from "@/lib/settings-service";
 
 // For top-level comments from the main form (typically by client or general update)
 export async function submitCommentAction(
@@ -284,7 +285,10 @@ export async function approveOrderAction(orderId: string): Promise<TrackingLink 
       return { error: "Order not found." };
     }
 
-    const isDocsApproval = order.currentStatus === 'co-clearance';
+    const settings = await getGlobalSettings();
+    const isDocsApproval = settings.docsApprovalStatusIds && settings.docsApprovalStatusIds.length > 0
+      ? settings.docsApprovalStatusIds.includes(order.currentStatus)
+      : order.currentStatus === 'co-clearance';
     const changedByUserId = isDocsApproval ? 'client-approved-docs' : 'client-approved-design';
     const notes = isDocsApproval 
       ? 'Terms accepted and documents approved by client.' 

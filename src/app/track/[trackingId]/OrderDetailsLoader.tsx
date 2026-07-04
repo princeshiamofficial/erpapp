@@ -47,6 +47,8 @@ interface OrderDetailsLoaderProps {
   rolesAllowedToViewFinancials: UserRole[];
   currentUser: User | null;
   hideStatusHeader?: boolean;
+  designApprovalStatusIds?: string[];
+  docsApprovalStatusIds?: string[];
 }
 
 export function OrderDetailsLoader({
@@ -57,6 +59,8 @@ export function OrderDetailsLoader({
   rolesAllowedToViewFinancials,
   currentUser,
   hideStatusHeader = false,
+  designApprovalStatusIds = [],
+  docsApprovalStatusIds = [],
 }: OrderDetailsLoaderProps) {
   // Pass the currentUser to the client component
   // The AuthProvider will hydrate the true current user state on the client side, but passing it from the server
@@ -70,6 +74,8 @@ export function OrderDetailsLoader({
         rolesAllowedToViewFinancials={rolesAllowedToViewFinancials}
         initialCurrentUser={currentUser}
         hideStatusHeader={hideStatusHeader}
+        designApprovalStatusIds={designApprovalStatusIds}
+        docsApprovalStatusIds={docsApprovalStatusIds}
     />
   );
 }

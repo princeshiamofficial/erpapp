@@ -314,6 +314,8 @@ export interface GlobalSettings {
   telegramRedirectDomain?: string | null;
   transactionCategories?: TransactionCategory[]; // New field
   isCourierNoteVisible?: boolean;
+  designApprovalStatusIds?: string[];
+  docsApprovalStatusIds?: string[];
 }
 
 export interface TransactionCategory {

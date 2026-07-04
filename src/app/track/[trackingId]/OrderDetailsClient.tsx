@@ -75,6 +75,8 @@ interface OrderDetailsClientProps {
   rolesAllowedToViewFinancials: UserRole[]; // New prop
   initialCurrentUser: User | null; // New prop for server-passed user
   hideStatusHeader?: boolean;
+  designApprovalStatusIds?: string[];
+  docsApprovalStatusIds?: string[];
 }
 
 export function OrderDetailsClient({
@@ -84,7 +86,9 @@ export function OrderDetailsClient({
   areCommentsVisible,
   rolesAllowedToViewFinancials,
   initialCurrentUser,
-  hideStatusHeader = false
+  hideStatusHeader = false,
+  designApprovalStatusIds = [],
+  docsApprovalStatusIds = []
 }: OrderDetailsClientProps) {
   const { currentUser: authContextUser } = useAuth();
   const { socket } = useSocket();
@@ -178,18 +182,32 @@ export function OrderDetailsClient({
 
   const currentStatusInfo = useMemo(() => {
     const info = getStatusDisplayInfo(order.currentStatus);
-    const hasDocsApprovedLog = order.statusHistory && order.statusHistory.some(entry => entry.status === 'co-clearance' && entry.notes === 'Terms accepted and documents approved by client.');
-    if (order.currentStatus === 'co-clearance' && hasDocsApprovedLog) {
+    const isDocsStatus = docsApprovalStatusIds && docsApprovalStatusIds.length > 0
+      ? docsApprovalStatusIds.includes(order.currentStatus)
+      : order.currentStatus === 'co-clearance';
+    const hasDocsApprovedLog = order.statusHistory && order.statusHistory.some(entry => {
+      const entryIsDocs = docsApprovalStatusIds && docsApprovalStatusIds.length > 0
+        ? docsApprovalStatusIds.includes(entry.status)
+        : entry.status === 'co-clearance';
+      return entryIsDocs && entry.notes === 'Terms accepted and documents approved by client.';
+    });
+    if (isDocsStatus && hasDocsApprovedLog) {
       return { ...info, name: 'Docs Approved' };
     }
     const hasDesignApprovedLog = order.statusHistory && order.statusHistory.some(entry => entry.notes === 'Terms accepted and design approved by client.');
-    if (hasDesignApprovedLog && (info.name === 'DR Assigned' || info.name === 'On Design' || order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design') || order.currentStatus === 'on-hold')) {
+    const isDesignStatus = designApprovalStatusIds && designApprovalStatusIds.length > 0
+      ? designApprovalStatusIds.includes(order.currentStatus)
+      : (info.name === 'DR Assigned' || info.name === 'On Design' || order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design') || order.currentStatus === 'on-hold');
+    if (hasDesignApprovedLog && isDesignStatus) {
       return { ...info, name: 'Design Approved' };
     }
     return info;
-  }, [getStatusDisplayInfo, order.currentStatus, order.statusHistory]);
+  }, [getStatusDisplayInfo, order.currentStatus, order.statusHistory, docsApprovalStatusIds, designApprovalStatusIds]);
 
   const isClearance = useMemo(() => {
+    if (docsApprovalStatusIds && docsApprovalStatusIds.length > 0) {
+      return docsApprovalStatusIds.includes(order.currentStatus);
+    }
     const statusName = currentStatusInfo.name.toLowerCase();
     const statusId = order.currentStatus.toLowerCase();
     return statusName.includes("cr clearance") ||
@@ -200,16 +218,19 @@ export function OrderDetailsClient({
       statusId.includes("co-clearance") ||
       statusId.includes("cr clearance") ||
       statusId.includes("co clearance");
-  }, [currentStatusInfo, order.currentStatus]);
+  }, [currentStatusInfo, order.currentStatus, docsApprovalStatusIds]);
 
   const isCoClearance = useMemo(() => {
+    if (docsApprovalStatusIds && docsApprovalStatusIds.length > 0) {
+      return docsApprovalStatusIds.includes(order.currentStatus);
+    }
     const statusName = currentStatusInfo.name.toLowerCase();
     const statusId = order.currentStatus.toLowerCase();
     return statusName.includes("co clearance") ||
       statusId.includes("co_clearance") ||
       statusId.includes("co-clearance") ||
       statusId.includes("co clearance");
-  }, [currentStatusInfo, order.currentStatus]);
+  }, [currentStatusInfo, order.currentStatus, docsApprovalStatusIds]);
 
   const isDocsApproved = useMemo(() => {
     return order.statusHistory && order.statusHistory.some(entry => entry.changedByUserId === 'client-approved-docs');
@@ -228,6 +249,19 @@ export function OrderDetailsClient({
       return isDesignApproved;
     }
   }, [isClearance, isDocsApproved, isDesignApproved]);
+
+  const allowsApproval = useMemo(() => {
+    if ((docsApprovalStatusIds && docsApprovalStatusIds.length > 0) || (designApprovalStatusIds && designApprovalStatusIds.length > 0)) {
+      const docs = docsApprovalStatusIds || [];
+      const design = designApprovalStatusIds || [];
+      return docs.includes(order.currentStatus) || design.includes(order.currentStatus);
+    }
+    const statusId = order.currentStatus;
+    const statusName = currentStatusInfo.name;
+    return statusId === 'co-clearance' || statusName === 'CO Clearance' ||
+           statusId === 'ready-for-design' || statusName === 'On Design' ||
+           statusId === 'on-hold' || statusName === 'On Hold';
+  }, [order.currentStatus, currentStatusInfo.name, docsApprovalStatusIds, designApprovalStatusIds]);
 
   const handleApproveOrder = async () => {
     if (!hasRequiredPayment && dialogStep !== 'terms') {
@@ -710,7 +744,10 @@ export function OrderDetailsClient({
           <CardContent className="p-6 sm:p-8"><div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-zinc-400 dark:border-zinc-600 ml-2 sm:ml-3">
             {order.statusHistory.slice().reverse().map((entry, index) => {
               let entryStatusInfo = getStatusDisplayInfo(entry.status);
-              if (entry.status === 'co-clearance' && entry.notes === 'Terms accepted and documents approved by client.') {
+              const entryIsDocs = docsApprovalStatusIds && docsApprovalStatusIds.length > 0
+                ? docsApprovalStatusIds.includes(entry.status)
+                : entry.status === 'co-clearance';
+              if (entryIsDocs && entry.notes === 'Terms accepted and documents approved by client.') {
                 entryStatusInfo = { ...entryStatusInfo, name: 'Docs Approved' };
               }
               if (entry.notes === 'Terms accepted and design approved by client.') {
@@ -736,11 +773,7 @@ export function OrderDetailsClient({
                     <div className="flex items-center justify-between w-full gap-3">
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                       {index === 0 && (
-                        !currentUser && !isApproved && (
-                          entry.status === 'co-clearance' || entryStatusInfo.name === 'CO Clearance' ||
-                          entry.status === 'ready-for-design' || entryStatusInfo.name === 'On Design' ||
-                          entry.status === 'on-hold' || entryStatusInfo.name === 'On Hold'
-                        ) ? (
+                        !currentUser && !isApproved && allowsApproval ? (
                           <Button
                             onClick={() => setIsApprovalDialogOpen(true)}
                             size="sm"
@@ -1116,7 +1149,12 @@ export function OrderDetailsClient({
             )}
           </div>
           ) : (
-            <ClientInvoicePDF order={order} allStatuses={allStatuses} />
+            <ClientInvoicePDF
+              order={order}
+              allStatuses={allStatuses}
+              designApprovalStatusIds={designApprovalStatusIds}
+              docsApprovalStatusIds={docsApprovalStatusIds}
+            />
           )
         )}
 

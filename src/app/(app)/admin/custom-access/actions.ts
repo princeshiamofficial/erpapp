@@ -20,6 +20,8 @@ import {
   setTelegramSettings,
   setLeaderboardRestriction,
   setShowAvatarsInOrders,
+  setDesignApprovalStatusIds,
+  setDocsApprovalStatusIds,
 } from "@/lib/settings-service";
 import { addCustomRole, updateCustomRole, deleteCustomRole, updateRolesOrder } from "@/lib/user-role-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types";
@@ -386,6 +388,36 @@ export async function updateRoleBasedTargetsAction(targets: RoleBasedTarget): Pr
     return { success: false, error: "Failed to update role-based targets in database." };
   } catch (error) {
     console.error("Error in updateRoleBasedTargetsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateDesignApprovalStatusIdsAction(ids: string[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setDesignApprovalStatusIds(ids);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/track/[trackingId]", "layout");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update Design Approval statuses in database." };
+  } catch (error) {
+    console.error("Error in updateDesignApprovalStatusIdsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateDocsApprovalStatusIdsAction(ids: string[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setDocsApprovalStatusIds(ids);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/track/[trackingId]", "layout");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update Docs Approval statuses in database." };
+  } catch (error) {
+    console.error("Error in updateDocsApprovalStatusIdsAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

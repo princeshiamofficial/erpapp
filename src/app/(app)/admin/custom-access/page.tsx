@@ -28,16 +28,19 @@ import {
   reorderRolesAction,
   updateShowAvatarsInOrdersAction,
   updateLeaderboardRestrictionAction,
+  updateDesignApprovalStatusIdsAction,
+  updateDocsApprovalStatusIdsAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award, Plus, Edit, MoreVertical, AlertTriangle, Loader2, GripVertical } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard, Award, Plus, Edit, MoreVertical, AlertTriangle, Loader2, GripVertical, Palette, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -105,17 +108,23 @@ export default function CustomAccessPage() {
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [crmSearchTerm, setCrmSearchTerm] = useState('');
   const [showPipelineAccess, setShowPipelineAccess] = useState(false);
+  const [designApprovalStatusIds, setDesignApprovalStatusIds] = useState<Set<string>>(new Set());
+  const [docsApprovalStatusIds, setDocsApprovalStatusIds] = useState<Set<string>>(new Set());
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
+  const [isSubmittingAllPermissions, setIsSubmittingAllPermissions] = useState(false);
   const [isSubmittingPaymentValidation, setIsSubmittingPaymentValidation] = useState(false);
   const [isSubmittingLeaderboardRestriction, setIsSubmittingLeaderboardRestriction] = useState(false);
   const [isSubmittingShowAvatars, setIsSubmittingShowAvatars] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
+  const [isSubmittingDesignApprovalStatuses, setIsSubmittingDesignApprovalStatuses] = useState(false);
+  const [isSubmittingDocsApprovalStatuses, setIsSubmittingDocsApprovalStatuses] = useState(false);
+  const [isSubmittingAllApprovalStatuses, setIsSubmittingAllApprovalStatuses] = useState(false);
 
   // Role Management states
   const [isAddEditRoleDialogOpen, setIsAddEditRoleDialogOpen] = useState(false);
@@ -153,6 +162,8 @@ export default function CustomAccessPage() {
       setIsPaymentValidationEnabled(globalSettings.isPaymentValidationEnabled ?? true);
       setIsLeaderboardRestricted(globalSettings.isLeaderboardRestrictedToAdmin ?? false);
       setIsShowAvatarsEnabled(globalSettings.showAvatarsInOrders ?? true);
+      setDesignApprovalStatusIds(new Set(globalSettings.designApprovalStatusIds ?? []));
+      setDocsApprovalStatusIds(new Set(globalSettings.docsApprovalStatusIds ?? []));
       setCrmUsers(allUsers.filter(u => u.role === 'CRM' && !u.isBanned));
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -201,6 +212,31 @@ export default function CustomAccessPage() {
     if (result.success) toast({ title: "Permissions Updated", description: "Financial visibility permissions saved." });
     else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingFinancialVisibility(false);
+  };
+
+  const handleSaveAllPermissions = async () => {
+    setIsSubmittingAllPermissions(true);
+    try {
+      const [editRes, deleteRes, financialRes] = await Promise.all([
+        updateRolesAllowedToEditOrdersAction(Array.from(rolesAllowedToEdit).filter(r => r !== 'SYSTEM_ADMIN')),
+        updateRolesAllowedToDeleteOrdersAction(Array.from(rolesAllowedToDelete).filter(r => r !== 'SYSTEM_ADMIN')),
+        updateRolesAllowedToViewFinancialsAction(Array.from(rolesAllowedToViewFinancials).filter(r => r !== 'SYSTEM_ADMIN'))
+      ]);
+
+      if (editRes.success && deleteRes.success && financialRes.success) {
+        toast({ title: "Permissions Updated", description: "All permissions saved successfully." });
+      } else {
+        const errors = [];
+        if (!editRes.success) errors.push(editRes.error || "Editing update failed");
+        if (!deleteRes.success) errors.push(deleteRes.error || "Deletion update failed");
+        if (!financialRes.success) errors.push(financialRes.error || "Financials update failed");
+        toast({ title: "Partial Update Failure", description: errors.join(", "), variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Update Failed", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setIsSubmittingAllPermissions(false);
+    }
   };
 
   const handleTogglePaymentValidation = async (enabled: boolean) => {
@@ -273,6 +309,63 @@ export default function CustomAccessPage() {
     if (result.success) toast({ title: "Permissions Updated", description: "Pipeline access permissions saved." });
     else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
     setIsSubmittingPipelineAccess(false);
+  };
+
+  const handleDesignApprovalStatusChange = (statusId: string, checked: boolean | "indeterminate") => {
+    setDesignApprovalStatusIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) newSet.add(statusId);
+      else newSet.delete(statusId);
+      return newSet;
+    });
+  };
+
+  const handleDocsApprovalStatusChange = (statusId: string, checked: boolean | "indeterminate") => {
+    setDocsApprovalStatusIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) newSet.add(statusId);
+      else newSet.delete(statusId);
+      return newSet;
+    });
+  };
+
+  const handleSaveDesignApprovalStatuses = async () => {
+    setIsSubmittingDesignApprovalStatuses(true);
+    const result = await updateDesignApprovalStatusIdsAction(Array.from(designApprovalStatusIds));
+    if (result.success) toast({ title: "Statuses Updated", description: "Design Approval statuses saved." });
+    else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
+    setIsSubmittingDesignApprovalStatuses(false);
+  };
+
+  const handleSaveDocsApprovalStatuses = async () => {
+    setIsSubmittingDocsApprovalStatuses(true);
+    const result = await updateDocsApprovalStatusIdsAction(Array.from(docsApprovalStatusIds));
+    if (result.success) toast({ title: "Statuses Updated", description: "Docs Approval statuses saved." });
+    else toast({ title: "Update Failed", description: result.error || "An unexpected error occurred.", variant: "destructive" });
+    setIsSubmittingDocsApprovalStatuses(false);
+  };
+
+  const handleSaveAllApprovalStatuses = async () => {
+    setIsSubmittingAllApprovalStatuses(true);
+    try {
+      const [designRes, docsRes] = await Promise.all([
+        updateDesignApprovalStatusIdsAction(Array.from(designApprovalStatusIds)),
+        updateDocsApprovalStatusIdsAction(Array.from(docsApprovalStatusIds))
+      ]);
+
+      if (designRes.success && docsRes.success) {
+        toast({ title: "Settings Updated", description: "Approval status configurations saved successfully." });
+      } else {
+        const errors = [];
+        if (!designRes.success) errors.push(designRes.error || "Design statuses update failed");
+        if (!docsRes.success) errors.push(docsRes.error || "Document statuses update failed");
+        toast({ title: "Partial Update Failure", description: errors.join(", "), variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Update Failed", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setIsSubmittingAllApprovalStatuses(false);
+    }
   };
 
   const filteredCrmUsers = useMemo(() => {
@@ -361,355 +454,455 @@ export default function CustomAccessPage() {
   const defaultManageableRoles = manageableRoles.filter(r => r.isDefault && r.id !== 'VENDOR');
 
   return (
-    <div className="space-y-8 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-8">
 
 
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-2xl font-bold text-card-foreground">Custom Access Control</h1>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setShowPipelineAccess(!showPipelineAccess)}
-          className="flex items-center gap-2"
-        >
-          {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-          {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
-        </Button>
-      </div>
+      <Tabs defaultValue="permissions" className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <TabsList className="flex flex-wrap md:inline-flex h-auto w-full md:w-auto gap-1 bg-muted p-1 rounded-lg">
+            <TabsTrigger value="permissions" className="data-[state=active]:bg-background">Permissions</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-background">General Settings</TabsTrigger>
+            <TabsTrigger value="approvals" className="data-[state=active]:bg-background">Approval Statuses</TabsTrigger>
+            <TabsTrigger value="roles" className="data-[state=active]:bg-background">User Roles</TabsTrigger>
+            <TabsTrigger value="stages" className="data-[state=active]:bg-background">Project Stages</TabsTrigger>
+          </TabsList>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-4">
-            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Editing Permissions</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can edit order details. System Admins always have permission.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4">
-            {isLoading ? <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-              : <div className="flex flex-wrap gap-3">
-                {defaultManageableRoles.map((role) => (<div key={role.id} className="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                  <Checkbox id={`role-edit-perm-${role.id}`} checked={rolesAllowedToEdit.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)} disabled={isSubmittingOrderEditing} />
-                  <Label htmlFor={`role-edit-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap">{role.name}</Label></div>))}
-              </div>}
-          </CardContent>
-          <CardFooter className="border-t p-4 flex justify-end">
-            <Button onClick={handleSaveOrderEditingPermissions} disabled={isLoading || isSubmittingOrderEditing}>{isSubmittingOrderEditing ? "Saving..." : "Save Editing Permissions"}</Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-4">
-            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Trash2 className="h-6 w-6 text-destructive" /> Order Deletion Permissions</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can delete orders. This is a destructive action.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4">
-            {isLoading ? <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-              : <div className="flex flex-wrap gap-3">
-                {defaultManageableRoles.map((role) => (<div key={`role-delete-perm-${role.id}`} className="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                  <Checkbox id={`role-delete-perm-${role.id}`} checked={rolesAllowedToDelete.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)} disabled={isSubmittingOrderDeletion} />
-                  <Label htmlFor={`role-delete-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap">{role.name}</Label></div>))}
-              </div>}
-          </CardContent>
-          <CardFooter className="border-t p-4 flex justify-end">
-            <Button onClick={handleSaveOrderDeletionPermissions} disabled={isLoading || isSubmittingOrderDeletion} variant="destructive">
-              {isSubmittingOrderDeletion ? "Saving..." : "Save Deletion Permissions"}
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-4">
-            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" /> Financial Visibility</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can see price and payment details on tracking pages.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4">
-            {isLoading ? <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-              : <div className="flex flex-wrap gap-3">
-                {defaultManageableRoles.map((role) => (<div key={`role-financial-perm-${role.id}`} className="flex items-center space-x-2 px-3 py-1.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                  <Checkbox id={`role-financial-perm-${role.id}`} checked={rolesAllowedToViewFinancials.has(role.id as UserRole)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)} disabled={isSubmittingFinancialVisibility} />
-                  <Label htmlFor={`role-financial-perm-${role.id}`} className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap">{role.name}</Label></div>))}
-              </div>}
-          </CardContent>
-          <CardFooter className="border-t p-4 flex justify-end">
-            <Button onClick={handleSaveFinancialVisibilityPermissions} disabled={isLoading || isSubmittingFinancialVisibility}>
-              {isSubmittingFinancialVisibility ? "Saving..." : "Save Financial Permissions"}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Payment Validation</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Enable or disable the 45% payment check before moving projects to Logistics.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {isLoading ? (
-                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
-              ) : (
-                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                  <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                    <span>Enforce 45% Payment for Logistics</span>
-                    <span className="font-normal leading-snug text-muted-foreground text-xs">If disabled, this check will be skipped.</span>
-                  </Label>
-                  <Switch
-                    id="paymentValidationSwitch"
-                    checked={isPaymentValidationEnabled}
-                    onCheckedChange={handleTogglePaymentValidation}
-                    disabled={isSubmittingPaymentValidation}
-                    aria-label="Toggle payment validation enforcement"
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Award className="h-6 w-6 text-primary" /> Leaderboard Access</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Restrict leaderboard visibility to administrators only.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {isLoading ? (
-                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
-              ) : (
-                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                  <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                    <span>Restrict Leaderboard to Admins</span>
-                    <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, non-admin users cannot see the leaderboard.</span>
-                  </Label>
-                  <Switch
-                    id="leaderboardRestrictionSwitch"
-                    checked={isLeaderboardRestricted}
-                    onCheckedChange={handleToggleLeaderboardRestriction}
-                    disabled={isSubmittingLeaderboardRestriction}
-                    aria-label="Toggle leaderboard restriction"
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Avatars</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Show or hide user avatars in the CRM Contact and DR columns of orders tables.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {isLoading ? (
-                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
-              ) : (
-                <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                  <Label htmlFor="showAvatarsSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                    <span>Show Avatars in Orders</span>
-                    <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, avatars will be displayed next to user names.</span>
-                  </Label>
-                  <Switch
-                    id="showAvatarsSwitch"
-                    checked={isShowAvatarsEnabled}
-                    onCheckedChange={handleToggleShowAvatars}
-                    disabled={isSubmittingShowAvatars}
-                    aria-label="Toggle avatars in orders"
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-      </div>
-
-
-
-<div className={cn("grid grid-cols-1 gap-8", showPipelineAccess ? "xl:grid-cols-3" : "xl:grid-cols-2")}>
-      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Drag rows to change role priority. System roles cannot be deleted.</CardDescription>
-            </div>
-            <Button onClick={handleOpenAddRole} size="sm">
-              <Plus className="h-4 w-4 mr-2" /> Add Custom Role
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="max-h-[500px] overflow-y-auto custom-scrollbar relative">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <Table>
-                <TableHeader className="sticky top-0 bg-card z-20 shadow-sm">
-                  <TableRow className="border-b border-border/50">
-                    <TableHead className="w-[50px]"></TableHead>
-                    <TableHead className="pl-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role Name</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role ID</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
-                    <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(3)].map((_, i) => (
-                    <TableRow key={`role-skel-${i}`}>
-                      <TableCell className="w-[50px]"></TableCell>
-                      <TableCell className="pl-2"><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <SortableContext
-                    items={allRoles.map(r => r.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {allRoles.map(role => (
-                      <SortableRoleRow
-                        key={role.id}
-                        role={role}
-                        onEdit={handleOpenEditRole}
-                        onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
-                      />
-                    ))}
-                  </SortableContext>
-                )}
-              </TableBody>
-            </Table>
-          </DndContext>
-          </div>
-        </CardContent>
-      </Card>
-      {showPipelineAccess && (
-        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
-            <div className="flex flex-col gap-4">
-              <div className="flex-1">
-                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
-                <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
-              </div>
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search CRM users..."
-                  value={crmSearchTerm}
-                  onChange={(e) => setCrmSearchTerm(e.target.value)}
-                  className="pl-10 h-9"
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-auto max-h-80">
-              <Table>
-                <TableHeader>
-                  <TableRow><TableHead className="pl-6 w-12">Allow</TableHead><TableHead>CRM User</TableHead></TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? [...Array(3)].map((_, i) => (
-                    <TableRow key={`pipe-skel-${i}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-5 w-5 rounded" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-40 rounded" /></TableCell>
-                    </TableRow>
-                  )) : filteredCrmUsers.length > 0 ? filteredCrmUsers.map(user => (
-                    <TableRow key={user.id} className="hover:bg-muted/30">
-                      <TableCell className="pl-6">
-                        <Checkbox
-                          id={`pipeline-perm-${user.id}`}
-                          checked={pipelineAccess.has(user.id)}
-                          onCheckedChange={(checked) => handlePipelineAccessChange(user.id, checked)}
-                          disabled={isSubmittingPipelineAccess}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={user.avatarUrl || undefined} />
-                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                              {getInitials(user.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <Label htmlFor={`pipeline-perm-${user.id}`} className="font-medium cursor-pointer">{user.name}</Label>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow><TableCell colSpan={2} className="text-center h-24 text-muted-foreground">No users with the CRM role were found.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </CardContent>
-          <CardFooter className="border-t p-5 flex justify-end">
-            <Button onClick={handleSavePipelineAccess} disabled={isLoading || isSubmittingPipelineAccess}>
-              {isSubmittingPipelineAccess ? "Saving..." : "Save Global Access"}
-            </Button>
-          </CardFooter>
-        </Card>
-      )}
-
-      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Project Stage Access</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can view and move projects to each Kanban stage.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6 font-semibold">Stage</TableHead>
-                  {defaultManageableRoles.map(role => (
-                    <TableHead key={role.id} className="text-center">{role.name}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  PROJECT_STAGES.map(stage => (
-                    <TableRow key={`skel-stage-${stage}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-5 w-32" /></TableCell>
-                      {defaultManageableRoles.map(role => (
-                        <TableCell key={`skel-cell-${stage}-${role.id}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  PROJECT_STAGES.map(stage => {
-                    return (
-                    <TableRow key={stage} className="hover:bg-muted/30">
-                      <TableCell className="pl-6 font-medium">
-                        <Badge className={cn("border-transparent font-medium rounded", getStageBadgeClass(stage))}>
-                          {stage}
-                        </Badge>
-                      </TableCell>
-                      {defaultManageableRoles.map(role => (
-                        <TableCell key={`${stage}-${role.id}`} className="text-center">
-                          <Checkbox
-                            id={`perm-${stage}-${role.id}`}
-                            checked={projectStageAccess[stage]?.includes(role.id as UserRole) || false}
-                            onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role.id as UserRole, checked)}
-                            disabled={isSubmittingProjectStageAccess}
-                            aria-label={`Allow ${role.name} for ${stage} stage`}
-                          />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  );
-                })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-        <CardFooter className="border-t p-5 flex justify-end">
-          <Button onClick={handleSaveProjectStageAccess} disabled={isLoading || isSubmittingProjectStageAccess}>
-            {isSubmittingProjectStageAccess ? "Saving Permissions..." : "Save Stage Permissions"}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowPipelineAccess(!showPipelineAccess)}
+            className="flex items-center gap-2 shadow-sm"
+          >
+            {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+            {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
           </Button>
-        </CardFooter>
-      </Card>
-      </div>
+        </div>
+
+        <TabsContent value="permissions" className="space-y-8 outline-none">
+            <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+              <CardHeader className="border-b p-5">
+                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Shield className="h-6 w-6 text-primary" /> Role Permissions Management</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure global access controls for editing, deletion, and financials visibility.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b border-border/50">
+                        <TableHead className="pl-6 w-[200px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Role</TableHead>
+                        <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Edit Order</TableHead>
+                        <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Delete Order</TableHead>
+                        <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Financial</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        [...Array(4)].map((_, i) => (
+                          <TableRow key={`perm-skel-row-${i}`}>
+                            <TableCell className="pl-6"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
+                            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
+                            <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        defaultManageableRoles.map((role) => (
+                          <TableRow key={role.id} className="hover:bg-muted/30">
+                            <TableCell className="pl-6 font-medium">
+                              <Badge
+                                style={{
+                                  backgroundColor: role.color || '#6b7280',
+                                  color: getContrastTextColor(role.color || '#6b7280')
+                                }}
+                                className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
+                              >
+                                {role.name}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox
+                                id={`role-edit-perm-${role.id}`}
+                                checked={rolesAllowedToEdit.has(role.id as UserRole)}
+                                onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToEdit, role.id as UserRole, checked)}
+                                disabled={isSubmittingAllPermissions}
+                                aria-label={`Allow ${role.name} to edit orders`}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox
+                                id={`role-delete-perm-${role.id}`}
+                                checked={rolesAllowedToDelete.has(role.id as UserRole)}
+                                onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToDelete, role.id as UserRole, checked)}
+                                disabled={isSubmittingAllPermissions}
+                                aria-label={`Allow ${role.name} to delete orders`}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox
+                                id={`role-financial-perm-${role.id}`}
+                                checked={rolesAllowedToViewFinancials.has(role.id as UserRole)}
+                                onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role.id as UserRole, checked)}
+                                disabled={isSubmittingAllPermissions}
+                                aria-label={`Allow ${role.name} to view financials`}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t p-4 flex justify-end">
+                <Button onClick={handleSaveAllPermissions} disabled={isLoading || isSubmittingAllPermissions}>
+                  {isSubmittingAllPermissions ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving Permissions...
+                    </>
+                  ) : "Save Permissions"}
+                </Button>
+              </CardFooter>
+            </Card>
+
+          {showPipelineAccess && (
+            <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+              <CardHeader className="border-b p-5">
+                <div className="flex flex-col gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
+                  </div>
+                  <div className="relative w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search CRM users..."
+                      value={crmSearchTerm}
+                      onChange={(e) => setCrmSearchTerm(e.target.value)}
+                      className="pl-10 h-9"
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-auto max-h-80">
+                  <Table>
+                    <TableHeader>
+                      <TableRow><TableHead className="pl-6 w-12">Allow</TableHead><TableHead>CRM User</TableHead></TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? [...Array(3)].map((_, i) => (
+                        <TableRow key={`pipe-skel-${i}`}>
+                          <TableCell className="pl-6"><Skeleton className="h-5 w-5 rounded" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-40 rounded" /></TableCell>
+                        </TableRow>
+                      )) : filteredCrmUsers.length > 0 ? filteredCrmUsers.map(user => (
+                        <TableRow key={user.id} className="hover:bg-muted/30">
+                          <TableCell className="pl-6">
+                            <Checkbox
+                              id={`pipeline-perm-${user.id}`}
+                              checked={pipelineAccess.has(user.id)}
+                              onCheckedChange={(checked) => handlePipelineAccessChange(user.id, checked)}
+                              disabled={isSubmittingPipelineAccess}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={user.avatarUrl || undefined} />
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                  {getInitials(user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <Label htmlFor={`pipeline-perm-${user.id}`} className="font-medium cursor-pointer">{user.name}</Label>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )) : (
+                        <TableRow><TableCell colSpan={2} className="text-center h-24 text-muted-foreground">No users with the CRM role were found.</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+              <CardFooter className="border-t p-5 flex justify-end">
+                <Button onClick={handleSavePipelineAccess} disabled={isLoading || isSubmittingPipelineAccess}>
+                  {isSubmittingPipelineAccess ? "Saving..." : "Save Global Access"}
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-8 outline-none">
+          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Global Platform Settings</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Toggle global system rules, verification checks, and display options.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={`skel-settings-${i}`} className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30">
+                      <Skeleton className="h-5 w-48 rounded" />
+                      <Skeleton className="h-6 w-12 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Switch 1: Payment Validation */}
+                  <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
+                    <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                      <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-muted-foreground" /> Enforce 45% Payment for Logistics</span>
+                      <span className="font-normal leading-snug text-muted-foreground text-xs">Enable or disable the 45% payment check before moving projects to Logistics stage.</span>
+                    </Label>
+                    <Switch
+                      id="paymentValidationSwitch"
+                      checked={isPaymentValidationEnabled}
+                      onCheckedChange={handleTogglePaymentValidation}
+                      disabled={isSubmittingPaymentValidation}
+                      aria-label="Toggle payment validation enforcement"
+                    />
+                  </div>
+
+                  {/* Switch 2: Leaderboard Access */}
+                  <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
+                    <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                      <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><Award className="h-4 w-4 text-muted-foreground" /> Restrict Leaderboard to Admins</span>
+                      <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, only administrators will have visibility of the leaderboard.</span>
+                    </Label>
+                    <Switch
+                      id="leaderboardRestrictionSwitch"
+                      checked={isLeaderboardRestricted}
+                      onCheckedChange={handleToggleLeaderboardRestriction}
+                      disabled={isSubmittingLeaderboardRestriction}
+                      aria-label="Toggle leaderboard restriction"
+                    />
+                  </div>
+
+                  {/* Switch 3: Order Avatars */}
+                  <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
+                    <Label htmlFor="showAvatarsSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                      <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><UserCheck className="h-4 w-4 text-muted-foreground" /> Show Avatars in Orders</span>
+                      <span className="font-normal leading-snug text-muted-foreground text-xs">Display user profile images in the CRM Contact and DR columns of the orders list.</span>
+                    </Label>
+                    <Switch
+                      id="showAvatarsSwitch"
+                      checked={isShowAvatarsEnabled}
+                      onCheckedChange={handleToggleShowAvatars}
+                      disabled={isSubmittingShowAvatars}
+                      aria-label="Toggle avatars in orders"
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="approvals" className="space-y-8 outline-none">
+          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Palette className="h-6 w-6 text-primary" /> Client Approval Statuses</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure which order statuses allow the client to approve designs or documents.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-border/50">
+                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Order Status</TableHead>
+                      <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Design Approval</TableHead>
+                      <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Document Approval</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      [...Array(4)].map((_, i) => (
+                        <TableRow key={`appr-skel-row-${i}`}>
+                          <TableCell className="pl-6"><Skeleton className="h-5 w-32 rounded" /></TableCell>
+                          <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
+                          <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : allStatuses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No order statuses found.</TableCell>
+                      </TableRow>
+                    ) : (
+                      allStatuses.map((status) => (
+                        <TableRow key={status.id} className="hover:bg-muted/30">
+                          <TableCell className="pl-6 font-medium flex items-center gap-2 h-12">
+                            <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
+                            <span className="text-sm font-medium text-card-foreground">{status.name}</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`design-appr-perm-${status.id}`}
+                              checked={designApprovalStatusIds.has(status.id)}
+                              onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
+                              disabled={isSubmittingAllApprovalStatuses}
+                              aria-label={`Allow Design Approval for ${status.name}`}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`docs-appr-perm-${status.id}`}
+                              checked={docsApprovalStatusIds.has(status.id)}
+                              onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
+                              disabled={isSubmittingAllApprovalStatuses}
+                              aria-label={`Allow Document Approval for ${status.name}`}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t p-4 flex justify-end">
+              <Button onClick={handleSaveAllApprovalStatuses} disabled={isLoading || isSubmittingAllApprovalStatuses}>
+                {isSubmittingAllApprovalStatuses ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving Statuses...
+                  </>
+                ) : "Save Approval Statuses"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-8 outline-none">
+          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm mt-0.5">Drag rows to change role priority. System roles cannot be deleted.</CardDescription>
+                </div>
+                <Button onClick={handleOpenAddRole} size="sm">
+                  <Plus className="h-4 w-4 mr-2" /> Add Custom Role
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-20 shadow-sm">
+                      <TableRow className="border-b border-border/50">
+                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead className="pl-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role Name</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role ID</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
+                        <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        [...Array(3)].map((_, i) => (
+                          <TableRow key={`role-skel-${i}`}>
+                            <TableCell className="w-[50px]"></TableCell>
+                            <TableCell className="pl-2"><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                            <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <SortableContext
+                          items={allRoles.map(r => r.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {allRoles.map(role => (
+                            <SortableRoleRow
+                              key={role.id}
+                              role={role}
+                              onEdit={handleOpenEditRole}
+                              onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
+                            />
+                          ))}
+                        </SortableContext>
+                      )}
+                    </TableBody>
+                  </Table>
+                </DndContext>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="stages" className="space-y-8 outline-none">
+          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Project Stage Access</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can view and move projects to each Kanban stage.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="pl-6 font-semibold">Stage</TableHead>
+                      {defaultManageableRoles.map(role => (
+                        <TableHead key={role.id} className="text-center">{role.name}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      PROJECT_STAGES.map(stage => (
+                        <TableRow key={`skel-stage-${stage}`}>
+                          <TableCell className="pl-6"><Skeleton className="h-5 w-32" /></TableCell>
+                          {defaultManageableRoles.map(role => (
+                            <TableCell key={`skel-cell-${stage}-${role.id}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      PROJECT_STAGES.map(stage => {
+                        return (
+                          <TableRow key={stage} className="hover:bg-muted/30">
+                            <TableCell className="pl-6 font-medium">
+                              <Badge className={cn("border-transparent font-medium rounded", getStageBadgeClass(stage))}>
+                                {stage}
+                              </Badge>
+                            </TableCell>
+                            {defaultManageableRoles.map(role => (
+                              <TableCell key={`${stage}-${role.id}`} className="text-center">
+                                <Checkbox
+                                  id={`perm-${stage}-${role.id}`}
+                                  checked={projectStageAccess[stage]?.includes(role.id as UserRole) || false}
+                                  onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role.id as UserRole, checked)}
+                                  disabled={isSubmittingProjectStageAccess}
+                                  aria-label={`Allow ${role.name} for ${stage} stage`}
+                                />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t p-5 flex justify-end">
+              <Button onClick={handleSaveProjectStageAccess} disabled={isLoading || isSubmittingProjectStageAccess}>
+                {isSubmittingProjectStageAccess ? "Saving Permissions..." : "Save Stage Permissions"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Role Management Dialog */}
       <Dialog open={isAddEditRoleDialogOpen} onOpenChange={setIsAddEditRoleDialogOpen}>
