@@ -846,12 +846,6 @@ export default function CustomAccessPage() {
         </TabsContent>
 
         <TabsContent value="stages" className="space-y-6 outline-none">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> Project Stage Access</h3>
-              <p className="text-muted-foreground text-sm mt-0.5">Define which user roles can view and move projects to each Kanban stage.</p>
-            </div>
-          </div>
 
           <div className="overflow-x-auto border rounded-lg bg-card">
             <Table>
