@@ -747,59 +747,52 @@ export default function CustomAccessPage() {
               <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Palette className="h-6 w-6 text-primary" /> Client Approval Statuses</CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure which order statuses allow the client to approve designs or documents.</CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="max-h-[800px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-card z-20 shadow-sm">
-                    <TableRow className="border-b border-border/50">
-                      <TableHead className="pl-6 w-[250px] font-semibold text-card-foreground text-xs uppercase tracking-wider">Project Stage</TableHead>
-                      <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Design Approval</TableHead>
-                      <TableHead className="text-center font-semibold text-card-foreground text-xs uppercase tracking-wider">Allow Document Approval</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      [...Array(4)].map((_, i) => (
-                        <TableRow key={`appr-skel-row-${i}`}>
-                          <TableCell className="pl-6"><Skeleton className="h-5 w-32 rounded" /></TableCell>
-                          <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
-                          <TableCell className="text-center"><Skeleton className="h-5 w-5 mx-auto rounded" /></TableCell>
-                        </TableRow>
-                      ))
-                    ) : filteredApprovalStatuses.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No order statuses found.</TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredApprovalStatuses.map((status) => (
-                        <TableRow key={status.id} className="hover:bg-muted/30">
-                          <TableCell className="pl-6 font-medium flex items-center gap-2 h-12">
-                            <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
-                            <span className="text-sm font-medium text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
-                          </TableCell>
-                          <TableCell className="text-center">
+            <CardContent className="p-6">
+              <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {isLoading ? (
+                    [...Array(6)].map((_, i) => (
+                      <div key={`skel-appr-${i}`} className="border border-border/30 rounded-lg p-4 space-y-3 bg-card">
+                        <Skeleton className="h-5 w-24 rounded" />
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                          <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-4" /></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : filteredApprovalStatuses.length === 0 ? (
+                    <p className="text-muted-foreground text-sm col-span-3 text-center py-6">No project stages found.</p>
+                  ) : (
+                    filteredApprovalStatuses.map((status) => (
+                      <div key={status.id} className="border border-border/40 rounded-lg p-5 bg-muted/10 hover:bg-muted/20 transition-colors flex flex-col justify-between space-y-4">
+                        <div className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
+                          <span className="text-sm font-semibold text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
+                        </div>
+                        <div className="flex flex-col gap-3 pt-3 border-t border-border/30">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`design-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Design Approval</Label>
                             <Checkbox
                               id={`design-appr-perm-${status.id}`}
                               checked={designApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDesignApprovalStatusChange(status.id, checked)}
                               disabled={isSubmittingAllApprovalStatuses || docsApprovalStatusIds.has(status.id)}
-                              aria-label={`Allow Design Approval for ${status.name}`}
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`docs-appr-perm-${status.id}`} className="text-xs text-muted-foreground cursor-pointer">Allow Document Approval</Label>
                             <Checkbox
                               id={`docs-appr-perm-${status.id}`}
                               checked={docsApprovalStatusIds.has(status.id)}
                               onCheckedChange={(checked) => handleDocsApprovalStatusChange(status.id, checked)}
                               disabled={isSubmittingAllApprovalStatuses || designApprovalStatusIds.has(status.id)}
-                              aria-label={`Allow Document Approval for ${status.name}`}
                             />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </CardContent>
             <CardFooter className="border-t p-4 flex justify-end">
