@@ -823,9 +823,7 @@ export default function CustomAccessPage() {
                   <Table>
                     <TableHeader className="sticky top-0 bg-card z-20 shadow-sm">
                       <TableRow className="border-b border-border/50">
-                        <TableHead className="w-[50px]"></TableHead>
-                        <TableHead className="pl-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role Name</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role ID</TableHead>
+                        <TableHead className="pl-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role Name</TableHead>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
                         <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
                       </TableRow>
@@ -834,9 +832,7 @@ export default function CustomAccessPage() {
                       {isLoading ? (
                         [...Array(3)].map((_, i) => (
                           <TableRow key={`role-skel-${i}`}>
-                            <TableCell className="w-[50px]"></TableCell>
-                            <TableCell className="pl-2"><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell className="pl-6 flex items-center gap-2"><Skeleton className="h-4 w-4 rounded" /><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                             <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                           </TableRow>
@@ -1030,23 +1026,22 @@ function SortableRoleRow({
 
   return (
     <TableRow ref={setNodeRef} style={style} className={cn(isDragging && "bg-muted shadow-lg")}>
-      <TableCell className="w-[50px]">
-        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
-          <GripVertical className="h-4 w-4" />
-        </button>
+      <TableCell className="pl-6 py-3">
+        <div className="flex items-center gap-3">
+          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <Badge
+            style={{
+              backgroundColor: role.color || '#6b7280',
+              color: getContrastTextColor(role.color || '#6b7280')
+            }}
+            className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
+          >
+            {role.name}
+          </Badge>
+        </div>
       </TableCell>
-      <TableCell className="pl-2">
-        <Badge
-          style={{
-            backgroundColor: role.color || '#6b7280',
-            color: getContrastTextColor(role.color || '#6b7280')
-          }}
-          className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
-        >
-          {role.name}
-        </Badge>
-      </TableCell>
-      <TableCell className="font-mono text-sm">{role.id}</TableCell>
       <TableCell>
         <Badge variant={role.isDefault ? "secondary" : "outline"} className="text-[10px] h-5.5 px-2 uppercase tracking-wide">
           {role.isDefault ? "System Default" : "Custom"}
