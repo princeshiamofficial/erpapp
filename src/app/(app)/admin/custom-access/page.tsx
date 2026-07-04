@@ -506,19 +506,20 @@ export default function CustomAccessPage() {
             <TabsTrigger value="roles" className="data-[state=active]:bg-background">User Roles</TabsTrigger>
             <TabsTrigger value="stages" className="data-[state=active]:bg-background">Project Stages</TabsTrigger>
           </TabsList>
-
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowPipelineAccess(!showPipelineAccess)}
-            className="flex items-center gap-2 shadow-sm"
-          >
-            {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-            {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
-          </Button>
         </div>
 
         <TabsContent value="permissions" className="space-y-6 outline-none">
+          <div className="flex justify-end mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowPipelineAccess(!showPipelineAccess)}
+              className="flex items-center gap-2 shadow-sm"
+            >
+              {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+              {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
+            </Button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
