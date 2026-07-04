@@ -748,7 +748,7 @@ export default function CustomAccessPage() {
               <CardDescription className="text-muted-foreground text-sm mt-0.5">Configure which order statuses allow the client to approve designs or documents.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="max-h-[500px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
+              <div className="max-h-[800px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
                 <Table>
                   <TableHeader className="sticky top-0 bg-card z-20 shadow-sm">
                     <TableRow className="border-b border-border/50">
