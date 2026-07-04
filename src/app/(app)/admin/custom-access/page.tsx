@@ -692,59 +692,85 @@ export default function CustomAccessPage() {
 
         <TabsContent value="settings" className="space-y-6 outline-none">
           {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={`skel-settings-${i}`} className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30">
-                  <Skeleton className="h-5 w-48 rounded" />
-                  <Skeleton className="h-6 w-12 rounded-full" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={`skel-settings-${i}`} className="border border-border/30 rounded-lg p-5 space-y-4 bg-card shadow-sm min-h-[140px] flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-32 rounded" />
+                    <Skeleton className="h-3 w-40 rounded" />
+                  </div>
+                  <div className="flex justify-end">
+                    <Skeleton className="h-6 w-10 rounded-full" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {/* Switch 1: Payment Validation */}
-              <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors bg-card">
-                <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                  <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-muted-foreground" /> Enforce 45% Payment for Logistics</span>
-                  <span className="font-normal leading-snug text-muted-foreground text-xs">Enable or disable the 45% payment check before moving projects to Logistics stage.</span>
-                </Label>
-                <Switch
-                  id="paymentValidationSwitch"
-                  checked={isPaymentValidationEnabled}
-                  onCheckedChange={handleTogglePaymentValidation}
-                  disabled={isSubmittingPaymentValidation}
-                  aria-label="Toggle payment validation enforcement"
-                />
+              <div className="border border-border/40 rounded-lg p-5 bg-card flex flex-col justify-between space-y-4 shadow-sm min-h-[140px]">
+                <div className="space-y-2">
+                  <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1.5 cursor-pointer">
+                    <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-primary" /> Enforce 45% Payment</span>
+                    <span className="font-normal leading-relaxed text-muted-foreground text-xs">Enable or disable the 45% payment check before moving projects to Logistics stage.</span>
+                  </Label>
+                </div>
+                <div className="flex justify-end pt-2 border-t border-border/30">
+                  <Switch
+                    id="paymentValidationSwitch"
+                    checked={isPaymentValidationEnabled}
+                    onCheckedChange={handleTogglePaymentValidation}
+                    disabled={isSubmittingPaymentValidation}
+                    aria-label="Toggle payment validation enforcement"
+                  />
+                </div>
               </div>
 
               {/* Switch 2: Leaderboard Access */}
-              <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors bg-card">
-                <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                  <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><Award className="h-4 w-4 text-muted-foreground" /> Restrict Leaderboard to Admins</span>
-                  <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, only administrators will have visibility of the leaderboard.</span>
-                </Label>
-                <Switch
-                  id="leaderboardRestrictionSwitch"
-                  checked={isLeaderboardRestricted}
-                  onCheckedChange={handleToggleLeaderboardRestriction}
-                  disabled={isSubmittingLeaderboardRestriction}
-                  aria-label="Toggle leaderboard restriction"
-                />
+              <div className="border border-border/40 rounded-lg p-5 bg-card flex flex-col justify-between space-y-4 shadow-sm min-h-[140px]">
+                <div className="space-y-2">
+                  <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1.5 cursor-pointer">
+                    <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><Award className="h-4 w-4 text-primary" /> Restrict Leaderboard</span>
+                    <span className="font-normal leading-relaxed text-muted-foreground text-xs">When enabled, only administrators will have visibility of the leaderboard.</span>
+                  </Label>
+                </div>
+                <div className="flex justify-end pt-2 border-t border-border/30">
+                  <Switch
+                    id="leaderboardRestrictionSwitch"
+                    checked={isLeaderboardRestricted}
+                    onCheckedChange={handleToggleLeaderboardRestriction}
+                    disabled={isSubmittingLeaderboardRestriction}
+                    aria-label="Toggle leaderboard restriction"
+                  />
+                </div>
               </div>
 
               {/* Switch 3: Order Avatars */}
-              <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors bg-card">
-                <Label htmlFor="showAvatarsSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                  <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><UserCheck className="h-4 w-4 text-muted-foreground" /> Show Avatars in Orders</span>
-                  <span className="font-normal leading-snug text-muted-foreground text-xs">Display user profile images in the CRM Contact and DR columns of the orders list.</span>
-                </Label>
-                <Switch
-                  id="showAvatarsSwitch"
-                  checked={isShowAvatarsEnabled}
-                  onCheckedChange={handleToggleShowAvatars}
-                  disabled={isSubmittingShowAvatars}
-                  aria-label="Toggle avatars in orders"
-                />
+              <div className="border border-border/40 rounded-lg p-5 bg-card flex flex-col justify-between space-y-4 shadow-sm min-h-[140px]">
+                <div className="space-y-2">
+                  <Label htmlFor="showAvatarsSwitch" className="flex flex-col space-y-1.5 cursor-pointer">
+                    <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><UserCheck className="h-4 w-4 text-primary" /> Show Avatars in Orders</span>
+                    <span className="font-normal leading-relaxed text-muted-foreground text-xs">Display user profile images in the CRM Contact and DR columns of the orders list.</span>
+                  </Label>
+                </div>
+                <div className="flex justify-end pt-2 border-t border-border/30">
+                  <Switch
+                    id="showAvatarsSwitch"
+                    checked={isShowAvatarsEnabled}
+                    onCheckedChange={handleToggleShowAvatars}
+                    disabled={isSubmittingShowAvatars}
+                    aria-label="Toggle avatars in orders"
+                  />
+                </div>
+              </div>
+
+              {/* Card 4: Coming Soon */}
+              <div className="border border-dashed border-border/60 rounded-lg p-5 bg-muted/5 flex flex-col justify-center items-center text-center space-y-2 min-h-[140px]">
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                  <Plus className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <span className="font-semibold text-muted-foreground text-xs">Coming Soon</span>
+                <span className="text-[10px] text-muted-foreground/80 leading-normal max-w-[150px]">Additional settings are currently under development.</span>
               </div>
             </div>
           )}
