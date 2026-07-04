@@ -519,12 +519,6 @@ export default function CustomAccessPage() {
         </div>
 
         <TabsContent value="permissions" className="space-y-6 outline-none">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Shield className="h-6 w-6 text-primary" /> Role Permissions Management</h3>
-              <p className="text-muted-foreground text-sm mt-0.5">Configure global access controls for editing, deletion, and financials visibility.</p>
-            </div>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
@@ -666,81 +660,67 @@ export default function CustomAccessPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="settings" className="space-y-8 outline-none">
-          <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-            <CardHeader className="border-b p-5">
-              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Global Platform Settings</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Toggle global system rules, verification checks, and display options.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={`skel-settings-${i}`} className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30">
-                      <Skeleton className="h-5 w-48 rounded" />
-                      <Skeleton className="h-6 w-12 rounded-full" />
-                    </div>
-                  ))}
+        <TabsContent value="settings" className="space-y-6 outline-none">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={`skel-settings-${i}`} className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30">
+                  <Skeleton className="h-5 w-48 rounded" />
+                  <Skeleton className="h-6 w-12 rounded-full" />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Switch 1: Payment Validation */}
-                  <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
-                    <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                      <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-muted-foreground" /> Enforce 45% Payment for Logistics</span>
-                      <span className="font-normal leading-snug text-muted-foreground text-xs">Enable or disable the 45% payment check before moving projects to Logistics stage.</span>
-                    </Label>
-                    <Switch
-                      id="paymentValidationSwitch"
-                      checked={isPaymentValidationEnabled}
-                      onCheckedChange={handleTogglePaymentValidation}
-                      disabled={isSubmittingPaymentValidation}
-                      aria-label="Toggle payment validation enforcement"
-                    />
-                  </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Switch 1: Payment Validation */}
+              <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors bg-card">
+                <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                  <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-muted-foreground" /> Enforce 45% Payment for Logistics</span>
+                  <span className="font-normal leading-snug text-muted-foreground text-xs">Enable or disable the 45% payment check before moving projects to Logistics stage.</span>
+                </Label>
+                <Switch
+                  id="paymentValidationSwitch"
+                  checked={isPaymentValidationEnabled}
+                  onCheckedChange={handleTogglePaymentValidation}
+                  disabled={isSubmittingPaymentValidation}
+                  aria-label="Toggle payment validation enforcement"
+                />
+              </div>
 
-                  {/* Switch 2: Leaderboard Access */}
-                  <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
-                    <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                      <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><Award className="h-4 w-4 text-muted-foreground" /> Restrict Leaderboard to Admins</span>
-                      <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, only administrators will have visibility of the leaderboard.</span>
-                    </Label>
-                    <Switch
-                      id="leaderboardRestrictionSwitch"
-                      checked={isLeaderboardRestricted}
-                      onCheckedChange={handleToggleLeaderboardRestriction}
-                      disabled={isSubmittingLeaderboardRestriction}
-                      aria-label="Toggle leaderboard restriction"
-                    />
-                  </div>
+              {/* Switch 2: Leaderboard Access */}
+              <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors bg-card">
+                <Label htmlFor="leaderboardRestrictionSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                  <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><Award className="h-4 w-4 text-muted-foreground" /> Restrict Leaderboard to Admins</span>
+                  <span className="font-normal leading-snug text-muted-foreground text-xs">When enabled, only administrators will have visibility of the leaderboard.</span>
+                </Label>
+                <Switch
+                  id="leaderboardRestrictionSwitch"
+                  checked={isLeaderboardRestricted}
+                  onCheckedChange={handleToggleLeaderboardRestriction}
+                  disabled={isSubmittingLeaderboardRestriction}
+                  aria-label="Toggle leaderboard restriction"
+                />
+              </div>
 
-                  {/* Switch 3: Order Avatars */}
-                  <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
-                    <Label htmlFor="showAvatarsSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                      <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><UserCheck className="h-4 w-4 text-muted-foreground" /> Show Avatars in Orders</span>
-                      <span className="font-normal leading-snug text-muted-foreground text-xs">Display user profile images in the CRM Contact and DR columns of the orders list.</span>
-                    </Label>
-                    <Switch
-                      id="showAvatarsSwitch"
-                      checked={isShowAvatarsEnabled}
-                      onCheckedChange={handleToggleShowAvatars}
-                      disabled={isSubmittingShowAvatars}
-                      aria-label="Toggle avatars in orders"
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              {/* Switch 3: Order Avatars */}
+              <div className="flex items-center justify-between space-x-2 p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors bg-card">
+                <Label htmlFor="showAvatarsSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                  <span className="font-semibold text-card-foreground text-sm flex items-center gap-2"><UserCheck className="h-4 w-4 text-muted-foreground" /> Show Avatars in Orders</span>
+                  <span className="font-normal leading-snug text-muted-foreground text-xs">Display user profile images in the CRM Contact and DR columns of the orders list.</span>
+                </Label>
+                <Switch
+                  id="showAvatarsSwitch"
+                  checked={isShowAvatarsEnabled}
+                  onCheckedChange={handleToggleShowAvatars}
+                  disabled={isSubmittingShowAvatars}
+                  aria-label="Toggle avatars in orders"
+                />
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="approvals" className="space-y-6 outline-none">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Palette className="h-6 w-6 text-primary" /> Client Approval Statuses</h3>
-              <p className="text-muted-foreground text-sm mt-0.5">Configure which order statuses allow the client to approve designs or documents.</p>
-            </div>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
@@ -800,11 +780,7 @@ export default function CustomAccessPage() {
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-6 outline-none">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-card-foreground flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" /> User Roles Management</h3>
-              <p className="text-muted-foreground text-sm mt-0.5">Drag cards to change role priority. System roles cannot be deleted.</p>
-            </div>
+          <div className="flex justify-end mb-4">
             <Button onClick={handleOpenAddRole} size="sm">
               <Plus className="h-4 w-4 mr-2" /> Add Custom Role
             </Button>
