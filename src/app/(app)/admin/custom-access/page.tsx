@@ -89,6 +89,36 @@ const getStageBadgeClass = (stage: ProjectStatusType) => {
   }
 };
 
+const MAPPED_STAGE_STATUS_IDS = new Set([
+  'order-submitted',
+  'co-clearance',
+  'cancelled',
+  'ready-for-design',
+  'on-hold',
+  'ready-for-logistics',
+  'shipped',
+  'delivered',
+  'docs-pending',
+  'project-pending',
+  'business-closed'
+]);
+
+const mapStatusToStageName = (statusId: string, statusName: string): string => {
+  const sId = statusId.toLowerCase();
+  if (sId === 'order-submitted') return 'CR Clearance';
+  if (sId === 'co-clearance') return 'CO Clearance';
+  if (sId === 'cancelled') return 'Cancel';
+  if (sId === 'ready-for-design') return 'On Design';
+  if (sId === 'on-hold') return 'On Hold';
+  if (sId === 'ready-for-logistics') return 'Logistics';
+  if (sId === 'shipped') return 'Courier';
+  if (sId === 'delivered') return 'Delivered';
+  if (sId === 'docs-pending') return 'Docs Pending';
+  if (sId === 'project-pending') return 'Project Pending';
+  if (sId === 'business-closed') return 'Business Closed';
+  return statusName;
+};
+
 export default function CustomAccessPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
@@ -378,14 +408,11 @@ export default function CustomAccessPage() {
   }, [crmUsers, crmSearchTerm]);
 
   const filteredApprovalStatuses = useMemo(() => {
-    return allStatuses.filter(status => {
-      const normalizedName = status.name.toLowerCase().trim();
-      return PROJECT_STAGES.some(stage => {
-        const normalizedStage = stage.toLowerCase().trim();
-        if (normalizedStage === 'cancel' && normalizedName === 'cancelled') return true;
-        if (normalizedStage === 'cancelled' && normalizedName === 'cancel') return true;
-        return normalizedStage === normalizedName;
-      });
+    const mapped = allStatuses.filter(status => MAPPED_STAGE_STATUS_IDS.has(status.id));
+    return mapped.sort((a, b) => {
+      const aStage = mapStatusToStageName(a.id, a.name);
+      const bStage = mapStatusToStageName(b.id, b.name);
+      return PROJECT_STAGES.indexOf(aStage as any) - PROJECT_STAGES.indexOf(bStage as any);
     });
   }, [allStatuses]);
 
@@ -748,7 +775,7 @@ export default function CustomAccessPage() {
                         <TableRow key={status.id} className="hover:bg-muted/30">
                           <TableCell className="pl-6 font-medium flex items-center gap-2 h-12">
                             <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: status.color }} />
-                            <span className="text-sm font-medium text-card-foreground">{status.name}</span>
+                            <span className="text-sm font-medium text-card-foreground">{mapStatusToStageName(status.id, status.name)}</span>
                           </TableCell>
                           <TableCell className="text-center">
                             <Checkbox
