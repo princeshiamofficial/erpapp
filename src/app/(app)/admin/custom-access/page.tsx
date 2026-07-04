@@ -509,19 +509,49 @@ export default function CustomAccessPage() {
 
           <div className="flex items-center gap-2">
             {activeTab === 'permissions' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowPipelineAccess(!showPipelineAccess)}
-                className="flex items-center gap-2 shadow-sm"
-              >
-                {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-                {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowPipelineAccess(!showPipelineAccess)}
+                  className="flex items-center gap-2 shadow-sm"
+                >
+                  {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                  {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
+                </Button>
+                <Button onClick={handleSaveAllPermissions} disabled={isLoading || isSubmittingAllPermissions} size="sm">
+                  {isSubmittingAllPermissions ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : "Save Permissions"}
+                </Button>
+              </>
+            )}
+            {activeTab === 'approvals' && (
+              <Button onClick={handleSaveAllApprovalStatuses} disabled={isLoading || isSubmittingAllApprovalStatuses} size="sm">
+                {isSubmittingAllApprovalStatuses ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : "Save Approval Statuses"}
               </Button>
             )}
             {activeTab === 'roles' && (
               <Button onClick={handleOpenAddRole} size="sm">
                 <Plus className="h-4 w-4 mr-2" /> Add Custom Role
+              </Button>
+            )}
+            {activeTab === 'stages' && (
+              <Button onClick={handleSaveProjectStageAccess} disabled={isLoading || isSubmittingProjectStageAccess} size="sm">
+                {isSubmittingProjectStageAccess ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : "Save Stage Permissions"}
               </Button>
             )}
           </div>
@@ -589,16 +619,7 @@ export default function CustomAccessPage() {
             )}
           </div>
 
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={handleSaveAllPermissions} disabled={isLoading || isSubmittingAllPermissions}>
-              {isSubmittingAllPermissions ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving Permissions...
-                </>
-              ) : "Save Permissions"}
-            </Button>
-          </div>
+
 
           {showPipelineAccess && (
             <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
@@ -776,16 +797,7 @@ export default function CustomAccessPage() {
             )}
           </div>
 
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={handleSaveAllApprovalStatuses} disabled={isLoading || isSubmittingAllApprovalStatuses}>
-              {isSubmittingAllApprovalStatuses ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving Statuses...
-                </>
-              ) : "Save Approval Statuses"}
-            </Button>
-          </div>
+
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-6 outline-none">
@@ -875,11 +887,7 @@ export default function CustomAccessPage() {
             </Table>
           </div>
 
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={handleSaveProjectStageAccess} disabled={isLoading || isSubmittingProjectStageAccess}>
-              {isSubmittingProjectStageAccess ? "Saving Stage Permissions..." : "Save Stage Permissions"}
-            </Button>
-          </div>
+
         </TabsContent>
       </Tabs>
 
