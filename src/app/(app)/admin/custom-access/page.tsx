@@ -61,6 +61,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -813,47 +814,40 @@ export default function CustomAccessPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative">
+            <CardContent className="p-6">
+              <div className="max-h-[800px] overflow-y-auto custom-scrollbar relative pr-2">
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card z-20 shadow-sm">
-                      <TableRow className="border-b border-border/50">
-                        <TableHead className="pl-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Role Name</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</TableHead>
-                        <TableHead className="text-right pr-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        [...Array(3)].map((_, i) => (
-                          <TableRow key={`role-skel-${i}`}>
-                            <TableCell className="pl-6 flex items-center gap-2"><Skeleton className="h-4 w-4 rounded" /><Skeleton className="h-6 w-32 rounded-full" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                            <TableCell className="text-right pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <SortableContext
-                          items={allRoles.map(r => r.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {allRoles.map(role => (
-                            <SortableRoleRow
-                              key={role.id}
-                              role={role}
-                              onEdit={handleOpenEditRole}
-                              onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
-                            />
-                          ))}
-                        </SortableContext>
-                      )}
-                    </TableBody>
-                  </Table>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {isLoading ? (
+                      [...Array(6)].map((_, i) => (
+                        <div key={`skel-role-${i}`} className="border border-border/30 rounded-lg p-5 space-y-3 bg-card shadow-sm">
+                          <div className="flex justify-between"><Skeleton className="h-6 w-24 rounded-full" /><Skeleton className="h-5 w-5" /></div>
+                          <div className="space-y-2 pt-2 border-t">
+                            <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-20" /></div>
+                            <div className="flex justify-between"><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-16" /></div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <SortableContext
+                        items={allRoles.map(r => r.id)}
+                        strategy={rectSortingStrategy}
+                      >
+                        {allRoles.map(role => (
+                          <SortableRoleCard
+                            key={role.id}
+                            role={role}
+                            onEdit={handleOpenEditRole}
+                            onDelete={(r) => { setRoleToDelete(r); setIsDeleteDialogOpen(true); }}
+                          />
+                        ))}
+                      </SortableContext>
+                    )}
+                  </div>
                 </DndContext>
               </div>
             </CardContent>
@@ -998,7 +992,7 @@ export default function CustomAccessPage() {
   );
 }
 
-function SortableRoleRow({
+function SortableRoleCard({
   role,
   onEdit,
   onDelete
@@ -1025,49 +1019,63 @@ function SortableRoleRow({
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style} className={cn(isDragging && "bg-muted shadow-lg")}>
-      <TableCell className="pl-6 py-3">
-        <div className="flex items-center gap-3">
-          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "border border-border/40 rounded-lg p-5 bg-card hover:bg-muted/10 transition-colors flex flex-col justify-between space-y-4 shadow-sm",
+        isDragging && "bg-muted shadow-lg border-primary/40"
+      )}
+    >
+      <div className="flex justify-between items-start">
+        <Badge
+          style={{
+            backgroundColor: role.color || '#6b7280',
+            color: getContrastTextColor(role.color || '#6b7280')
+          }}
+          className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
+        >
+          {role.name}
+        </Badge>
+        
+        <div className="flex items-center gap-1.5">
+          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 hover:bg-muted rounded transition-colors" title="Drag to reorder">
             <GripVertical className="h-4 w-4" />
           </button>
-          <Badge
-            style={{
-              backgroundColor: role.color || '#6b7280',
-              color: getContrastTextColor(role.color || '#6b7280')
-            }}
-            className="border-none px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight"
-          >
-            {role.name}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={() => onEdit(role)} className="cursor-pointer">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Role
+              </DropdownMenuItem>
+              {!role.isDefault && (
+                <DropdownMenuItem className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => onDelete(role)}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Role
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 pt-2 border-t border-border/30">
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-muted-foreground font-medium">Role ID</span>
+          <span className="font-mono text-xs text-card-foreground bg-muted px-2 py-0.5 rounded">{role.id}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-muted-foreground font-medium">Type</span>
+          <Badge variant={role.isDefault ? "secondary" : "outline"} className="text-[10px] h-5 px-2 uppercase tracking-wide">
+            {role.isDefault ? "System Default" : "Custom"}
           </Badge>
         </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant={role.isDefault ? "secondary" : "outline"} className="text-[10px] h-5.5 px-2 uppercase tracking-wide">
-          {role.isDefault ? "System Default" : "Custom"}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-right pr-6">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuItem onClick={() => onEdit(role)} className="cursor-pointer">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Role
-            </DropdownMenuItem>
-            {!role.isDefault && (
-              <DropdownMenuItem className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => onDelete(role)}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Role
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-    </TableRow>
+      </div>
+    </div>
   );
 }
