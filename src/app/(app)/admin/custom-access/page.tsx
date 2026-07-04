@@ -141,7 +141,7 @@ export default function CustomAccessPage() {
   const [showPipelineAccess, setShowPipelineAccess] = useState(false);
   const [designApprovalStatusIds, setDesignApprovalStatusIds] = useState<Set<string>>(new Set());
   const [docsApprovalStatusIds, setDocsApprovalStatusIds] = useState<Set<string>>(new Set());
-
+  const [activeTab, setActiveTab] = useState('permissions');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
@@ -497,27 +497,37 @@ export default function CustomAccessPage() {
     <div className="space-y-8">
 
 
-      <Tabs defaultValue="permissions" className="w-full">
-        <TabsList className="flex flex-wrap md:inline-flex h-auto w-full md:w-auto gap-1 bg-muted p-1 rounded-lg mb-6">
-          <TabsTrigger value="permissions" className="data-[state=active]:bg-background">Permissions</TabsTrigger>
-          <TabsTrigger value="settings" className="data-[state=active]:bg-background">General Settings</TabsTrigger>
-          <TabsTrigger value="approvals" className="data-[state=active]:bg-background">Approval Statuses</TabsTrigger>
-          <TabsTrigger value="roles" className="data-[state=active]:bg-background">User Roles</TabsTrigger>
-          <TabsTrigger value="stages" className="data-[state=active]:bg-background">Project Stages</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="permissions" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <TabsList className="flex flex-wrap md:inline-flex h-auto w-full md:w-auto gap-1 bg-muted p-1 rounded-lg">
+            <TabsTrigger value="permissions" className="data-[state=active]:bg-background">Permissions</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-background">General Settings</TabsTrigger>
+            <TabsTrigger value="approvals" className="data-[state=active]:bg-background">Approval Statuses</TabsTrigger>
+            <TabsTrigger value="roles" className="data-[state=active]:bg-background">User Roles</TabsTrigger>
+            <TabsTrigger value="stages" className="data-[state=active]:bg-background">Project Stages</TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-2">
+            {activeTab === 'permissions' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowPipelineAccess(!showPipelineAccess)}
+                className="flex items-center gap-2 shadow-sm"
+              >
+                {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
+              </Button>
+            )}
+            {activeTab === 'roles' && (
+              <Button onClick={handleOpenAddRole} size="sm">
+                <Plus className="h-4 w-4 mr-2" /> Add Custom Role
+              </Button>
+            )}
+          </div>
+        </div>
 
         <TabsContent value="permissions" className="space-y-6 outline-none">
-          <div className="flex justify-end mb-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowPipelineAccess(!showPipelineAccess)}
-              className="flex items-center gap-2 shadow-sm"
-            >
-              {showPipelineAccess ? <Filter className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-              {showPipelineAccess ? "Hide" : "Show"} Pipeline Access
-            </Button>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
@@ -779,11 +789,6 @@ export default function CustomAccessPage() {
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-6 outline-none">
-          <div className="flex justify-end mb-4">
-            <Button onClick={handleOpenAddRole} size="sm">
-              <Plus className="h-4 w-4 mr-2" /> Add Custom Role
-            </Button>
-          </div>
 
           <DndContext
             sensors={sensors}
