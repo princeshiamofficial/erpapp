@@ -75,7 +75,7 @@ export async function storeUserFCMTokenAction(
     if (success) {
       // Optionally revalidate users path if you display tokens on the users page or admin page
       // revalidatePath("/(app)/users");
-      revalidatePath("/(app)/admin/crm-target-settings"); // Revalidate settings page where tokens might be displayed
+      revalidatePath("/(app)/admin/settings"); // Revalidate settings page where tokens might be displayed
       return { success: true };
     }
     return { success: false, error: "Failed to store FCM token in database." };

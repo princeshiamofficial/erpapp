@@ -14,6 +14,7 @@ import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth, isAft
 import { Download, FileText } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { SalaryTransferPDF } from '@/components/payroll/SalaryTransferPDF';
+import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
 
 const PDFDownloadLink = dynamic(() => import('@react-pdf/renderer').then(mod => mod.PDFDownloadLink), {
   ssr: false,
@@ -47,21 +48,26 @@ export default function SalaryTransferPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
   const [unpaidMonths, setUnpaidMonths] = useState<string[]>([]);
+  const [bankName, setBankName] = useState('UNITED COMM. BANK');
+  const [bankAccountNo, setBankAccountNo] = useState('0872101000007053');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const monthStr = format(selectedDate, 'yyyy-MM');
-      const [fetchedEmployees, fetchedSalarySheet, fetchedAttendance, fetchedWeekendSettings] = await Promise.all([
+      const [fetchedEmployees, fetchedSalarySheet, fetchedAttendance, fetchedWeekendSettings, globalSettings] = await Promise.all([
         getEmployees(),
         getSalarySheetForMonth(monthStr),
         getAttendanceForMonth(selectedDate),
         getWeekendSettings(),
+        fetchGlobalSettings(),
       ]);
       setEmployees(fetchedEmployees);
       setSalarySheetData(fetchedSalarySheet);
       setAttendanceData(fetchedAttendance);
       setWeekendDays(fetchedWeekendSettings.days);
+      setBankName(globalSettings.salaryTransferBankName ?? 'UNITED COMM. BANK');
+      setBankAccountNo(globalSettings.salaryTransferBankAccountNo ?? '0872101000007053');
       
       const fetchedUnpaidMonths = await getUnpaidMonthsAction();
       setUnpaidMonths(fetchedUnpaidMonths);
@@ -248,7 +254,7 @@ export default function SalaryTransferPage() {
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem asChild className="cursor-pointer">
                 <PDFDownloadLink
-                  document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} version="v1" />}
+                  document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} version="v1" bankName={bankName} bankAccountNo={bankAccountNo} />}
                   fileName={`salary_transfer_v1_${format(selectedDate, 'MMM_yyyy')}.pdf`}
                 >
                   {({ loading }) => (
@@ -261,7 +267,7 @@ export default function SalaryTransferPage() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <PDFDownloadLink
-                  document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} version="v2" />}
+                  document={<SalaryTransferPDF data={unpaidEmployeesData} selectedDate={selectedDate} totalAmount={totalPayableAmount} version="v2" bankName={bankName} bankAccountNo={bankAccountNo} />}
                   fileName={`salary_transfer_v2_${format(selectedDate, 'MMM_yyyy')}.pdf`}
                 >
                   {({ loading }) => (
@@ -289,7 +295,7 @@ export default function SalaryTransferPage() {
                 <p>Salary Month : <span className="text-red-600 font-semibold">{format(selectedDate, 'MMMM yyyy')}</span></p>
               </div>
               <div className="px-2 mt-1">
-                <p>Bank Name : <span className="text-red-600 font-semibold">UNITED COMM. BANK (A/C 0872101000007053)</span></p>
+                <p>Bank Name : <span className="text-red-600 font-semibold">{bankName} (A/C {bankAccountNo})</span></p>
               </div>
            </div>
 

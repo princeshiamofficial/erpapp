@@ -126,7 +126,7 @@ const navItems: NavItem[] = [
       { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/admin/custom-access", label: "Custom Access", icon: Shield, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
-      { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] },
+      { href: "/admin/settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/admin/stock-reports", label: "Stock Reports", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"] },

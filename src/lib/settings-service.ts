@@ -86,6 +86,8 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   isCourierNoteVisible: true,
   designApprovalStatusIds: [],
   docsApprovalStatusIds: [],
+  salaryTransferBankName: "UNITED COMM. BANK",
+  salaryTransferBankAccountNo: "0872101000007053",
 };
 
 export async function getGlobalSettings(): Promise<GlobalSettings> {
@@ -230,4 +232,11 @@ export async function setDesignApprovalStatusIds(statusIds: string[]): Promise<b
 
 export async function setDocsApprovalStatusIds(statusIds: string[]): Promise<boolean> {
   return updateSettings({ docsApprovalStatusIds: statusIds });
+}
+
+export async function setSalaryTransferBankSettings(bankName: string | null, accountNo: string | null): Promise<boolean> {
+  return updateSettings({
+    salaryTransferBankName: bankName,
+    salaryTransferBankAccountNo: accountNo,
+  });
 }

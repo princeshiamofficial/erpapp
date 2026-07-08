@@ -35,7 +35,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   '/crm/sow': 'SOW',
   '/crm/all-districts-data': 'All Districts Data',
   '/deliveries': 'Deliveries',
-  '/admin/crm-target-settings': 'CRM Target Settings',
+  '/admin/settings': 'Application Settings',
   '/admin/statuses': 'Order Status Management',
   '/admin/service-management': 'Service Management',
   '/admin/stock-reports': 'Stock Reports',

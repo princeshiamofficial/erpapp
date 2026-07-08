@@ -316,6 +316,8 @@ export interface GlobalSettings {
   isCourierNoteVisible?: boolean;
   designApprovalStatusIds?: string[];
   docsApprovalStatusIds?: string[];
+  salaryTransferBankName?: string | null;
+  salaryTransferBankAccountNo?: string | null;
 }
 
 export interface TransactionCategory {

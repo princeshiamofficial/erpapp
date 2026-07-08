@@ -88,7 +88,7 @@ export async function updateCompletionStatusIdsAction(ids: string[]): Promise<{ 
   try {
     const success = await setCrmCompletionStatusIds(ids);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/(app)/dashboard");
       revalidatePath("/(app)/leaderboard");
       return { success: true };
@@ -104,7 +104,7 @@ export async function updateCommentsVisibilityAction(isVisible: boolean): Promis
   try {
     const success = await setCommentsVisibility(isVisible);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/track/[trackingId]", "layout");
       return { success: true };
     }
@@ -119,7 +119,7 @@ export async function updateRolesAllowedToEditOrdersAction(roles: UserRole[]): P
   try {
     const success = await setRolesAllowedToEditOrders(roles);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/(app)/orders");
       return { success: true };
     }
@@ -134,7 +134,7 @@ export async function updateRolesAllowedToDeleteOrdersAction(roles: UserRole[]):
   try {
     const success = await setRolesAllowedToDeleteOrders(roles);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/(app)/orders");
       return { success: true };
     }
@@ -149,7 +149,7 @@ export async function updateRolesAllowedToViewFinancialsAction(roles: UserRole[]
   try {
     const success = await setRolesAllowedToViewFinancials(roles);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/track/[trackingId]", "layout");
       return { success: true };
     }
@@ -232,7 +232,7 @@ export async function updateToastSoundUrlAction(soundUrl: string | null): Promis
   try {
     const success = await setToastSoundUrl(soundUrl);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       return { success: true };
     }
     return { success: false, error: "Failed to update toast sound URL in database." };
@@ -247,7 +247,7 @@ export async function updateLeaderboardBackgroundImageUrlAction(imageUrl: string
 
     const success = await setLeaderboardBackgroundImageUrl(imageUrl);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/(app)/leaderboard");
       return { success: true };
     }
@@ -273,7 +273,7 @@ export async function updateExpenseLoggingPermissionsAction(permissions: Expense
 
     const success = await setExpenseLoggingPermissions(permissions);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/(app)/finance-manager");
       return { success: true };
     }
@@ -290,7 +290,7 @@ export async function updateProjectStageAccessAction(
   try {
     const success = await setProjectStageAccess(permissions);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/(app)/projects");
       return { success: true };
     }
@@ -345,7 +345,7 @@ export async function updateDrAssignmentNotificationTemplatesAction(
   try {
     const success = await setDrAssignmentNotificationTemplates(title, body);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       return { success: true };
     }
     return { success: false, error: "Failed to update DR assignment notification templates in database." };
@@ -363,7 +363,7 @@ export async function updateTelegramSettingsAction(
   try {
     const success = await setTelegramSettings(botToken, chatIds, redirectDomain);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       return { success: true };
     }
     return { success: false, error: "Failed to update Telegram settings in database." };
@@ -381,7 +381,7 @@ export async function updateRoleBasedTargetsAction(targets: RoleBasedTarget): Pr
   try {
     const success = await setRoleBasedTargets(targets);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/admin/settings");
       revalidatePath("/(app)/dashboard");
       return { success: true };
     }

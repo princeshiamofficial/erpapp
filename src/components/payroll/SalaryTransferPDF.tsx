@@ -203,6 +203,8 @@ interface SalaryTransferPDFProps {
   selectedDate: Date;
   totalAmount: number;
   version?: 'v1' | 'v2';
+  bankName?: string;
+  bankAccountNo?: string;
 }
 
 const chunkArray = <T,>(arr: T[], size: number): T[][] => {
@@ -213,7 +215,7 @@ const chunkArray = <T,>(arr: T[], size: number): T[][] => {
   return chunks;
 };
 
-export const SalaryTransferPDF = ({ data, selectedDate, totalAmount, version = 'v1' }: SalaryTransferPDFProps) => {
+export const SalaryTransferPDF = ({ data, selectedDate, totalAmount, version = 'v1', bankName = 'UNITED COMM. BANK', bankAccountNo = '0872101000007053' }: SalaryTransferPDFProps) => {
   const getChunks = (arr: any[]) => {
     const chunks = [];
     if (arr.length > 0) {
@@ -258,7 +260,7 @@ export const SalaryTransferPDF = ({ data, selectedDate, totalAmount, version = '
                   <Text>Salary Month : <Text style={styles.month}>{format(selectedDate, 'MMMM yyyy')}</Text></Text>
                 </View>
                 <View style={{ marginTop: 2 }}>
-                  <Text>Bank Name : <Text style={styles.bankInfo}>UNITED COMM. BANK (A/C 0872101000007053)</Text></Text>
+                  <Text>Bank Name : <Text style={styles.bankInfo}>{bankName} (A/C {bankAccountNo})</Text></Text>
                 </View>
               </View>
             </>
