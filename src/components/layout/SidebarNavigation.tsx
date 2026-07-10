@@ -77,6 +77,7 @@ const navItems: NavItem[] = [
       { href: "/follow-up", label: "Follow-UP", icon: Phone, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/order-pulse", label: "OrderPulse", icon: Activity, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/library", label: "Library", icon: Archive, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "/menu-verse", label: "MenuVerse", icon: GlobeLock, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
