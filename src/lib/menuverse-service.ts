@@ -15,6 +15,8 @@ export const initMenuverseTable = async () => {
         restaurant_name VARCHAR(255) NOT NULL,
         role VARCHAR(100) NOT NULL,
         restaurant_type VARCHAR(100),
+        address TEXT,
+        number_of_tables INT,
         number_of_branches INT,
         ip_address VARCHAR(45),
         comment TEXT,
@@ -24,6 +26,12 @@ export const initMenuverseTable = async () => {
     `);
     
     // Attempt to add the column for existing tables seamlessly
+    try {
+      await query(`ALTER TABLE ${MENUVERSE_REGISTRATIONS_TABLE} ADD COLUMN address TEXT`);
+    } catch (e) {}
+    try {
+      await query(`ALTER TABLE ${MENUVERSE_REGISTRATIONS_TABLE} ADD COLUMN number_of_tables INT`);
+    } catch (e) {}
     try {
       await query(`ALTER TABLE ${MENUVERSE_REGISTRATIONS_TABLE} ADD COLUMN ip_address VARCHAR(45)`);
     } catch (e) {}
