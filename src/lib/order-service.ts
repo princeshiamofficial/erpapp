@@ -1243,13 +1243,13 @@ export const getOrderPulsesPaginated = async (
     `;
 
     const filterConditions = ['ro.rn = 1'];
-    const filterParams = [...params, ...params]; // Params for rankedQuery and countQuery
+    const extraFilterParams: any[] = [];
 
     if (pulseStatusFilter === 'Active') {
       filterConditions.push(`TIMESTAMPDIFF(MONTH, ro.lastOrderDate, NOW()) < 3`);
     } else if (pulseStatusFilter === 'Inactive') {
       filterConditions.push(`TIMESTAMPDIFF(MONTH, ro.lastOrderDate, NOW()) >= ?`);
-      filterParams.push(inactivityThresholdMonths);
+      extraFilterParams.push(inactivityThresholdMonths);
     }
 
     if (searchTerm) {
@@ -1261,7 +1261,7 @@ export const getOrderPulsesPaginated = async (
         ro.crmUserName LIKE ? OR 
         ro.lastOrderStatus LIKE ?
       )`);
-      filterParams.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+      extraFilterParams.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
     }
 
     const filterWhere = filterConditions.join(' AND ');
@@ -1294,13 +1294,14 @@ export const getOrderPulsesPaginated = async (
       WHERE ${filterWhere}
     `;
 
-    const totalResult = await query<any[]>(totalCountQuery, filterParams);
+    const totalParams = [...params, ...extraFilterParams];
+    const totalResult = await query<any[]>(totalCountQuery, totalParams);
     const total = totalResult[0]?.total || 0;
 
     const offset = Math.max(0, (page - 1) * limit);
-    const limitParams = [...filterParams, Number(limit), Number(offset)];
+    const finalParams = [...params, ...params, ...extraFilterParams, Number(limit), Number(offset)];
     
-    const rows = await query<any[]>(finalQuery, limitParams);
+    const rows = await query<any[]>(finalQuery, finalParams);
 
     const pulses: OrderPulse[] = rows.map(row => {
       let status = 'Active';
