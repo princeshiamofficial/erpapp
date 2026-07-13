@@ -247,15 +247,7 @@ export default function EventsPage() {
       baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
 
-    // Search term filter
-    if (searchTerm) {
-      const queryLower = searchTerm.toLowerCase();
-      baseLeads = baseLeads.filter(lead =>
-        (lead.contactName && lead.contactName.toLowerCase().includes(queryLower)) ||
-        (lead.businessName && lead.businessName.toLowerCase().includes(queryLower)) ||
-        (lead.phone && lead.phone.toLowerCase().includes(queryLower))
-      );
-    }
+    // Search term is now handled entirely on the server side via debouncedSearchTerm
 
     // Sort table view by schedule date ascending (closest events first)
     return baseLeads.sort((a, b) => {

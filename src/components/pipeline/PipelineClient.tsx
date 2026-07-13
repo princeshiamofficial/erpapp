@@ -253,17 +253,7 @@ export function PipelineClient() {
       baseLeads = baseLeads.filter(lead => lead.category === categoryFilter);
     }
 
-    // Search term filter
-    if (searchTerm) {
-      const lowercasedFilter = searchTerm.toLowerCase();
-      baseLeads = baseLeads.filter(lead =>
-        (lead.contactName && lead.contactName.toLowerCase().includes(lowercasedFilter)) ||
-        (lead.businessName && lead.businessName.toLowerCase().includes(lowercasedFilter)) ||
-        (lead.phone && lead.phone.toLowerCase().includes(lowercasedFilter)) ||
-        (lead.source && lead.source.toLowerCase().includes(lowercasedFilter)) ||
-        (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
-      );
-    }
+    // Search term is now handled entirely on the server side via debouncedSearchTerm
 
     return baseLeads.sort((a, b) => new Date(b.categoryUpdatedAt || b.date).getTime() - new Date(a.categoryUpdatedAt || a.date).getTime());
 

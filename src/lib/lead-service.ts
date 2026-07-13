@@ -53,11 +53,11 @@ export const getLeads = async (
       params.push(`%${searchTerm}%`);
     }
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${LEADS_TABLE} ${whereClause} ORDER BY id DESC`, params);
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${LEADS_TABLE} ${whereClause} ORDER BY COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.categoryUpdatedAt')), ''), JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date'))) DESC`, params);
     return rows.map(row => ({
       id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
-    } as Lead)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } as Lead)).sort((a, b) => new Date(b.categoryUpdatedAt || b.date).getTime() - new Date(a.categoryUpdatedAt || a.date).getTime());
   } catch (error) {
     console.error(`Error fetching leads from MySQL:`, error);
     return [];
@@ -192,7 +192,7 @@ export const getLeadsPaginated = async (
 
     const offset = Math.max(0, (page - 1) * limit);
     const rows = await query<any[]>(
-      `SELECT id, data_json FROM ${LEADS_TABLE} ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+      `SELECT id, data_json FROM ${LEADS_TABLE} ${whereClause} ORDER BY COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.categoryUpdatedAt')), ''), JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date'))) DESC LIMIT ? OFFSET ?`,
       [...params, Number(limit), Number(offset)]
     );
 

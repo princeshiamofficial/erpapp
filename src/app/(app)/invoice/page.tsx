@@ -65,6 +65,13 @@ export default function InvoiceListPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [ordersToPrint, setOrdersToPrint] = useState<TrackingLink[] | null>(null);
@@ -84,7 +91,7 @@ export default function InvoiceListPage() {
     setIsLoading(true);
     try {
       const promises: any[] = [
-        getOrders(),
+        getOrders(undefined, undefined, undefined, undefined, undefined, undefined, debouncedSearchTerm),
       ];
 
       if (allStatuses.length === 0) promises.push(getStatuses());
@@ -101,7 +108,7 @@ export default function InvoiceListPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast, allStatuses.length, allUsers.length]);
+  }, [currentUser, toast, allStatuses.length, allUsers.length, debouncedSearchTerm]);
 
   useEffect(() => {
     fetchInvoiceData();
@@ -114,14 +121,8 @@ export default function InvoiceListPage() {
       result = result.filter(order => order.currentStatus === selectedStatus);
     }
 
-    if (!searchTerm) return result;
-
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return result.filter(order =>
-      (order.id || '').toLowerCase().includes(lowerSearchTerm) ||
-      (order.companyName || '').toLowerCase().includes(lowerSearchTerm) ||
-      (order.phoneNumber || '').toLowerCase().includes(lowerSearchTerm)
-    );
+    // Search term is now handled entirely on the server side via debouncedSearchTerm
+    return result;
   }, [allOrders, searchTerm, selectedStatus]);
 
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);

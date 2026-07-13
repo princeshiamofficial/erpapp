@@ -268,11 +268,7 @@ export default function SOWPage() {
   const sortedAndFilteredData = useMemo(() => {
     let sortableItems = [...sowData];
 
-    if (searchTerm) {
-        sortableItems = sortableItems.filter(item => 
-            item.businessName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }
+    // Search term is now handled entirely on the server side via debouncedSearchTerm
     
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {

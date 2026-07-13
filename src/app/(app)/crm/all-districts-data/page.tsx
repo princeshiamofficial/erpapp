@@ -246,19 +246,9 @@ export default function AllDistrictsDataPage() {
     return districtData.map(division => {
       const filteredDistricts = division.districts.map(district => {
         const filteredEntries = district.entries.filter(entry => {
-          // Search Term Filter
-          if (searchTerm) {
-            return (
-              entry.jobId.toLowerCase().includes(lowercasedSearchTerm) ||
-              entry.businessName.toLowerCase().includes(lowercasedSearchTerm) ||
-              entry.address.toLowerCase().includes(lowercasedSearchTerm) ||
-              entry.phone.toLowerCase().includes(lowercasedSearchTerm) ||
-              district.name.toLowerCase().includes(lowercasedSearchTerm) ||
-              division.division.toLowerCase().includes(lowercasedSearchTerm)
-            );
-          }
+          // Search term filtering is handled entirely on the server side via debouncedSearchTerm
           // If no search term, only system admins can see the data by default
-          return isSystemAdmin;
+          return isSystemAdmin || !!searchTerm;
         });
         return { ...district, entries: filteredEntries };
       }).filter(district => district.entries.length > 0);
