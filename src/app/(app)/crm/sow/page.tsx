@@ -12,8 +12,10 @@ import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getSowEntries } from '@/lib/sow-service'; // Import new SOW service
 import { PackageSearch, ListChecks, ArrowUpDown, Phone, MapPin, PlusCircle } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { DateRangePicker3 } from '@/components/dashboard/date-range-picker3';
+import type { DateRange } from "react-day-picker";
 import {
   Tooltip,
   TooltipContent,
@@ -200,6 +202,14 @@ export default function SOWPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBusiness, setSelectedBusiness] = useState<SowData | null>(null);
@@ -208,10 +218,14 @@ export default function SOWPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
+      const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const role = currentUser?.role;
+      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
       const [fetchedOrders, fetchedSettings, fetchedSowEntries] = await Promise.all([
-        getOrders(),
+        getOrders(startStr, endStr, role, userId, undefined, undefined, debouncedSearchTerm),
         getGlobalSettings(),
-        getSowEntries(),
+        getSowEntries(startStr, endStr, role, userId, debouncedSearchTerm),
       ]);
       const data = generateSowData(fetchedOrders, fetchedSowEntries, fetchedSettings);
       setSowData(data);
@@ -226,7 +240,7 @@ export default function SOWPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, selectedDateRange, currentUser, debouncedSearchTerm]);
 
 
    useEffect(() => {
@@ -394,6 +408,7 @@ export default function SOWPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full sm:w-auto sm:max-w-xs"
                 />
+                <DateRangePicker3 initialRange={selectedDateRange} onDateRangeChange={(range) => setSelectedDateRange(range)} />
                 {canCreateOrder && (
                   <NewSowDialog
                     currentUser={currentUser}

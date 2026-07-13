@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { useSocket } from '@/contexts/socket-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners, DragOverlay } from '@dnd-kit/core';
-import { getLeads, updateLeadAction, deleteLeadAction, transferSelectedLeadsAction } from '@/app/(app)/pipeline/actions';
+import { getLeads, getLeadsPaginatedAction, updateLeadAction, deleteLeadAction, transferSelectedLeadsAction } from '@/app/(app)/pipeline/actions';
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Button } from '@/components/ui/button';
@@ -124,6 +124,7 @@ export function PipelineClient() {
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'calendar' | 'report'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE);
+  const [totalLeadsCount, setTotalLeadsCount] = useState<number>(0);
 
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),
@@ -137,6 +138,13 @@ export function PipelineClient() {
   const [isTransferSelectedDialogOpen, setIsTransferSelectedDialogOpen] = useState(false);
 
 
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
@@ -149,20 +157,49 @@ export function PipelineClient() {
       setIsLoading(true);
     }
     try {
-      const [fetchedLeads, fetchedUsers, fetchedSettings] = await Promise.all([
-        getLeads(),
+      const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const role = currentUser?.role;
+      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id;
+
+      let fetchedLeads: Lead[] = [];
+      let fetchedTotal = 0;
+
+      const [usersData, settingsData] = await Promise.all([
         getUsers(),
         getGlobalSettings()
       ]);
-      setLeads(fetchedLeads.sort((a, b) => new Date(b.categoryUpdatedAt || b.date).getTime() - new Date(a.categoryUpdatedAt || a.date).getTime()));
-      setAllUsers(fetchedUsers);
-      setGlobalSettings(fetchedSettings);
+
+      if (viewMode === 'list' || viewMode === 'report') {
+        const paginatedResult = await getLeadsPaginatedAction(
+          currentPage,
+          itemsPerPage,
+          startStr,
+          endStr,
+          role,
+          userId,
+          categoryFilter,
+          activityFilter,
+          debouncedSearchTerm
+        );
+        fetchedLeads = paginatedResult.leads;
+        fetchedTotal = paginatedResult.total;
+      } else {
+        fetchedLeads = await getLeads(startStr, endStr, role, userId, categoryFilter, activityFilter, debouncedSearchTerm);
+        fetchedTotal = fetchedLeads.length;
+      }
+
+      setLeads(fetchedLeads);
+      setTotalLeadsCount(fetchedTotal);
+      setAllUsers(usersData);
+      setGlobalSettings(settingsData);
     } catch (error) {
-      toast({ title: "Error fetching data", description: "Could not load pipeline or user data.", variant: "destructive" });
+      console.error("Failed to fetch leads or users:", error);
+      toast({ title: "Error", description: "Could not load data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, [toast, currentUser]);
+  }, [currentUser, toast, selectedDateRange, selectedCrmId, viewMode, currentPage, itemsPerPage, categoryFilter, activityFilter, debouncedSearchTerm]);
 
   useEffect(() => {
     fetchLeadsAndUsers();
@@ -204,23 +241,6 @@ export function PipelineClient() {
       baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
 
-    // Date filter
-    if (selectedDateRange?.from) {
-      const startDate = startOfDay(selectedDateRange.from);
-      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-
-      baseLeads = baseLeads.filter(lead => {
-        const dateToFilter = viewMode === 'calendar' ? lead.schedule : (lead.categoryUpdatedAt || lead.date);
-        if (!dateToFilter) return false;
-        try {
-          const leadDate = parseISO(dateToFilter);
-          return isWithinInterval(leadDate, { start: startDate, end: endDate });
-        } catch {
-          return false;
-        }
-      });
-    }
-
     // Activity filter
     if (activityFilter !== 'all') {
       baseLeads = baseLeads.filter(lead =>
@@ -249,12 +269,17 @@ export function PipelineClient() {
 
   }, [leads, searchTerm, selectedCrmId, selectedDateRange, categoryFilter, viewMode, activityFilter]);
 
-  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const totalPages = (viewMode === 'list' || viewMode === 'report')
+    ? Math.ceil(totalLeadsCount / itemsPerPage)
+    : Math.ceil(filteredLeads.length / itemsPerPage);
 
   const paginatedLeads = useMemo(() => {
+    if (viewMode === 'list' || viewMode === 'report') {
+      return filteredLeads;
+    }
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredLeads.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredLeads, currentPage, itemsPerPage]);
+  }, [filteredLeads, currentPage, itemsPerPage, viewMode]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -285,6 +310,15 @@ export function PipelineClient() {
     });
     return grouped;
   }, [filteredLeads]);
+
+  const kanbanServerFilters = useMemo(() => ({
+    startDate: (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined,
+    endDate: (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined,
+    role: currentUser?.role,
+    userId: (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id,
+    activity: activityFilter,
+    searchTerm: debouncedSearchTerm,
+  }), [selectedDateRange, currentUser?.role, currentUser?.id, selectedCrmId, activityFilter, debouncedSearchTerm]);
 
   const handleOpenAddDialog = () => {
     setEditingLead(null);
@@ -596,6 +630,7 @@ export function PipelineClient() {
                   onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} 
                   onHistoryView={openHistoryDialog}
                   allUsers={allUsers}
+                  serverFilters={kanbanServerFilters}
                 />
               ))}
             </div>
@@ -613,7 +648,7 @@ export function PipelineClient() {
               onSelectAll={handleSelectAll}
             />
             <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
                 <span>Show</span>
                 <Select value={itemsPerPage.toString()} onValueChange={(val) => { setItemsPerPage(Number(val)); setCurrentPage(1); }}>
                   <SelectTrigger className="h-8 w-[70px]">
@@ -625,7 +660,7 @@ export function PipelineClient() {
                     ))}
                   </SelectContent>
                 </Select>
-                <span>of {filteredLeads.length} leads</span>
+                <span className="whitespace-nowrap">of {viewMode === 'list' ? totalLeadsCount : filteredLeads.length} leads</span>
               </div>
 
               {totalPages > 1 && (
@@ -654,7 +689,15 @@ export function PipelineClient() {
             </div>
           </>
         ) : viewMode === 'report' ? (
-          <LeadReportView leads={filteredLeads} allUsers={allUsers} />
+          <LeadReportView
+            leads={paginatedLeads}
+            allUsers={allUsers}
+            serverPagination={{
+              currentPage,
+              totalPages,
+              onPageChange: (p) => setCurrentPage(p),
+            }}
+          />
         ) : (
           <div className="flex-1 mt-4 flex flex-col">
             <LeadCalendarView

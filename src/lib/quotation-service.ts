@@ -7,9 +7,16 @@ import { parseISO } from 'date-fns';
 
 const QUOTATIONS_TABLE = 'quotations';
 
-export const getQuotations = async (): Promise<TrackingLink[]> => {
+export const getQuotations = async (searchTerm?: string): Promise<TrackingLink[]> => {
   try {
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${QUOTATIONS_TABLE} WHERE is_deleted = FALSE ORDER BY id DESC`);
+    let queryStr = `SELECT id, data_json FROM ${QUOTATIONS_TABLE} WHERE is_deleted = FALSE`;
+    const params: any[] = [];
+    if (searchTerm) {
+      queryStr += ` AND data_json LIKE ?`;
+      params.push(`%${searchTerm}%`);
+    }
+    queryStr += ` ORDER BY id DESC`;
+    const rows = await query<any[]>(queryStr, params);
     return rows.map(row => ({
       id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)

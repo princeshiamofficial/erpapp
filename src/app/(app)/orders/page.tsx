@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { getStatuses } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
-import { getOrders } from '@/lib/order-service';
+import { getOrders, getOrdersWithTotal } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -109,7 +109,13 @@ export default function OrdersPage() {
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
   const [orderToDownload, setOrderToDownload] = useState<TrackingLink | null>(null);
 
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [totalOrders, setTotalOrders] = useState(0);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const fetchOrderData = useCallback(async () => {
     if (!currentUser) {
@@ -119,13 +125,19 @@ export default function OrdersPage() {
       setIsLoading(true);
     }
     try {
-      const [fetchedOrders, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([
-        getOrders(),
+      const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const role = currentUser.role;
+      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser.id;
+
+      const [fetchedResult, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([
+        getOrdersWithTotal(startStr, endStr, role, userId, currentPage, ITEMS_PER_PAGE, debouncedSearchTerm, viewType),
         getStatuses(),
         getGlobalSettings(),
         getUsers()
       ]);
-      setOrders(fetchedOrders);
+      setOrders(fetchedResult.orders);
+      setTotalOrders(fetchedResult.total);
       setAllStatuses(fetchedStatuses);
       setGlobalAppSettings(fetchedSettings);
       
@@ -141,7 +153,7 @@ export default function OrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast, orders.length]);
+  }, [currentUser, toast, selectedDateRange, debouncedSearchTerm, currentPage, viewType]);
 
   useEffect(() => {
     setIsClient(true);
@@ -171,74 +183,9 @@ export default function OrdersPage() {
     setSelectedDateRange(range);
   };
 
-  const filteredOrders = useMemo(() => {
-    let result = orders;
-    if (currentUser?.role === 'CRM') {
-      result = result.filter(order => order.crmUserId === currentUser.id);
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-      result = result.filter(order => order.designerRepresentativeId === currentUser.id);
-    }
-
-    if (selectedDateRange?.from) {
-      const startDate = startOfDay(selectedDateRange.from);
-      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-      result = result.filter(order => {
-        try {
-          const orderDate = parseISO(order.createdAt);
-          return isWithinInterval(orderDate, { start: startDate, end: endDate });
-        } catch {
-          return false;
-        }
-      });
-    }
-
-    if (viewType === 'reorders') {
-      // Calculate jobCounts across ALL orders (not just the currently filtered 'result')
-      // to correctly identify reorders that span across different months/filters.
-      const jobCounts = orders.reduce((acc, order) => {
-        const jobId = (order.companyName || '').split(' • ')[0].trim();
-        if (jobId) {
-          acc[jobId] = (acc[jobId] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      const reorderJobIds = new Set(Object.keys(jobCounts).filter(jobId => jobCounts[jobId] > 1));
-
-      result = result.filter(order => {
-        const jobId = (order.companyName || '').split(' • ')[0].trim();
-        return jobId && reorderJobIds.has(jobId);
-      });
-    }
-
-    if (viewType === 'pending_payment') {
-      result = result.filter(order => {
-        return !order.advancePayments || order.advancePayments.length === 0;
-      });
-    }
-
-    const sortOrders = (a: TrackingLink, b: TrackingLink) => {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    };
-
-    if (!searchTerm) return [...result].sort(sortOrders);
-
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return result.filter(order =>
-      (order.id || '').toLowerCase().includes(lowerSearchTerm) ||
-      (order.companyName || '').toLowerCase().includes(lowerSearchTerm) ||
-      (order.phoneNumber || '').toLowerCase().includes(lowerSearchTerm) ||
-      (order.crmUserName || '').toLowerCase().includes(lowerSearchTerm) ||
-      (order.designerRepresentativeName || '').toLowerCase().includes(lowerSearchTerm)
-    ).sort(sortOrders);
-  }, [orders, searchTerm, currentUser, viewType, selectedDateRange]);
-
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-
-  const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredOrders, currentPage]);
+  const filteredOrders = orders;
+  const totalPages = Math.ceil(totalOrders / ITEMS_PER_PAGE);
+  const paginatedOrders = orders;
 
   useEffect(() => {
     setCurrentPage(1);

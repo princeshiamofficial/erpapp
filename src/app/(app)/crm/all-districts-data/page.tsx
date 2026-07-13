@@ -134,13 +134,29 @@ const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataE
 export default function AllDistrictsDataPage() {
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [districtData, setDistrictData] = useState<DivisionData[]>([]);
+  const [rawOrders, setRawOrders] = useState<TrackingLink[]>([]);
+  const [rawManualEntries, setRawManualEntries] = useState<DistrictDataEntry[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const ITEMS_PER_PAGE = 50;
+
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [dateRangeLabel, setDateRangeLabel] = useState<string>("All Time");
   const [showAddButton, setShowAddButton] = useState(false);
+
+  const { ref: observerRef, inView } = require('react-intersection-observer').useInView({ threshold: 0.1 });
 
   const handleDateRangeChange = (
     range: DateRange | undefined,
@@ -149,28 +165,78 @@ export default function AllDistrictsDataPage() {
   ) => {
     setSelectedDateRange(range);
     setDateRangeLabel(displayLabel);
+    setPage(1);
+    setRawOrders([]);
+    setRawManualEntries([]);
+    setHasMore(true);
   };
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (isInitial: boolean = true) => {
+    if (isInitial) {
+      setIsLoading(true);
+      setPage(1);
+      setRawOrders([]);
+      setRawManualEntries([]);
+    } else {
+      setIsFetchingMore(true);
+    }
+    
     try {
+        const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+        const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+        const role = currentUser?.role;
+        const targetPage = isInitial ? 1 : page + 1;
+        
         const [fetchedOrders, fetchedManualEntries] = await Promise.all([
-            getOrders(),
-            getManualDistrictData()
+            getOrders(startStr, endStr, role, undefined, targetPage, ITEMS_PER_PAGE, debouncedSearchTerm),
+            getManualDistrictData(startStr, endStr, role, undefined, targetPage, ITEMS_PER_PAGE, debouncedSearchTerm)
         ]);
-        const formattedData = formatDistrictData(fetchedOrders, fetchedManualEntries);
-        setDistrictData(formattedData);
+        
+        if (isInitial) {
+            setRawOrders(fetchedOrders);
+            setRawManualEntries(fetchedManualEntries);
+        } else {
+            if (fetchedOrders.length > 0) setRawOrders(prev => {
+                const existing = new Set(prev.map(l => l.id));
+                return [...prev, ...fetchedOrders.filter(l => !existing.has(l.id))];
+            });
+            if (fetchedManualEntries.length > 0) setRawManualEntries(prev => {
+                const existing = new Set(prev.map(l => l.id));
+                return [...prev, ...fetchedManualEntries.filter(l => !existing.has(l.id))];
+            });
+        }
+        
+        if (fetchedOrders.length < ITEMS_PER_PAGE && fetchedManualEntries.length < ITEMS_PER_PAGE) {
+            setHasMore(false);
+        } else {
+            setHasMore(true);
+        }
+        
+        setPage(targetPage);
     } catch (error) {
         console.error("Failed to fetch order data for districts page:", error);
         toast({ title: "Error", description: "Could not load district data.", variant: "destructive" });
     } finally {
-        setIsLoading(false);
+        if (isInitial) setIsLoading(false);
+        else setIsFetchingMore(false);
     }
-  }, [toast]);
+  }, [toast, selectedDateRange, currentUser, page, debouncedSearchTerm]);
   
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDateRange, currentUser, debouncedSearchTerm]);
+
+  useEffect(() => {
+    if (inView && hasMore && !isLoading && !isFetchingMore) {
+        fetchData(false);
+    }
+  }, [inView, hasMore, isLoading, isFetchingMore, fetchData]);
+
+  useEffect(() => {
+    const formattedData = formatDistrictData(rawOrders, rawManualEntries);
+    setDistrictData(formattedData);
+  }, [rawOrders, rawManualEntries]);
 
   const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
 
@@ -180,16 +246,6 @@ export default function AllDistrictsDataPage() {
     return districtData.map(division => {
       const filteredDistricts = division.districts.map(district => {
         const filteredEntries = district.entries.filter(entry => {
-          // Date Range Filter
-          if (selectedDateRange?.from) {
-            const entryDate = parseISO(entry.orderDate);
-            const startDate = startOfDay(selectedDateRange.from);
-            const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-            if (!isWithinInterval(entryDate, { start: startDate, end: endDate })) {
-              return false;
-            }
-          }
-
           // Search Term Filter
           if (searchTerm) {
             return (
@@ -393,6 +449,9 @@ export default function AllDistrictsDataPage() {
                   )}
                 </TableBody>
               </Table>
+              {hasMore && !isLoading && (
+                <div ref={observerRef} className="h-10 w-full" />
+              )}
             </div>
           </CardContent>
         </Card>

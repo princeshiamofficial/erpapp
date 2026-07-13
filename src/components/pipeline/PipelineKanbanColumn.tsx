@@ -13,12 +13,22 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Loader2 } from 'lucide-react';
+import { getLeadsPaginatedAction } from '@/app/(app)/pipeline/actions';
 
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
   loading: () => <Skeleton className="h-20 w-full rounded-md" />
 });
+
+export interface KanbanServerFilters {
+  startDate?: string;
+  endDate?: string;
+  role?: string;
+  userId?: string;
+  activity?: string;
+  searchTerm?: string;
+}
 
 interface PipelineKanbanColumnProps {
   id: string;
@@ -35,6 +45,7 @@ interface PipelineKanbanColumnProps {
   onTransferLead: (lead: Lead) => void;
   onHistoryView: (lead: Lead) => void;
   allUsers: User[];
+  serverFilters?: KanbanServerFilters;
 }
 
 const LEADS_PER_PAGE = 20;
@@ -54,31 +65,74 @@ export function PipelineKanbanColumn({
   onTransferLead,
   onHistoryView,
   allUsers,
+  serverFilters,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
-  const [visibleCount, setVisibleCount] = useState(LEADS_PER_PAGE);
+  const [columnLeads, setColumnLeads] = useState<Lead[]>(leads);
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [hasMoreServer, setHasMoreServer] = useState(leads.length >= LEADS_PER_PAGE && leads.length > 0);
 
-  // Reset visible count when the underlying leads array changes (e.g., due to filtering)
   useEffect(() => {
-    setVisibleCount(LEADS_PER_PAGE);
+    setColumnLeads(leads);
+    setPage(1);
+    setHasMoreServer(leads.length >= LEADS_PER_PAGE && leads.length > 0);
   }, [leads]);
-
-  const handleLoadMore = () => {
-    setVisibleCount(prevCount => prevCount + LEADS_PER_PAGE);
-  };
-
-  const visibleLeads = useMemo(() => leads.slice(0, visibleCount), [leads, visibleCount]);
-  const hasMoreLeads = visibleCount < leads.length;
 
   const { ref: observerRef, inView } = useInView({
     threshold: 0.1,
   });
 
   useEffect(() => {
-    if (inView && hasMoreLeads) {
-      handleLoadMore();
+    let mounted = true;
+    const fetchNextPage = async () => {
+      if (!serverFilters || isFetchingMore || !hasMoreServer || columnLeads.length < LEADS_PER_PAGE) return;
+      setIsFetchingMore(true);
+      try {
+        const nextPage = page + 1;
+        const res = await getLeadsPaginatedAction(
+          nextPage,
+          LEADS_PER_PAGE,
+          serverFilters.startDate,
+          serverFilters.endDate,
+          serverFilters.role,
+          serverFilters.userId,
+          id,
+          serverFilters.activity,
+          serverFilters.searchTerm
+        );
+        if (mounted) {
+          if (res.leads.length > 0) {
+            setColumnLeads(prev => {
+              const existing = new Set(prev.map(l => l.id));
+              const fresh = res.leads.filter(l => !existing.has(l.id));
+              const updated = [...prev, ...fresh];
+              if (updated.length >= res.total || res.leads.length < LEADS_PER_PAGE) {
+                setHasMoreServer(false);
+              }
+              return updated;
+            });
+            setPage(nextPage);
+          } else {
+            setHasMoreServer(false);
+          }
+          if (res.leads.length < LEADS_PER_PAGE) {
+            setHasMoreServer(false);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching more kanban leads:", err);
+      } finally {
+        if (mounted) setIsFetchingMore(false);
+      }
+    };
+
+    if (inView && hasMoreServer && !isFetchingMore && columnLeads.length >= LEADS_PER_PAGE) {
+      fetchNextPage();
     }
-  }, [inView, hasMoreLeads]);
+
+    return () => { mounted = false; };
+  }, [inView, hasMoreServer, isFetchingMore, page, serverFilters, id, columnLeads.length]);
 
   return (
     <div
@@ -97,23 +151,22 @@ export function PipelineKanbanColumn({
           <Icon className={cn(`mr-2 h-4 w-4`, headerIconClass)} />
           <h2 className="font-semibold text-sm tracking-wide">{title}</h2>
         </div>
-        <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : leads.length}</span>
+        <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : columnLeads.length}</span>
       </div>
       <ScrollArea className="flex-1 bg-background/10 custom-scrollbar">
         <div className="space-y-3 p-3">
-          {isLoading && leads.length === 0 ? (
+          {isLoading && columnLeads.length === 0 ? (
             <div className="space-y-3">
               <Skeleton className="h-20 w-full rounded-md" />
               <Skeleton className="h-20 w-full rounded-md" />
-              <Skeleton className="h-20 w-full rounded-md" />
             </div>
-          ) : visibleLeads.length === 0 ? (
+          ) : columnLeads.length === 0 ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-xs text-muted-foreground text-center italic">No leads in this category.</p>
             </div>
           ) : (
             <AnimatePresence>
-              {visibleLeads.map((lead, index) => (
+              {columnLeads.map((lead, index) => (
                 <motion.div
                   key={lead.id}
                   layout
@@ -137,10 +190,8 @@ export function PipelineKanbanColumn({
             </AnimatePresence>
           )}
 
-          {hasMoreLeads && (
-            <div ref={observerRef} className="flex justify-center p-2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
+          {hasMoreServer && columnLeads.length >= LEADS_PER_PAGE && (
+            <div ref={observerRef} className="h-4 w-full shrink-0" />
           )}
         </div>
       </ScrollArea>

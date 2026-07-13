@@ -58,9 +58,24 @@ export async function getTransactionsForUser(userId: string): Promise<Transactio
   }
 }
 
-export async function getAllTransactions(): Promise<Transaction[]> {
+export async function getAllTransactions(startDate?: string, endDate?: string, role?: string, userId?: string): Promise<Transaction[]> {
   try {
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${FINANCE_TABLE} ORDER BY date DESC`);
+    const conditions: string[] = [];
+    const params: any[] = [];
+    if (startDate) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) >= ?`);
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) <= ?`);
+      params.push(endDate);
+    }
+    if (userId && userId !== 'all' && (role !== 'SYSTEM_ADMIN' && role !== 'ADMIN')) {
+      conditions.push(`user_id = ?`);
+      params.push(userId);
+    }
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${FINANCE_TABLE} ${whereClause} ORDER BY date DESC`, params);
     return rows.map(row => ({
       id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)

@@ -21,6 +21,11 @@ import { cn } from '@/lib/utils';
 interface LeadReportViewProps {
   leads: Lead[];
   allUsers: User[];
+  serverPagination?: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
 }
 
 const ITEMS_PER_PAGE = 25;
@@ -50,15 +55,26 @@ const getRecentActivityNote = (lead: Lead): string => {
     return sortedActivities[0].notes || sortedActivities[0].activity;
 };
 
-export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+export function LeadReportView({ leads, allUsers, serverPagination }: LeadReportViewProps) {
+  const [localPage, setLocalPage] = useState(1);
 
-  const totalPages = Math.ceil(leads.length / ITEMS_PER_PAGE);
+  const isServer = !!serverPagination;
+  const currentPage = isServer ? serverPagination!.currentPage : localPage;
+  const totalPages = isServer ? serverPagination!.totalPages : Math.ceil(leads.length / ITEMS_PER_PAGE);
+
+  const handlePageChange = (p: number) => {
+    if (isServer && serverPagination) {
+      serverPagination.onPageChange(p);
+    } else {
+      setLocalPage(p);
+    }
+  };
 
   const paginatedLeads = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    if (isServer) return leads;
+    const startIndex = (localPage - 1) * ITEMS_PER_PAGE;
     return leads.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [leads, currentPage]);
+  }, [leads, localPage, isServer]);
 
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -104,7 +120,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
           <PaginationItem>
             <PaginationPrevious
               href="#"
-              onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+              onClick={(e) => { e.preventDefault(); handlePageChange(Math.max(1, currentPage - 1)); }}
               aria-disabled={currentPage === 1}
               className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
             />
@@ -116,7 +132,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
               ) : (
                 <PaginationLink
                   href="#"
-                  onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }}
+                  onClick={(e) => { e.preventDefault(); handlePageChange(page as number); }}
                   isActive={currentPage === page}
                 >
                   {page}
@@ -127,7 +143,7 @@ export function LeadReportView({ leads, allUsers }: LeadReportViewProps) {
           <PaginationItem>
             <PaginationNext
               href="#"
-              onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+              onClick={(e) => { e.preventDefault(); handlePageChange(Math.min(totalPages, currentPage + 1)); }}
               aria-disabled={currentPage === totalPages}
               className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
             />

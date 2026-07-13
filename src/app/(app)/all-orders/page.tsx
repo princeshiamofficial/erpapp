@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getOrders } from '@/lib/order-service';
+import { getOrders, getOrdersWithTotal } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -63,6 +63,14 @@ export default function AllOrdersPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [totalOrders, setTotalOrders] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
   };
@@ -70,13 +78,19 @@ export default function AllOrdersPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedLinks, fetchedStatuses, fetchedUsers, fetchedSettings] = await Promise.all([
-        getOrders(),
+      const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const role = currentUser?.role;
+      const userId = undefined; // No user ID based filtering on all-orders page
+
+      const [fetchedResult, fetchedStatuses, fetchedUsers, fetchedSettings] = await Promise.all([
+        getOrdersWithTotal(startStr, endStr, role, userId, currentPage, 25, debouncedSearchTerm), // using ITEMS_PER_PAGE=25 directly here to avoid circular dep if needed, but ITEMS_PER_PAGE is outside component
         getStatuses(),
         getUsers(),
         getGlobalSettings()
       ]);
-      setTrackingLinks(fetchedLinks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setTrackingLinks(fetchedResult.orders);
+      setTotalOrders(fetchedResult.total);
       setAllStatuses(fetchedStatuses);
       setGlobalAppSettings(fetchedSettings);
       
@@ -89,7 +103,7 @@ export default function AllOrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, selectedDateRange, debouncedSearchTerm, currentUser, currentPage]);
 
   useEffect(() => {
     if (currentUser) {
@@ -151,42 +165,8 @@ export default function AllOrdersPage() {
   };
 
 
-  const filteredTrackingLinks = useMemo(() => {
-    let result = trackingLinks;
-
-    if (selectedDateRange?.from) {
-      const startDate = startOfDay(selectedDateRange.from);
-      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
-      result = result.filter(link => {
-        try {
-          if (!link.createdAt) return false;
-          const linkDate = parseISO(link.createdAt);
-          return isWithinInterval(linkDate, { start: startDate, end: endDate });
-        } catch {
-          return false;
-        }
-      });
-    }
-
-    if (searchTerm) {
-      result = result.filter(link =>
-        link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (link.crmUserName && link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (link.designerRepresentativeName && link.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-    
-    return result;
-  }, [trackingLinks, searchTerm, selectedDateRange]);
-
-  const totalPages = Math.ceil(filteredTrackingLinks.length / ITEMS_PER_PAGE);
-
-  const paginatedLinks = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredTrackingLinks.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredTrackingLinks, currentPage]);
+  const totalPages = Math.ceil(totalOrders / ITEMS_PER_PAGE);
+  const paginatedLinks = trackingLinks;
 
   useEffect(() => {
     setCurrentPage(1);

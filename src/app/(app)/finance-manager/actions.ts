@@ -217,9 +217,8 @@ export async function getTransactionsForUserAction(userId: string): Promise<Tran
   return getTransactionsForUserService(userId);
 }
 
-// Server action to get all transactions (for admin)
-export async function getAllTransactionsAction(): Promise<Transaction[]> {
-  return getAllTransactionsService();
+export async function getAllTransactionsAction(startDate?: string, endDate?: string, role?: string, userId?: string): Promise<Transaction[]> {
+  return getAllTransactionsService(startDate, endDate, role, userId);
 }
 
 

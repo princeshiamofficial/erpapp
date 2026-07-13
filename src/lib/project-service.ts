@@ -34,13 +34,13 @@ const getInitialsForName = (name: string | undefined): string => {
 };
 
 
-export const getProjects = async (): Promise<Project[]> => {
+export const getProjects = async (startDate?: string, endDate?: string, role?: string, userId?: string): Promise<Project[]> => {
   console.log('[getProjects] Function called. Generating projects from orders.');
 
   let ordersToDisplayAsProjects: Project[] = [];
   try {
     const [allOrders, _allUsers, persistentProjects] = await Promise.all([
-      getOrders(),
+      getOrders(startDate, endDate, role, userId),
       getAllUsersService(),
       query<any[]>(`SELECT id, data_json FROM ${PROJECTS_TABLE}`)
     ]);

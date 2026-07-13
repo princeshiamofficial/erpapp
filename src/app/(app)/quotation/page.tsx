@@ -79,6 +79,13 @@ export default function QuotationsPage() {
   const [quotations, setQuotations] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
@@ -110,13 +117,13 @@ export default function QuotationsPage() {
     fetchData();
   }, [currentUser]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (quotations.length === 0) {
       setIsLoading(true);
     }
     try {
       const [fetchedQuotations, fetchedStatuses, fetchedSettings, fetchedOrders, fetchedOrderStatuses] = await Promise.all([
-        getQuotations(),
+        getQuotations(debouncedSearchTerm),
         // Mocking statuses for quotation page
         Promise.resolve([
           { id: 'Pending', name: 'Pending', color: '#8B5CF6', xid: 'pending' },
@@ -141,12 +148,12 @@ export default function QuotationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [debouncedSearchTerm, toast, quotations.length]);
 
   useEffect(() => {
     setIsClient(true);
     fetchData();
-  }, []);
+  }, [fetchData]);
 
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {

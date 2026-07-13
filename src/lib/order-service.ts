@@ -66,8 +66,45 @@ const mapRowToOrder = (row: any): TrackingLink => ({
   deletedByName: row.deleted_by_name,
 });
 
-export const getOrders = async (): Promise<TrackingLink[]> => {
+export const getOrders = async (startDate?: string, endDate?: string, role?: string, userId?: string, page?: number, limit?: number, searchTerm?: string): Promise<TrackingLink[]> => {
   try {
+    const conditions = ['o.is_deleted = FALSE'];
+    const params: any[] = [];
+
+    if (startDate) {
+      conditions.push('o.created_at >= ?');
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push('o.created_at <= ?');
+      params.push(endDate);
+    }
+
+    if (role === 'CRM' && userId) {
+      conditions.push('o.crm_user_id = ?');
+      params.push(userId);
+    } else if (role === 'DESIGNER_REPRESENTATIVE' && userId) {
+      conditions.push('o.designer_representative_id = ?');
+      params.push(userId);
+    } else if ((role === 'SYSTEM_ADMIN' || role === 'ADMIN') && userId && userId !== 'all') {
+      conditions.push('o.crm_user_id = ?');
+      params.push(userId);
+    }
+
+    if (searchTerm) {
+      const likeTerm = `%${searchTerm}%`;
+      conditions.push(`(o.id LIKE ? OR c.company_name LIKE ? OR o.client_id LIKE ? OR CONCAT(o.client_id, ' • ', c.company_name) LIKE ? OR c.phone_number LIKE ? OR uc.name LIKE ? OR ud.name LIKE ?)`);
+      params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+    }
+
+    const whereSql = conditions.join(' AND ');
+
+    let limitSql = '';
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      limitSql = `LIMIT ${limit} OFFSET ${offset}`;
+    }
+
     const results = await query<any[]>(`
       SELECT o.*, c.company_name, c.phone_number, c.address,
              uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
@@ -78,13 +115,101 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
       LEFT JOIN users uc ON o.crm_user_id = uc.id
       LEFT JOIN users ud ON o.designer_representative_id = ud.id
       LEFT JOIN users uu ON o.updated_by_user_id = uu.id
-      WHERE o.is_deleted = FALSE 
+      WHERE ${whereSql} 
       ORDER BY o.created_at DESC
-    `);
+      ${limitSql}
+    `, params);
     return results.map(mapRowToOrder);
   } catch (error) {
     console.error("Error fetching orders from MySQL:", error);
     return [];
+  }
+};
+
+export const getOrdersWithTotal = async (startDate?: string, endDate?: string, role?: string, userId?: string, page: number = 1, limit: number = 25, searchTerm?: string, viewType?: 'orders' | 'reorders' | 'pending_payment'): Promise<{ orders: TrackingLink[], total: number }> => {
+  try {
+    const conditions = ['o.is_deleted = FALSE'];
+    const params: any[] = [];
+
+    if (startDate) {
+      conditions.push('o.created_at >= ?');
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push('o.created_at <= ?');
+      params.push(endDate);
+    }
+
+    if (role === 'CRM' && userId) {
+      conditions.push('o.crm_user_id = ?');
+      params.push(userId);
+    } else if (role === 'DESIGNER_REPRESENTATIVE' && userId) {
+      conditions.push('o.designer_representative_id = ?');
+      params.push(userId);
+    } else if ((role === 'SYSTEM_ADMIN' || role === 'ADMIN') && userId && userId !== 'all') {
+      conditions.push('o.crm_user_id = ?');
+      params.push(userId);
+    }
+
+    if (searchTerm) {
+      const likeTerm = `%${searchTerm}%`;
+      conditions.push(`(o.id LIKE ? OR c.company_name LIKE ? OR o.client_id LIKE ? OR CONCAT(o.client_id, ' • ', c.company_name) LIKE ? OR c.phone_number LIKE ? OR uc.name LIKE ? OR ud.name LIKE ?)`);
+      params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+    }
+    
+    if (viewType === 'pending_payment') {
+      conditions.push(`(o.advance_payments IS NULL OR JSON_LENGTH(o.advance_payments) = 0 OR o.advance_payments = '[]')`);
+    } else if (viewType === 'reorders') {
+      const baseConditions = [...conditions];
+      const subquery = `
+        SELECT inner_o.client_id
+        FROM ${ORDERS_TABLE} inner_o
+        JOIN clients inner_c ON inner_o.client_id = inner_c.id
+        LEFT JOIN users inner_uc ON inner_o.crm_user_id = inner_uc.id
+        LEFT JOIN users inner_ud ON inner_o.designer_representative_id = inner_ud.id
+        WHERE ${baseConditions.join(' AND ').replace(/o\./g, 'inner_o.').replace(/c\./g, 'inner_c.').replace(/uc\./g, 'inner_uc.').replace(/ud\./g, 'inner_ud.')}
+        GROUP BY inner_o.client_id
+        HAVING COUNT(inner_o.id) > 1
+      `;
+      conditions.push(`o.client_id IN (${subquery})`);
+      params.push(...params);
+    }
+
+    const whereSql = conditions.join(' AND ');
+
+    const countQuery = `
+      SELECT COUNT(DISTINCT o.id) as total
+      FROM ${ORDERS_TABLE} o
+      JOIN clients c ON o.client_id = c.id
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      WHERE ${whereSql}
+    `;
+    const countResult = await query<any[]>(countQuery, params);
+    const total = countResult[0]?.total || 0;
+
+    const offset = (page - 1) * limit;
+    const limitSql = ` LIMIT ${limit} OFFSET ${offset}`;
+
+    const results = await query<any[]>(`
+      SELECT o.*, c.company_name, c.phone_number, c.address,
+             uc.name as crm_user_name, uc.avatar_url as assignee_avatar_url,
+             ud.name as designer_representative_name, ud.avatar_url as designer_representative_avatar_url,
+             uu.name as updated_by_user_name
+      FROM ${ORDERS_TABLE} o 
+      JOIN clients c ON o.client_id = c.id 
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      LEFT JOIN users uu ON o.updated_by_user_id = uu.id
+      WHERE ${whereSql} 
+      ORDER BY o.created_at DESC
+      ${limitSql}
+    `, params);
+
+    return { orders: results.map(mapRowToOrder), total };
+  } catch (error) {
+    console.error("Error fetching orders with total from MySQL:", error);
+    return { orders: [], total: 0 };
   }
 };
 
@@ -94,9 +219,9 @@ export const getOrdersPaginated = async (limit: number, offset: number, searchTe
     const params: any[] = [];
 
     if (searchTerm) {
-      whereClauseParts.push(`(o.id LIKE ? OR c.company_name LIKE ? OR c.phone_number LIKE ? OR uc.name LIKE ?)`);
+      whereClauseParts.push(`(o.id LIKE ? OR c.company_name LIKE ? OR o.client_id LIKE ? OR CONCAT(o.client_id, ' • ', c.company_name) LIKE ? OR c.phone_number LIKE ? OR uc.name LIKE ?)`);
       const searchParam = `%${searchTerm}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
+      params.push(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     }
 
 

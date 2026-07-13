@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import type { Lead, User, LeadActivity, LeadCategory, LeadStatusType } from '@/types';
 import {
   getLeads as getLeadsFromDb,
+  getLeadsPaginated as getLeadsPaginatedFromDb,
   addLead,
   updateLead,
   deleteLead,
@@ -18,12 +19,39 @@ import { getIO } from "@/lib/socket-io";
 import { LEAD_CATEGORY_LABELS } from "@/lib/pipeline-constants";
 
 
-export async function getLeads(): Promise<Lead[]> {
+export async function getLeads(
+  startDate?: string,
+  endDate?: string,
+  role?: string,
+  userId?: string,
+  category?: string,
+  activity?: string,
+  searchTerm?: string
+): Promise<Lead[]> {
   try {
-    return await getLeadsFromDb();
+    return await getLeadsFromDb(startDate, endDate, role, userId, category, activity, searchTerm);
   } catch (error) {
     console.error("Error in getLeads server action:", error);
     return [];
+  }
+}
+
+export async function getLeadsPaginatedAction(
+  page: number = 1,
+  limit: number = 10,
+  startDate?: string,
+  endDate?: string,
+  role?: string,
+  userId?: string,
+  category?: string,
+  activity?: string,
+  searchTerm?: string
+): Promise<{ leads: Lead[]; total: number }> {
+  try {
+    return await getLeadsPaginatedFromDb(page, limit, startDate, endDate, role, userId, category, activity, searchTerm);
+  } catch (error) {
+    console.error("Error in getLeadsPaginatedAction server action:", error);
+    return { leads: [], total: 0 };
   }
 }
 

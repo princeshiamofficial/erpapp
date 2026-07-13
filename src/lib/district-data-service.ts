@@ -6,9 +6,35 @@ import { query } from './mysql';
 
 const TABLE_NAME = 'district_data';
 
-export const getManualDistrictData = async (): Promise<DistrictDataEntry[]> => {
+export const getManualDistrictData = async (startDate?: string, endDate?: string, role?: string, userId?: string, page?: number, limit?: number, searchTerm?: string): Promise<DistrictDataEntry[]> => {
   try {
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME}`);
+    const conditions: string[] = [];
+    const params: any[] = [];
+    if (startDate) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.orderDate')) >= ?`);
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.orderDate')) <= ?`);
+      params.push(endDate);
+    }
+    if (userId && userId !== 'all' && role === 'CRM') {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.crmUserId')) = ?`);
+      params.push(userId);
+    }
+    if (searchTerm) {
+      conditions.push(`data_json LIKE ?`);
+      params.push(`%${searchTerm}%`);
+    }
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    
+    let limitSql = '';
+    if (page !== undefined && limit !== undefined) {
+      limitSql = 'LIMIT ? OFFSET ?';
+      params.push(limit, (page - 1) * limit);
+    }
+
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ${whereClause} ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.orderDate')) DESC ${limitSql}`, params);
     return rows.map(row => ({
       id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)

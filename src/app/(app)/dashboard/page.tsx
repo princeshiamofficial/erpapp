@@ -357,9 +357,13 @@ function DashboardContent() {
     if (!currentUser) {
       return null;
     }
+    const startStr = selectedDateRange?.from ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+    const endStr = selectedDateRange?.to ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+    const role = currentUser?.role;
+    const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id;
     try {
       const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
-        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(),
+        getOrders(startStr, endStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -373,10 +377,6 @@ function DashboardContent() {
         createdAt: entry.date,
       }));
 
-      // For CRM users, we might want to prioritize workflow tasks or merge them.
-      // The user asked to "get Sales Performance task count from crworkflow sale input",
-      // implying this should be the source for Sales Performance.
-      
       return {
         allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers,
         allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
@@ -389,10 +389,10 @@ function DashboardContent() {
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       throw new Error("Data fetch failed");
     }
-  }, [currentUser, toast]);
+  }, [currentUser, toast, selectedDateRange, selectedCrmId]);
 
   const { data: queryData, isLoading: isLoadingData, refetch } = useQuery({
-    queryKey: ['dashboardData', currentUser?.id],
+    queryKey: ['dashboardData', currentUser?.id, selectedCrmId, selectedDateRange?.from?.toISOString(), selectedDateRange?.to?.toISOString()],
     queryFn: fetchDashboardData,
     enabled: !!currentUser,
     refetchOnWindowFocus: false,
@@ -414,12 +414,7 @@ function DashboardContent() {
   };
 
   const filteredOrders = useMemo(() => {
-    const interval = getDateRangeInterval();
-    if (!interval) return [];
-
-    let ordersToFilter = allOrders.filter(order =>
-      order.createdAt && isWithinInterval(parseISO(order.createdAt), interval)
-    );
+    let ordersToFilter = [...allOrders];
 
     if (currentUser?.role === 'CRM') {
       ordersToFilter = ordersToFilter.filter(order => order.crmUserId === currentUser.id);
@@ -430,16 +425,10 @@ function DashboardContent() {
     }
 
     return ordersToFilter;
-  }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
+  }, [allOrders, currentUser, selectedCrmId]);
 
   const filteredLeads = useMemo(() => {
-    const interval = getDateRangeInterval();
-    if (!interval) return [];
-
-    let leadsToFilter = allLeads.filter(lead => {
-      const dateToFilter = lead.categoryUpdatedAt || lead.date;
-      return dateToFilter && isWithinInterval(parseISO(dateToFilter), interval);
-    });
+    let leadsToFilter = [...allLeads];
 
     if (currentUser?.role === 'CRM') {
       leadsToFilter = leadsToFilter.filter(l => l.crmId === currentUser.id);
@@ -447,14 +436,11 @@ function DashboardContent() {
       leadsToFilter = leadsToFilter.filter(l => l.crmId === selectedCrmId);
     }
     return leadsToFilter;
-  }, [allLeads, selectedDateRange, currentUser, selectedCrmId]);
+  }, [allLeads, currentUser, selectedCrmId]);
 
   const filteredProjects = useMemo(() => {
-    const isDrLrOrCo = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR' || currentUser?.role === 'CO';
+    let projectsToFilter = [...allProjects];
 
-    let projectsToFilter = allProjects;
-
-    // First, filter by role
     if (currentUser?.role === 'CRM') {
       projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id);
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
@@ -465,20 +451,8 @@ function DashboardContent() {
       projectsToFilter = projectsToFilter.filter(p => p.assigneeId === selectedCrmId);
     }
 
-    // Then, apply date filter unless user is DR/LR/CO
-    if (!isDrLrOrCo) {
-      const interval = getDateRangeInterval();
-      if (interval) {
-        projectsToFilter = projectsToFilter.filter(project =>
-          project.createdAt && isWithinInterval(parseISO(project.createdAt), interval)
-        );
-      } else {
-        return []; // If no interval, return empty
-      }
-    }
-
     return projectsToFilter;
-  }, [allProjects, selectedDateRange, currentUser, selectedCrmId]);
+  }, [allProjects, currentUser, selectedCrmId]);
 
 
   const topSalesAreaData = useMemo(() => {

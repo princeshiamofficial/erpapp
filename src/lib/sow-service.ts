@@ -7,9 +7,28 @@ import { v4 as uuidv4 } from 'uuid';
 
 const TABLE_NAME = 'sow_data';
 
-export const getSowEntries = async (): Promise<SowDataEntry[]> => {
+export const getSowEntries = async (startDate?: string, endDate?: string, role?: string, userId?: string, searchTerm?: string): Promise<SowDataEntry[]> => {
   try {
-    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ORDER BY id DESC`);
+    const conditions: string[] = [];
+    const params: any[] = [];
+    if (startDate) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.createdAt')) >= ?`);
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.createdAt')) <= ?`);
+      params.push(endDate);
+    }
+    if (userId && userId !== 'all' && (role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE')) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.createdByUserId')) = ?`);
+      params.push(userId);
+    }
+    if (searchTerm) {
+      conditions.push(`data_json LIKE ?`);
+      params.push(`%${searchTerm}%`);
+    }
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${TABLE_NAME} ${whereClause} ORDER BY id DESC`, params);
     return rows.map(row => ({
       id: row.id,
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)

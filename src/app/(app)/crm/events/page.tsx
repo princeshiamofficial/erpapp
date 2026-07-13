@@ -30,7 +30,9 @@ import {
   Search, Building, Clock, AlertCircle, Eye, Edit, MoreVertical, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, parseISO, isBefore, startOfDay, isToday } from 'date-fns';
+import { format, parseISO, isBefore, startOfDay, endOfDay, isToday } from 'date-fns';
+import { DateRangePicker3 } from '@/components/dashboard/date-range-picker3';
+import type { DateRange } from "react-day-picker";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -84,6 +86,13 @@ export default function EventsPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [timeFilter, setTimeFilter] = useState<'today' | 'all'>('all');
 
@@ -98,6 +107,7 @@ export default function EventsPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [eventToRemove, setEventToRemove] = useState<Lead | null>(null);
   const [isRemovingEvent, setIsRemovingEvent] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
 
   const fetchLeadsAndUsers = useCallback(async (isSilent = false) => {
     if (!currentUser) return;
@@ -105,8 +115,12 @@ export default function EventsPage() {
       setIsLoading(true);
     }
     try {
+      const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const role = currentUser?.role;
+      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
       const [fetchedLeads, fetchedUsers] = await Promise.all([
-        getLeads(),
+        getLeads(startStr, endStr, role, userId, undefined, undefined, debouncedSearchTerm),
         getUsers()
       ]);
       setLeads(fetchedLeads);
@@ -120,7 +134,7 @@ export default function EventsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, currentUser]);
+  }, [toast, currentUser, selectedDateRange, debouncedSearchTerm]);
 
   useEffect(() => {
     if (currentUser) {
@@ -392,6 +406,7 @@ export default function EventsPage() {
                 id="events-search-input"
               />
             </div>
+            <DateRangePicker3 initialRange={selectedDateRange} onDateRangeChange={(range) => setSelectedDateRange(range)} />
 
             {/* CRM Dropdown Filter */}
             {isAdmin && (

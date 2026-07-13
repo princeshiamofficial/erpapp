@@ -55,6 +55,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { DateRangePicker4, type PredefinedRange4 } from '@/components/dashboard/date-range-picker4';
+import { DateRangePicker3 } from '@/components/dashboard/date-range-picker3';
 import type { DateRange } from "react-day-picker";
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog), { ssr: false });
@@ -79,6 +80,13 @@ export default function OrderPulsePage() {
   const [orders, setOrders] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
@@ -96,13 +104,14 @@ export default function OrderPulsePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedInactivityThreshold, setSelectedInactivityThreshold] = useState<PredefinedRange4>("6Months");
   const [pulseStatusFilter, setPulseStatusFilter] = useState<"Active" | "Inactive">("Inactive");
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
 
   const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
 
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedInactivityThreshold, searchTerm, pulseStatusFilter]);
+  }, [selectedInactivityThreshold, debouncedSearchTerm, pulseStatusFilter, selectedDateRange]);
 
   const fetchOrderData = useCallback(async () => {
     if (!currentUser) {
@@ -112,8 +121,12 @@ export default function OrderPulsePage() {
       setIsLoading(true);
     }
     try {
+      const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+      const role = currentUser?.role;
+      const userId = undefined; // No user ID based filtering on order-pulse page
       const [fetchedOrders, fetchedStatuses, fetchedSettings] = await Promise.all([
-        getOrders(),
+        getOrders(startStr, endStr, role, userId, undefined, undefined, debouncedSearchTerm),
         getStatuses(),
         getGlobalSettings()
       ]);
@@ -129,7 +142,7 @@ export default function OrderPulsePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast, orders.length]);
+  }, [currentUser, toast, orders.length, selectedDateRange, debouncedSearchTerm]);
 
   useEffect(() => {
     setIsClient(true);
@@ -169,14 +182,6 @@ export default function OrderPulsePage() {
     );
 
     let result = orders.filter(order => !cancelStatusIds.has(order.currentStatus));
-    
-    if (currentUser?.role === 'CRM') {
-      result = result.filter(order => order.crmUserId === currentUser.id);
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-      result = result.filter(order => order.designerRepresentativeId === currentUser.id);
-    }
-
-
 
     const customerMap = new Map<string, any>();
 
@@ -464,6 +469,7 @@ export default function OrderPulsePage() {
                   className="pl-10 bg-background h-10 rounded-md w-full"
                 />
               </div>
+              <DateRangePicker3 initialRange={selectedDateRange} onDateRangeChange={(range) => setSelectedDateRange(range)} />
             </div>
           </div>
         </CardHeader>
