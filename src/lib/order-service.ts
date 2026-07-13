@@ -1225,7 +1225,7 @@ export const getOrderPulsesPaginated = async (
         ) as rn
       FROM ${ORDERS_TABLE} o
       JOIN clients c ON o.client_id = c.id
-      LEFT JOIN statuses s ON o.current_status = s.id
+      LEFT JOIN order_statuses s ON o.current_status = s.id
       LEFT JOIN users uc ON o.crm_user_id = uc.id
       LEFT JOIN users ud ON o.designer_representative_id = ud.id
       WHERE ${baseWhere}
@@ -1237,7 +1237,7 @@ export const getOrderPulsesPaginated = async (
         COUNT(o.id) as totalOrders
       FROM ${ORDERS_TABLE} o
       JOIN clients c ON o.client_id = c.id
-      LEFT JOIN statuses s ON o.current_status = s.id
+      LEFT JOIN order_statuses s ON o.current_status = s.id
       WHERE ${baseWhere}
       GROUP BY customer_key
     `;
