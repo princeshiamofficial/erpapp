@@ -86,3 +86,59 @@ export async function updatePaymentStatus(paymentId: string, newStatus: 'Approve
 export async function addPaymentToHistory(reportData: Omit<BillReport, 'id'> & { id: string }) {
     // No operation required with MySQL migration
 }
+
+export async function getPaymentHistoryPaginated(
+    page: number = 1,
+    limit: number = 20,
+    searchTerm?: string,
+    startDateStr?: string,
+    endDateStr?: string,
+    sortConfig?: { key: string; direction: 'asc' | 'desc' } | null
+): Promise<{ payments: PaymentHistoryEntry[]; total: number }> {
+    const allPayments = await getAllPaymentHistory();
+    let results = [...allPayments];
+
+    if (startDateStr && endDateStr) {
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(endDateStr);
+        results = results.filter(p => {
+            try {
+                const paymentDate = new Date(p.date);
+                return paymentDate >= startDate && paymentDate <= endDate && paymentDate > new Date('2025-11-13');
+            } catch (e) {
+                return false;
+            }
+        });
+    }
+
+    if (searchTerm && searchTerm.trim()) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        results = results.filter(p =>
+            (p.vendorName && p.vendorName.toLowerCase().includes(lowerSearchTerm)) ||
+            (p.invoiceId && p.invoiceId.toLowerCase().includes(lowerSearchTerm)) ||
+            (p.method && p.method.toLowerCase().includes(lowerSearchTerm)) ||
+            (p.notes && p.notes.toLowerCase().includes(lowerSearchTerm)) ||
+            (p.status && p.status.toLowerCase().includes(lowerSearchTerm))
+        );
+    }
+
+    if (sortConfig) {
+        results.sort((a, b) => {
+            let aVal: any = (a as any)[sortConfig.key];
+            let bVal: any = (b as any)[sortConfig.key];
+            if (sortConfig.key === 'date') {
+                aVal = new Date(a.date).getTime();
+                bVal = new Date(b.date).getTime();
+            }
+            if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    const total = results.length;
+    const startIndex = (page - 1) * limit;
+    const payments = results.slice(startIndex, startIndex + limit);
+
+    return { payments, total };
+}

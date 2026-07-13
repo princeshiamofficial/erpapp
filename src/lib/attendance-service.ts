@@ -105,6 +105,27 @@ export const getAttendanceForDateRange = async (startDate: Date, endDate: Date):
   }
 };
 
+export const getAttendancePaginated = async (
+  startDate: Date,
+  endDate: Date,
+  page: number = 1,
+  limit: number = 50,
+  searchTerm?: string
+): Promise<{ records: AttendanceRecord[]; total: number }> => {
+  const allRecords = await getAttendanceForDateRange(startDate, endDate);
+  let results = Array.from(new Map(allRecords.map(item => [item.id, item])).values());
+  if (searchTerm && searchTerm.trim()) {
+    const lower = searchTerm.toLowerCase();
+    results = results.filter(r =>
+      (r.employeeName && r.employeeName.toLowerCase().includes(lower)) ||
+      (r.employeeId && r.employeeId.toLowerCase().includes(lower))
+    );
+  }
+  const total = results.length;
+  const startIndex = (page - 1) * limit;
+  return { records: results.slice(startIndex, startIndex + limit), total };
+};
+
 export const addOrUpdateAttendanceRecord = async (recordData: Omit<AttendanceRecord, 'id'>): Promise<AttendanceRecord | null> => {
   let finalDate = recordData.date;
   let finalCheckIn = recordData.checkInTime;

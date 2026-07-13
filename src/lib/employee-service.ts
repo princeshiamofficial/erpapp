@@ -50,6 +50,32 @@ export const getEmployees = async (): Promise<Employee[]> => {
     }
 };
 
+export const getEmployeesPaginated = async (
+    page: number = 1,
+    limit: number = 20,
+    searchTerm?: string,
+    statusFilter?: string
+): Promise<{ employees: Employee[]; total: number }> => {
+    const allEmployees = await getEmployees();
+    let results = [...allEmployees];
+    if (statusFilter && statusFilter !== 'all') {
+        results = results.filter(e => e.status === statusFilter);
+    }
+    if (searchTerm && searchTerm.trim()) {
+        const lower = searchTerm.toLowerCase();
+        results = results.filter(e =>
+            e.name.toLowerCase().includes(lower) ||
+            (e.email && e.email.toLowerCase().includes(lower)) ||
+            e.employeeId.toLowerCase().includes(lower) ||
+            e.designation.toLowerCase().includes(lower) ||
+            e.mobileNo.includes(searchTerm)
+        );
+    }
+    const total = results.length;
+    const startIndex = (page - 1) * limit;
+    return { employees: results.slice(startIndex, startIndex + limit), total };
+};
+
 export const getEmployeeById = async (id: string): Promise<Employee | null> => {
     if (!id) return null;
     try {

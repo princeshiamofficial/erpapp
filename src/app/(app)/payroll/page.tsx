@@ -20,7 +20,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, History, AlertTriangle, Wallet, CheckCircle, Receipt, Check, Landmark as ProvidentFundIcon, AlertCircle as FineIcon, Calendar, UserRoundX, SquarePen } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord, ProvidentFundRecord } from '@/types';
-import { getEmployees } from '@/lib/employee-service';
+import { getEmployees, getEmployeesPaginated } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -78,6 +78,8 @@ export default function PayrollPage() {
 
   const [activeTab, setActiveTab] = useState("salary_sheet");
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [serverPaginatedEmployees, setServerPaginatedEmployees] = useState<Employee[]>([]);
+  const [totalEmployeesCount, setTotalEmployeesCount] = useState(0);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,6 +117,7 @@ export default function PayrollPage() {
       const monthStr = format(selectedDate, 'yyyy-MM');
       const [
         fetchedEmployees,
+        fetchedPaginatedRes,
         fetchedUsers,
         fetchedAttendance,
         fetchedSalarySheet,
@@ -123,6 +126,7 @@ export default function PayrollPage() {
         fetchedLastAttendance
       ] = await Promise.all([
         getEmployees(),
+        getEmployeesPaginated(currentPage, 20, searchTerm, statusFilter),
         getUsers(),
         getAttendanceForMonth(selectedDate),
         getSalarySheetForMonth(monthStr),
@@ -131,6 +135,8 @@ export default function PayrollPage() {
         getLastAttendanceDatesAction()
       ]);
       setEmployees(fetchedEmployees);
+      setServerPaginatedEmployees(fetchedPaginatedRes.employees);
+      setTotalEmployeesCount(fetchedPaginatedRes.total);
       setAllUsers(fetchedUsers);
       setAttendanceData(fetchedAttendance);
       setSalarySheetData(fetchedSalarySheet);
@@ -311,13 +317,13 @@ export default function PayrollPage() {
 
   const totalPages = useMemo(() => {
     if (activeTab === 'employee_list') {
-      return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
+      return Math.ceil(totalEmployeesCount / ITEMS_PER_PAGE);
     }
     if (activeTab === 'employees_wallet') {
       return Math.ceil(walletCalculatedData.length / ITEMS_PER_PAGE);
     }
     return 1;
-  }, [filteredEmployees, activeTab, walletCalculatedData]);
+  }, [totalEmployeesCount, activeTab, walletCalculatedData]);
 
   const salaryStatusMap = useMemo(() => {
     const map = new Map();
@@ -326,17 +332,18 @@ export default function PayrollPage() {
   }, [salarySheetCalculatedData]);
 
   const paginatedEmployees = useMemo(() => {
-    if (activeTab !== 'employee_list' && activeTab !== 'employees_wallet') return salarySheetCalculatedData;
-
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
+    if (activeTab === 'employee_list') {
+      return serverPaginatedEmployees;
+    }
 
     if (activeTab === 'employees_wallet') {
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
       return walletCalculatedData.slice(startIndex, endIndex);
     }
 
-    return filteredEmployees.slice(startIndex, endIndex);
-  }, [filteredEmployees, currentPage, activeTab, salarySheetCalculatedData, walletCalculatedData]);
+    return salarySheetCalculatedData;
+  }, [serverPaginatedEmployees, currentPage, activeTab, salarySheetCalculatedData, walletCalculatedData]);
 
   useEffect(() => {
     setCurrentPage(1);

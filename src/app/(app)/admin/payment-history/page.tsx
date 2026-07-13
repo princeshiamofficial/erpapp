@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Search, Wallet, ArrowUpDown, Download, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getAllPaymentHistory } from '@/lib/payment-history-service';
+import { getAllPaymentHistory, getPaymentHistoryPaginated } from '@/lib/payment-history-service';
 import { updateAdvancePaymentStatus } from '@/lib/order-service'; // Corrected import
 import type { BillReport, AdvancePaymentRecord, TrackingLink } from '@/types';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, isAfter, startOfMonth, endOfMonth } from 'date-fns';
@@ -78,6 +78,14 @@ export default function PaymentHistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'date', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [totalPayments, setTotalPayments] = useState(0);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
     const today = new Date();
     return {
@@ -93,14 +101,25 @@ export default function PaymentHistoryPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedPayments = await getAllPaymentHistory();
-      setAllPayments(fetchedPayments);
+      const startDateStr = selectedDateRange?.from ? startOfDay(selectedDateRange.from).toISOString() : undefined;
+      const endDateStr = selectedDateRange?.to ? endOfDay(selectedDateRange.to).toISOString() : undefined;
+
+      const res = await getPaymentHistoryPaginated(
+        currentPage,
+        ITEMS_PER_PAGE,
+        debouncedSearchTerm,
+        startDateStr,
+        endDateStr,
+        sortConfig
+      );
+      setPayments(res.payments);
+      setTotalPayments(res.total);
     } catch (error) {
       toast({ title: "Error", description: "Could not load payment history.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, currentPage, debouncedSearchTerm, selectedDateRange, sortConfig]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -111,57 +130,9 @@ export default function PaymentHistoryPage() {
     fetchData();
   }, [fetchData, currentUser, router]);
 
-  const filteredAndSortedPayments = useMemo(() => {
-    let results = [...allPayments];
+  const totalPayment = useMemo(() => payments.reduce((sum, p) => sum + (Number(p.payment) || 0), 0), [payments]);
 
-    // Date range filter
-    if (selectedDateRange?.from && selectedDateRange?.to) {
-        const startDate = startOfDay(selectedDateRange.from);
-        const endDate = endOfDay(selectedDateRange.to);
-        results = results.filter(p => {
-            try {
-                const paymentDate = parseISO(p.date);
-                // The date '2025-11-13' check is kept as per previous request.
-                return isWithinInterval(paymentDate, { start: startDate, end: endDate }) && isAfter(paymentDate, new Date('2025-11-13'));
-            } catch (e) {
-                return false;
-            }
-        });
-    }
-
-    if (searchTerm.trim()) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-      results = results.filter(p =>
-        p.vendorName.toLowerCase().includes(lowerSearchTerm) || 
-        p.invoiceId.toLowerCase().includes(lowerSearchTerm) || 
-        p.method.toLowerCase().includes(lowerSearchTerm) ||
-        (p.notes && p.notes.toLowerCase().includes(lowerSearchTerm)) ||
-        (p.status && p.status.toLowerCase().includes(lowerSearchTerm))
-      );
-    }
-
-    if (sortConfig !== null) {
-      results.sort((a, b) => {
-        let aValue: string | number = a[sortConfig.key];
-        let bValue: string | number = b[sortConfig.key];
-
-        if (sortConfig.key === 'date') {
-          try {
-            aValue = new Date(aValue).getTime();
-            bValue = new Date(bValue).getTime();
-          } catch (e) {
-            return 0;
-          }
-        }
-
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return results;
-  }, [allPayments, searchTerm, sortConfig, selectedDateRange]);
+  const totalPages = Math.ceil(totalPayments / ITEMS_PER_PAGE);
   
   const handleStatusDoubleClick = (payment: PaymentHistoryEntry) => {
     // Only allow changing status for payments linked to an order
@@ -183,7 +154,7 @@ export default function PaymentHistoryPage() {
       toast({ title: "Status Updated", description: `Payment for order ${paymentToUpdate.vendorName} marked as ${newStatus}.` });
       
       // Silent UI update
-      setAllPayments(prevPayments => {
+      setPayments(prevPayments => {
         return prevPayments.map(p => {
             if (p.id === paymentToUpdate.id) {
                 return { ...p, status: newStatus };
@@ -201,15 +172,6 @@ export default function PaymentHistoryPage() {
     setPaymentToUpdate(null);
   };
   
-  const totalPayment = useMemo(() => filteredAndSortedPayments.reduce((sum, p) => sum + (Number(p.payment) || 0), 0), [filteredAndSortedPayments]);
-
-  const totalPages = Math.ceil(filteredAndSortedPayments.length / ITEMS_PER_PAGE);
-
-  const paginatedPayments = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredAndSortedPayments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredAndSortedPayments, currentPage]);
-  
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -225,11 +187,11 @@ export default function PaymentHistoryPage() {
   };
   
   const handleExport = () => {
-    if (filteredAndSortedPayments.length === 0) {
+    if (payments.length === 0) {
       toast({ title: "No Data to Export", description: "There is no data matching the current filters." });
       return;
     }
-    const dataToExport = filteredAndSortedPayments.map(p => ({
+    const dataToExport = payments.map(p => ({
       'Order ID': p.vendorName,
       'Company': p.invoiceId, 
       'Payment Amount': p.payment,
@@ -259,8 +221,8 @@ export default function PaymentHistoryPage() {
         </TableRow>
       ));
     }
-    if (paginatedPayments.length > 0) {
-      return paginatedPayments.map((p) => (
+    if (payments.length > 0) {
+      return payments.map((p) => (
         <TableRow key={p.id}>
           <TableCell className="font-medium">{p.vendorName}</TableCell>
           <TableCell>{p.invoiceId}</TableCell>
@@ -330,7 +292,7 @@ export default function PaymentHistoryPage() {
                   />
                 </div>
                  <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={(r) => setSelectedDateRange(r)} />
-                 <Button variant="outline" onClick={handleExport} disabled={filteredAndSortedPayments.length === 0}><Download className="mr-2 h-4 w-4"/>Export</Button>
+                 <Button variant="outline" onClick={handleExport} disabled={payments.length === 0}><Download className="mr-2 h-4 w-4"/>Export</Button>
               </div>
             </div>
         </CardHeader>

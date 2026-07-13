@@ -59,6 +59,25 @@ export const getVendorBills = async (): Promise<VendorBill[]> => {
   }
 };
 
+export const getVendorBillsPaginated = async (
+  page: number = 1,
+  limit: number = 20,
+  searchTerm?: string
+): Promise<{ bills: VendorBill[]; total: number }> => {
+  const allBills = await getVendorBills();
+  let results = [...allBills];
+  if (searchTerm && searchTerm.trim()) {
+    const lower = searchTerm.toLowerCase();
+    results = results.filter(b =>
+      (b.vendorName && b.vendorName.toLowerCase().includes(lower)) ||
+      (b.billId && b.billId.toLowerCase().includes(lower))
+    );
+  }
+  const total = results.length;
+  const startIndex = (page - 1) * limit;
+  return { bills: results.slice(startIndex, startIndex + limit), total };
+};
+
 export const getBillById = async (id: string): Promise<VendorBill | null> => {
   if (!id) return null;
   try {

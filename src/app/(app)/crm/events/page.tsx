@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { getLeads, updateLeadAction } from '@/app/(app)/pipeline/actions';
+import { getLeads, getEventsPaginatedAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
 import { getUsers } from '@/lib/user-service';
 import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
 import type { Lead, User } from '@/types';
@@ -83,6 +83,7 @@ export default function EventsPage() {
   const { toast } = useToast();
 
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [totalEvents, setTotalEvents] = useState(0);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,6 +110,10 @@ export default function EventsPage() {
   const [isRemovingEvent, setIsRemovingEvent] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, timeFilter, selectedCrmId, selectedDateRange]);
+
   const fetchLeadsAndUsers = useCallback(async (isSilent = false) => {
     if (!currentUser) return;
     if (!isSilent) {
@@ -119,11 +124,27 @@ export default function EventsPage() {
       const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? endOfDay(selectedDateRange.to).toISOString() : undefined;
       const role = currentUser?.role;
       const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
-      const [fetchedLeads, fetchedUsers] = await Promise.all([
-        getLeads(startStr, endStr, role, userId, undefined, undefined, debouncedSearchTerm),
+      const scheduleStart = timeFilter === 'today' ? startOfDay(new Date()).toISOString() : undefined;
+      const scheduleEnd = timeFilter === 'today' ? endOfDay(new Date()).toISOString() : undefined;
+      const crmFilterId = selectedCrmId === 'all' ? undefined : selectedCrmId;
+      const queryUserId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? crmFilterId : userId;
+
+      const [paginatedResult, fetchedUsers] = await Promise.all([
+        getEventsPaginatedAction(
+          currentPage,
+          ITEMS_PER_PAGE,
+          startStr,
+          endStr,
+          role,
+          queryUserId,
+          debouncedSearchTerm,
+          scheduleStart,
+          scheduleEnd
+        ),
         getUsers()
       ]);
-      setLeads(fetchedLeads);
+      setLeads(paginatedResult.leads);
+      setTotalEvents(paginatedResult.total);
       setAllUsers(fetchedUsers);
     } catch (error) {
       toast({ 
@@ -134,13 +155,13 @@ export default function EventsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, currentUser, selectedDateRange, debouncedSearchTerm]);
+  }, [toast, currentUser, selectedDateRange, debouncedSearchTerm, currentPage, timeFilter, selectedCrmId]);
 
   useEffect(() => {
     if (currentUser) {
       fetchLeadsAndUsers();
     }
-  }, [currentUser, fetchLeadsAndUsers]);
+  }, [fetchLeadsAndUsers, currentUser]);
 
   useEffect(() => {
     if (!socket) return;
@@ -227,41 +248,8 @@ export default function EventsPage() {
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
-  // Filter leads with schedules
-  const filteredEvents = useMemo(() => {
-    let baseLeads = leads.filter(lead => {
-      if (!lead.schedule) return false;
-      try {
-        const scheduleDate = parseISO(lead.schedule);
-        if (timeFilter === 'today') {
-          return isToday(scheduleDate);
-        }
-        return true;
-      } catch (e) {
-        return false;
-      }
-    });
-
-    // Filter by CRM
-    if (selectedCrmId !== 'all') {
-      baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
-    }
-
-    // Search term is now handled entirely on the server side via debouncedSearchTerm
-
-    // Sort table view by schedule date ascending (closest events first)
-    return baseLeads.sort((a, b) => {
-      if (!a.schedule || !b.schedule) return 0;
-      return new Date(a.schedule).getTime() - new Date(b.schedule).getTime();
-    });
-  }, [leads, selectedCrmId, searchTerm, timeFilter]);
-
-  // Pagination calculations for the table view
-  const totalPages = Math.ceil(filteredEvents.length / ITEMS_PER_PAGE);
-  const paginatedEvents = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredEvents.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredEvents, currentPage]);
+  // Pagination calculation from server total
+  const totalPages = Math.ceil(totalEvents / ITEMS_PER_PAGE);
 
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
@@ -370,7 +358,7 @@ export default function EventsPage() {
           <div>
             <CardTitle className="text-lg font-bold">Scheduled Events List</CardTitle>
             <CardDescription>
-              Showing all {filteredEvents.length} scheduled CRM leads & appointments.
+              Showing all {totalEvents} scheduled CRM leads & appointments.
             </CardDescription>
           </div>
           
@@ -483,8 +471,8 @@ export default function EventsPage() {
                       <TableCell className="text-right"><div className="h-8 w-8 bg-muted animate-pulse rounded ml-auto" /></TableCell>
                     </TableRow>
                   ))
-                ) : paginatedEvents.length > 0 ? (
-                  paginatedEvents.map((lead, index) => {
+                ) : leads.length > 0 ? (
+                  leads.map((lead, index) => {
                     const scheduleDate = lead.schedule ? parseISO(lead.schedule) : null;
                     const isPast = scheduleDate ? isBefore(scheduleDate, startOfDay(new Date())) && !isToday(scheduleDate) : false;
 

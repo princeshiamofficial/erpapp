@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { Gift, User } from '@/types';
 import {
   getGifts as getGiftsFromDb,
+  getMembershipCardsPaginated,
   addGift as addGiftToDb,
   updateGift as updateGiftInDb,
   deleteGift as deleteGiftFromDb,
@@ -27,6 +28,20 @@ export async function getGifts(): Promise<Gift[]> {
   } catch (error) {
     console.error("Error in getGifts server action:", error);
     return [];
+  }
+}
+
+export async function getMembershipCardsPaginatedAction(
+  page: number = 1,
+  limit: number = 25,
+  searchTerm?: string,
+  crmUserId?: string
+): Promise<{ cards: Gift[]; total: number }> {
+  try {
+    return await getMembershipCardsPaginated(page, limit, searchTerm, crmUserId);
+  } catch (error) {
+    console.error("Error in getMembershipCardsPaginatedAction:", error);
+    return { cards: [], total: 0 };
   }
 }
 

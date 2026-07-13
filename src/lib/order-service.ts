@@ -126,10 +126,25 @@ export const getOrders = async (startDate?: string, endDate?: string, role?: str
   }
 };
 
-export const getOrdersWithTotal = async (startDate?: string, endDate?: string, role?: string, userId?: string, page: number = 1, limit: number = 25, searchTerm?: string, viewType?: 'orders' | 'reorders' | 'pending_payment'): Promise<{ orders: TrackingLink[], total: number }> => {
+export const getOrdersWithTotal = async (
+  startDate?: string, 
+  endDate?: string, 
+  role?: string, 
+  userId?: string, 
+  page: number = 1, 
+  limit: number = 25, 
+  searchTerm?: string, 
+  viewType?: 'orders' | 'reorders' | 'pending_payment',
+  statusFilter?: string
+): Promise<{ orders: TrackingLink[], total: number }> => {
   try {
     const conditions = ['o.is_deleted = FALSE'];
     const params: any[] = [];
+
+    if (statusFilter && statusFilter !== 'all') {
+      conditions.push('o.current_status = ?');
+      params.push(statusFilter);
+    }
 
     if (startDate) {
       conditions.push('o.created_at >= ?');
@@ -1152,6 +1167,175 @@ export const getDeliveredOrdersByDateRange = async (
   } catch (error) {
     console.error("Error fetching delivered orders by date range from MySQL:", error);
     return { orders: [], total: 0 };
+  }
+};
+
+export interface OrderPulse {
+  id: string; // customer_key
+  companyName: string;
+  phoneNumber: string;
+  crmUserName?: string;
+  designerRepresentativeName?: string;
+  lastOrderDate: string;
+  totalOrders: number;
+  lastOrderId: string;
+  lastOrderStatus: string;
+  status?: string;
+  statusColor?: string;
+  monthsDiff?: number;
+}
+
+export const getOrderPulsesPaginated = async (
+  startDate?: string,
+  endDate?: string,
+  inactivityThresholdMonths: number = 3,
+  pulseStatusFilter: 'Active' | 'Inactive' | 'All' = 'All',
+  page: number = 1,
+  limit: number = 25,
+  searchTerm?: string
+): Promise<{ pulses: OrderPulse[], total: number }> => {
+  try {
+    const conditions = ['o.is_deleted = FALSE', 'LOWER(s.name) NOT LIKE ?'];
+    const params: any[] = ['%cancel%'];
+
+    if (startDate) {
+      conditions.push('o.created_at >= ?');
+      params.push(startDate);
+    }
+    if (endDate) {
+      conditions.push('o.created_at <= ?');
+      params.push(endDate);
+    }
+
+    const baseWhere = conditions.join(' AND ');
+
+    const rankedQuery = `
+      SELECT 
+        o.id as lastOrderId,
+        c.company_name as companyName,
+        c.phone_number as phoneNumber,
+        o.current_status as lastOrderStatus,
+        o.created_at as lastOrderDate,
+        uc.name as crmUserName,
+        ud.name as designerRepresentativeName,
+        COALESCE(NULLIF(TRIM(c.company_name), ''), NULLIF(TRIM(c.phone_number), ''), 'Unknown Customer') as customer_key,
+        ROW_NUMBER() OVER(
+          PARTITION BY COALESCE(NULLIF(TRIM(c.company_name), ''), NULLIF(TRIM(c.phone_number), ''), 'Unknown Customer') 
+          ORDER BY o.created_at DESC
+        ) as rn
+      FROM ${ORDERS_TABLE} o
+      JOIN clients c ON o.client_id = c.id
+      LEFT JOIN statuses s ON o.current_status = s.id
+      LEFT JOIN users uc ON o.crm_user_id = uc.id
+      LEFT JOIN users ud ON o.designer_representative_id = ud.id
+      WHERE ${baseWhere}
+    `;
+
+    const countQuery = `
+      SELECT 
+        COALESCE(NULLIF(TRIM(c.company_name), ''), NULLIF(TRIM(c.phone_number), ''), 'Unknown Customer') as customer_key,
+        COUNT(o.id) as totalOrders
+      FROM ${ORDERS_TABLE} o
+      JOIN clients c ON o.client_id = c.id
+      LEFT JOIN statuses s ON o.current_status = s.id
+      WHERE ${baseWhere}
+      GROUP BY customer_key
+    `;
+
+    const filterConditions = ['ro.rn = 1'];
+    const filterParams = [...params, ...params]; // Params for rankedQuery and countQuery
+
+    if (pulseStatusFilter === 'Active') {
+      filterConditions.push(`TIMESTAMPDIFF(MONTH, ro.lastOrderDate, NOW()) < 3`);
+    } else if (pulseStatusFilter === 'Inactive') {
+      filterConditions.push(`TIMESTAMPDIFF(MONTH, ro.lastOrderDate, NOW()) >= ?`);
+      filterParams.push(inactivityThresholdMonths);
+    }
+
+    if (searchTerm) {
+      const likeTerm = `%${searchTerm}%`;
+      filterConditions.push(`(
+        ro.lastOrderId LIKE ? OR 
+        ro.companyName LIKE ? OR 
+        ro.phoneNumber LIKE ? OR 
+        ro.crmUserName LIKE ? OR 
+        ro.lastOrderStatus LIKE ?
+      )`);
+      filterParams.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+    }
+
+    const filterWhere = filterConditions.join(' AND ');
+
+    const finalQuery = `
+      WITH RankedOrders AS (${rankedQuery}),
+           OrderCounts AS (${countQuery})
+      SELECT 
+        ro.customer_key as id,
+        ro.companyName,
+        ro.phoneNumber,
+        ro.crmUserName,
+        ro.designerRepresentativeName,
+        ro.lastOrderDate,
+        oc.totalOrders,
+        ro.lastOrderId,
+        ro.lastOrderStatus,
+        TIMESTAMPDIFF(MONTH, ro.lastOrderDate, NOW()) as monthsDiff
+      FROM RankedOrders ro
+      JOIN OrderCounts oc ON ro.customer_key = oc.customer_key
+      WHERE ${filterWhere}
+      ORDER BY ro.lastOrderDate DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const totalCountQuery = `
+      WITH RankedOrders AS (${rankedQuery})
+      SELECT COUNT(*) as total
+      FROM RankedOrders ro
+      WHERE ${filterWhere}
+    `;
+
+    const totalResult = await query<any[]>(totalCountQuery, filterParams);
+    const total = totalResult[0]?.total || 0;
+
+    const offset = Math.max(0, (page - 1) * limit);
+    const limitParams = [...filterParams, Number(limit), Number(offset)];
+    
+    const rows = await query<any[]>(finalQuery, limitParams);
+
+    const pulses: OrderPulse[] = rows.map(row => {
+      let status = 'Active';
+      let statusColor = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      const monthsDiff = row.monthsDiff;
+      
+      if (monthsDiff >= 3) {
+        status = `Inactive (${monthsDiff}+ Months)`;
+        if (monthsDiff >= 6) {
+          statusColor = 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+        } else {
+          statusColor = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
+        }
+      }
+
+      return {
+        id: row.id,
+        companyName: row.companyName,
+        phoneNumber: row.phoneNumber,
+        crmUserName: row.crmUserName,
+        designerRepresentativeName: row.designerRepresentativeName,
+        lastOrderDate: row.lastOrderDate,
+        totalOrders: row.totalOrders,
+        lastOrderId: row.lastOrderId,
+        lastOrderStatus: row.lastOrderStatus,
+        status,
+        statusColor,
+        monthsDiff
+      };
+    });
+
+    return { pulses, total };
+  } catch (error) {
+    console.error("Error fetching paginated order pulses from MySQL:", error);
+    return { pulses: [], total: 0 };
   }
 };
 

@@ -14,7 +14,7 @@ import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { getContrastTextColor } from '@/lib/color-utils';
-import { getQuotations } from '@/lib/quotation-service';
+import { getQuotationsPaginated } from '@/lib/quotation-service';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getStatuses } from '@/lib/status-service';
@@ -77,6 +77,7 @@ export default function QuotationsPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [quotations, setQuotations] = useState<TrackingLink[]>([]);
+  const [totalQuotations, setTotalQuotations] = useState(0);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -122,9 +123,11 @@ export default function QuotationsPage() {
       setIsLoading(true);
     }
     try {
-      const [fetchedQuotations, fetchedStatuses, fetchedSettings, fetchedOrders, fetchedOrderStatuses] = await Promise.all([
-        getQuotations(debouncedSearchTerm),
-        // Mocking statuses for quotation page
+      const role = currentUser?.role;
+      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
+
+      const [fetchedResult, fetchedStatuses, fetchedSettings, fetchedOrders, fetchedOrderStatuses] = await Promise.all([
+        getQuotationsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm, role, userId, viewType),
         Promise.resolve([
           { id: 'Pending', name: 'Pending', color: '#8B5CF6', xid: 'pending' },
           { id: 'Approved', name: 'Approved', color: '#10B981', xid: 'approved' },
@@ -134,7 +137,8 @@ export default function QuotationsPage() {
         getOrders(),
         getStatuses()
       ]);
-      setQuotations(fetchedQuotations);
+      setQuotations(fetchedResult.quotations);
+      setTotalQuotations(fetchedResult.total);
       setAllStatuses(fetchedStatuses);
       setGlobalAppSettings(fetchedSettings);
       setAllOrders(fetchedOrders);
@@ -148,7 +152,7 @@ export default function QuotationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearchTerm, toast, quotations.length]);
+  }, [debouncedSearchTerm, toast, quotations.length, currentPage, viewType, currentUser]);
 
   useEffect(() => {
     setIsClient(true);
@@ -160,49 +164,7 @@ export default function QuotationsPage() {
     return allStatuses.filter(s => s.isVisible !== false);
   }, [allStatuses]);
 
-  const filteredQuotations = useMemo(() => {
-    let result = quotations;
-    if (currentUser?.role === 'CRM') {
-      result = result.filter(quotation => quotation.crmUserId === currentUser.id);
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-      result = result.filter(quotation => quotation.designerRepresentativeId === currentUser.id);
-    }
-
-    if (viewType === 're-quotations') {
-      const jobCounts = quotations.reduce((acc, quotation) => {
-        const jobId = (quotation.companyName || '').split(' • ')[0].trim();
-        if (jobId) {
-          acc[jobId] = (acc[jobId] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      const reorderJobIds = new Set(Object.keys(jobCounts).filter(jobId => jobCounts[jobId] > 1));
-
-      result = result.filter(quotation => {
-        const jobId = (quotation.companyName || '').split(' • ')[0].trim();
-        return jobId && reorderJobIds.has(jobId);
-      });
-    }
-
-    if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return result.filter(quotation =>
-      quotation.id.toLowerCase().includes(lowerSearchTerm) ||
-      (quotation.companyName && quotation.companyName.toLowerCase().includes(lowerSearchTerm)) ||
-      (quotation.phoneNumber && quotation.phoneNumber.toLowerCase().includes(lowerSearchTerm)) ||
-      quotation.crmUserName.toLowerCase().includes(lowerSearchTerm) ||
-      (quotation.designerRepresentativeName && quotation.designerRepresentativeName.toLowerCase().includes(lowerSearchTerm))
-    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [quotations, searchTerm, currentUser, viewType]);
-
-  const totalPages = Math.ceil(filteredQuotations.length / ITEMS_PER_PAGE);
-
-  const paginatedQuotations = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredQuotations.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredQuotations, currentPage]);
+  const totalPages = Math.ceil(totalQuotations / ITEMS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -219,10 +181,10 @@ export default function QuotationsPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredQuotations.length > 0) {
+    if (allStatuses.length > 0 && quotations.length > 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInScope = new Set<string>();
-      filteredQuotations.forEach(quotation => uniqueStatusIdsInScope.add(quotation.currentStatus));
+      quotations.forEach(quotation => uniqueStatusIdsInScope.add(quotation.currentStatus));
 
       uniqueStatusIdsInScope.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
@@ -234,10 +196,10 @@ export default function QuotationsPage() {
         }
         return prevMap;
       });
-    } else if (Object.keys(quotationStatusDisplay).length > 0 && (allStatuses.length === 0 || filteredQuotations.length === 0)) {
+    } else if (Object.keys(quotationStatusDisplay).length > 0 && (allStatuses.length === 0 || quotations.length === 0)) {
       setQuotationStatusDisplay({});
     }
-  }, [filteredQuotations, allStatuses, getStatusDisplayInfo]);
+  }, [quotations, allStatuses, getStatusDisplayInfo]);
 
 
   const canCreateQuotation = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -505,8 +467,8 @@ export default function QuotationsPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : paginatedQuotations.length > 0 ? (
-                  paginatedQuotations.map((quotation) => {
+                ) : quotations.length > 0 ? (
+                  quotations.map((quotation) => {
                     const nameParts = (quotation.companyName || '').split(' • ');
                     const contactPerson = nameParts[0].trim();
                     const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : 'N/A';

@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, GlobalSettings, CustomStatus, SowDataEntry } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { getSowEntries } from '@/lib/sow-service'; // Import new SOW service
+import { getSowDataPaginated, SowData } from '@/lib/sow-service';
 import { PackageSearch, ListChecks, ArrowUpDown, Phone, MapPin, PlusCircle } from 'lucide-react';
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -47,19 +47,6 @@ import { NewSowDialog } from '@/components/sow/NewSowDialog';
 const ITEMS_PER_PAGE = 12;
 const SOW_DATA_CACHE_KEY = 'sowDataCache';
 
-interface SowData {
-  id: string; // Using Job ID as the unique key
-  orderDate: string; // Will use the date of the latest order for that job
-  businessName: string;
-  address: string;
-  phoneNumber: string;
-  purchasedCategories: string[];
-  unmatchedPurchasedItems: string[];
-  allCategories: string[];
-  amount: number;
-  loyaltyScore: number;
-}
-
 type SortKey = 'orderDate' | 'loyaltyScore' | 'products';
 type SortDirection = 'asc' | 'desc';
 
@@ -79,114 +66,6 @@ const formatDate = (dateString?: string) => {
     }
 };
 
-const generateSowData = (orders: TrackingLink[], sowEntries: SowDataEntry[], globalSettings: GlobalSettings | null): SowData[] => {
-    const filters = globalSettings?.reportProductFilters || [];
-
-    const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string, address: string, phoneNumber: string, manualAmount: number }>();
-
-    orders.forEach(order => {
-        const companyNameParts = order.companyName.split(' • ').map(part => part.trim());
-        const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id;
-        const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
-
-        const existing = ordersByJobId.get(jobId) || { orders: [], businessName, latestDate: order.createdAt, address: order.address, phoneNumber: order.phoneNumber, manualAmount: 0 };
-        existing.orders.push(order);
-        if (new Date(order.createdAt) > new Date(existing.latestDate)) {
-          existing.latestDate = order.createdAt;
-          existing.businessName = businessName;
-          existing.address = order.address;
-          existing.phoneNumber = order.phoneNumber;
-        }
-        ordersByJobId.set(jobId, existing);
-    });
-
-    sowEntries.forEach(entry => {
-        const jobId = entry.jobId;
-        const businessName = entry.businessName;
-        const existing = ordersByJobId.get(jobId) || { orders: [], businessName: entry.businessName, latestDate: entry.createdAt, address: entry.address, phoneNumber: entry.phoneNumber, manualAmount: 0 };
-        
-        const sowAsOrderItem: OrderItem = {
-          id: entry.id,
-          model: entry.category,
-          quantity: 1,
-          lamination: 'N/A',
-          unitPrice: entry.amount || 0,
-          lineItemTotalPrice: entry.amount || 0,
-        };
-
-        const pseudoOrder: TrackingLink = {
-          id: entry.id,
-          companyName: `${entry.jobId} • ${entry.businessName}`,
-          address: entry.address,
-          phoneNumber: entry.phoneNumber,
-          orderItems: [sowAsOrderItem],
-          createdAt: entry.createdAt,
-          crmUserId: entry.crmUserId,
-          crmUserName: entry.crmUserName,
-          currentStatus: 'sow-entry',
-          isPublic: false,
-          statusHistory: [],
-          comments: []
-        };
-        
-        existing.orders.push(pseudoOrder);
-        existing.manualAmount += entry.amount || 0;
-
-        if (new Date(entry.createdAt) > new Date(existing.latestDate)) {
-          existing.latestDate = entry.createdAt;
-          existing.businessName = entry.businessName;
-          existing.address = entry.address;
-          existing.phoneNumber = entry.phoneNumber;
-        }
-        ordersByJobId.set(jobId, existing);
-    });
-
-    return Array.from(ordersByJobId.entries()).map(([jobId, group]) => {
-        const allItemsFromGroup = group.orders.flatMap(o => o.orderItems || []);
-        
-        const matchedFilters = new Set<string>();
-        const unmatchedItems = new Set<string>();
-
-        if (allItemsFromGroup.length > 0) {
-            allItemsFromGroup.forEach(item => {
-                let isItemMatched = false;
-                if (filters.length > 0) {
-                    for (const filter of filters) {
-                        if (item.model.toLowerCase().includes(filter.toLowerCase())) {
-                            matchedFilters.add(filter);
-                            isItemMatched = true;
-                        }
-                    }
-                }
-                if (!isItemMatched) {
-                    unmatchedItems.add(item.model);
-                }
-            });
-        }
-        
-        const totalAmount = group.orders.reduce((sum, order) => {
-            const orderTotal = (order.orderItems || []).reduce((itemSum, item) => itemSum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
-            return sum + orderTotal;
-        }, 0);
-        
-        const loyaltyScore = Math.min(100, Math.floor(totalAmount / 1000));
-
-        return {
-            id: jobId,
-            orderDate: group.latestDate, // Store as ISO string for sorting
-            businessName: group.businessName,
-            address: group.address,
-            phoneNumber: group.phoneNumber,
-            purchasedCategories: Array.from(matchedFilters),
-            unmatchedPurchasedItems: Array.from(unmatchedItems),
-            allCategories: filters,
-            amount: totalAmount,
-            loyaltyScore: loyaltyScore,
-        };
-    });
-};
-
-
 const getLoyaltyColorClass = (score: number) => {
     if (score <= 25) return 'bg-red-500';
     if (score <= 50) return 'bg-amber-500';
@@ -198,6 +77,7 @@ const getLoyaltyColorClass = (score: number) => {
 export default function SOWPage() {
   const { currentUser } = useAuth();
   const [sowData, setSowData] = useState<SowData[]>([]);
+  const [totalSowData, setTotalSowData] = useState(0);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -222,15 +102,19 @@ export default function SOWPage() {
       const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? endOfDay(selectedDateRange.to).toISOString() : undefined;
       const role = currentUser?.role;
       const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
-      const [fetchedOrders, fetchedSettings, fetchedSowEntries] = await Promise.all([
-        getOrders(startStr, endStr, role, userId, undefined, undefined, debouncedSearchTerm),
-        getGlobalSettings(),
-        getSowEntries(startStr, endStr, role, userId, debouncedSearchTerm),
-      ]);
-      const data = generateSowData(fetchedOrders, fetchedSowEntries, fetchedSettings);
-      setSowData(data);
-      setGlobalSettings(fetchedSettings);
-      localStorage.setItem(SOW_DATA_CACHE_KEY, JSON.stringify(data));
+      const res = await getSowDataPaginated(
+        currentPage,
+        ITEMS_PER_PAGE,
+        startStr,
+        endStr,
+        role,
+        userId,
+        debouncedSearchTerm,
+        sortConfig
+      );
+      setSowData(res.data);
+      setTotalSowData(res.total);
+      setGlobalSettings(res.globalSettings);
     } catch (error) {
       toast({
         title: "Error fetching data",
@@ -240,7 +124,7 @@ export default function SOWPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, selectedDateRange, currentUser, debouncedSearchTerm]);
+  }, [toast, selectedDateRange, currentUser, debouncedSearchTerm, currentPage, sortConfig]);
 
 
    useEffect(() => {
@@ -265,44 +149,7 @@ export default function SOWPage() {
     setCurrentPage(1);
   };
   
-  const sortedAndFilteredData = useMemo(() => {
-    let sortableItems = [...sowData];
-
-    // Search term is now handled entirely on the server side via debouncedSearchTerm
-    
-    if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        if (sortConfig.key === 'products') {
-          const aCount = a.purchasedCategories.length + a.unmatchedPurchasedItems.length;
-          const bCount = b.purchasedCategories.length + b.unmatchedPurchasedItems.length;
-          if (aCount < bCount) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (aCount > bCount) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
-        } else if (sortConfig.key === 'orderDate') {
-          const dateA = new Date(a.orderDate).getTime();
-          const dateB = new Date(b.orderDate).getTime();
-          if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
-        } else {
-           if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
-           if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
-           return 0;
-        }
-      });
-    } else {
-        sortableItems.sort((a,b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
-    }
-    return sortableItems;
-  }, [sowData, searchTerm, sortConfig]);
-
-  const totalPages = Math.ceil(sortedAndFilteredData.length / ITEMS_PER_PAGE);
-
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return sortedAndFilteredData.slice(startIndex, endIndex);
-  }, [sortedAndFilteredData, currentPage]);
+  const totalPages = Math.ceil(totalSowData / ITEMS_PER_PAGE);
   
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -460,8 +307,8 @@ export default function SOWPage() {
                                   <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
                              </TableRow>
                           ))
-                      ) : paginatedData.length > 0 ? (
-                          paginatedData.map((row, index) => {
+                      ) : sowData.length > 0 ? (
+                          sowData.map((row, index) => {
                              const totalPurchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
                              const totalPossibleCategories = row.allCategories.length;
                              return (

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { getStatuses } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
-import { getOrders } from '@/lib/order-service';
+import { getOrderPulsesPaginated, OrderPulse } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { deleteOrderAction } from '../orders/actions';
@@ -77,7 +77,8 @@ const ITEMS_PER_PAGE = 25;
 export default function OrderPulsePage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [orders, setOrders] = useState<TrackingLink[]>([]);
+  const [pulses, setPulses] = useState<OrderPulse[]>([]);
+  const [totalPulses, setTotalPulses] = useState(0);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -117,32 +118,34 @@ export default function OrderPulsePage() {
     if (!currentUser) {
       return;
     }
-    if (orders.length === 0) {
+    if (pulses.length === 0) {
       setIsLoading(true);
     }
     try {
       const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
       const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
-      const role = currentUser?.role;
-      const userId = undefined; // No user ID based filtering on order-pulse page
-      const [fetchedOrders, fetchedStatuses, fetchedSettings] = await Promise.all([
-        getOrders(startStr, endStr, role, userId, undefined, undefined, debouncedSearchTerm),
+      const thresholdMonths = selectedInactivityThreshold === '3Months' ? 3 : selectedInactivityThreshold === '6Months' ? 6 : 12;
+
+      const [fetchedResult, fetchedStatuses, fetchedSettings] = await Promise.all([
+        getOrderPulsesPaginated(startStr, endStr, thresholdMonths, pulseStatusFilter, currentPage, ITEMS_PER_PAGE, debouncedSearchTerm),
         getStatuses(),
         getGlobalSettings()
       ]);
-      setOrders(fetchedOrders);
+      setPulses(fetchedResult.pulses);
+      setTotalPulses(fetchedResult.total);
       setAllStatuses(fetchedStatuses);
       setGlobalAppSettings(fetchedSettings);
     } catch (error) {
-      console.error("Failed to fetch orders, statuses, or settings:", error);
-      toast({ title: "Error", description: "Could not load order data or settings.", variant: "destructive" });
-      setOrders([]);
+      console.error("Failed to fetch order pulses, statuses, or settings:", error);
+      toast({ title: "Error", description: "Could not load order pulse data.", variant: "destructive" });
+      setPulses([]);
+      setTotalPulses(0);
       setAllStatuses([]);
       setGlobalAppSettings(null);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast, orders.length, selectedDateRange, debouncedSearchTerm]);
+  }, [currentUser, toast, pulses.length, selectedDateRange, debouncedSearchTerm, selectedInactivityThreshold, pulseStatusFilter, currentPage]);
 
   useEffect(() => {
     setIsClient(true);
@@ -174,97 +177,7 @@ export default function OrderPulsePage() {
     setSelectedInactivityThreshold(predefined);
   };
 
-  const filteredPulses = useMemo(() => {
-    const cancelStatusIds = new Set(
-      allStatuses
-        .filter(s => s.name.toLowerCase().includes('cancel'))
-        .map(s => s.id)
-    );
-
-    let result = orders.filter(order => !cancelStatusIds.has(order.currentStatus));
-
-    const customerMap = new Map<string, any>();
-
-    result.forEach(order => {
-      const key = order.companyName?.trim() || order.phoneNumber?.trim() || 'Unknown Customer';
-      if (!customerMap.has(key)) {
-        customerMap.set(key, {
-          id: key, // Use company or phone as unique id
-          companyName: order.companyName || 'Unknown',
-          phoneNumber: order.phoneNumber || 'N/A',
-          crmUserName: order.crmUserName,
-          designerRepresentativeName: order.designerRepresentativeName,
-          lastOrderDate: order.createdAt,
-          totalOrders: 1,
-          lastOrderId: order.id,
-          lastOrderStatus: order.currentStatus
-        });
-      } else {
-        const existing = customerMap.get(key);
-        existing.totalOrders += 1;
-        if (new Date(order.createdAt) > new Date(existing.lastOrderDate)) {
-          existing.lastOrderDate = order.createdAt;
-          existing.lastOrderId = order.id;
-          existing.lastOrderStatus = order.currentStatus;
-          existing.crmUserName = order.crmUserName;
-          existing.designerRepresentativeName = order.designerRepresentativeName;
-          if (order.phoneNumber) existing.phoneNumber = order.phoneNumber;
-          if (order.companyName) existing.companyName = order.companyName;
-        }
-      }
-    });
-
-    const now = new Date();
-    const thresholdMonths = selectedInactivityThreshold === '3Months' ? 3 : selectedInactivityThreshold === '6Months' ? 6 : 12;
-
-    let pulses = Array.from(customerMap.values()).map(customer => {
-      const monthsDiff = differenceInMonths(now, new Date(customer.lastOrderDate));
-      
-      let status = 'Active';
-      let statusColor = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      
-      if (monthsDiff >= 3) {
-        status = `Inactive (${monthsDiff}+ Months)`;
-        if (monthsDiff >= 6) {
-          statusColor = 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-        } else {
-          statusColor = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
-        }
-      }
-
-      return {
-        ...customer,
-        status,
-        statusColor,
-        monthsDiff
-      };
-    }).filter(pulse => {
-      if (pulseStatusFilter === "Active") {
-        return pulse.monthsDiff < 3;
-      } else {
-        return pulse.monthsDiff >= thresholdMonths;
-      }
-    });
-
-    if (searchTerm) {
-      const terms = searchTerm.toLowerCase().trim().split(/\s+/).filter(Boolean);
-      if (terms.length > 0) {
-        pulses = pulses.filter(p => {
-          const searchableText = `${p.lastOrderId || ''} ${p.companyName || ''} ${p.phoneNumber || ''} ${p.crmUserName || ''} ${p.status || ''}`.toLowerCase();
-          return terms.every(term => searchableText.includes(term));
-        });
-      }
-    }
-
-    return pulses.sort((a, b) => new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime());
-  }, [orders, currentUser, searchTerm, selectedInactivityThreshold, pulseStatusFilter, allStatuses]);
-
-  const totalPages = Math.ceil(filteredPulses.length / ITEMS_PER_PAGE);
-
-  const paginatedPulses = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredPulses.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredPulses, currentPage]);
+  const totalPages = Math.ceil(totalPulses / ITEMS_PER_PAGE);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
@@ -277,10 +190,10 @@ export default function OrderPulsePage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredPulses.length > 0) {
+    if (allStatuses.length > 0 && pulses.length > 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInScope = new Set<string>();
-      filteredPulses.forEach(pulse => uniqueStatusIdsInScope.add(pulse.lastOrderStatus));
+      pulses.forEach(pulse => uniqueStatusIdsInScope.add(pulse.lastOrderStatus));
 
       uniqueStatusIdsInScope.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
@@ -292,10 +205,10 @@ export default function OrderPulsePage() {
         }
         return prevMap;
       });
-    } else if (Object.keys(orderStatusDisplay).length > 0 && (allStatuses.length === 0 || filteredPulses.length === 0)) {
+    } else if (Object.keys(orderStatusDisplay).length > 0 && (allStatuses.length === 0 || pulses.length === 0)) {
       setOrderStatusDisplay({});
     }
-  }, [filteredPulses, allStatuses, getStatusDisplayInfo]);
+  }, [pulses, allStatuses, getStatusDisplayInfo]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -348,11 +261,9 @@ export default function OrderPulsePage() {
   }, [toast]);
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
-    setOrders(prevOrders =>
-      prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
-    );
+    await fetchOrderData();
     toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-  }, [toast]);
+  }, [toast, fetchOrderData]);
 
   const handleDeleteOrder = async () => {
     if (!orderToDelete || !canDeleteOrder || !currentUser) return;
@@ -379,13 +290,11 @@ export default function OrderPulsePage() {
   };
 
   const handleOrderUpdated = useCallback(async (updatedOrder: TrackingLink) => {
-    setOrders(prevOrders =>
-      prevOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
-    );
+    await fetchOrderData();
     toast({ title: "Order Updated", description: "Order details have been successfully updated." });
     setIsEditOrderDialogOpen(false);
     setOrderToEdit(null);
-  }, [toast]);
+  }, [toast, fetchOrderData]);
 
   const renderPagination = () => {
     const pageNumbers = [];
@@ -504,8 +413,8 @@ export default function OrderPulsePage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : paginatedPulses.length > 0 ? (
-                  paginatedPulses.map((pulseData) => {
+                ) : pulses.length > 0 ? (
+                  pulses.map((pulseData) => {
                     const statusInfo = orderStatusDisplay[pulseData.lastOrderStatus] || { name: pulseData.lastOrderStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
                     return (
                       <TableRow key={pulseData.id} className="hover:bg-muted/50 transition-colors">
@@ -575,7 +484,7 @@ export default function OrderPulsePage() {
                           onOrderCreated={async () => {
                             await fetchOrderData();
                           }}
-                          allOrders={orders}
+                          allOrders={[]}
                           isOpen={isCreateOrderDialogOpen}
                           onOpenChange={setIsCreateOrderDialogOpen}
                         >
@@ -650,7 +559,7 @@ export default function OrderPulsePage() {
           order={orderToEdit}
           currentUser={currentUser}
           onOrderUpdated={handleOrderUpdated}
-          allOrders={orders}
+          allOrders={[]}
         />
       )}
 

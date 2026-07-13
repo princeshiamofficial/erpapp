@@ -192,3 +192,70 @@ export const permanentlyDeleteQuotation = async (quotationId: string): Promise<b
     return false;
   }
 };
+
+export const getQuotationsPaginated = async (
+  page: number = 1,
+  limit: number = 25,
+  searchTerm?: string,
+  role?: string,
+  userId?: string,
+  viewType: 'quotations' | 're-quotations' = 'quotations'
+): Promise<{ quotations: TrackingLink[], total: number }> => {
+  try {
+    const conditions = ['is_deleted = FALSE'];
+    const params: any[] = [];
+
+    if (role === 'CRM' && userId) {
+      conditions.push("JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.crmUserId')) = ?");
+      params.push(userId);
+    } else if (role === 'DESIGNER_REPRESENTATIVE' && userId) {
+      conditions.push("JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.designerRepresentativeId')) = ?");
+      params.push(userId);
+    }
+
+    if (searchTerm) {
+      const likeTerm = `%${searchTerm}%`;
+      conditions.push(`(id LIKE ? OR data_json LIKE ?)`);
+      params.push(likeTerm, likeTerm);
+    }
+
+    if (viewType === 're-quotations') {
+      conditions.push(`
+        SUBSTRING_INDEX(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.companyName')), ' • ', 1) IN (
+          SELECT SUBSTRING_INDEX(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.companyName')), ' • ', 1) as jobId
+          FROM ${QUOTATIONS_TABLE}
+          WHERE is_deleted = FALSE
+          GROUP BY jobId
+          HAVING COUNT(*) > 1
+        )
+      `);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const countQuery = `SELECT COUNT(*) as total FROM ${QUOTATIONS_TABLE} WHERE ${whereClause}`;
+    const countResult = await query<any[]>(countQuery, params);
+    const total = countResult[0]?.total || 0;
+
+    const offset = Math.max(0, (page - 1) * limit);
+    const dataQuery = `
+      SELECT id, data_json 
+      FROM ${QUOTATIONS_TABLE} 
+      WHERE ${whereClause} 
+      ORDER BY id DESC 
+      LIMIT ? OFFSET ?
+    `;
+    const dataParams = [...params, Number(limit), Number(offset)];
+    const rows = await query<any[]>(dataQuery, dataParams);
+
+    const quotations = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as TrackingLink));
+
+    return { quotations, total };
+  } catch (error) {
+    console.error("Error fetching paginated quotations from MySQL:", error);
+    return { quotations: [], total: 0 };
+  }
+};

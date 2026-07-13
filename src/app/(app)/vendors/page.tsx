@@ -39,7 +39,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service';
-import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
+import { getVendorBills, getVendorBillsPaginated, deleteVendorBill } from '@/lib/vendor-bill-service';
 import { getBillReports, deleteBillReport } from '@/lib/bill-report-service';
 import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -150,6 +150,7 @@ export default function VendorsPage() {
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [categories, setCategories] = useState<VendorCategory[]>([]);
   const [bills, setBills] = useState<VendorBill[]>([]);
+  const [totalBills, setTotalBills] = useState(0);
   const [billReports, setBillReports] = useState<BillReport[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -164,18 +165,19 @@ export default function VendorsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedUsers, fetchedCategories, fetchedProducts, fetchedBills, fetchedPaymentMethods, fetchedBillReports] = await Promise.all([
+      const [fetchedUsers, fetchedCategories, fetchedProducts, fetchedBillsRes, fetchedPaymentMethods, fetchedBillReports] = await Promise.all([
         getUsers(),
         getVendorCategories(),
         getVendorProducts(),
-        getVendorBills(),
+        getVendorBillsPaginated(currentPage, ITEMS_PER_PAGE, searchTerm),
         getPaymentMethods(),
         getBillReports(),
       ]);
       setAllUsers(fetchedUsers);
       setCategories(fetchedCategories);
       setProducts(fetchedProducts);
-      setBills(fetchedBills);
+      setBills(fetchedBillsRes.bills);
+      setTotalBills(fetchedBillsRes.total);
       setPaymentMethods(fetchedPaymentMethods);
       setBillReports(fetchedBillReports);
     } catch (error) {
@@ -412,17 +414,17 @@ export default function VendorsPage() {
   const totalPages = useMemo(() => {
     if (activeTab === 'vendor_list') return Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
     if (activeTab === 'products') return Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-    if (activeTab === 'vendor_bills') return Math.ceil(filteredBills.length / ITEMS_PER_PAGE);
+    if (activeTab === 'vendor_bills') return Math.ceil(totalBills / ITEMS_PER_PAGE);
     if (activeTab === 'bill_reports') return Math.ceil(billReportsByVendor.length / ITEMS_PER_PAGE);
     return 1;
-  }, [activeTab, filteredVendors, filteredProducts, filteredBills, billReportsByVendor]);
+  }, [activeTab, filteredVendors, filteredProducts, totalBills, billReportsByVendor]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     if (activeTab === 'vendor_list') return filteredVendors.slice(startIndex, endIndex);
     if (activeTab === 'products') return filteredProducts.slice(startIndex, endIndex);
-    if (activeTab === 'vendor_bills') return filteredBills.slice(startIndex, endIndex);
+    if (activeTab === 'vendor_bills') return bills;
     if (activeTab === 'bill_reports') return billReportsByVendor;
     return [];
   }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills, billReportsByVendor]);

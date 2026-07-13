@@ -14,7 +14,7 @@ import type { Gift, User, ServiceGiftItem, TrackingLink } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
-import { getGifts as fetchGifts, deleteGift as deleteGiftAction } from './actions';
+import { getGiftsPaginatedAction as fetchGiftsPaginated, deleteGift as deleteGiftAction } from './actions';
 import { getGifts as getGiftOptions } from '@/lib/service-options-service';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,6 +48,14 @@ export default function GiftsPage() {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [giftOptions, setGiftOptions] = useState<ServiceGiftItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const [totalGifts, setTotalGifts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
@@ -66,12 +74,13 @@ export default function GiftsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedGifts, fetchedGiftOptions, fetchedOrders] = await Promise.all([
-        fetchGifts(),
+      const [fetchedResult, fetchedGiftOptions, fetchedOrders] = await Promise.all([
+        fetchGiftsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm),
         getGiftOptions(),
         getOrders(),
       ]);
-      setGifts(fetchedGifts);
+      setGifts(fetchedResult.gifts);
+      setTotalGifts(fetchedResult.total);
       setGiftOptions(fetchedGiftOptions);
       setAllOrders(fetchedOrders);
     } catch (error) {
@@ -80,22 +89,23 @@ export default function GiftsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, currentPage, debouncedSearchTerm]);
 
   const fetchDataSilent = useCallback(async () => {
     try {
-      const [fetchedGifts, fetchedGiftOptions, fetchedOrders] = await Promise.all([
-        fetchGifts(),
+      const [fetchedResult, fetchedGiftOptions, fetchedOrders] = await Promise.all([
+        fetchGiftsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm),
         getGiftOptions(),
         getOrders(),
       ]);
-      setGifts(fetchedGifts);
+      setGifts(fetchedResult.gifts);
+      setTotalGifts(fetchedResult.total);
       setGiftOptions(fetchedGiftOptions);
       setAllOrders(fetchedOrders);
     } catch (error) {
       console.error("Failed to silently sync gifts data:", error);
     }
-  }, []);
+  }, [currentPage, debouncedSearchTerm]);
 
   useEffect(() => {
     if (!socket) return;
@@ -118,34 +128,7 @@ export default function GiftsPage() {
     }
   }, [currentUser, fetchData, router]);
 
-  const filteredGifts = useMemo(() => {
-    let result = gifts;
-    if (currentUser?.role === 'CRM') {
-      result = result.filter(gift => gift.givenByUserId === currentUser.id);
-    }
-    if (!searchTerm) return result;
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return result.filter(gift => {
-      const linkedOrder = gift.orderId ? allOrders.find(o => o.id === gift.orderId) : null;
-      const jobDisplayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim().toLowerCase() : '';
-      
-      return (
-        gift.giftIdDisplay.toLowerCase().includes(lowerSearchTerm) ||
-        (gift.orderId && gift.orderId.toLowerCase().includes(lowerSearchTerm)) ||
-        jobDisplayId.includes(lowerSearchTerm) ||
-        gift.recipientName.toLowerCase().includes(lowerSearchTerm) ||
-        gift.recipientPhone.toLowerCase().includes(lowerSearchTerm) ||
-        (Array.isArray(gift.giftItemNames) && gift.giftItemNames.some(name => name.toLowerCase().includes(lowerSearchTerm)))
-      );
-    });
-  }, [gifts, searchTerm, currentUser]);
-
-  const totalPages = Math.ceil(filteredGifts.length / ITEMS_PER_PAGE);
-
-  const paginatedGifts = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredGifts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredGifts, currentPage]);
+  const totalPages = Math.ceil(totalGifts / ITEMS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -331,7 +314,7 @@ export default function GiftsPage() {
                       </TableRow>
                     ))}
 
-                   {!isLoading && paginatedGifts.length > 0 && paginatedGifts.map((gift, index) => (
+                   {!isLoading && gifts.length > 0 && gifts.map((gift, index) => (
                      <TableRow key={gift.id || `gift-${index}`} className="hover:bg-muted/50">
                        <TableCell className="pl-6 font-mono text-primary font-bold">{gift.giftIdDisplay}</TableCell>
                         <TableCell className="font-mono text-muted-foreground text-sm">
@@ -413,7 +396,7 @@ export default function GiftsPage() {
                      </TableRow>
                    ))}
 
-                   {!isLoading && paginatedGifts.length === 0 && (
+                   {!isLoading && gifts.length === 0 && (
                      <TableRow key="empty-gifts">
                        <TableCell colSpan={8} className="h-48 text-center">
                          <GiftIcon className="mx-auto h-12 w-12 opacity-30 mb-3" />

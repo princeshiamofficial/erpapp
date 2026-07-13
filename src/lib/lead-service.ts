@@ -207,3 +207,84 @@ export const getLeadsPaginated = async (
     return { leads: [], total: 0 };
   }
 };
+
+export const getEventsPaginated = async (
+  page: number = 1,
+  limit: number = 10,
+  startDate?: string,
+  endDate?: string,
+  role?: string,
+  userId?: string,
+  searchTerm?: string,
+  scheduleStart?: string,
+  scheduleEnd?: string
+): Promise<{ leads: Lead[]; total: number }> => {
+  try {
+    const conditions: string[] = [
+      `JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.schedule')) IS NOT NULL`,
+      `JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.schedule')) != 'null'`,
+      `JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.schedule')) != ''`
+    ];
+    const params: any[] = [];
+
+    if (startDate && endDate) {
+      conditions.push(`(
+        (JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) >= ? AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) <= ?)
+        OR
+        (JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.categoryUpdatedAt')) >= ? AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.categoryUpdatedAt')) <= ?)
+      )`);
+      params.push(startDate, endDate, startDate, endDate);
+    } else {
+      if (startDate) {
+        conditions.push(`(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) >= ? OR JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.categoryUpdatedAt')) >= ?)`);
+        params.push(startDate, startDate);
+      }
+      if (endDate) {
+        conditions.push(`(JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) <= ? OR JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.categoryUpdatedAt')) <= ?)`);
+        params.push(endDate, endDate);
+      }
+    }
+    
+    if (scheduleStart) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.schedule')) >= ?`);
+      params.push(scheduleStart);
+    }
+    if (scheduleEnd) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.schedule')) <= ?`);
+      params.push(scheduleEnd);
+    }
+
+    if ((role === 'CRM' && userId) || ((role === 'SYSTEM_ADMIN' || role === 'ADMIN') && userId && userId !== 'all')) {
+      conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.crmId')) = ?`);
+      params.push(userId);
+    }
+    
+    if (searchTerm) {
+      conditions.push(`LOWER(data_json) LIKE LOWER(?)`);
+      params.push(`%${searchTerm}%`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const countRows = await query<any[]>(`SELECT COUNT(*) as total FROM ${LEADS_TABLE} ${whereClause}`, params);
+    const total = countRows[0]?.total || 0;
+
+    const offset = Math.max(0, (page - 1) * limit);
+    const rows = await query<any[]>(
+      `SELECT id, data_json FROM ${LEADS_TABLE} ${whereClause} ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.schedule')) ASC LIMIT ? OFFSET ?`,
+      [...params, Number(limit), Number(offset)]
+    );
+
+    const leads = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as Lead)).sort((a, b) => {
+      if (!a.schedule || !b.schedule) return 0;
+      return new Date(a.schedule).getTime() - new Date(b.schedule).getTime();
+    });
+
+    return { leads, total };
+  } catch (error) {
+    console.error(`Error fetching paginated events from MySQL:`, error);
+    return { leads: [], total: 0 };
+  }
+};

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import type { Card as CardModel, User, ServiceGiftItem, TrackingLink } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-import { getGifts as fetchCards, deleteGift as deleteCardAction } from './actions';
+import { getMembershipCardsPaginatedAction as fetchCardsPaginated, getGifts as fetchCards, deleteGift as deleteCardAction } from './actions';
 import { getGifts as getCardOptions } from '@/lib/service-options-service';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,6 +57,13 @@ export default function MembershipCardPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalCards, setTotalCards] = useState(0);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const [cardForCourier, setCardForCourier] = useState<CardModel | null>(null);
   const [isCourierDialogOpen, setIsCourierDialogOpen] = useState(false);
@@ -66,12 +73,14 @@ export default function MembershipCardPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedCards, fetchedCardOptions, fetchedOrders] = await Promise.all([
-        fetchCards(),
+      const crmUserId = currentUser?.role === 'CRM' ? currentUser.id : undefined;
+      const [fetchedCardsRes, fetchedCardOptions, fetchedOrders] = await Promise.all([
+        fetchCardsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm, crmUserId),
         getCardOptions(),
         getOrders(),
       ]);
-      setCards(fetchedCards);
+      setCards(fetchedCardsRes.cards);
+      setTotalCards(fetchedCardsRes.total);
       setCardOptions(fetchedCardOptions);
       setAllOrders(fetchedOrders);
     } catch (error) {
@@ -80,22 +89,24 @@ export default function MembershipCardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, currentPage, debouncedSearchTerm, currentUser]);
 
   const fetchDataSilent = useCallback(async () => {
     try {
-      const [fetchedCards, fetchedCardOptions, fetchedOrders] = await Promise.all([
-        fetchCards(),
+      const crmUserId = currentUser?.role === 'CRM' ? currentUser.id : undefined;
+      const [fetchedCardsRes, fetchedCardOptions, fetchedOrders] = await Promise.all([
+        fetchCardsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm, crmUserId),
         getCardOptions(),
         getOrders(),
       ]);
-      setCards(fetchedCards);
+      setCards(fetchedCardsRes.cards);
+      setTotalCards(fetchedCardsRes.total);
       setCardOptions(fetchedCardOptions);
       setAllOrders(fetchedOrders);
     } catch (error) {
       console.error("Failed to silently sync card data:", error);
     }
-  }, []);
+  }, [currentPage, debouncedSearchTerm, currentUser]);
 
   useEffect(() => {
     if (!socket) return;
@@ -118,34 +129,7 @@ export default function MembershipCardPage() {
     }
   }, [currentUser, fetchData, router]);
 
-  const filteredCards = useMemo(() => {
-    let result = cards;
-    if (currentUser?.role === 'CRM') {
-      result = result.filter(card => card.givenByUserId === currentUser.id);
-    }
-    if (!searchTerm) return result;
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return result.filter(card => {
-      const linkedOrder = card.orderId ? allOrders.find(o => o.id === card.orderId) : null;
-      const jobDisplayId = linkedOrder ? (linkedOrder.companyName || '').split(' • ')[0].trim().toLowerCase() : '';
-      
-      return (
-        card.giftIdDisplay.toLowerCase().includes(lowerSearchTerm) ||
-        (card.orderId && card.orderId.toLowerCase().includes(lowerSearchTerm)) ||
-        jobDisplayId.includes(lowerSearchTerm) ||
-        card.recipientName.toLowerCase().includes(lowerSearchTerm) ||
-        card.recipientPhone.toLowerCase().includes(lowerSearchTerm) ||
-        (Array.isArray(card.giftItemNames) && card.giftItemNames.some(name => name.toLowerCase().includes(lowerSearchTerm)))
-      );
-    });
-  }, [cards, searchTerm, currentUser]);
-
-  const totalPages = Math.ceil(filteredCards.length / ITEMS_PER_PAGE);
-
-  const paginatedCards = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredCards.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredCards, currentPage]);
+  const totalPages = Math.ceil(totalCards / ITEMS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -336,7 +320,7 @@ export default function MembershipCardPage() {
                       </TableRow>
                     ))}
 
-                   {!isLoading && paginatedCards.length > 0 && paginatedCards.map((cardItem, index) => (
+                   {!isLoading && cards.length > 0 && cards.map((cardItem, index) => (
                      <TableRow key={cardItem.id || `card-${index}`} className="hover:bg-muted/50">
                        <TableCell className="pl-6 font-mono text-primary font-bold">{cardItem.giftIdDisplay}</TableCell>
                        <TableCell className="font-mono text-muted-foreground">
@@ -384,7 +368,7 @@ export default function MembershipCardPage() {
                      </TableRow>
                    ))}
 
-                   {!isLoading && paginatedCards.length === 0 && (
+                   {!isLoading && cards.length === 0 && (
                      <TableRow key="empty-cards">
                        <TableCell colSpan={8} className="h-48 text-center">
                          <CreditCard className="mx-auto h-12 w-12 opacity-30 mb-3" />

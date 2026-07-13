@@ -48,6 +48,38 @@ export const getGifts = async (): Promise<Card[]> => {
   }
 };
 
+export const getMembershipCardsPaginated = async (
+  page: number = 1,
+  limit: number = 25,
+  searchTerm?: string,
+  crmUserId?: string
+): Promise<{ cards: Card[]; total: number }> => {
+  const allCards = await getGifts();
+  let results = [...allCards];
+
+  if (crmUserId) {
+    results = results.filter(c => c.givenByUserId === crmUserId);
+  }
+
+  if (searchTerm && searchTerm.trim()) {
+    const lower = searchTerm.toLowerCase();
+    results = results.filter(card =>
+      (card.giftIdDisplay && card.giftIdDisplay.toLowerCase().includes(lower)) ||
+      (card.orderId && card.orderId.toLowerCase().includes(lower)) ||
+      (card.recipientName && card.recipientName.toLowerCase().includes(lower)) ||
+      (card.recipientPhone && card.recipientPhone.toLowerCase().includes(lower)) ||
+      (Array.isArray(card.giftItemNames) && card.giftItemNames.some(name => name.toLowerCase().includes(lower)))
+    );
+  }
+
+  const total = results.length;
+  const startIndex = (page - 1) * limit;
+  return {
+    cards: results.slice(startIndex, startIndex + limit),
+    total
+  };
+};
+
 export const getGiftById = async (id: string): Promise<Card | null> => {
   if (!id) return null;
   try {

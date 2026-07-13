@@ -7,6 +7,7 @@ import type { Lead, User, LeadActivity, LeadCategory, LeadStatusType } from '@/t
 import {
   getLeads as getLeadsFromDb,
   getLeadsPaginated as getLeadsPaginatedFromDb,
+  getEventsPaginated as getEventsPaginatedFromDb,
   addLead,
   updateLead,
   deleteLead,
@@ -51,6 +52,25 @@ export async function getLeadsPaginatedAction(
     return await getLeadsPaginatedFromDb(page, limit, startDate, endDate, role, userId, category, activity, searchTerm);
   } catch (error) {
     console.error("Error in getLeadsPaginatedAction server action:", error);
+    return { leads: [], total: 0 };
+  }
+}
+
+export async function getEventsPaginatedAction(
+  page: number = 1,
+  limit: number = 10,
+  startDate?: string,
+  endDate?: string,
+  role?: string,
+  userId?: string,
+  searchTerm?: string,
+  scheduleStart?: string,
+  scheduleEnd?: string
+): Promise<{ leads: Lead[]; total: number }> {
+  try {
+    return await getEventsPaginatedFromDb(page, limit, startDate, endDate, role, userId, searchTerm, scheduleStart, scheduleEnd);
+  } catch (error) {
+    console.error("Error in getEventsPaginatedAction server action:", error);
     return { leads: [], total: 0 };
   }
 }

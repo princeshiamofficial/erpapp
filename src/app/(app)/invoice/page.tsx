@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { TrackingLink, CustomStatus, AdvancePaymentRecord, User } from '@/types';
-import { getOrders } from '@/lib/order-service';
+import { getOrdersWithTotal } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
 import { getUsers } from '@/lib/user-service';
@@ -81,6 +81,7 @@ export default function InvoiceListPage() {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
   const ITEMS_PER_PAGE = 25;
 
   const fetchInvoiceData = useCallback(async () => {
@@ -90,16 +91,30 @@ export default function InvoiceListPage() {
     }
     setIsLoading(true);
     try {
+      const role = currentUser.role;
+      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser.id;
+
       const promises: any[] = [
-        getOrders(undefined, undefined, undefined, undefined, undefined, undefined, debouncedSearchTerm),
+        getOrdersWithTotal(
+          undefined, 
+          undefined, 
+          role, 
+          userId, 
+          currentPage, 
+          ITEMS_PER_PAGE, 
+          debouncedSearchTerm, 
+          undefined, 
+          selectedStatus
+        ),
       ];
 
       if (allStatuses.length === 0) promises.push(getStatuses());
       if (allUsers.length === 0) promises.push(getUsers());
 
-      const [ordersList, fetchedStatuses, fetchedUsers] = await Promise.all(promises);
+      const [ordersResult, fetchedStatuses, fetchedUsers] = await Promise.all(promises);
 
-      setAllOrders(ordersList);
+      setAllOrders(ordersResult.orders);
+      setTotalOrders(ordersResult.total);
       if (fetchedStatuses) setAllStatuses(fetchedStatuses);
       if (fetchedUsers) setAllUsers(fetchedUsers);
     } catch (error) {
@@ -108,29 +123,13 @@ export default function InvoiceListPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast, allStatuses.length, allUsers.length, debouncedSearchTerm]);
+  }, [currentUser, toast, allStatuses.length, allUsers.length, debouncedSearchTerm, currentPage, selectedStatus]);
 
   useEffect(() => {
     fetchInvoiceData();
   }, [currentUser, fetchInvoiceData]);
 
-  const filteredOrders = useMemo(() => {
-    let result = allOrders;
-
-    if (selectedStatus !== 'all') {
-      result = result.filter(order => order.currentStatus === selectedStatus);
-    }
-
-    // Search term is now handled entirely on the server side via debouncedSearchTerm
-    return result;
-  }, [allOrders, searchTerm, selectedStatus]);
-
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-
-  const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredOrders, currentPage]);
+  const totalPages = Math.ceil(totalOrders / ITEMS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -377,13 +376,13 @@ export default function InvoiceListPage() {
     if (checked === true) {
       setSelectedRowIds(prev => {
         const newSelection = new Set(prev);
-        paginatedOrders.forEach(o => newSelection.add(o.id));
+        allOrders.forEach((o: any) => newSelection.add(o.id));
         return newSelection;
       });
     } else {
       setSelectedRowIds(prev => {
         const newSelection = new Set(prev);
-        paginatedOrders.forEach(o => newSelection.delete(o.id));
+        allOrders.forEach((o: any) => newSelection.delete(o.id));
         return newSelection;
       });
     }
@@ -405,12 +404,12 @@ export default function InvoiceListPage() {
   const tableHeaderTopClass = numSelected > 0 ? "lg:top-[13.25rem]" : "lg:top-[9.5rem]";
 
   const isAllPageSelected = useMemo(() => {
-    return paginatedOrders.length > 0 && paginatedOrders.every(o => selectedRowIds.has(o.id));
-  }, [paginatedOrders, selectedRowIds]);
+    return allOrders.length > 0 && allOrders.every(o => selectedRowIds.has(o.id));
+  }, [allOrders, selectedRowIds]);
 
   const isSomePageSelected = useMemo(() => {
-    return paginatedOrders.some(o => selectedRowIds.has(o.id)) && !isAllPageSelected;
-  }, [paginatedOrders, selectedRowIds, isAllPageSelected]);
+    return allOrders.some(o => selectedRowIds.has(o.id)) && !isAllPageSelected;
+  }, [allOrders, selectedRowIds, isAllPageSelected]);
 
   return (
     <>
@@ -527,8 +526,8 @@ export default function InvoiceListPage() {
                         <TableCell className="text-right pr-6"><Skeleton className="h-8 w-8 ml-auto rounded" /></TableCell>
                       </TableRow>
                     ))
-                  ) : paginatedOrders.length > 0 ? (
-                    paginatedOrders.map((order) => {
+                  ) : allOrders.length > 0 ? (
+                    allOrders.map((order) => {
                       const financials = getOrderFinancials(order);
                       const statusInfo = getStatusDisplayInfo(order.currentStatus);
                       const isSelected = selectedRowIds.has(order.id);

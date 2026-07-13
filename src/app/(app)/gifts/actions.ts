@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { Gift, User } from '@/types';
 import {
   getGifts as getGiftsFromDb,
+  getGiftsPaginated as getGiftsPaginatedFromDb,
   addGift as addGiftToDb,
   updateGift as updateGiftInDb,
   deleteGift as deleteGiftFromDb,
@@ -28,6 +29,19 @@ export async function getGifts(): Promise<Gift[]> {
   } catch (error) {
     console.error("Error in getGifts server action:", error);
     return [];
+  }
+}
+
+export async function getGiftsPaginatedAction(
+  page: number = 1,
+  limit: number = 25,
+  searchTerm?: string
+): Promise<{ gifts: Gift[]; total: number }> {
+  try {
+    return await getGiftsPaginatedFromDb(page, limit, searchTerm);
+  } catch (error) {
+    console.error("Error in getGiftsPaginatedAction:", error);
+    return { gifts: [], total: 0 };
   }
 }
 

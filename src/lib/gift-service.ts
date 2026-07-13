@@ -29,6 +29,58 @@ export const getGifts = async (): Promise<Gift[]> => {
   }
 };
 
+export const getGiftsPaginated = async (
+  page: number = 1,
+  limit: number = 25,
+  searchTerm?: string
+): Promise<{ gifts: Gift[]; total: number }> => {
+  try {
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (searchTerm) {
+      conditions.push('data_json LIKE ?');
+      params.push(`%${searchTerm}%`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countQuery = `SELECT COUNT(*) as total FROM ${GIFTS_TABLE} ${whereClause}`;
+    const countResult = await query<any[]>(countQuery, params);
+    const total = countResult[0]?.total || 0;
+
+    const offset = Math.max(0, (page - 1) * limit);
+    const dataQuery = `
+      SELECT id, data_json 
+      FROM ${GIFTS_TABLE} 
+      ${whereClause} 
+      ORDER BY id DESC 
+      LIMIT ? OFFSET ?
+    `;
+    const dataParams = [...params, Number(limit), Number(offset)];
+    const rows = await query<any[]>(dataQuery, dataParams);
+
+    const gifts = rows.map(row => {
+      const parsed = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json;
+      return {
+        id: row.id,
+        ...parsed
+      } as Gift;
+    });
+
+    gifts.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    return { gifts, total };
+  } catch (error) {
+    console.error("Error fetching paginated gifts from MySQL:", error);
+    return { gifts: [], total: 0 };
+  }
+};
+
 export const getGiftById = async (id: string): Promise<Gift | null> => {
   if (!id) return null;
   try {

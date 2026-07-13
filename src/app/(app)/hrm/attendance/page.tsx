@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
-import { getAttendanceForMonth, getAttendanceForDateRange } from '@/lib/attendance-service';
+import { getAttendanceForMonth, getAttendanceForDateRange, getAttendancePaginated } from '@/lib/attendance-service';
 import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays, parseISO, isWithinInterval, endOfDay, startOfMonth, endOfMonth, getYear, isSameMonth, getMonth, isSameDay } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
@@ -127,6 +127,8 @@ export default function AttendancePage() {
     const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
 
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+    const [paginatedAttendanceRecords, setPaginatedAttendanceRecords] = useState<AttendanceRecord[]>([]);
+    const [totalAttendanceRecords, setTotalAttendanceRecords] = useState(0);
 
     const [reportDateRange, setReportDateRange] = useState<DateRange | undefined>(() => {
         const now = new Date();
@@ -163,6 +165,7 @@ export default function AttendancePage() {
                 fetchedEmployees,
                 fetchedOfficeTimes,
                 attendanceRecords,
+                fetchedPaginatedAtt,
                 fetchedUsers,
                 fetchedWeekendSettings,
                 fetchedRoles
@@ -170,6 +173,7 @@ export default function AttendancePage() {
                 getEmployees(),
                 getOfficeTimes(),
                 getAttendanceForDateRange(twoYearsAgo, today),
+                getAttendancePaginated(twoYearsAgo, today, 1, 50, reportSearchTerm),
                 getUsers(),
                 getWeekendSettings(),
                 getRoles()
@@ -180,6 +184,8 @@ export default function AttendancePage() {
             setEmployees(fetchedEmployees);
             setOfficeTimes(fetchedOfficeTimes);
             setAttendanceData(uniqueAttendance);
+            setPaginatedAttendanceRecords(fetchedPaginatedAtt.records);
+            setTotalAttendanceRecords(fetchedPaginatedAtt.total);
             setAllUsers(fetchedUsers);
             setSelectedWeekends(fetchedWeekendSettings.days);
             setAvailableRoles(fetchedRoles);
