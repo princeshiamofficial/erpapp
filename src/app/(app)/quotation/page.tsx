@@ -111,17 +111,8 @@ export default function QuotationsPage() {
 
 
 
-  const fetchQuotationData = useCallback(async () => {
-    if (!currentUser) {
-      return;
-    }
-    fetchData();
-  }, [currentUser]);
-
   const fetchData = useCallback(async () => {
-    if (quotations.length === 0) {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
     try {
       const role = currentUser?.role;
       const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
@@ -152,7 +143,15 @@ export default function QuotationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearchTerm, toast, quotations.length, currentPage, viewType, currentUser]);
+  }, [debouncedSearchTerm, toast, currentPage, viewType, currentUser]);
+
+  const fetchQuotationData = useCallback(async () => {
+    if (!currentUser) {
+      return;
+    }
+    setCurrentPage(1);
+    await fetchData();
+  }, [currentUser, fetchData]);
 
   useEffect(() => {
     setIsClient(true);
