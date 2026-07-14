@@ -221,7 +221,8 @@ export default function QuotationsPage() {
     const result = await deleteQuotationAction(quotationToDelete.id, currentUser);
     if (result.success) {
       toast({ title: "Moved to Trash", description: `Quotation ${quotationToDelete.id} has been moved to the trash bin.` });
-      await fetchQuotationData();
+      setQuotations(prev => prev.filter(q => q.id !== quotationToDelete.id));
+      setTotalQuotations(prev => Math.max(0, prev - 1));
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete the quotation.", variant: "destructive" });
     }
