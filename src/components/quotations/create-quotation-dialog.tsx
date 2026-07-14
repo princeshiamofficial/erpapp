@@ -26,7 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 interface CreateQuotationDialogProps {
   currentUser: User;
   availableStatuses: CustomStatus[];
-  onQuotationCreated: () => void;
+  onQuotationCreated: (newQuotation: TrackingLink) => void;
   children: React.ReactNode;
   allQuotations: TrackingLink[];
 }
@@ -454,7 +454,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       toast({ title: "Quotation Creation Failed", description: result.error, variant: "destructive" });
     } else {
       toast({ title: "Quotation Created", description: `Quotation ${result.id} for ${result.companyName} has been created.` });
-      onQuotationCreated();
+      onQuotationCreated(result as TrackingLink);
       setIsOpen(false);
       resetForm();
     }

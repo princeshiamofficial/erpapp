@@ -400,8 +400,12 @@ export default function QuotationsPage() {
             <CreateQuotationDialog
               currentUser={currentUser}
               availableStatuses={memoizedAvailableStatusesForDialog}
-              onQuotationCreated={async () => {
-                await fetchQuotationData();
+              onQuotationCreated={(newQuotation) => {
+                setQuotations(prev => {
+                  const filtered = prev.filter(q => q.id !== newQuotation.id);
+                  return [newQuotation, ...filtered].slice(0, ITEMS_PER_PAGE);
+                });
+                setTotalQuotations(prev => prev + 1);
               }}
               allQuotations={quotations}
             >
