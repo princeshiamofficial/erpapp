@@ -111,14 +111,16 @@ export default function QuotationsPage() {
 
 
 
+  const currentUserRole = currentUser?.role;
+  const currentUserId = currentUser?.id;
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const role = currentUser?.role;
-      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
+      const userId = (currentUserRole === 'SYSTEM_ADMIN' || currentUserRole === 'ADMIN') ? undefined : currentUserId;
 
       const [fetchedResult, fetchedStatuses, fetchedSettings, fetchedOrders, fetchedOrderStatuses] = await Promise.all([
-        getQuotationsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm, role, userId, viewType),
+        getQuotationsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm, currentUserRole, userId, viewType),
         Promise.resolve([
           { id: 'Pending', name: 'Pending', color: '#8B5CF6', xid: 'pending' },
           { id: 'Approved', name: 'Approved', color: '#10B981', xid: 'approved' },
@@ -143,7 +145,8 @@ export default function QuotationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearchTerm, toast, currentPage, viewType, currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchTerm, currentPage, viewType, currentUserRole, currentUserId]);
 
   const fetchQuotationData = useCallback(async () => {
     if (!currentUser) {
