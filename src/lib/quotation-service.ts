@@ -242,7 +242,7 @@ export const getQuotationsPaginated = async (
       SELECT id, data_json 
       FROM ${QUOTATIONS_TABLE} 
       WHERE ${whereClause} 
-      ORDER BY id DESC 
+      ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.createdAt')) DESC 
       LIMIT ? OFFSET ?
     `;
     const dataParams = [...params, Number(limit), Number(offset)];
