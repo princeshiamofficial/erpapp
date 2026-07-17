@@ -33,6 +33,11 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForDev: true,
     serverActions: {
       bodySizeLimit: '4mb',
+      allowedOrigins: [
+        'app.colorhutbd.xyz',
+        'https://app.colorhutbd.xyz',
+        'www.app.colorhutbd.xyz',
+      ],
     },
     optimizePackageImports: [
       'lucide-react',
