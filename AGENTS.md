@@ -32,6 +32,7 @@ Specific knowledge bases:
 - **AI-First**: When building features, consider how Genkit AI can enhance the user experience (e.g., smart summaries, automated forms).
 - **Banglish Summary**: Provide a concise summary of the work performed in **Banglish** (Bengali written in Latin/English script) after completing each task. **NEVER use direct Bengali Unicode characters (e.g., বাংলা)** — always write Bengali phonetically in English letters only (e.g., "Ami kaj shesh korlam").
 - **Summary of Actions**: After the Banglish summary, provide a clear, bulleted "Summary of Actions" in English to detail the specific technical steps taken.
+- **Benefit Comparison Table**: Always provide a comparison table in **Banglish** (using Latin/English script, never Unicode Bengali) showing the **Previous State/Implementation** vs. the **Recent State/Benefits** of your changes at the end of each task.
 - **Safety**: Ensure all database operations are sanitized and follow the established Zod validation patterns.
 
 ## Commit Messages & PR Descriptions

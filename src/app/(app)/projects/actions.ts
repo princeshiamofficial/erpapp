@@ -25,7 +25,7 @@ import { getAppUrl } from "@/lib/server-utils";
 const sanitizeForPackzy = (input: string | null | undefined, maxLength?: number): string => {
   if (!input) return '';
   const sanitized = input
-    .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '')
+    .replace(/[^\p{L}\p{M}\p{N}.,\s#/()&:;।‌‍-]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
   return maxLength ? sanitized.slice(0, maxLength) : sanitized;
@@ -193,18 +193,14 @@ export async function transferToCourierAction(
       packzyPayload.note = sanitizeForPackzy(courierNote.trim(), 480);
     }
 
-    const urlEncodedBody = Object.entries(packzyPayload)
-      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-      .join('&');
-
     const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
       method: 'POST',
       headers: {
         'Api-Key': 'vfei2q49dhy1rxqxjs6xntkkvc2odeax',
         'Secret-Key': 'n4wr4fhdohq0x3gmm8xg3pp1',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+        'Content-Type': 'application/json; charset=utf-8',
       },
-      body: urlEncodedBody,
+      body: JSON.stringify(packzyPayload),
     });
 
     const responseText = await response.text();

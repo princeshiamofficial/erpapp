@@ -144,10 +144,6 @@ export default function AllDistrictsDataPage() {
   const [districtData, setDistrictData] = useState<DivisionData[]>([]);
   const [rawOrders, setRawOrders] = useState<TrackingLink[]>([]);
   const [rawManualEntries, setRawManualEntries] = useState<DistrictDataEntry[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const ITEMS_PER_PAGE = 50;
 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -156,8 +152,6 @@ export default function AllDistrictsDataPage() {
   const [dateRangeLabel, setDateRangeLabel] = useState<string>("All Time");
   const [showAddButton, setShowAddButton] = useState(false);
 
-  const { ref: observerRef, inView } = require('react-intersection-observer').useInView({ threshold: 0.1 });
-
   const handleDateRangeChange = (
     range: DateRange | undefined,
     displayLabel: string,
@@ -165,73 +159,34 @@ export default function AllDistrictsDataPage() {
   ) => {
     setSelectedDateRange(range);
     setDateRangeLabel(displayLabel);
-    setPage(1);
-    setRawOrders([]);
-    setRawManualEntries([]);
-    setHasMore(true);
   };
 
-  const fetchData = useCallback(async (isInitial: boolean = true) => {
-    if (isInitial) {
-      setIsLoading(true);
-      setPage(1);
-      setRawOrders([]);
-      setRawManualEntries([]);
-    } else {
-      setIsFetchingMore(true);
-    }
-    
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
         const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? startOfDay(selectedDateRange.from).toISOString() : undefined;
         const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? endOfDay(selectedDateRange.to).toISOString() : undefined;
         const role = currentUser?.role;
-        const targetPage = isInitial ? 1 : page + 1;
         
         const [fetchedOrders, fetchedManualEntries] = await Promise.all([
-            getOrders(startStr, endStr, role, undefined, targetPage, ITEMS_PER_PAGE, debouncedSearchTerm),
-            getManualDistrictData(startStr, endStr, role, undefined, targetPage, ITEMS_PER_PAGE, debouncedSearchTerm)
+            getOrders(startStr, endStr, role, undefined, undefined, undefined, debouncedSearchTerm),
+            getManualDistrictData(startStr, endStr, role, undefined, undefined, undefined, debouncedSearchTerm)
         ]);
         
-        if (isInitial) {
-            setRawOrders(fetchedOrders);
-            setRawManualEntries(fetchedManualEntries);
-        } else {
-            if (fetchedOrders.length > 0) setRawOrders(prev => {
-                const existing = new Set(prev.map(l => l.id));
-                return [...prev, ...fetchedOrders.filter(l => !existing.has(l.id))];
-            });
-            if (fetchedManualEntries.length > 0) setRawManualEntries(prev => {
-                const existing = new Set(prev.map(l => l.id));
-                return [...prev, ...fetchedManualEntries.filter(l => !existing.has(l.id))];
-            });
-        }
-        
-        if (fetchedOrders.length < ITEMS_PER_PAGE && fetchedManualEntries.length < ITEMS_PER_PAGE) {
-            setHasMore(false);
-        } else {
-            setHasMore(true);
-        }
-        
-        setPage(targetPage);
+        setRawOrders(fetchedOrders);
+        setRawManualEntries(fetchedManualEntries);
     } catch (error) {
         console.error("Failed to fetch order data for districts page:", error);
         toast({ title: "Error", description: "Could not load district data.", variant: "destructive" });
     } finally {
-        if (isInitial) setIsLoading(false);
-        else setIsFetchingMore(false);
+        setIsLoading(false);
     }
-  }, [toast, selectedDateRange, currentUser, page, debouncedSearchTerm]);
+  }, [toast, selectedDateRange, currentUser, debouncedSearchTerm]);
   
   useEffect(() => {
-    fetchData(true);
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDateRange, currentUser, debouncedSearchTerm]);
-
-  useEffect(() => {
-    if (inView && hasMore && !isLoading && !isFetchingMore) {
-        fetchData(false);
-    }
-  }, [inView, hasMore, isLoading, isFetchingMore, fetchData]);
 
   useEffect(() => {
     const formattedData = formatDistrictData(rawOrders, rawManualEntries);
@@ -439,9 +394,7 @@ export default function AllDistrictsDataPage() {
                   )}
                 </TableBody>
               </Table>
-              {hasMore && !isLoading && (
-                <div ref={observerRef} className="h-10 w-full" />
-              )}
+
             </div>
           </CardContent>
         </Card>
