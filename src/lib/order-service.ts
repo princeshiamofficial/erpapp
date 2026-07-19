@@ -93,8 +93,8 @@ export const getOrders = async (startDate?: string, endDate?: string, role?: str
 
     if (searchTerm) {
       const likeTerm = `%${searchTerm}%`;
-      conditions.push(`(o.id LIKE ? OR c.company_name LIKE ? OR o.client_id LIKE ? OR CONCAT(o.client_id, ' • ', c.company_name) LIKE ? OR c.phone_number LIKE ? OR uc.name LIKE ? OR ud.name LIKE ?)`);
-      params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
+      conditions.push(`(o.id LIKE ? OR c.company_name LIKE ? OR o.client_id LIKE ? OR CONCAT(o.client_id, ' • ', c.company_name) LIKE ? OR c.phone_number LIKE ? OR uc.name LIKE ? OR ud.name LIKE ? OR c.address LIKE ?)`);
+      params.push(likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm, likeTerm);
     }
 
     const whereSql = conditions.join(' AND ');

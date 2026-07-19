@@ -199,11 +199,26 @@ export default function AllDistrictsDataPage() {
     const lowercasedSearchTerm = searchTerm.trim().toLowerCase();
 
     return districtData.map(division => {
+      const divisionMatches = division.division.toLowerCase().includes(lowercasedSearchTerm);
+
       const filteredDistricts = division.districts.map(district => {
+        const districtMatches = district.name.toLowerCase().includes(lowercasedSearchTerm);
+
         const filteredEntries = district.entries.filter(entry => {
-          // Search term filtering is handled entirely on the server side via debouncedSearchTerm
           // If no search term, only system admins can see the data by default
-          return isSystemAdmin || !!searchTerm;
+          if (!searchTerm && !isSystemAdmin) return false;
+          if (!searchTerm) return true;
+
+          // If division or district matches the search term, keep all their entries
+          if (divisionMatches || districtMatches) return true;
+
+          // Otherwise check individual entry fields
+          return (
+            (entry.jobId || '').toLowerCase().includes(lowercasedSearchTerm) ||
+            (entry.businessName || '').toLowerCase().includes(lowercasedSearchTerm) ||
+            (entry.address || '').toLowerCase().includes(lowercasedSearchTerm) ||
+            (entry.phone || '').toLowerCase().includes(lowercasedSearchTerm)
+          );
         });
         return { ...district, entries: filteredEntries };
       }).filter(district => district.entries.length > 0);
@@ -266,8 +281,8 @@ export default function AllDistrictsDataPage() {
   return (
     <>
       <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 pt-0">
-        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
+        <Card className="shadow-xl border bg-card rounded-lg">
+          <CardHeader className="sticky top-[4.5rem] z-20 bg-card/95 backdrop-blur-sm border-b p-5 rounded-t-lg">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex-grow">
                     <CardTitle 
@@ -317,17 +332,17 @@ export default function AllDistrictsDataPage() {
               </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+            <div className="sm:overflow-visible">
+              <Table containerClassName="overflow-auto sm:overflow-visible">
+                <TableHeader className="sm:sticky sm:top-[9.5rem] bg-card z-10 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                   <TableRow>
-                    <TableHead className="w-[200px] text-xs pl-6 py-2">Division</TableHead>
-                    <TableHead className="w-[180px] text-xs py-2">District</TableHead>
-                    <TableHead className="text-xs py-2">Job ID</TableHead>
-                    <TableHead className="text-xs py-2">Order Date</TableHead>
-                    <TableHead className="text-xs py-2">Business Name</TableHead>
-                    <TableHead className="text-xs py-2">Address</TableHead>
-                    <TableHead className="text-xs py-2">Phone</TableHead>
+                    <TableHead className="w-[200px] text-xs pl-6 py-2 sm:sticky sm:top-[9.5rem] bg-card z-10">Division</TableHead>
+                    <TableHead className="w-[180px] text-xs py-2 sm:sticky sm:top-[9.5rem] bg-card z-10">District</TableHead>
+                    <TableHead className="text-xs py-2 sm:sticky sm:top-[9.5rem] bg-card z-10">Job ID</TableHead>
+                    <TableHead className="text-xs py-2 sm:sticky sm:top-[9.5rem] bg-card z-10">Order Date</TableHead>
+                    <TableHead className="text-xs py-2 sm:sticky sm:top-[9.5rem] bg-card z-10">Business Name</TableHead>
+                    <TableHead className="text-xs py-2 sm:sticky sm:top-[9.5rem] bg-card z-10">Address</TableHead>
+                    <TableHead className="text-xs py-2 sm:sticky sm:top-[9.5rem] bg-card z-10">Phone</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
