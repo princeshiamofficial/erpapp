@@ -12,7 +12,8 @@ import {
   updateLead,
   deleteLead,
   getLeadById,
-  getLeadByPhone
+  getLeadByPhone,
+  getUniqueLeadCrmIds,
 } from '@/lib/lead-service';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { v4 as uuidv4 } from 'uuid';
@@ -526,5 +527,14 @@ export async function getLeadByPhoneAction(phone: string): Promise<Lead | null> 
   } catch (error) {
     console.error("Error in getLeadByPhoneAction:", error);
     return null;
+  }
+}
+
+export async function getUniqueLeadCrmIdsAction(): Promise<Array<{ crmId: string; crmName: string }>> {
+  try {
+    return await getUniqueLeadCrmIds();
+  } catch (error) {
+    console.error("Error in getUniqueLeadCrmIdsAction:", error);
+    return [];
   }
 }

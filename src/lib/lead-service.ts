@@ -288,3 +288,15 @@ export const getEventsPaginated = async (
     return { leads: [], total: 0 };
   }
 };
+
+export const getUniqueLeadCrmIds = async (): Promise<Array<{ crmId: string; crmName: string }>> => {
+  try {
+    const rows = await query<any[]>(`SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.crmId')) as crmId, JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.crmName')) as crmName FROM ${LEADS_TABLE}`);
+    return rows
+      .filter(r => r.crmId && r.crmId !== 'null')
+      .map(r => ({ crmId: r.crmId as string, crmName: (r.crmName || '') as string }));
+  } catch (error) {
+    console.error(`Error fetching unique CRM IDs from leads:`, error);
+    return [];
+  }
+};
