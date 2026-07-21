@@ -34,6 +34,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -86,6 +87,13 @@ const ACTIVITY_TYPES = [
   'Other'
 ];
 
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.trim().split(/\s+/);
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
 export function PipelineClient() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -100,6 +108,7 @@ export function PipelineClient() {
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
   const [isCrmFilterOpen, setIsCrmFilterOpen] = useState(false);
   const [crmSearchQuery, setCrmSearchQuery] = useState("");
+  const [crmTab, setCrmTab] = useState<'active' | 'leave'>('active');
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -280,14 +289,36 @@ export function PipelineClient() {
     return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CRM";
   }, [selectedCrmId, allCrmUsers]);
 
+  const selectedCrmUser = useMemo(() => {
+    if (selectedCrmId === 'all') return null;
+    return allCrmUsers.find(u => u.id === selectedCrmId) || null;
+  }, [selectedCrmId, allCrmUsers]);
+
+  const activeCrmUsers = useMemo(() => allCrmUsers.filter(u => !u.isBanned), [allCrmUsers]);
+  const leaveCrmUsers = useMemo(() => allCrmUsers.filter(u => u.isBanned), [allCrmUsers]);
+
   const filteredCrmUsersForDropdown = useMemo(() => {
-    const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
-    const baseUsers = [allCrmsOption, ...allCrmUsers.filter(u => !u.isBanned)];
+    let baseUsers: { id: string; name: string; avatarUrl?: string | null; role?: any; email?: string }[] = [];
+    if (crmTab === 'active') {
+      const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
+      baseUsers = [allCrmsOption, ...activeCrmUsers];
+    } else {
+      baseUsers = leaveCrmUsers;
+    }
     if (!crmSearchQuery) return baseUsers;
     return baseUsers.filter(user =>
       user.name.toLowerCase().includes(crmSearchQuery.toLowerCase())
     );
-  }, [allCrmUsers, crmSearchQuery]);
+  }, [activeCrmUsers, leaveCrmUsers, crmSearchQuery, crmTab]);
+
+  useEffect(() => {
+    if (isCrmFilterOpen && selectedCrmId !== 'all') {
+      const selectedUser = allCrmUsers.find(u => u.id === selectedCrmId);
+      if (selectedUser?.isBanned) {
+        setCrmTab('leave');
+      }
+    }
+  }, [isCrmFilterOpen, selectedCrmId, allCrmUsers]);
 
   const leadsByCategory = useMemo(() => {
     const grouped: Record<LeadCategory, Lead[]> = {
@@ -540,12 +571,83 @@ export function PipelineClient() {
           <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-card border-border/50 focus:border-primary lg:max-w-xs" />
           <div className="flex-grow flex flex-col sm:flex-row items-center gap-2">
             {showCrmFilter && (
-              <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}><PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10"><span className="truncate">{selectedCrmName}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
-              </PopoverTrigger><PopoverContent className="w-[--radix-popover-trigger-width)] p-0"><Command><CommandInput placeholder="Search CRM..." value={crmSearchQuery} onValueChange={setCrmSearchQuery} />
-                <CommandList><CommandEmpty>No CRM found.</CommandEmpty><CommandGroup>
-                  {filteredCrmUsersForDropdown.map(crm => (<CommandItem key={crm.id} value={crm.name} onSelect={() => { setSelectedCrmId(crm.id); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />{crm.name}</CommandItem>))}
-                </CommandGroup></CommandList></Command></PopoverContent>
+              <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10 gap-2">
+                    <div className="flex items-center gap-2 truncate">
+                      {selectedCrmUser ? (
+                        <Avatar className="h-5 w-5 shrink-0">
+                          <AvatarImage src={selectedCrmUser.avatarUrl || undefined} alt={selectedCrmUser.name} />
+                          <AvatarFallback className="text-[10px]">{getInitials(selectedCrmUser.name)}</AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="truncate">{selectedCrmName}</span>
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[240px] p-0">
+                  <div className="flex border-b border-border/60 p-1 bg-muted/40 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCrmTab('active')}
+                      className={cn(
+                        "flex-1 text-xs py-1.5 px-2 rounded-md font-medium transition-all text-center",
+                        crmTab === 'active'
+                          ? "bg-background text-foreground shadow-sm font-semibold border border-border/50"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      )}
+                    >
+                      Active ({activeCrmUsers.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCrmTab('leave')}
+                      className={cn(
+                        "flex-1 text-xs py-1.5 px-2 rounded-md font-medium transition-all text-center",
+                        crmTab === 'leave'
+                          ? "bg-background text-foreground shadow-sm font-semibold border border-border/50"
+                          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      )}
+                    >
+                      Leave ({leaveCrmUsers.length})
+                    </button>
+                  </div>
+                  <Command>
+                    <CommandInput placeholder="Search CRM..." value={crmSearchQuery} onValueChange={setCrmSearchQuery} />
+                    <CommandList>
+                      <CommandEmpty>No CRM found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredCrmUsersForDropdown.map(crm => (
+                          <CommandItem
+                            key={crm.id}
+                            value={crm.name}
+                            onSelect={() => {
+                              setSelectedCrmId(crm.id);
+                              setIsCrmFilterOpen(false);
+                            }}
+                            className="flex items-center gap-2 py-1.5 cursor-pointer"
+                          >
+                            <Check className={cn("h-4 w-4 shrink-0", crm.id === selectedCrmId ? "opacity-100 text-primary" : "opacity-0")} />
+                            {crm.id === 'all' ? (
+                              <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+                                ALL
+                              </div>
+                            ) : (
+                              <Avatar className="h-6 w-6 shrink-0">
+                                <AvatarImage src={crm.avatarUrl || undefined} alt={crm.name} />
+                                <AvatarFallback className="text-[10px] bg-muted text-foreground font-medium">{getInitials(crm.name)}</AvatarFallback>
+                              </Avatar>
+                            )}
+                            <span className="truncate text-sm">{crm.name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
               </Popover>
             )}
             <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
