@@ -52,7 +52,7 @@ export const getEmployees = async (): Promise<Employee[]> => {
 
 export const getEmployeesPaginated = async (
     page: number = 1,
-    limit: number = 20,
+    limit: number = 50,
     searchTerm?: string,
     statusFilter?: string
 ): Promise<{ employees: Employee[]; total: number }> => {

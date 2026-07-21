@@ -78,8 +78,6 @@ export default function PayrollPage() {
 
   const [activeTab, setActiveTab] = useState("salary_sheet");
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [serverPaginatedEmployees, setServerPaginatedEmployees] = useState<Employee[]>([]);
-  const [totalEmployeesCount, setTotalEmployeesCount] = useState(0);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,7 +115,6 @@ export default function PayrollPage() {
       const monthStr = format(selectedDate, 'yyyy-MM');
       const [
         fetchedEmployees,
-        fetchedPaginatedRes,
         fetchedUsers,
         fetchedAttendance,
         fetchedSalarySheet,
@@ -126,7 +123,6 @@ export default function PayrollPage() {
         fetchedLastAttendance
       ] = await Promise.all([
         getEmployees(),
-        getEmployeesPaginated(currentPage, 20, searchTerm, statusFilter),
         getUsers(),
         getAttendanceForMonth(selectedDate),
         getSalarySheetForMonth(monthStr),
@@ -135,8 +131,6 @@ export default function PayrollPage() {
         getLastAttendanceDatesAction()
       ]);
       setEmployees(fetchedEmployees);
-      setServerPaginatedEmployees(fetchedPaginatedRes.employees);
-      setTotalEmployeesCount(fetchedPaginatedRes.total);
       setAllUsers(fetchedUsers);
       setAttendanceData(fetchedAttendance);
       setSalarySheetData(fetchedSalarySheet);
@@ -158,6 +152,28 @@ export default function PayrollPage() {
       router.replace('/dashboard');
     }
   }, [currentUser, router, fetchData]);
+
+  const filteredEmployeeList = useMemo(() => {
+    let results = [...employees];
+
+    if (statusFilter !== 'all') {
+      results = results.filter(employee => employee.status === statusFilter);
+    }
+
+    if (searchTerm) {
+      const lowercasedFilter = searchTerm.toLowerCase();
+      results = results.filter(employee =>
+        employee.name.toLowerCase().includes(lowercasedFilter) ||
+        (employee.email && employee.email.toLowerCase().includes(lowercasedFilter)) ||
+        (employee.employeeId && employee.employeeId.toLowerCase().includes(lowercasedFilter)) ||
+        (employee.designation && employee.designation.toLowerCase().includes(lowercasedFilter)) ||
+        (employee.mobileNo && employee.mobileNo.includes(lowercasedFilter)) ||
+        (employee.nationalId && employee.nationalId.includes(lowercasedFilter))
+      );
+    }
+
+    return results;
+  }, [employees, statusFilter, searchTerm]);
 
   const { filteredEmployees, salarySheetCalculatedData, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = [...employees];
@@ -317,13 +333,13 @@ export default function PayrollPage() {
 
   const totalPages = useMemo(() => {
     if (activeTab === 'employee_list') {
-      return Math.ceil(totalEmployeesCount / ITEMS_PER_PAGE);
+      return Math.ceil(filteredEmployeeList.length / ITEMS_PER_PAGE);
     }
     if (activeTab === 'employees_wallet') {
       return Math.ceil(walletCalculatedData.length / ITEMS_PER_PAGE);
     }
     return 1;
-  }, [totalEmployeesCount, activeTab, walletCalculatedData]);
+  }, [filteredEmployeeList.length, activeTab, walletCalculatedData]);
 
   const salaryStatusMap = useMemo(() => {
     const map = new Map();
@@ -333,7 +349,8 @@ export default function PayrollPage() {
 
   const paginatedEmployees = useMemo(() => {
     if (activeTab === 'employee_list') {
-      return serverPaginatedEmployees;
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      return filteredEmployeeList.slice(startIndex, startIndex + ITEMS_PER_PAGE);
     }
 
     if (activeTab === 'employees_wallet') {
@@ -343,7 +360,7 @@ export default function PayrollPage() {
     }
 
     return salarySheetCalculatedData;
-  }, [serverPaginatedEmployees, currentPage, activeTab, salarySheetCalculatedData, walletCalculatedData]);
+  }, [filteredEmployeeList, currentPage, activeTab, salarySheetCalculatedData, walletCalculatedData]);
 
   useEffect(() => {
     setCurrentPage(1);

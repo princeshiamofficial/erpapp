@@ -22,13 +22,21 @@ import { sendTelegramMessage } from "@/lib/notification-utils";
 import { getIO } from "@/lib/socket-io";
 import { getAppUrl } from "@/lib/server-utils";
 
-const sanitizeForPackzy = (input: string | null | undefined, maxLength?: number): string => {
+const sanitizeForPackzy = (input: string | null | undefined, maxLength?: number, maxBytes?: number): string => {
   if (!input) return '';
-  const sanitized = input
+  let sanitized = input
     .replace(/[^\p{L}\p{M}\p{N}.,\s#/()&:;।‌‍-]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
-  return maxLength ? sanitized.slice(0, maxLength) : sanitized;
+  if (maxLength && sanitized.length > maxLength) {
+    sanitized = sanitized.slice(0, maxLength);
+  }
+  if (maxBytes) {
+    while (Buffer.byteLength(sanitized, 'utf-8') > maxBytes && sanitized.length > 0) {
+      sanitized = sanitized.slice(0, -1);
+    }
+  }
+  return sanitized;
 };
 
 
@@ -190,7 +198,7 @@ export async function transferToCourierAction(
     };
 
     if (courierNote && courierNote.trim()) {
-      packzyPayload.note = sanitizeForPackzy(courierNote.trim(), 480);
+      packzyPayload.note = sanitizeForPackzy(courierNote.trim(), 160, 450);
     }
 
     const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
