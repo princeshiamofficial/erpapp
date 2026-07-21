@@ -24,7 +24,7 @@ interface MonthlySalesData {
   name: string; // month name
   sales: number;
   orders: number; // New field for sales count
-  crmSales: { [crmId: string]: { sales: number; orders: number } };
+  crmSales: { [crmId: string]: { sales: number; orders: number; crmUserName?: string } };
 }
 
 const formatCurrencyBdt = (value: number | null | undefined): string => {
@@ -49,24 +49,28 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers, displayMode = '
   const userMap = useMemo(() => new Map(allCrmUsers.map(u => [u.id, u])), [allCrmUsers]);
 
   const availableYears = useMemo(() => {
-    if (!allOrders || allOrders.length === 0) {
-      return [getYear(new Date())];
-    }
-    const years = new Set(
-      allOrders
-        .map(order => {
-          try {
-            return getYear(parseISO(order.createdAt));
-          } catch {
-            return null;
-          }
-        })
-        .filter((year): year is number => year !== null)
-    );
+    const years = new Set<number>();
     const currentYear = getYear(new Date());
-    if (!years.has(currentYear)) {
-      years.add(currentYear);
+
+    for (let y = currentYear - 4; y <= currentYear; y++) {
+      years.add(y);
     }
+
+    if (allOrders && allOrders.length > 0) {
+      allOrders.forEach(order => {
+        try {
+          if (order.createdAt) {
+            const yr = getYear(parseISO(order.createdAt));
+            if (!isNaN(yr)) {
+              years.add(yr);
+            }
+          }
+        } catch {
+          // Ignore invalid dates
+        }
+      });
+    }
+
     return Array.from(years).sort((a, b) => b - a);
   }, [allOrders]);
 
@@ -88,7 +92,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers, displayMode = '
           months[monthIndex].orders += 1;
 
           if (!months[monthIndex].crmSales[order.crmUserId]) {
-            months[monthIndex].crmSales[order.crmUserId] = { sales: 0, orders: 0 };
+            months[monthIndex].crmSales[order.crmUserId] = { sales: 0, orders: 0, crmUserName: order.crmUserName };
           }
           months[monthIndex].crmSales[order.crmUserId].sales += orderTotal;
           months[monthIndex].crmSales[order.crmUserId].orders += 1;
@@ -256,18 +260,19 @@ const ChartTooltipContentCustom = ({ active, payload, label, userMap, displayMod
     const crmSalesData = activePayload?.payload?.crmSales;
 
     const crmBreakdown = crmSalesData ? Object.entries(crmSalesData)
-      .map(([crmId, data]: [string, any]) => ({
-        crmId,
-        sales: data.sales as number,
-        orders: data.orders as number,
-        user: userMap.get(crmId),
-      }))
-      .filter(item => item.user)
-      // Sort by sales if showing amount, otherwise sort by orders
+      .map(([crmId, data]: [string, any]) => {
+        const user = userMap.get(crmId);
+        return {
+          crmId,
+          sales: data.sales as number,
+          orders: data.orders as number,
+          user: user || (data.crmUserName ? { name: data.crmUserName, avatarUrl: null } : { name: `User (${crmId.slice(0, 6)})`, avatarUrl: null }),
+        };
+      })
       .sort((a, b) => showAmount ? b.sales - a.sales : b.orders - a.orders) : [];
 
     return (
-      <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
+      <div className="rounded-lg border bg-background p-2.5 shadow-md min-w-[240px] max-w-[280px]">
         <div className="grid grid-cols-1 gap-1.5">
           <p className="font-semibold text-foreground">{label}</p>
           {showAmount && salesPayload && (
@@ -288,8 +293,8 @@ const ChartTooltipContentCustom = ({ active, payload, label, userMap, displayMod
           {crmBreakdown.length > 0 && (
             <>
               <div className="border-t border-dashed my-1"></div>
-              <p className="font-semibold text-xs text-muted-foreground mt-1">Top Contributors:</p>
-              <ScrollArea className="max-h-28 pr-2">
+              <p className="font-semibold text-xs text-muted-foreground mt-1">Top Contributors ({crmBreakdown.length}):</p>
+              <ScrollArea className="max-h-56 pr-2">
                 <div className="space-y-1.5">
                   {crmBreakdown.map(({ crmId, sales, orders, user }) => (
                     <div key={crmId} className="flex items-center gap-2 text-xs">
@@ -308,7 +313,7 @@ const ChartTooltipContentCustom = ({ active, payload, label, userMap, displayMod
           )}
         </div>
       </div>
-    )
+    );
   }
   return null;
 }

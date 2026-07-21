@@ -39,24 +39,28 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
   const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
 
   const availableYears = useMemo(() => {
-    if (!allOrders || allOrders.length === 0) {
-      return [getYear(new Date())];
-    }
-    const years = new Set(
-      allOrders
-        .map(order => {
-          try {
-            return getYear(parseISO(order.createdAt));
-          } catch {
-            return null;
-          }
-        })
-        .filter((year): year is number => year !== null)
-    );
+    const years = new Set<number>();
     const currentYear = getYear(new Date());
-    if (!years.has(currentYear)) {
-      years.add(currentYear);
+
+    for (let y = currentYear - 4; y <= currentYear; y++) {
+      years.add(y);
     }
+
+    if (allOrders && allOrders.length > 0) {
+      allOrders.forEach(order => {
+        try {
+          if (order.createdAt) {
+            const yr = getYear(parseISO(order.createdAt));
+            if (!isNaN(yr)) {
+              years.add(yr);
+            }
+          }
+        } catch {
+          // Ignore invalid dates
+        }
+      });
+    }
+
     return Array.from(years).sort((a, b) => b - a);
   }, [allOrders]);
 

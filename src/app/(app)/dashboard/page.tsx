@@ -362,8 +362,8 @@ function DashboardContent() {
     const role = currentUser?.role;
     const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id;
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
-        getOrders(startStr, endStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
+      const [fetchedOrders, fetchedAllOrdersUnfiltered, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
+        getOrders(startStr, endStr, role, userId), getOrders(undefined, undefined, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -378,7 +378,7 @@ function DashboardContent() {
       }));
 
       return {
-        allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers,
+        allOrders: fetchedOrders, allOrdersUnfiltered: fetchedAllOrdersUnfiltered, allModels: fetchedModels, allUsers: fetchedUsers,
         allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
         allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
         allFeedback: fetchedFeedback,
@@ -401,7 +401,7 @@ function DashboardContent() {
     retry: 1,
   });
 
-  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
+  const { allOrders = [], allOrdersUnfiltered = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -1270,14 +1270,15 @@ function DashboardContent() {
   }, [currentUser, globalSettings, isLoadingContent]);
 
   const salesPerformanceOrders = useMemo(() => {
+    const ordersSource = allOrdersUnfiltered.length > 0 ? allOrdersUnfiltered : allOrders;
     if (currentUser?.role === 'CRM') {
-      return allOrders.filter(order => order.crmUserId === currentUser.id);
+      return ordersSource.filter(order => order.crmUserId === currentUser.id);
     }
     if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
-      return allOrders.filter(order => order.crmUserId === selectedCrmId);
+      return ordersSource.filter(order => order.crmUserId === selectedCrmId);
     }
-    return allOrders;
-  }, [allOrders, currentUser, selectedCrmId]);
+    return ordersSource;
+  }, [allOrdersUnfiltered, allOrders, currentUser, selectedCrmId]);
 
   const recentFeedback = useMemo(() => {
     if (!allFeedback || !currentUser) return [];
@@ -1822,12 +1823,12 @@ function DashboardContent() {
           {canSeeSystemAdminCharts && (
             <SalesPerformanceClient
               allOrders={salesPerformanceOrders}
-              allCrmUsers={allCrmUsers}
+              allCrmUsers={allUsers}
               displayMode={displayMode}
             />
           )}
           {canSeeAdminCharts && (
-            <OrderAnalysisClient allOrders={allOrders} />
+            <OrderAnalysisClient allOrders={allOrdersUnfiltered.length > 0 ? allOrdersUnfiltered : allOrders} />
           )}
           {!isDesignerRepOrLrOrCo && currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
           {canSeeSystemAdminCharts && (
