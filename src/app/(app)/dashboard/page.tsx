@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -362,8 +362,8 @@ function DashboardContent() {
     const role = currentUser?.role;
     const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id;
     try {
-      const [fetchedOrders, fetchedAllOrdersUnfiltered, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
-        getOrders(startStr, endStr, role, userId), getOrders(undefined, undefined, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
+        getOrders(startStr, endStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -378,7 +378,7 @@ function DashboardContent() {
       }));
 
       return {
-        allOrders: fetchedOrders, allOrdersUnfiltered: fetchedAllOrdersUnfiltered, allModels: fetchedModels, allUsers: fetchedUsers,
+        allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers,
         allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
         allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
         allFeedback: fetchedFeedback,
@@ -401,7 +401,7 @@ function DashboardContent() {
     retry: 1,
   });
 
-  const { allOrders = [], allOrdersUnfiltered = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
+  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -1270,15 +1270,14 @@ function DashboardContent() {
   }, [currentUser, globalSettings, isLoadingContent]);
 
   const salesPerformanceOrders = useMemo(() => {
-    const ordersSource = allOrdersUnfiltered.length > 0 ? allOrdersUnfiltered : allOrders;
     if (currentUser?.role === 'CRM') {
-      return ordersSource.filter(order => order.crmUserId === currentUser.id);
+      return allOrders.filter(order => order.crmUserId === currentUser.id);
     }
     if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
-      return ordersSource.filter(order => order.crmUserId === selectedCrmId);
+      return allOrders.filter(order => order.crmUserId === selectedCrmId);
     }
-    return ordersSource;
-  }, [allOrdersUnfiltered, allOrders, currentUser, selectedCrmId]);
+    return allOrders;
+  }, [allOrders, currentUser, selectedCrmId]);
 
   const recentFeedback = useMemo(() => {
     if (!allFeedback || !currentUser) return [];
@@ -1798,43 +1797,37 @@ function DashboardContent() {
 
         <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLrOrCo) ? "lg:grid-cols-1" : "")}>
           <div className="lg:col-span-1">
-            <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-2xl" />}>
-              <TeamPerformanceGraph
-                allTasks={allTasks}
-                monthlyTargetData={teamPerformanceData}
-                totalPerformanceTarget={totalPerformanceTarget}
-                onDateRangeChange={handleTeamPerformanceDateRangeChange}
-                selectedDateRange={teamPerformanceDateRange}
-                userMap={new Map(allUsers.map(u => [u.id, u]))}
-                globalSettings={globalSettings}
-                onTeamChange={handleTeamChange}
-                onSpecificUserChange={handleSpecificUserChange}
-                selectedTeam={selectedTeam}
-                specificUserId={specificUserId}
-                isAdminView={isAdminView}
-                refetchData={refetch}
-                allUsers={allUsers.filter(u => !u.isBanned)}
-                specificUserOptions={specificUserOptions}
-              />
-            </Suspense>
+            <TeamPerformanceGraph
+              allTasks={allTasks}
+              monthlyTargetData={teamPerformanceData}
+              totalPerformanceTarget={totalPerformanceTarget}
+              onDateRangeChange={handleTeamPerformanceDateRangeChange}
+              selectedDateRange={teamPerformanceDateRange}
+              userMap={new Map(allUsers.map(u => [u.id, u]))}
+              globalSettings={globalSettings}
+              onTeamChange={handleTeamChange}
+              onSpecificUserChange={handleSpecificUserChange}
+              selectedTeam={selectedTeam}
+              specificUserId={specificUserId}
+              isAdminView={isAdminView}
+              refetchData={refetch}
+              allUsers={allUsers.filter(u => !u.isBanned)}
+              specificUserOptions={specificUserOptions}
+            />
           </div>
 
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
           {canSeeSystemAdminCharts && (
-            <Suspense fallback={<Skeleton className="h-[440px] w-full rounded-2xl" />}>
-              <SalesPerformanceClient
-                allOrders={salesPerformanceOrders}
-                allCrmUsers={allUsers}
-                displayMode={displayMode}
-              />
-            </Suspense>
+            <SalesPerformanceClient
+              allOrders={salesPerformanceOrders}
+              allCrmUsers={allCrmUsers}
+              displayMode={displayMode}
+            />
           )}
           {canSeeAdminCharts && (
-            <Suspense fallback={<Skeleton className="h-[440px] w-full rounded-2xl" />}>
-              <OrderAnalysisClient allOrders={allOrdersUnfiltered.length > 0 ? allOrdersUnfiltered : allOrders} />
-            </Suspense>
+            <OrderAnalysisClient allOrders={allOrders} />
           )}
           {!isDesignerRepOrLrOrCo && currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
           {canSeeSystemAdminCharts && (

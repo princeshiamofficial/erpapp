@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -362,22 +362,18 @@ export default function LeaderboardPage() {
               <TabsTrigger value="dr_board">DR Board</TabsTrigger>
             </TabsList>
             <TabsContent value="cr_board" className="mt-4">
-              <Suspense fallback={<Skeleton className="h-64 w-full rounded-2xl bg-white/10" />}>
-                <LeaderboardDisplay
-                  performanceData={currentLeaderboardData}
-                  currentUser={currentUser}
-                  timePeriodLabel={currentDateRangeLabel}
-                />
-              </Suspense>
+              <LeaderboardDisplay
+                performanceData={currentLeaderboardData}
+                currentUser={currentUser}
+                timePeriodLabel={currentDateRangeLabel}
+              />
             </TabsContent>
             <TabsContent value="dr_board" className="mt-4">
-              <Suspense fallback={<Skeleton className="h-64 w-full rounded-2xl bg-white/10" />}>
-                <LeaderboardDisplay
-                  performanceData={currentLeaderboardData}
-                  currentUser={currentUser}
-                  timePeriodLabel={currentDateRangeLabel}
-                />
-              </Suspense>
+              <LeaderboardDisplay
+                performanceData={currentLeaderboardData}
+                currentUser={currentUser}
+                timePeriodLabel={currentDateRangeLabel}
+              />
             </TabsContent>
           </Tabs>
         ) : (
