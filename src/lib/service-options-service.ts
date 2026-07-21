@@ -475,7 +475,12 @@ export const initCourierNotesTable = async () => {
 
 const seedDefaultCourierNotes = async (): Promise<ServiceCourierNoteItem[]> => {
   const createdItems: ServiceCourierNoteItem[] = [];
-  const defaultNotesData: string[] = ["Please call before delivery", "Leave at front desk", "Do not bend package"];
+  const defaultNotesData: string[] = [
+    "প্রিয় রাইডার ভাই, পার্সেল এসাইন হলে কাস্টমারকে কলে বলুন কালার হাট থেকে মেনু বুক এসেছে ও সিওডি জানান। কাস্টমার অগ্রিম পেমেন্ট করেছেন এবং কাস্টমাইজড পণ্য হওয়াতে কোনোভাবেই রিটার্ন করা যাবে না। সিওডি রিসিভ ব্যাতিত পণ্য দিয়ে আসা থেকে বিরত থাকুন এবং যেকোনো প্রয়োজনে সরাসরি মার্চেন্টকে জানান। ধন্যবাদ।",
+    "Please call before delivery",
+    "Leave at front desk",
+    "Do not bend package"
+  ];
 
   for (const name of defaultNotesData) {
     const id = uuidv4();
@@ -500,10 +505,27 @@ export const getCourierNotes = async (): Promise<ServiceCourierNoteItem[]> => {
       ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
     } as ServiceCourierNoteItem));
 
+    const fullBengaliNote = "প্রিয় রাইডার ভাই, পার্সেল এসাইন হলে কাস্টমারকে কলে বলুন কালার হাট থেকে মেনু বুক এসেছে ও সিওডি জানান। কাস্টমার অগ্রিম পেমেন্ট করেছেন এবং কাস্টমাইজড পণ্য হওয়াতে কোনোভাবেই রিটার্ন করা যাবে না। সিওডি রিসিভ ব্যাতিত পণ্য দিয়ে আসা থেকে বিরত থাকুন এবং যেকোনো প্রয়োজনে সরাসরি মার্চেন্টকে জানান। ধন্যবাদ।";
+
+    let foundBengaliNote = false;
+    for (const note of notes) {
+      if (note.name && note.name.includes("প্রিয় রাইডার ভাই")) {
+        foundBengaliNote = true;
+        if (note.name !== fullBengaliNote) {
+          note.name = fullBengaliNote;
+          await updateCourierNote(note.id, fullBengaliNote);
+        }
+      }
+    }
+
     if (notes.length === 0) {
       console.log("No courier notes found, seeding defaults in MySQL.");
       notes = await seedDefaultCourierNotes();
+    } else if (!foundBengaliNote) {
+      const added = await addCourierNote(fullBengaliNote);
+      if (added) notes.push(added);
     }
+
     return notes.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error("Error fetching courier notes from MySQL:", error);

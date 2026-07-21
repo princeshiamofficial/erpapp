@@ -182,21 +182,36 @@ export function GiftCourierDialog({ isOpen, onOpenChange, gift, currentUser, onS
               />
             </div>
             {isNoteVisible && (
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor="predefined-note" className="text-right">Courier Note</Label>
-                <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
-                  <SelectTrigger id="predefined-note" className="col-span-2 h-8">
-                    <SelectValue placeholder="Choose a note (Optional)" />
-                  </SelectTrigger>
-                  <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
-                    <SelectItem value="none_selected">None</SelectItem>
-                    {courierNotesOptions.map((note) => (
-                      <SelectItem key={note.id} value={note.name} className="whitespace-normal break-words">
-                        {note.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-3 items-start gap-4">
+                <Label htmlFor="predefined-note" className="text-right pt-2">Courier Note</Label>
+                <div className="col-span-2 space-y-2">
+                  <Select onValueChange={(val) => setCourierNote(val === 'none_selected' ? '' : val)}>
+                    <SelectTrigger id="predefined-note" className="h-8">
+                      <SelectValue placeholder="Choose a preset note (Optional)" />
+                    </SelectTrigger>
+                    <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
+                      <SelectItem value="none_selected">None / Clear Note</SelectItem>
+                      {courierNotesOptions.map((note) => (
+                        <SelectItem key={note.id} value={note.name} className="whitespace-normal break-words">
+                          {note.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Textarea
+                    value={courierNote}
+                    onChange={(e) => setCourierNote(e.target.value)}
+                    placeholder="Type or edit courier note..."
+                    className="text-xs resize-none min-h-[70px]"
+                    maxLength={480}
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
+                    <span>Max 480 characters</span>
+                    <span className={cn(courierNote.length >= 450 && "text-destructive font-semibold")}>
+                      {courierNote.length}/480
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
             <div className="grid grid-cols-3 items-center gap-4 mt-2 pt-2 border-t border-dashed">
