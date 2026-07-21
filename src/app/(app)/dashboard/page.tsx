@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -1798,37 +1798,43 @@ function DashboardContent() {
 
         <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLrOrCo) ? "lg:grid-cols-1" : "")}>
           <div className="lg:col-span-1">
-            <TeamPerformanceGraph
-              allTasks={allTasks}
-              monthlyTargetData={teamPerformanceData}
-              totalPerformanceTarget={totalPerformanceTarget}
-              onDateRangeChange={handleTeamPerformanceDateRangeChange}
-              selectedDateRange={teamPerformanceDateRange}
-              userMap={new Map(allUsers.map(u => [u.id, u]))}
-              globalSettings={globalSettings}
-              onTeamChange={handleTeamChange}
-              onSpecificUserChange={handleSpecificUserChange}
-              selectedTeam={selectedTeam}
-              specificUserId={specificUserId}
-              isAdminView={isAdminView}
-              refetchData={refetch}
-              allUsers={allUsers.filter(u => !u.isBanned)}
-              specificUserOptions={specificUserOptions}
-            />
+            <Suspense fallback={<Skeleton className="h-[420px] w-full rounded-2xl" />}>
+              <TeamPerformanceGraph
+                allTasks={allTasks}
+                monthlyTargetData={teamPerformanceData}
+                totalPerformanceTarget={totalPerformanceTarget}
+                onDateRangeChange={handleTeamPerformanceDateRangeChange}
+                selectedDateRange={teamPerformanceDateRange}
+                userMap={new Map(allUsers.map(u => [u.id, u]))}
+                globalSettings={globalSettings}
+                onTeamChange={handleTeamChange}
+                onSpecificUserChange={handleSpecificUserChange}
+                selectedTeam={selectedTeam}
+                specificUserId={specificUserId}
+                isAdminView={isAdminView}
+                refetchData={refetch}
+                allUsers={allUsers.filter(u => !u.isBanned)}
+                specificUserOptions={specificUserOptions}
+              />
+            </Suspense>
           </div>
 
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
           {canSeeSystemAdminCharts && (
-            <SalesPerformanceClient
-              allOrders={salesPerformanceOrders}
-              allCrmUsers={allUsers}
-              displayMode={displayMode}
-            />
+            <Suspense fallback={<Skeleton className="h-[440px] w-full rounded-2xl" />}>
+              <SalesPerformanceClient
+                allOrders={salesPerformanceOrders}
+                allCrmUsers={allUsers}
+                displayMode={displayMode}
+              />
+            </Suspense>
           )}
           {canSeeAdminCharts && (
-            <OrderAnalysisClient allOrders={allOrdersUnfiltered.length > 0 ? allOrdersUnfiltered : allOrders} />
+            <Suspense fallback={<Skeleton className="h-[440px] w-full rounded-2xl" />}>
+              <OrderAnalysisClient allOrders={allOrdersUnfiltered.length > 0 ? allOrdersUnfiltered : allOrders} />
+            </Suspense>
           )}
           {!isDesignerRepOrLrOrCo && currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
           {canSeeSystemAdminCharts && (
