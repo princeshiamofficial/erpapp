@@ -359,11 +359,14 @@ function DashboardContent() {
     }
     const startStr = selectedDateRange?.from ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
     const endStr = selectedDateRange?.to ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
+    const refDate = selectedDateRange?.from || new Date();
+    const yearStartStr = format(startOfYear(refDate), 'yyyy-MM-dd HH:mm:ss');
+    const yearEndStr = format(endOfYear(refDate), 'yyyy-MM-dd HH:mm:ss');
     const role = currentUser?.role;
     const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id;
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
-        getOrders(startStr, endStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
+      const [fetchedOrders, fetchedYearOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
+        getOrders(startStr, endStr, role, userId), getOrders(yearStartStr, yearEndStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -378,7 +381,7 @@ function DashboardContent() {
       }));
 
       return {
-        allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers,
+        allOrders: fetchedOrders, allYearOrders: fetchedYearOrders, allModels: fetchedModels, allUsers: fetchedUsers,
         allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
         allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
         allFeedback: fetchedFeedback,
@@ -401,7 +404,7 @@ function DashboardContent() {
     retry: 1,
   });
 
-  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
+  const { allOrders = [], allYearOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -1821,13 +1824,13 @@ function DashboardContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
           {canSeeSystemAdminCharts && (
             <SalesPerformanceClient
-              allOrders={salesPerformanceOrders}
-              allCrmUsers={allCrmUsers}
+              allOrders={allYearOrders.length > 0 ? allYearOrders : allOrders}
+              allCrmUsers={allUsers}
               displayMode={displayMode}
             />
           )}
           {canSeeAdminCharts && (
-            <OrderAnalysisClient allOrders={allOrders} />
+            <OrderAnalysisClient allOrders={allYearOrders.length > 0 ? allYearOrders : allOrders} />
           )}
           {!isDesignerRepOrLrOrCo && currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
           {canSeeSystemAdminCharts && (
