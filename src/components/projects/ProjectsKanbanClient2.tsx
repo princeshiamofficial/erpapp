@@ -193,11 +193,9 @@ export function ProjectsKanbanClient() {
     try {
       const startStr = selectedDateRange?.from ? startOfDay(selectedDateRange.from).toISOString() : undefined;
       const endStr = selectedDateRange?.to ? endOfDay(selectedDateRange.to).toISOString() : undefined;
-      const role = currentUser?.role;
-      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
 
       const [fetchedProjects, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([
-        getProjects(startStr, endStr, role, userId),
+        getProjects(startStr, endStr),
         getStatuses(),
         getGlobalSettings(),
         getUsers()
@@ -213,7 +211,7 @@ export function ProjectsKanbanClient() {
       setIsLoading(false);
       setIsDataFetching(false);
     }
-  }, [toast, selectedDateRange, currentUser]);
+  }, [toast, selectedDateRange]);
 
   useEffect(() => {
     if (!socket) return;
