@@ -119,7 +119,7 @@ export default function QuotationsPage() {
     try {
       const userId = (currentUserRole === 'SYSTEM_ADMIN' || currentUserRole === 'ADMIN') ? undefined : currentUserId;
 
-      const [fetchedResult, fetchedStatuses, fetchedSettings, fetchedOrders, fetchedOrderStatuses] = await Promise.all([
+      const [fetchedResult, fetchedStatuses, fetchedSettings, fetchedOrderStatuses] = await Promise.all([
         getQuotationsPaginated(currentPage, ITEMS_PER_PAGE, debouncedSearchTerm, currentUserRole, userId, viewType),
         Promise.resolve([
           { id: 'Pending', name: 'Pending', color: '#8B5CF6', xid: 'pending' },
@@ -127,14 +127,12 @@ export default function QuotationsPage() {
           { id: 'Canceled', name: 'Canceled', color: '#EF4444', xid: 'canceled' },
         ]),
         getGlobalSettings(),
-        getOrders(),
         getStatuses()
       ]);
       setQuotations(fetchedResult.quotations);
       setTotalQuotations(fetchedResult.total);
       setAllStatuses(fetchedStatuses);
       setGlobalAppSettings(fetchedSettings);
-      setAllOrders(fetchedOrders);
       setAvailableOrderStatuses(fetchedOrderStatuses.filter(s => s.isVisible !== false));
     } catch (error) {
       console.error("Failed to fetch quotations, statuses, or settings:", error);
@@ -171,6 +169,21 @@ export default function QuotationsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, viewType]);
+
+  // Load allOrders lazily only when the CreateOrderDialog is opened
+  useEffect(() => {
+    if (isCreateOrderDialogOpen && allOrders.length === 0) {
+      const fetchOrdersForDialog = async () => {
+        try {
+          const fetchedOrders = await getOrders();
+          setAllOrders(fetchedOrders);
+        } catch (err) {
+          console.error("Failed to load orders for dialog autofill:", err);
+        }
+      };
+      fetchOrdersForDialog();
+    }
+  }, [isCreateOrderDialogOpen, allOrders.length]);
 
   const [quotationStatusDisplay, setQuotationStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
