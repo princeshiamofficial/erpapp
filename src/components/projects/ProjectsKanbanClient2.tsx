@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import {
   DndContext,
   MouseSensor,
@@ -153,7 +153,16 @@ export function ProjectsKanbanClient() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [hashId, setHashId] = useState<string | null>(null);
 
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>();
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    const now = new Date();
+    return {
+      from: startOfMonth(now),
+      to: endOfMonth(now),
+    };
+  });
 
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
   const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
@@ -191,8 +200,13 @@ export function ProjectsKanbanClient() {
     if (!isSilent) setIsLoading(true);
     setIsDataFetching(true);
     try {
+      const startStr = selectedDateRange?.from ? startOfDay(selectedDateRange.from).toISOString() : undefined;
+      const endStr = selectedDateRange?.to ? endOfDay(selectedDateRange.to).toISOString() : undefined;
+      const role = currentUser?.role;
+      const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? undefined : currentUser?.id;
+
       const [fetchedProjects, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([
-        getProjects(),
+        getProjects(startStr, endStr, role, userId),
         getStatuses(),
         getGlobalSettings(),
         getUsers()
@@ -208,7 +222,7 @@ export function ProjectsKanbanClient() {
       setIsLoading(false);
       setIsDataFetching(false);
     }
-  }, [toast]);
+  }, [toast, selectedDateRange, currentUser]);
 
   useEffect(() => {
     if (!socket) return;
