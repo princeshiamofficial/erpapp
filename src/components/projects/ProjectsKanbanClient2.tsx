@@ -153,16 +153,7 @@ export function ProjectsKanbanClient() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [hashId, setHashId] = useState<string | null>(null);
 
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-    const now = new Date();
-    return {
-      from: startOfMonth(now),
-      to: endOfMonth(now),
-    };
-  });
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
 
   const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all');
   const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
