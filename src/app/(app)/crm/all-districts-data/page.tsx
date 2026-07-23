@@ -20,7 +20,7 @@ import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataD
 import { cn } from '@/lib/utils';
 import { DateRangePicker3, type PredefinedRange } from '@/components/dashboard/date-range-picker3';
 import type { DateRange } from "react-day-picker";
-import { isWithinInterval, startOfDay, endOfDay, subDays } from 'date-fns';
+import { isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
 
 
 const formatDate = (dateString?: string) => {
@@ -32,34 +32,45 @@ const formatDate = (dateString?: string) => {
     }
 };
 
-const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataEntry[]): DivisionData[] => {
-    const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
+const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
 
+// Precompute static matchable districts and their simplified names to avoid recalculating in hot loops
+const matchableDistricts = divisions.flatMap(div => 
+    div.districts.map(dist => {
+        const namesToMatch = [dist.name, ...(dist.aliases || [])];
+        const simplifiedNames = namesToMatch
+            .map(name => simplifyString(name))
+            .filter(name => name.length > 0);
+        return {
+            name: dist.name,
+            division: div.division,
+            simplifiedNames
+        };
+    })
+);
+
+const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataEntry[]): DivisionData[] => {
     // 1. Process all sources into a unified list of entries
     const allEntries: DistrictDataEntry[] = [];
 
     // Process orders from tracking links
     orders.forEach(order => {
-        const companyNameParts = order.companyName.split('•').map(part => part.trim());
-        const jobId = (companyNameParts.length > 1 ? companyNameParts[0] : order.id).trim();
-        const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
-        const phone = order.phoneNumber.trim();
+        const companyNameParts = (order.companyName || '').split('•').map(part => part.trim());
+        const jobId = (companyNameParts.length > 1 ? companyNameParts[0] : order.id || '').trim();
+        const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName || '';
+        const phone = (order.phoneNumber || '').trim();
 
-        // Calculate division/district for orders based on address
+        // Calculate division/district for orders based on address using precomputed map
         let longestMatch: { name: string; division: string; } | null = null;
         let longestMatchLength = 0;
-        const simplifiedAddress = simplifyString(order.address);
+        const simplifiedAddress = simplifyString(order.address || '');
 
-        for (const div of divisions) {
-            for (const dist of div.districts) {
-                const namesToMatch = [dist.name, ...(dist.aliases || [])];
-                for (const name of namesToMatch) {
-                    const simplifiedDistName = simplifyString(name);
-                    if (simplifiedDistName.length > 0 && simplifiedAddress.includes(simplifiedDistName)) {
-                        if (simplifiedDistName.length > longestMatchLength) {
-                            longestMatchLength = simplifiedDistName.length;
-                            longestMatch = { name: dist.name, division: div.division };
-                        }
+        for (const dist of matchableDistricts) {
+            for (const simplifiedName of dist.simplifiedNames) {
+                if (simplifiedAddress.includes(simplifiedName)) {
+                    if (simplifiedName.length > longestMatchLength) {
+                        longestMatchLength = simplifiedName.length;
+                        longestMatch = { name: dist.name, division: dist.division };
                     }
                 }
             }
@@ -68,7 +79,7 @@ const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataE
         allEntries.push({
             jobId,
             businessName,
-            address: order.address,
+            address: order.address || '',
             phone,
             orderDate: order.createdAt,
             district: longestMatch ? longestMatch.name : "Unknown",
@@ -80,25 +91,26 @@ const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataE
     manualEntries.forEach(entry => {
         allEntries.push({
             ...entry,
-            jobId: entry.jobId.trim(),
-            phone: entry.phone.trim(),
+            jobId: (entry.jobId || '').trim(),
+            phone: (entry.phone || '').trim(),
             division: entry.division || 'Unknown',
             district: entry.district || 'Unknown',
         });
     });
 
-    // 2. Sort by date descending (latest first)
-    allEntries.sort((a, b) => {
-        const dateA = new Date(a.orderDate).getTime();
-        const dateB = new Date(b.orderDate).getTime();
-        return dateB - dateA;
-    });
+    // 2. Sort by date descending using Schwartzian transform to avoid O(N log N) Date instantiation
+    const entriesWithTime = allEntries.map(entry => ({
+        entry,
+        time: entry.orderDate ? new Date(entry.orderDate).getTime() : 0
+    }));
+    entriesWithTime.sort((a, b) => b.time - a.time);
+    const sortedEntries = entriesWithTime.map(item => item.entry);
 
     // 3. De-duplicate based on Job ID or Phone, keeping the latest (since we sorted)
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
     const seenJobIds = new Set<string>();
 
-    allEntries.forEach(entry => {
+    sortedEntries.forEach(entry => {
         const jobIdLower = entry.jobId.toLowerCase();
 
         if (seenJobIds.has(jobIdLower)) {
@@ -148,8 +160,17 @@ export default function AllDistrictsDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
-  const [dateRangeLabel, setDateRangeLabel] = useState<string>("All Time");
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    const now = new Date();
+    return {
+      from: startOfMonth(now),
+      to: endOfMonth(now),
+    };
+  });
+  const [dateRangeLabel, setDateRangeLabel] = useState<string>("This Month");
   const [showAddButton, setShowAddButton] = useState(false);
 
   const handleDateRangeChange = (
@@ -164,9 +185,18 @@ export default function AllDistrictsDataPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
+        const role = currentUser?.role;
+
+        // Skip fetching if the user is not a system admin and has not typed a search term (as the UI filters them out anyway)
+        if (!debouncedSearchTerm && role !== 'SYSTEM_ADMIN') {
+            setRawOrders([]);
+            setRawManualEntries([]);
+            setIsLoading(false);
+            return;
+        }
+
         const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? startOfDay(selectedDateRange.from).toISOString() : undefined;
         const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? endOfDay(selectedDateRange.to).toISOString() : undefined;
-        const role = currentUser?.role;
         
         const [fetchedOrders, fetchedManualEntries] = await Promise.all([
             getOrders(startStr, endStr, role, undefined, undefined, undefined, debouncedSearchTerm),
@@ -196,7 +226,7 @@ export default function AllDistrictsDataPage() {
   const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
 
   const filteredData = useMemo(() => {
-    const lowercasedSearchTerm = searchTerm.trim().toLowerCase();
+    const lowercasedSearchTerm = debouncedSearchTerm.trim().toLowerCase();
 
     return districtData.map(division => {
       const divisionMatches = division.division.toLowerCase().includes(lowercasedSearchTerm);
@@ -206,8 +236,8 @@ export default function AllDistrictsDataPage() {
 
         const filteredEntries = district.entries.filter(entry => {
           // If no search term, only system admins can see the data by default
-          if (!searchTerm && !isSystemAdmin) return false;
-          if (!searchTerm) return true;
+          if (!debouncedSearchTerm && !isSystemAdmin) return false;
+          if (!debouncedSearchTerm) return true;
 
           // If division or district matches the search term, keep all their entries
           if (divisionMatches || districtMatches) return true;
@@ -226,7 +256,7 @@ export default function AllDistrictsDataPage() {
       return { ...division, districts: filteredDistricts };
     }).filter(division => division.districts.length > 0);
 
-  }, [districtData, searchTerm, selectedDateRange, isSystemAdmin]);
+  }, [districtData, debouncedSearchTerm, isSystemAdmin]);
 
   const handleExport = () => {
     if (filteredData.length === 0) {
