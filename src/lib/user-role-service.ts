@@ -67,18 +67,26 @@ export const getRoles = async (): Promise<UserRoleDefinition[]> => {
   }
 };
 
-export const addCustomRole = async (name: string, color: string): Promise<UserRoleDefinition | null> => {
-  if (!name.trim()) return null;
-  const id = name.trim().toUpperCase().replace(/\s+/g, '_');
+export const addCustomRole = async (name: string, color: string): Promise<UserRoleDefinition> => {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    throw new Error("Role name cannot be empty.");
+  }
+  const id = trimmedName.toUpperCase().replace(/\s+/g, '_');
 
   try {
     const existingRoles = await getRoles();
+    const duplicate = existingRoles.find(r => r.id === id || r.name.toLowerCase() === trimmedName.toLowerCase());
+    if (duplicate) {
+      throw new Error(`Role "${duplicate.name}" already exists.`);
+    }
+
     const maxPriority = existingRoles.reduce((max, r) => Math.max(max, r.priority || 0), -1);
 
     const createdAt = new Date().toISOString();
     const roleData = {
       id,
-      name: name.trim().toUpperCase(),
+      name: trimmedName.toUpperCase(),
       color: color || "#6b7280",
       isDefault: false,
       priority: maxPriority + 1,
@@ -86,43 +94,59 @@ export const addCustomRole = async (name: string, color: string): Promise<UserRo
     };
 
     await query(
-      `INSERT INTO ${ROLES_TABLE} (id, name, color, is_default, priority, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-      [roleData.id, roleData.name, roleData.color, roleData.isDefault, roleData.priority, roleData.createdAt]
+      `INSERT INTO ${ROLES_TABLE} (id, name, color, is_default, priority, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
+      [roleData.id, roleData.name, roleData.color, 0, roleData.priority]
     );
 
     return roleData as UserRoleDefinition;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding custom role to MySQL:", error);
-    return null;
+    if (error?.code === 'ER_DUP_ENTRY') {
+      throw new Error(`Role "${trimmedName.toUpperCase()}" already exists in the database.`);
+    }
+    throw error;
   }
 };
 
 export const updateCustomRole = async (id: string, name: string, color: string): Promise<boolean> => {
-  if (!id || !name.trim()) return false;
+  const trimmedName = name.trim();
+  if (!id || !trimmedName) {
+    throw new Error("Invalid role details provided.");
+  }
   try {
+    const existingRoles = await getRoles();
+    const duplicate = existingRoles.find(r => r.id !== id && r.name.toLowerCase() === trimmedName.toLowerCase());
+    if (duplicate) {
+      throw new Error(`Another role named "${duplicate.name}" already exists.`);
+    }
+
     await query(
       `UPDATE ${ROLES_TABLE} SET name = ?, color = ? WHERE id = ?`,
-      [name.trim().toUpperCase(), color || "#6b7280", id]
+      [trimmedName.toUpperCase(), color || "#6b7280", id]
     );
     return true;
   } catch (error) {
     console.error(`Error updating role ${id} in MySQL:`, error);
-    return false;
+    throw error;
   }
 };
 
 export const deleteCustomRole = async (id: string): Promise<boolean> => {
-  if (!id) return false;
+  if (!id) {
+    throw new Error("No role ID provided for deletion.");
+  }
   try {
     // Prevent deleting default roles
     const results = await query<any[]>(`SELECT is_default FROM ${ROLES_TABLE} WHERE id = ?`, [id]);
-    if (results.length > 0 && results[0].is_default) return false;
+    if (results.length > 0 && results[0].is_default) {
+      throw new Error("Default system roles cannot be deleted.");
+    }
 
     await query(`DELETE FROM ${ROLES_TABLE} WHERE id = ?`, [id]);
     return true;
   } catch (error) {
     console.error(`Error deleting role ${id} from MySQL:`, error);
-    return false;
+    throw error;
   }
 };
 
@@ -134,6 +158,7 @@ export const updateRolesOrder = async (roleIds: string[]): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error updating roles priority order in MySQL:", error);
-    return false;
+    throw error;
   }
 };
+

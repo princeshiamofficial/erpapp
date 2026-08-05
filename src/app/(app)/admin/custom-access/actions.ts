@@ -38,7 +38,7 @@ export async function addCustomRoleAction(name: string, color: string): Promise<
     }
     return { success: false, error: "Failed to add role." };
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Error" };
+    return { success: false, error: e instanceof Error ? e.message : "Failed to add role." };
   }
 }
 
@@ -52,7 +52,7 @@ export async function updateCustomRoleAction(id: string, name: string, color: st
     }
     return { success: false, error: "Failed to update role." };
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Error" };
+    return { success: false, error: e instanceof Error ? e.message : "Failed to update role." };
   }
 }
 
@@ -66,7 +66,7 @@ export async function deleteCustomRoleAction(id: string): Promise<{ success: boo
     }
     return { success: false, error: "Failed to delete role." };
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Error" };
+    return { success: false, error: e instanceof Error ? e.message : "Failed to delete role." };
   }
 }
 
@@ -80,7 +80,7 @@ export async function reorderRolesAction(roleIds: string[]): Promise<{ success: 
     }
     return { success: false, error: "Failed to save new roles order." };
   } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Error" };
+    return { success: false, error: e instanceof Error ? e.message : "Failed to save new roles order." };
   }
 }
 
