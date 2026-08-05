@@ -397,37 +397,48 @@ export default function ModelManagementPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label htmlFor="modelImageFile">Model Image (Optional)</Label>
-              <div className="flex items-center gap-4 mt-1">
-                {imagePreviewUrl ? (
-                  <NextImage
-                    src={imagePreviewUrl}
-                    alt="Model preview"
-                    width={80}
-                    height={80}
-                    className="rounded-md object-cover border bg-muted"
-                    unoptimized={true}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
-                      (e.target as HTMLImageElement).alt = 'Error loading image';
-                    }}
-                  />
-                ) : (
-                  <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed">
-                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="flex flex-col gap-2">
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
-                    <UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}
-                  </Button>
-                  {(imagePreviewUrl) && (
-                    <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}>
-                      <Trash2 className="mr-1 h-3 w-3" /> Remove Image
-                    </Button>
+            <div>
+              <div className="flex items-center gap-3">
+                <div
+                  onClick={() => !isSubmitting && fileInputRef.current?.click()}
+                  className="relative h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed border-muted-foreground/40 hover:border-primary cursor-pointer group transition-all overflow-hidden"
+                  title="Click to upload image"
+                >
+                  {imagePreviewUrl ? (
+                    <>
+                      <NextImage
+                        src={imagePreviewUrl}
+                        alt="Model preview"
+                        width={80}
+                        height={80}
+                        className="rounded-md object-cover w-full h-full"
+                        unoptimized={true}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <UploadCloud className="h-6 w-6 text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground group-hover:text-primary transition-colors">
+                      <ImageIcon className="h-8 w-8" />
+                    </div>
                   )}
                 </div>
+                {imagePreviewUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-destructive hover:bg-destructive/10 h-8"
+                    onClick={handleRemoveImage}
+                    disabled={isSubmitting}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" /> Remove Image
+                  </Button>
+                )}
               </div>
               <Input
                 id="modelImageFile"
