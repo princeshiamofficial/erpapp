@@ -32,9 +32,7 @@ export default async function QuotationPage({ params }: QuotationPageProps) {
   const plainAllUsers = JSON.parse(JSON.stringify(allUsersResult));
 
   return (
-    <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
-
-
+    <div className="selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
       <Suspense fallback={<QuotationPageSkeleton />}>
         <QuotationDetailsClient
           quotation={plainQuotationData}
@@ -42,11 +40,6 @@ export default async function QuotationPage({ params }: QuotationPageProps) {
           allUsers={plainAllUsers}
         />
       </Suspense>
-
-      <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30 print:hidden">
-        <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} <span className="font-bold">Color Hut</span>. All rights reserved.</p>
-        <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 sm:mt-1.5">Precision Quotation Management, Simplified.</p>
-      </footer>
     </div>
   );
 }
