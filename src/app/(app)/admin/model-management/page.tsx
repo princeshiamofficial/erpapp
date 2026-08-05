@@ -398,6 +398,48 @@ export default function ModelManagementPage() {
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
             <div className="space-y-1">
+              <Label htmlFor="modelImageFile">Model Image (Optional)</Label>
+              <div className="flex items-center gap-4 mt-1">
+                {imagePreviewUrl ? (
+                  <NextImage
+                    src={imagePreviewUrl}
+                    alt="Model preview"
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover border bg-muted"
+                    unoptimized={true}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
+                      (e.target as HTMLImageElement).alt = 'Error loading image';
+                    }}
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed">
+                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
+                    <UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}
+                  </Button>
+                  {(imagePreviewUrl) && (
+                    <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}>
+                      <Trash2 className="mr-1 h-3 w-3" /> Remove Image
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Input
+                id="modelImageFile"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/jpeg,image/png,image/gif"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="itemName">Name</Label>
               <Input id="itemName" placeholder="Name" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -451,47 +493,6 @@ export default function ModelManagementPage() {
                   <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new ready-made items.'}</p>
                 </div>
               )}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="modelImageFile">Model Image (Optional)</Label>
-              <div className="flex items-center gap-4 mt-1">
-                {imagePreviewUrl ? (
-                  <NextImage
-                    src={imagePreviewUrl}
-                    alt="Model preview"
-                    width={80}
-                    height={80}
-                    className="rounded-md object-cover border bg-muted"
-                    unoptimized={true}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
-                      (e.target as HTMLImageElement).alt = 'Error loading image';
-                    }}
-                  />
-                ) : (
-                  <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed">
-                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="flex flex-col gap-2">
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
-                    <UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}
-                  </Button>
-                  {(imagePreviewUrl) && (
-                    <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}>
-                      <Trash2 className="mr-1 h-3 w-3" /> Remove Image
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <Input
-                id="modelImageFile"
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/jpeg,image/png,image/gif"
-              />
             </div>
 
             <DialogFooter className="pt-4">
