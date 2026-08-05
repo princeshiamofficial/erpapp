@@ -135,6 +135,8 @@ export interface OrderItem {
   model: string;
   quantity: number;
   lamination: string;
+  variation?: string;
+  unit?: string;
   unitPrice: number;
   lineItemTotalPrice: number;
   isGift?: boolean;
@@ -226,6 +228,14 @@ export interface Comment {
   };
 }
 
+export interface ServiceModelVariationItem {
+  id: string;
+  name: string;
+  buyingPrice: number;
+  sellingPrice: number;
+  stockCount?: number;
+}
+
 export interface ServiceModelItem {
   id: string;
   name: string;
@@ -233,6 +243,10 @@ export interface ServiceModelItem {
   sellingPrice?: number;
   imageUrl?: string | null;
   isReadyMade?: boolean;
+  hasVariation?: boolean;
+  hasUnit?: boolean;
+  laminationPrices?: Record<string, { name?: string; buyingPrice: number; sellingPrice: number; stockCount?: number }>;
+  customVariations?: ServiceModelVariationItem[];
   stockCount?: number;
   totalSold?: number;
 }
@@ -253,6 +267,11 @@ export interface ServiceGiftItem {
 }
 
 export interface ServiceCourierNoteItem {
+  id: string;
+  name: string;
+}
+
+export interface ServiceVariationItem {
   id: string;
   name: string;
 }

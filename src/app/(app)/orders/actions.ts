@@ -37,6 +37,8 @@ interface CreateOrderDialogFormData {
     model: string;
     quantity: number;
     lamination: string;
+    variation?: string;
+    unit?: string;
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
     isGift?: boolean;
@@ -106,6 +108,8 @@ export async function createOrderAction(
         model: item.model.trim(),
         quantity: quantity,
         lamination: lamination,
+        variation: item.variation?.trim() || undefined,
+        unit: item.unit?.trim() || undefined,
         unitPrice: unitPrice,
         lineItemTotalPrice: lineItemTotalPrice,
         isGift: item.isGift || false,

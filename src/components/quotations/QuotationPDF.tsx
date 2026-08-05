@@ -431,7 +431,7 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
 
             {quotation.orderItems.map((item, index) => (
               <View key={index} style={styles.tableRow}>
-                <View style={styles.colModel}><Text style={[styles.tableCell, { fontWeight: 'bold' }]}>{item.model}</Text></View>
+                <View style={styles.colModel}><Text style={[styles.tableCell, { fontWeight: 'bold' }]}>{item.unit ? `${item.unit} • ` : ''}{item.model}{(item.variation || (item.lamination && item.lamination !== 'None' && item.lamination !== 'N/A' ? item.lamination : '')) ? ` — ${item.variation || item.lamination}` : ''}</Text></View>
                 <View style={styles.colQty}><Text style={styles.tableCell}>{item.quantity}</Text></View>
                 <View style={styles.colLam}><Text style={styles.tableCell}>{item.lamination || 'None'}</Text></View>
                 <View style={styles.colPrice}><Text style={styles.tableCell}>BDT {item.unitPrice.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text></View>

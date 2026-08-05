@@ -18,17 +18,20 @@ import {
   addCourierNote,
   updateCourierNote,
   deleteCourierNote,
+  addVariation,
+  updateVariation,
+  deleteVariation,
 } from "@/lib/service-options-service";
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem } from "@/types";
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem, ServiceVariationItem } from "@/types";
 
 const SERVICE_MANAGEMENT_PATH = "/(app)/admin/service-management";
 const MODEL_MANAGEMENT_PATH = "/(app)/admin/model-management";
 const CREATE_ORDER_DIALOG_REVALIDATION_TARGET = "/(app)/orders"; // To refresh CreateOrderDialog options
 
 // Model Actions
-export async function addModelAction(name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
+export async function addModelAction(name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number, hasVariation?: boolean, laminationPrices?: Record<string, { buyingPrice: number; sellingPrice: number; stockCount?: number }>, hasUnit?: boolean): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
   try {
-    const newModel = await addModel(name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCount);
+    const newModel = await addModel(name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCount, hasVariation, laminationPrices, hasUnit);
     if (newModel) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
@@ -42,9 +45,9 @@ export async function addModelAction(name: string, buyingPrice?: number, selling
   }
 }
 
-export async function updateModelAction(id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number): Promise<{ success: boolean; error?: string }> {
+export async function updateModelAction(id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number, hasVariation?: boolean, laminationPrices?: Record<string, { buyingPrice: number; sellingPrice: number; stockCount?: number }>, hasUnit?: boolean): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateModel(id, name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCountChange);
+    const success = await updateModel(id, name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCountChange, hasVariation, laminationPrices, hasUnit);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
@@ -254,6 +257,52 @@ export async function deleteCourierNoteAction(id: string): Promise<{ success: bo
     return { success: false, error: "Failed to delete courier note from database." };
   } catch (error) {
     console.error("Error in deleteCourierNoteAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// Variation Actions
+export async function addVariationAction(name: string): Promise<{ success: boolean; variation?: ServiceVariationItem; error?: string }> {
+  try {
+    const newVariation = await addVariation(name);
+    if (newVariation) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true, variation: newVariation };
+    }
+    return { success: false, error: "Failed to add variation to database." };
+  } catch (error) {
+    console.error("Error in addVariationAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateVariationAction(id: string, name: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updateVariation(id, name);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update variation in database." };
+  } catch (error) {
+    console.error("Error in updateVariationAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function deleteVariationAction(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteVariation(id);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete variation from database." };
+  } catch (error) {
+    console.error("Error in deleteVariationAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

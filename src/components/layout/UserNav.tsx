@@ -89,7 +89,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10 border-2 border-primary">
             <AvatarImage 
-              src={currentUser.avatarUrl || `https://placehold.co/100x100.png?text=${getInitials(currentUser.name)}`} 
+              src={currentUser.avatarUrl || undefined} 
               alt={currentUser.name} 
               data-ai-hint={currentUser.avatarUrl ? "user uploaded" : "abstract lettermark"} 
             />

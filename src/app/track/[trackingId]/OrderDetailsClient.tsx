@@ -1042,7 +1042,7 @@ export function OrderDetailsClient({
                     <TableBody>
                       {order.orderItems.map((item, index) => (
                         <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
-                          <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
+                          <TableCell className="font-medium text-card-foreground">{item.unit ? `${item.unit} • ` : ''}{item.model}{(item.variation || (item.lamination && item.lamination !== 'None' && item.lamination !== 'N/A' ? item.lamination : '')) ? ` — ${item.variation || item.lamination}` : ''}</TableCell>
                           <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
                           <TableCell className="text-card-foreground">{item.lamination}</TableCell>
                           {shouldShowFinancials && (

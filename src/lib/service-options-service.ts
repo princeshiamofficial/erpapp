@@ -1,7 +1,7 @@
 
 "use server";
 
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem } from '@/types';
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem, ServiceVariationItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from './mysql';
 import { getOrders } from './order-service';
@@ -10,6 +10,7 @@ const MODELS_TABLE = 'service_models';
 const LAMINATIONS_TABLE = 'service_laminations';
 const PAYMENT_METHODS_TABLE = 'service_payment_methods';
 const GIFTS_TABLE = 'service_gifts';
+const VARIATIONS_TABLE = 'service_variations';
 
 // --- Model Functions ---
 
@@ -85,7 +86,7 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
   }
 };
 
-export const addModel = async (name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number): Promise<ServiceModelItem | null> => {
+export const addModel = async (name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number, hasVariation?: boolean, laminationPrices?: Record<string, { buyingPrice: number; sellingPrice: number; stockCount?: number }>, hasUnit?: boolean): Promise<ServiceModelItem | null> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
@@ -102,6 +103,9 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
       sellingPrice: numSellingPrice,
       imageUrl: imageUrl || null,
       isReadyMade: isReadyMade || false,
+      hasVariation: hasVariation || false,
+      hasUnit: hasUnit || false,
+      laminationPrices: laminationPrices || {},
       stockCount: finalStockCount,
       totalSold: 0
     } as ServiceModelItem;
@@ -115,7 +119,7 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
   }
 };
 
-export const updateModel = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number): Promise<boolean> => {
+export const updateModel = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number, hasVariation?: boolean, laminationPrices?: Record<string, { buyingPrice: number; sellingPrice: number; stockCount?: number }>, hasUnit?: boolean): Promise<boolean> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
@@ -140,6 +144,9 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
       sellingPrice: numSellingPrice,
       imageUrl: imageUrl === undefined ? existingData.imageUrl : imageUrl,
       isReadyMade: isReadyMade === undefined ? existingData.isReadyMade : isReadyMade,
+      hasVariation: hasVariation === undefined ? existingData.hasVariation : hasVariation,
+      hasUnit: hasUnit === undefined ? existingData.hasUnit : hasUnit,
+      laminationPrices: laminationPrices === undefined ? existingData.laminationPrices : laminationPrices,
       stockCount: finalStockCount,
     };
 
@@ -576,6 +583,119 @@ export const deleteCourierNote = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting courier note from MySQL:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+// --- Variation Functions ---
+
+let isVariationsTableInitialized = false;
+
+const initVariationsTable = async () => {
+  if (isVariationsTableInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ${VARIATIONS_TABLE} (
+        id VARCHAR(255) PRIMARY KEY,
+        data_json TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    isVariationsTableInitialized = true;
+  } catch (error) {
+    console.error(`Error initializing table ${VARIATIONS_TABLE}:`, error);
+  }
+};
+
+const seedDefaultVariations = async (): Promise<ServiceVariationItem[]> => {
+  const createdVariations: ServiceVariationItem[] = [];
+  const defaultVariationsData: string[] = ["Standard", "Custom", "Premium"];
+
+  for (const name of defaultVariationsData) {
+    const id = uuidv4();
+    const newVariation: ServiceVariationItem = { id, name };
+    try {
+      await query(`INSERT INTO ${VARIATIONS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newVariation)]);
+      createdVariations.push(newVariation);
+    } catch (error) {
+      console.error(`Error seeding variation "${name}" in MySQL:`, error);
+    }
+  }
+  console.log('Default service variations seeded in MySQL.');
+  return createdVariations;
+};
+
+export const getVariations = async (): Promise<ServiceVariationItem[]> => {
+  try {
+    await initVariationsTable();
+    const rows = await query<any[]>(`SELECT id, data_json FROM ${VARIATIONS_TABLE} ORDER BY id ASC`);
+    let items = rows.map(row => ({
+      id: row.id,
+      ...(typeof row.data_json === 'string' ? JSON.parse(row.data_json) : row.data_json)
+    } as ServiceVariationItem));
+
+    const laminationNamesToClean = ["Dimond Gloss - 300 GSM", "Royal Matt", "Valvate Touch"];
+    const hasLaminationDefaults = items.some(item => laminationNamesToClean.includes(item.name));
+
+    if (hasLaminationDefaults) {
+      await query(`DELETE FROM ${VARIATIONS_TABLE}`);
+      items = await seedDefaultVariations();
+    } else if (items.length === 0) {
+      console.log("No service variations found, seeding defaults in MySQL.");
+      items = await seedDefaultVariations();
+    }
+
+    return items.sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error("Error fetching variations from MySQL:", error);
+    return [];
+  }
+};
+
+export const addVariation = async (name: string): Promise<ServiceVariationItem | null> => {
+  if (!name.trim()) {
+    throw new Error("Variation name cannot be empty.");
+  }
+  try {
+    await initVariationsTable();
+    const id = uuidv4();
+    const newItemData: ServiceVariationItem = { id, name: name.trim() };
+    await query(`INSERT INTO ${VARIATIONS_TABLE} (id, data_json) VALUES (?, ?)`, [id, JSON.stringify(newItemData)]);
+    return newItemData;
+  } catch (error) {
+    console.error("Error adding variation to MySQL:", error);
+    if (error instanceof Error) throw error;
+    return null;
+  }
+};
+
+export const updateVariation = async (id: string, name: string): Promise<boolean> => {
+  if (!name.trim()) {
+    throw new Error("Variation name cannot be empty.");
+  }
+  try {
+    await initVariationsTable();
+    const rows = await query<any[]>(`SELECT data_json FROM ${VARIATIONS_TABLE} WHERE id = ?`, [id]);
+    if (rows.length === 0) return false;
+    const existingData = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+    const finalData = { ...existingData, name: name.trim() };
+    await query(`UPDATE ${VARIATIONS_TABLE} SET data_json = ? WHERE id = ?`, [JSON.stringify(finalData), id]);
+    return true;
+  } catch (error) {
+    console.error("Error updating variation in MySQL:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+export const deleteVariation = async (id: string): Promise<boolean> => {
+  try {
+    await initVariationsTable();
+    await query(`DELETE FROM ${VARIATIONS_TABLE} WHERE id = ?`, [id]);
+    return true;
+  } catch (error) {
+    console.error("Error deleting variation from MySQL:", error);
     if (error instanceof Error) throw error;
     return false;
   }

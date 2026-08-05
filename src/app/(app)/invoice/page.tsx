@@ -258,15 +258,11 @@ export default function InvoiceListPage() {
       const printBlob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
       
       const url = URL.createObjectURL(printBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Invoice_${order.id}.pdf`;
-      link.click();
       
-      // Auto trigger print dialog
+      // Trigger print dialog directly (no download)
       triggerPdfPrint(url);
       
-      toast({ title: "Success", description: `Invoice ${order.id} downloaded & print triggered.` });
+      toast({ title: "Print Ready", description: `Print dialog opened for Invoice ${order.id}.` });
       
       // Revoke the object URL after a delay
       setTimeout(() => URL.revokeObjectURL(url), 10000);
@@ -284,7 +280,7 @@ export default function InvoiceListPage() {
     try {
       const fullOrders = await getFullOrdersByIds(orderIds);
       if (fullOrders.length === 0) {
-        toast({ title: "Download Error", description: "Could not retrieve selected orders.", variant: "destructive" });
+        toast({ title: "Print Error", description: "Could not retrieve selected orders.", variant: "destructive" });
         return;
       }
       
@@ -302,21 +298,14 @@ export default function InvoiceListPage() {
       const printBlob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
       
       const url = URL.createObjectURL(printBlob);
-      const link = document.createElement('a');
-      link.href = url;
       
       if (fullOrders.length === 1) {
-        link.download = `Invoice_${fullOrders[0].id}.pdf`;
-        toast({ title: "Success", description: `Invoice ${fullOrders[0].id} downloaded & print triggered.` });
+        toast({ title: "Print Ready", description: `Print dialog opened for Invoice ${fullOrders[0].id}.` });
       } else {
-        const dateStr = new Date().toISOString().split('T')[0];
-        link.download = `Invoices_Merged_${dateStr}.pdf`;
-        toast({ title: "Success", description: `${fullOrders.length} Invoices merged, downloaded & print triggered.` });
+        toast({ title: "Print Ready", description: `${fullOrders.length} Invoices merged. Print dialog opened.` });
       }
       
-      link.click();
-      
-      // Auto trigger print dialog
+      // Trigger print dialog directly (no download)
       triggerPdfPrint(url);
       
       setSelectedRowIds(new Set());
@@ -572,9 +561,9 @@ export default function InvoiceListPage() {
                                   {isDownloadingPDF === order.id ? (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                   ) : (
-                                    <Download className="mr-2 h-4 w-4" />
+                                    <Printer className="mr-2 h-4 w-4" />
                                   )}
-                                  Download PDF
+                                  Print PDF
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onSelect={() => handlePrintInvoices([order.id])}

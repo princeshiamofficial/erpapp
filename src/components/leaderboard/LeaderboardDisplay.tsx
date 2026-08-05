@@ -83,7 +83,7 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
             "border-4 shadow-xl overflow-hidden relative z-10 mx-auto",
             isCenter ? "h-20 w-20 sm:h-24 sm:w-24 border-[hsl(var(--leaderboard-gold))] border-[4px]" : "h-16 w-16 sm:h-20 sm:w-20 border-white/70 border-2"
         )}>
-          <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="leaderboard user avatar" />
+          <AvatarImage src={user.userAvatar || undefined} alt={user.userName} data-ai-hint="leaderboard user avatar" />
           <AvatarFallback className="bg-gray-700 text-white text-2xl sm:text-3xl">{getInitials(user.userName)}</AvatarFallback>
         </Avatar>
       </div>
@@ -123,7 +123,7 @@ const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ u
       </div>
       
       <Avatar className="h-10 w-10 sm:h-11 sm:w-11 border-2 border-gray-200 dark:border-gray-700 shrink-0">
-        <AvatarImage src={user.userAvatar || `https://placehold.co/48x48.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="list user avatar" />
+        <AvatarImage src={user.userAvatar || undefined} alt={user.userName} data-ai-hint="list user avatar" />
         <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{getInitials(user.userName)}</AvatarFallback>
       </Avatar>
 

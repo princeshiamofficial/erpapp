@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem, ServicePaymentMethodItem, AdvancePaymentRecord, TrackingLink } from "@/types";
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, ServiceVariationItem, OrderItem, ServicePaymentMethodItem, AdvancePaymentRecord, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction, getClientDetailsAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
+import { getModels, getLaminations, getPaymentMethods, getVariations } from '@/lib/service-options-service';
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, UploadCloud, Paperclip, XCircle, Star, Gift } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -39,6 +39,8 @@ interface DialogOrderItem {
   model: string;
   quantity: string;
   lamination: string;
+  variation?: string;
+  unit?: string;
   unitPrice: number | null;
   lineItemTotalPrice: number | null;
   isGift?: boolean;
@@ -47,6 +49,29 @@ interface DialogOrderItem {
 const formatCurrencyBdt = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+const getModelPriceDisplay = (option: ServiceModelItem): string | null => {
+  // Collect variation selling prices
+  const prices: number[] = [];
+  if (option.customVariations && option.customVariations.length > 0) {
+    option.customVariations.forEach(v => {
+      if (v.sellingPrice !== undefined && v.sellingPrice !== null) prices.push(v.sellingPrice);
+    });
+  } else if (option.laminationPrices && Object.keys(option.laminationPrices).length > 0) {
+    Object.values(option.laminationPrices).forEach(p => {
+      if (p.sellingPrice !== undefined && p.sellingPrice !== null) prices.push(p.sellingPrice);
+    });
+  }
+  if (prices.length > 0) {
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    if (min === max) return formatCurrencyBdt(min);
+    const fmt = (n: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n);
+    return `BDT ${fmt(min)}-${fmt(max)}`;
+  }
+  if (option.sellingPrice !== undefined && option.sellingPrice !== null) return formatCurrencyBdt(option.sellingPrice);
+  return null;
 };
 
 const initialOrderItemState: DialogOrderItem = {
@@ -92,6 +117,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
+  const [variationOptions, setVariationOptions] = useState<ServiceVariationItem[]>([]);
   const [paymentMethodOptions, setPaymentMethodOptions] = useState<ServicePaymentMethodItem[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
@@ -133,13 +159,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const fetchOptions = useCallback(async () => {
     setIsLoadingOptions(true);
     try {
-      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([
+      const [fetchedModels, fetchedLaminations, fetchedVariations, fetchedPaymentMethods] = await Promise.all([
         getModels(),
         getLaminations(),
+        getVariations(),
         getPaymentMethods(),
       ]);
       setModelOptions(fetchedModels);
       setLaminationOptions(fetchedLaminations);
+      setVariationOptions(fetchedVariations);
       setPaymentMethodOptions(fetchedPaymentMethods);
     } catch (error) {
       console.error("Failed to fetch order options:", error);
@@ -169,6 +197,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             model: item.model,
             quantity: item.quantity.toString(),
             lamination: item.lamination,
+            variation: item.variation || undefined,
             unitPrice: item.unitPrice,
             lineItemTotalPrice: item.lineItemTotalPrice,
           })));
@@ -252,11 +281,36 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   }, [isAdvancePaymentEntered]);
 
-  const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
+  const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string, unitStr?: string): number | null => {
     if (unitPrice === null) return null;
     const quantity = parseInt(quantityStr, 10);
     if (isNaN(quantity) || quantity < 1) return null;
-    return unitPrice * quantity;
+    let unitMultiplier = 1;
+    if (unitStr) {
+      const parsedUnit = parseFloat(unitStr);
+      if (!isNaN(parsedUnit) && parsedUnit > 0) {
+        unitMultiplier = parsedUnit;
+      }
+    }
+    return unitPrice * quantity * unitMultiplier;
+  };
+
+  const getUnitPriceForModelAndLamination = (modelName: string, laminationName: string, variationName?: string): number | null => {
+    const selectedModel = modelOptions.find(opt => opt.name === modelName);
+    if (!selectedModel) return null;
+
+    if (selectedModel.hasVariation) {
+      const vars = selectedModel.customVariations || (selectedModel.laminationPrices ? Object.entries(selectedModel.laminationPrices).map(([id, p]) => ({ id, name: p.name || id, buyingPrice: p.buyingPrice, sellingPrice: p.sellingPrice })) : []);
+      if (variationName) {
+        const found = vars.find(v => v.name === variationName || v.id === variationName);
+        if (found && found.sellingPrice !== undefined && found.sellingPrice !== null && found.sellingPrice >= 0) return found.sellingPrice;
+      }
+      if (selectedModel.laminationPrices && variationName && selectedModel.laminationPrices[variationName]) {
+        const varPrice = selectedModel.laminationPrices[variationName].sellingPrice;
+        if (varPrice !== undefined && varPrice !== null && varPrice >= 0) return varPrice;
+      }
+    }
+    return selectedModel.sellingPrice ?? null;
   };
 
   const handleItemChange = (itemId: string, field: keyof DialogOrderItem | 'modelName', value: string | number | null) => {
@@ -267,12 +321,28 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           if (field === 'modelName') {
             const selectedModel = modelOptions.find(opt => opt.name === value);
             updatedItem.model = selectedModel ? selectedModel.name : '';
-            updatedItem.unitPrice = selectedModel?.sellingPrice ?? null;
-          } else if (field === 'quantity' || field === 'lamination') {
+            if (selectedModel?.hasVariation) {
+              const modelVars = selectedModel.customVariations || (selectedModel.laminationPrices ? Object.entries(selectedModel.laminationPrices).map(([id, p]) => ({ id, name: p.name || id })) : []);
+              if (modelVars.length > 0) {
+                updatedItem.variation = modelVars[0].name;
+              }
+            } else {
+              updatedItem.variation = undefined;
+            }
+            updatedItem.unitPrice = getUnitPriceForModelAndLamination(updatedItem.model, updatedItem.lamination, updatedItem.variation);
+          } else if (field === 'variation') {
+            updatedItem.variation = value as string;
+            updatedItem.unitPrice = getUnitPriceForModelAndLamination(updatedItem.model, updatedItem.lamination, updatedItem.variation);
+          } else if (field === 'unit') {
+            updatedItem.unit = value as string;
+          } else if (field === 'lamination') {
+            updatedItem.lamination = value as string;
+            updatedItem.unitPrice = getUnitPriceForModelAndLamination(updatedItem.model, updatedItem.lamination, updatedItem.variation);
+          } else if (field === 'quantity') {
             updatedItem = { ...item, [field]: value as string };
           }
-          if (field === 'modelName' || field === 'quantity') {
-            updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, updatedItem.quantity);
+          if (field === 'modelName' || field === 'quantity' || field === 'lamination' || field === 'variation' || field === 'unit') {
+            updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, updatedItem.quantity, updatedItem.unit);
           }
           return updatedItem;
         }
@@ -727,46 +797,79 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     {orderItems.map((item) => (
                       <TableRow key={item.id} className="hover:bg-muted/30">
                         <TableCell className="p-2 align-middle">
-                          <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="w-full justify-between bg-background text-sm" disabled={isLoadingOptions || modelOptions.length === 0}>
-                                <span className="flex items-center gap-1.5 flex-1 text-left whitespace-nowrap overflow-hidden">
-                                  {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
-                                    <Avatar className="h-4 w-4 rounded-sm shrink-0">
-                                      <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
-                                      <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                                    </Avatar>
-                                  ) : null}
-                                  <span className="truncate">
-                                    {item.model ? modelOptions.find((option) => option.name === item.model)?.name : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                          <div className="flex items-center gap-1.5">
+                            {modelOptions.find(m => m.name === item.model)?.hasUnit && (
+                              <Input
+                                placeholder="Unit"
+                                value={item.unit || ''}
+                                onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
+                                className="h-9 w-10 px-1 text-center shrink-0 text-xs bg-background"
+                              />
+                            )}
+                            <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="flex-1 min-w-0 justify-between bg-background text-sm" disabled={isLoadingOptions || modelOptions.length === 0}>
+                                  <span className="flex items-center gap-1.5 flex-1 text-left whitespace-nowrap overflow-hidden">
+                                    {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
+                                      <Avatar className="h-4 w-4 rounded-sm shrink-0">
+                                        <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
+                                        <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                      </Avatar>
+                                    ) : null}
+                                    <span className="truncate">
+                                      {item.model ? modelOptions.find((option) => option.name === item.model)?.name : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                                    </span>
                                   </span>
-                                </span>
-                                <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0" portal={false}>
-                              <Command className="max-h-96 overflow-hidden flex flex-col">
-                                <CommandInput placeholder="Search model..." />
-                                <CommandList className="max-h-80 overflow-y-auto">
-                                  <CommandEmpty>No model found.</CommandEmpty>
-                                  <CommandGroup>
-                                    {modelOptions.map((option) => (
-                                      <CommandItem key={option.id} value={option.name} onSelect={(currentValue) => { handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue); togglePopover(item.id, false); }} className="flex items-center gap-2">
-                                        <Check className={cn("h-4 w-4 shrink-0", item.model === option.name ? "opacity-100" : "opacity-0")} />
-                                        <Avatar className="h-8 w-8 rounded-sm shrink-0">
-                                          <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
-                                          <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
-                                        </Avatar>
-                                        <span className="flex-1 truncate">{option.name}</span>
-                                        {option.isReadyMade && <span className="text-xs text-green-600 font-semibold">(Stock: {option.stockCount ?? 0})</span>}
-                                        {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                                  <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0" portal={false}>
+                                <Command className="max-h-96 overflow-hidden flex flex-col">
+                                  <CommandInput placeholder="Search model..." />
+                                  <CommandList className="max-h-80 overflow-y-auto">
+                                    <CommandEmpty>No model found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {modelOptions.map((option) => (
+                                        <CommandItem key={option.id} value={option.name} onSelect={(currentValue) => { handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue); togglePopover(item.id, false); }} className="flex items-center gap-2">
+                                          <Check className={cn("h-4 w-4 shrink-0", item.model === option.name ? "opacity-100" : "opacity-0")} />
+                                          <Avatar className="h-8 w-8 rounded-sm shrink-0">
+                                            <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
+                                            <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                          </Avatar>
+                                          <span className="flex-1 truncate">{option.name}</span>
+                                          {option.isReadyMade && <span className="text-xs text-green-600 font-semibold">(Stock: {option.stockCount ?? 0})</span>}
+                                          {(() => { const p = getModelPriceDisplay(option); return p ? <span className="ml-auto text-xs text-muted-foreground">({p})</span> : null; })()}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+
+                            {modelOptions.find(m => m.name === item.model)?.hasVariation && (
+                              <Select
+                                value={item.variation || ''}
+                                onValueChange={(value) => handleItemChange(item.id, 'variation', value)}
+                                disabled={isLoadingOptions}
+                              >
+                                <SelectTrigger className="h-9 w-[110px] shrink-0 bg-background text-xs">
+                                  <SelectValue placeholder="Variation" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(() => {
+                                    const selectedM = modelOptions.find(m => m.name === item.model);
+                                    const modelVars = selectedM?.customVariations || (selectedM?.laminationPrices ? Object.entries(selectedM.laminationPrices).map(([id, p]) => ({ id, name: (p as any).name || id })) : []);
+                                    return modelVars.map((v: any) => (
+                                      <SelectItem key={v.id} value={v.name} className="text-xs">
+                                        {v.name}
+                                      </SelectItem>
+                                    ));
+                                  })()}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="p-2 align-middle">
                           <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required className="bg-background text-sm h-9" />

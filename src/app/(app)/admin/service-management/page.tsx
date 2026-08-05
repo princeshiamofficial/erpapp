@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift, ClipboardList } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Gift, ClipboardList, Layers } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem } from "@/types";
-import { getLaminations, getPaymentMethods, getGifts, getCourierNotes } from '@/lib/service-options-service';
+import type { ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem, ServiceCourierNoteItem, ServiceVariationItem } from "@/types";
+import { getLaminations, getPaymentMethods, getGifts, getCourierNotes, getVariations } from '@/lib/service-options-service';
 import {
   addLaminationAction, updateLaminationAction, deleteLaminationAction,
   addPaymentMethodAction, updatePaymentMethodAction, deletePaymentMethodAction,
   addGiftAction, updateGiftAction, deleteGiftAction,
-  addCourierNoteAction, updateCourierNoteAction, deleteCourierNoteAction
+  addCourierNoteAction, updateCourierNoteAction, deleteCourierNoteAction,
+  addVariationAction, updateVariationAction, deleteVariationAction
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 
-type ItemType = 'lamination' | 'paymentMethod' | 'gift' | 'courierNote';
+type ItemType = 'lamination' | 'variation' | 'paymentMethod' | 'gift' | 'courierNote';
 interface ItemToEdit {
   id: string;
   name: string;
@@ -44,6 +45,7 @@ export default function ServiceManagementPage() {
   const { toast } = useToast();
 
   const [laminations, setLaminations] = useState<ServiceLaminationItem[]>([]);
+  const [variations, setVariations] = useState<ServiceVariationItem[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [gifts, setGifts] = useState<ServiceGiftItem[]>([]);
   const [courierNotes, setCourierNotes] = useState<ServiceCourierNoteItem[]>([]);
@@ -63,13 +65,15 @@ export default function ServiceManagementPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedLaminations, fetchedPaymentMethods, fetchedGifts, fetchedCourierNotes] = await Promise.all([
+      const [fetchedLaminations, fetchedVariations, fetchedPaymentMethods, fetchedGifts, fetchedCourierNotes] = await Promise.all([
         getLaminations(),
+        getVariations(),
         getPaymentMethods(),
         getGifts(),
         getCourierNotes()
       ]);
       setLaminations(fetchedLaminations);
+      setVariations(fetchedVariations);
       setPaymentMethods(fetchedPaymentMethods);
       setGifts(fetchedGifts);
       setCourierNotes(fetchedCourierNotes);
@@ -82,7 +86,7 @@ export default function ServiceManagementPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (currentUser && currentUser.role === 'SYSTEM_ADMIN') {
+    if (currentUser && (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN')) {
       fetchData();
     } else if (currentUser) {
       router.replace('/dashboard');
@@ -125,6 +129,8 @@ export default function ServiceManagementPage() {
     if (editingItem) {
       if (currentType === 'lamination') {
         result = await updateLaminationAction(editingItem.id, itemName.trim());
+      } else if (currentType === 'variation') {
+        result = await updateVariationAction(editingItem.id, itemName.trim());
       } else if (currentType === 'paymentMethod') {
         result = await updatePaymentMethodAction(editingItem.id, itemName.trim());
       } else if (currentType === 'gift') {
@@ -138,6 +144,8 @@ export default function ServiceManagementPage() {
     } else if (itemTypeToAdd) {
       if (currentType === 'lamination') {
         result = await addLaminationAction(itemName.trim());
+      } else if (currentType === 'variation') {
+        result = await addVariationAction(itemName.trim());
       } else if (currentType === 'paymentMethod') {
         result = await addPaymentMethodAction(itemName.trim());
       } else if (currentType === 'gift') {
@@ -168,6 +176,8 @@ export default function ServiceManagementPage() {
     let result;
     if (itemToDelete.type === 'lamination') {
       result = await deleteLaminationAction(itemToDelete.id);
+    } else if (itemToDelete.type === 'variation') {
+      result = await deleteVariationAction(itemToDelete.id);
     } else if (itemToDelete.type === 'paymentMethod') {
       result = await deletePaymentMethodAction(itemToDelete.id);
     } else if (itemToDelete.type === 'gift') {
@@ -187,10 +197,10 @@ export default function ServiceManagementPage() {
     setIsSubmitting(false);
   };
 
-  if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
+  if (!currentUser || (currentUser.role !== 'SYSTEM_ADMIN' && currentUser.role !== 'ADMIN')) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <p>Access Denied. You must be a System Administrator to view this page.</p>
+        <p>Access Denied. You must be an Administrator or System Administrator to view this page.</p>
       </div>
     );
   }
@@ -241,7 +251,7 @@ export default function ServiceManagementPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <Tabs defaultValue="lamination" onValueChange={(value) => setActiveTab(value as ItemType)} className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full max-w-3xl gap-2">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full max-w-3xl gap-2 h-auto p-1">
             <TabsTrigger value="lamination" className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white dark:data-[state=active]:bg-white dark:data-[state=active]:text-black">
               <ShieldHalf className="h-4 w-4" /> Laminations
             </TabsTrigger>
@@ -279,9 +289,10 @@ export default function ServiceManagementPage() {
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {
               currentType === 'lamination' ? 'Lamination' :
-                currentType === 'paymentMethod' ? 'Payment Method' :
-                  currentType === 'gift' ? 'Gift' :
-                    'Courier Note'
+                currentType === 'variation' ? 'Variation' :
+                  currentType === 'paymentMethod' ? 'Payment Method' :
+                    currentType === 'gift' ? 'Gift' :
+                      'Courier Note'
             }</DialogTitle>
             <DialogDescription>
               {editingItem 
