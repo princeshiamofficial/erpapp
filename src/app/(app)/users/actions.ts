@@ -4,12 +4,33 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  addUser as addUserInDb,
   updateUserBanStatus,
   updateUserInfo as updateUserInfoInDb,
   deleteUser as deleteUserFromDbService,
   updateUserFCMToken
 } from "@/lib/user-service";
 import { User } from "@/types";
+
+export async function addUserAction(
+  userData: Omit<User, 'id'> & { id?: string }
+): Promise<{ success: boolean; user?: User; error?: string }> {
+  try {
+    const user = await addUserInDb(userData);
+    if (user) {
+      revalidatePath("/(app)/users");
+      revalidatePath("/(app)/vendors");
+      return { success: true, user };
+    }
+    return { success: false, error: "Failed to add user." };
+  } catch (error) {
+    console.error("Error in addUserAction:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "An unexpected error occurred while adding user."
+    };
+  }
+}
 
 export async function toggleUserBanStatusAction(
   userId: string,

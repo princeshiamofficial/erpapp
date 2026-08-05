@@ -5,41 +5,63 @@ import type { User, UserRole } from '@/types';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
+import { getRoles } from './user-role-service';
+
 const USERS_TABLE = 'users';
 
 
 // Add a new user to MySQL
 export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Promise<User | null> => {
-  try {
-    let userId = userData.id;
+  let userId = userData.id;
 
-    if (!userId) {
-      // Generate a unique ID using UUID
-      userId = uuidv4();
-    } else {
-      // Check if custom ID already exists
-      const existingUser = await getUserById(userId);
-      if (existingUser) {
-        throw new Error(`User ID "${userId}" already exists. Please choose another.`);
-      }
+  if (!userId) {
+    // Generate a unique ID using UUID
+    userId = uuidv4();
+  } else {
+    // Check if custom ID already exists
+    const existingUser = await getUserById(userId);
+    if (existingUser) {
+      throw new Error(`User ID "${userId}" already exists. Please choose another.`);
     }
+  }
 
-    const hashedPassword = userData.password ? await bcrypt.hash(userData.password, 10) : await bcrypt.hash('password', 10);
+  if (userData.email) {
+    const existingEmail = await getUserByEmail(userData.email.trim());
+    if (existingEmail) {
+      throw new Error(`Email "${userData.email.trim()}" is already registered to another user.`);
+    }
+  }
 
-    const newUser: User = {
-      ...userData,
-      id: userId,
-      companyName: userData.companyName || null,
-      phone: userData.phone || null,
-      address: userData.address || null,
-      avatarUrl: userData.avatarUrl || null,
-      monthlyOrderTarget: userData.monthlyOrderTarget ?? 0,
-      weeklyOrderTarget: userData.weeklyOrderTarget ?? 0,
-      isBanned: false,
-      fcmToken: null,
-      isLeader: userData.isLeader || false,
-    };
+  if (userData.role) {
+    try {
+      const roles = await getRoles();
+      const roleExists = roles.some(r => r.id === userData.role);
+      if (!roleExists) {
+        throw new Error(`Role "${userData.role}" does not exist in the system. Please ensure the role is created under Custom Access first.`);
+      }
+    } catch (e: any) {
+      if (e?.message?.includes("does not exist")) throw e;
+    }
+  }
 
+  const hashedPassword = userData.password ? await bcrypt.hash(userData.password, 10) : await bcrypt.hash('password', 10);
+
+  const newUser: User = {
+    ...userData,
+    id: userId,
+    email: userData.email.trim(),
+    companyName: userData.companyName || null,
+    phone: userData.phone || null,
+    address: userData.address || null,
+    avatarUrl: userData.avatarUrl || null,
+    monthlyOrderTarget: userData.monthlyOrderTarget ?? 0,
+    weeklyOrderTarget: userData.weeklyOrderTarget ?? 0,
+    isBanned: false,
+    fcmToken: null,
+    isLeader: userData.isLeader || false,
+  };
+
+  try {
     await query(
       `INSERT INTO ${USERS_TABLE} (id, name, email, password, role, company_name, phone, address, avatar_url, monthly_order_target, weekly_order_target, is_banned, fcm_token, is_leader) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -47,15 +69,37 @@ export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Pro
         newUser.id, newUser.name, newUser.email, hashedPassword,
         newUser.role, newUser.companyName, newUser.phone, newUser.address,
         newUser.avatarUrl, newUser.monthlyOrderTarget, newUser.weeklyOrderTarget,
-        newUser.isBanned, newUser.fcmToken, newUser.isLeader
+        newUser.isBanned ? 1 : 0, newUser.fcmToken, newUser.isLeader ? 1 : 0
       ]
     );
 
     return newUser;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding user to MySQL:", error);
+    if (error?.code === 'ER_DUP_ENTRY') {
+      throw new Error(`A user with email "${newUser.email}" already exists.`);
+    }
+    if (error?.code === 'ER_NO_REFERENCED_ROW_2' || error?.code === 'ER_NO_REFERENCED_ROW') {
+      throw new Error(`Role "${newUser.role}" is invalid or does not exist in the database.`);
+    }
+    if (error?.code === 'ER_DATA_TOO_LONG') {
+      throw new Error("Avatar image file size is too large for database storage. Please choose a smaller image.");
+    }
+    if (error?.code === 'ER_BAD_FIELD_ERROR' && error?.message?.includes('role')) {
+      await query(
+        `INSERT INTO ${USERS_TABLE} (id, name, email, password, role_id, company_name, phone, address, avatar_url, monthly_order_target, weekly_order_target, is_banned, fcm_token, is_leader) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          newUser.id, newUser.name, newUser.email, hashedPassword,
+          newUser.role, newUser.companyName, newUser.phone, newUser.address,
+          newUser.avatarUrl, newUser.monthlyOrderTarget, newUser.weeklyOrderTarget,
+          newUser.isBanned ? 1 : 0, newUser.fcmToken, newUser.isLeader ? 1 : 0
+        ]
+      );
+      return newUser;
+    }
     if (error instanceof Error) throw error;
-    return null;
+    throw new Error("Failed to insert user into database.");
   }
 };
 

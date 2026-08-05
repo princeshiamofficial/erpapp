@@ -19,7 +19,7 @@ import type { User, UserRole, UserRoleDefinition } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff, Fingerprint } from 'lucide-react';
-import { addUser as addUserToFirestoreService } from '@/lib/user-service';
+import { addUserAction } from '@/app/(app)/users/actions';
 import { getRoles } from '@/lib/user-role-service';
 import { Switch } from '@/components/ui/switch'; 
 import { Loader2 } from 'lucide-react';
@@ -255,14 +255,15 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     };
 
     try {
-      const createdUser = await addUserToFirestoreService(newUserFirestoreData);
+      const result = await addUserAction(newUserFirestoreData);
       setIsSubmitting(false);
 
-      if (createdUser) {
+      if (result.success && result.user) {
+          toast({ title: "Success", description: `User ${result.user.name} added successfully.` });
           onUserAdded();
           onOpenChange(false);
       } else {
-         toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
+         toast({ title: "Error", description: result.error || "Could not add user.", variant: "destructive"});
       }
     } catch (error: any) {
       setIsSubmitting(false);
