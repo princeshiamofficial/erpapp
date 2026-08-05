@@ -9,9 +9,21 @@ import { getRoles } from './user-role-service';
 
 const USERS_TABLE = 'users';
 
+let avatarColumnCapacityEnsured = false;
+const ensureAvatarColumnCapacity = async () => {
+  if (avatarColumnCapacityEnsured) return;
+  try {
+    await query(`ALTER TABLE ${USERS_TABLE} MODIFY COLUMN avatar_url LONGTEXT`);
+    avatarColumnCapacityEnsured = true;
+  } catch (e) {
+    // Ignore if table/column does not exist yet or user lacks alter privileges
+  }
+};
+
 
 // Add a new user to MySQL
 export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Promise<User | null> => {
+  await ensureAvatarColumnCapacity();
   let userId = userData.id;
 
   if (!userId) {
@@ -248,6 +260,7 @@ export const verifyUserPassword = async (email: string, passwordPlainText: strin
 // Update user's avatar in MySQL
 export const updateUserAvatar = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
   try {
+    await ensureAvatarColumnCapacity();
     await query(`UPDATE ${USERS_TABLE} SET avatar_url = ? WHERE id = ?`, [avatarUrl, userId]);
     return true;
   } catch (error) {
