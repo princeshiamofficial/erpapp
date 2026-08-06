@@ -198,6 +198,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             quantity: item.quantity.toString(),
             lamination: item.lamination,
             variation: item.variation || undefined,
+            unit: item.unit || undefined,
             unitPrice: item.unitPrice,
             lineItemTotalPrice: item.lineItemTotalPrice,
           })));

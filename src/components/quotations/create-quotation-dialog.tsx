@@ -494,6 +494,8 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
         model: item.model,
         quantity: parseInt(item.quantity, 10),
         lamination: item.lamination,
+        variation: item.variation?.trim() || undefined,
+        unit: item.unit?.trim() || undefined,
         unitPrice: item.unitPrice!,
         lineItemTotalPrice: item.lineItemTotalPrice!,
         isGift: item.isGift || false,

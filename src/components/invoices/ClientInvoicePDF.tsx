@@ -676,7 +676,7 @@ const ClientInvoicePage = ({ order, allStatuses, designApprovalStatusIds = [], d
                 borderBottomWidth: index === order.orderItems.length - 1 ? 0 : 1
               }
             ]}>
-              <View style={styles.colModel}><Text style={[styles.tableCell, { fontWeight: 'bold', fontSize: cellFontSize }]}>{item.unit ? `${item.unit} • ` : ''}{item.model}{(item.variation || (item.lamination && item.lamination !== 'None' && item.lamination !== 'N/A' ? item.lamination : '')) ? ` — ${item.variation || item.lamination}` : ''}</Text></View>
+              <View style={styles.colModel}><Text style={[styles.tableCell, { fontWeight: 'bold', fontSize: cellFontSize }]}>{item.unit ? `${item.unit} • ` : ''}{item.model}{item.variation ? ` — ${item.variation}` : ''}</Text></View>
               <View style={styles.colQty}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{item.quantity}</Text></View>
               <View style={styles.colLam}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>{item.lamination || 'None'}</Text></View>
               <View style={styles.colPrice}><Text style={[styles.tableCell, { fontSize: cellFontSize }]}>BDT {Number(item.unitPrice).toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text></View>
