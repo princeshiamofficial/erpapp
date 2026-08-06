@@ -7,6 +7,24 @@ import { parseISO } from 'date-fns';
 
 const QUOTATIONS_TABLE = 'quotations';
 
+const ensureQuotationsTableExists = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ${QUOTATIONS_TABLE} (
+        id VARCHAR(255) PRIMARY KEY,
+        data_json LONGTEXT,
+        is_deleted TINYINT(1) DEFAULT 0,
+        deleted_at DATETIME NULL,
+        deleted_by_id VARCHAR(255) NULL,
+        deleted_by_name VARCHAR(255) NULL
+      )
+    `);
+  } catch (error) {
+    console.error(`Error ensuring table '${QUOTATIONS_TABLE}' exists:`, error);
+  }
+};
+ensureQuotationsTableExists();
+
 export const getQuotations = async (searchTerm?: string): Promise<TrackingLink[]> => {
   try {
     let queryStr = `SELECT id, data_json FROM ${QUOTATIONS_TABLE} WHERE is_deleted = FALSE`;
@@ -60,7 +78,12 @@ export const addQuotation = async (quotationData: {
   try {
     let finalCreatedAt = quotationData.createdAt;
     try {
-      finalCreatedAt = parseISO(quotationData.createdAt).toISOString();
+      const parsedDate = parseISO(quotationData.createdAt);
+      if (!isNaN(parsedDate.getTime())) {
+        finalCreatedAt = parsedDate.toISOString();
+      } else {
+        finalCreatedAt = new Date().toISOString();
+      }
     } catch (e) {
       finalCreatedAt = new Date().toISOString();
     }
@@ -70,18 +93,28 @@ export const addQuotation = async (quotationData: {
     const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
     const quotationPrefix = `Q${currentYear}${currentMonth}`;
 
-    const allQuotations = await getQuotations();
-    let newSequence = 1;
-    if (allQuotations.length > 0) {
-      const maxId = allQuotations
-        .map(q => q.id)
-        .filter(id => id.startsWith(quotationPrefix))
+    const existingRows = await query<any[]>(`SELECT id FROM ${QUOTATIONS_TABLE} WHERE id LIKE ?`, [`${quotationPrefix}%`]);
+    let maxSequence = 0;
+    if (existingRows && existingRows.length > 0) {
+      maxSequence = existingRows
+        .map(row => row.id)
         .map(id => parseInt(id.substring(quotationPrefix.length), 10))
         .filter(num => !isNaN(num))
         .reduce((max, current) => (current > max ? current : max), 0);
-      newSequence = maxId + 1;
     }
-    const quotationId = `${quotationPrefix}${String(newSequence).padStart(2, '0')}`;
+    let newSequence = maxSequence + 1;
+    let quotationId = `${quotationPrefix}${String(newSequence).padStart(2, '0')}`;
+
+    let collisionChecks = 0;
+    while (collisionChecks < 100) {
+      const collisionRow = await query<any[]>(`SELECT id FROM ${QUOTATIONS_TABLE} WHERE id = ?`, [quotationId]);
+      if (!collisionRow || collisionRow.length === 0) {
+        break;
+      }
+      newSequence++;
+      quotationId = `${quotationPrefix}${String(newSequence).padStart(2, '0')}`;
+      collisionChecks++;
+    }
 
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(), timestamp: finalCreatedAt, status: quotationData.initialStatusId,
@@ -118,7 +151,7 @@ export const addQuotation = async (quotationData: {
     return { id: quotationId, ...newQuotationData };
   } catch (error) {
     console.error("Error adding quotation to MySQL:", error);
-    return null;
+    throw error;
   }
 };
 

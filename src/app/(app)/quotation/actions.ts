@@ -156,7 +156,14 @@ export async function createQuotationAction(
       crmUserName: currentUser.name,
     };
 
-    const createdQuotation = await addQuotationService(newQuotationDataForService);
+    let createdQuotation: TrackingLink | null = null;
+    try {
+      createdQuotation = await addQuotationService(newQuotationDataForService);
+    } catch (err: any) {
+      console.error("addQuotationService error:", err);
+      return { error: err?.message || "Failed to create quotation due to a database service error." };
+    }
+
     if (!createdQuotation) return { error: "Failed to create quotation due to a service error." };
 
     revalidatePath("/(app)/quotation");
