@@ -714,7 +714,7 @@ export default function StockReportsPage() {
                                                 </div>
 
                                                 <div className="flex justify-end gap-2">
-                                                    {entry.status === 'Pending' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                                                    {entry.status === 'Pending' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || (currentUser?.role === 'LR' && currentUser?.isLeader)) && (
                                                         <>
                                                             <Button
                                                                 variant="ghost"
@@ -809,7 +809,7 @@ export default function StockReportsPage() {
                                                         </TableCell>
                                                         <TableCell className="text-right pr-4">
                                                             <div className="flex items-center justify-end gap-1">
-                                                                {entry.status === 'Pending' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                                                                {entry.status === 'Pending' && (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || (currentUser?.role === 'LR' && currentUser?.isLeader)) && (
                                                                     <>
                                                                         <Button
                                                                             variant="ghost"

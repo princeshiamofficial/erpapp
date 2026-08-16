@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, User as UserIcon, Settings, Edit3, Calculator, Hash } from "lucide-react";
+import { LogOut, User as UserIcon, Settings, Edit3, Calculator, Hash, BadgeCheck } from "lucide-react";
 import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
 import { getRoles } from "@/lib/user-role-service";
 
@@ -102,7 +102,12 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+              {currentUser.isLeader && (
+                <BadgeCheck className="h-4 w-4 fill-[#6F4E37] text-white shrink-0" />
+              )}
+            </div>
             <p className="text-xs leading-none text-muted-foreground">
               {currentUser.email}
             </p>

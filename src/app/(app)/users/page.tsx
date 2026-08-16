@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter, LogIn, Eye } from "lucide-react";
+import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter, LogIn, Eye, BadgeCheck } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole, UserRoleDefinition } from "@/types";
@@ -409,22 +409,22 @@ export default function UsersPage() {
                           <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
                       </TableCell>
-                      <TableCell className="font-medium text-foreground">{user.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Badge
-                            style={{ backgroundColor: badgeColor, color: textColor }}
-                            className="border-none"
-                          >
-                            {roleDef?.name || user.role.replace(/_/g, ' ')}
-                          </Badge>
+                      <TableCell className="font-medium text-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <span>{user.name}</span>
                           {user.isLeader && (
-                            <Badge variant="outline" className="text-[10px] py-0 h-5 border-amber-500/50 text-amber-600 bg-amber-500/10 font-semibold">
-                              Team Leader
-                            </Badge>
+                            <BadgeCheck className="h-4 w-4 fill-[#6F4E37] text-white shrink-0" />
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell>
+                        <Badge
+                          style={{ backgroundColor: badgeColor, color: textColor }}
+                          className="border-none"
+                        >
+                          {roleDef?.name || user.role.replace(/_/g, ' ')}
+                        </Badge>
                       </TableCell>
                       {showBanStatusColumn && (
                         <TableCell>
