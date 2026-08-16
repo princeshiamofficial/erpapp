@@ -412,12 +412,19 @@ export default function UsersPage() {
                       <TableCell className="font-medium text-foreground">{user.name}</TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
-                        <Badge
-                          style={{ backgroundColor: badgeColor, color: textColor }}
-                          className="border-none"
-                        >
-                          {roleDef?.name || user.role.replace(/_/g, ' ')}
-                        </Badge>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge
+                            style={{ backgroundColor: badgeColor, color: textColor }}
+                            className="border-none"
+                          >
+                            {roleDef?.name || user.role.replace(/_/g, ' ')}
+                          </Badge>
+                          {user.isLeader && (
+                            <Badge variant="outline" className="text-[10px] py-0 h-5 border-amber-500/50 text-amber-600 bg-amber-500/10 font-semibold">
+                              Team Leader
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       {showBanStatusColumn && (
                         <TableCell>

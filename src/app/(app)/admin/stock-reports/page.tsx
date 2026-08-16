@@ -275,6 +275,10 @@ export default function StockReportsPage() {
 
     const handleDelete = async () => {
         if (!itemToDelete) return;
+        if (currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN') {
+            toast({ title: "Permission Denied", description: "You do not have permission to delete stock items.", variant: "destructive" });
+            return;
+        }
         setIsSubmitting(true);
         const result = await deleteStockAction(itemToDelete.id, currentUser?.id, currentUser?.name);
         if (result.success) {
@@ -314,8 +318,8 @@ export default function StockReportsPage() {
             })
             .filter(item => item.quantity > 0);
 
-        const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN';
-        const status = isAdmin ? 'Approved' : 'Pending';
+        const isAutoApproveAllowed = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || (currentUser.role === 'LR' && currentUser.isLeader);
+        const status = isAutoApproveAllowed ? 'Approved' : 'Pending';
 
         const result = await addSellEntryAction(itemsToAdd, currentUser.id, currentUser.name, sellEntryDate.toISOString(), status);
 
@@ -359,6 +363,10 @@ export default function StockReportsPage() {
 
     const handleDeleteSellEntry = async () => {
         if (!sellEntryToDelete) return;
+        if (currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN') {
+            toast({ title: "Permission Denied", description: "You do not have permission to delete sell entries.", variant: "destructive" });
+            return;
+        }
         setIsSubmitting(true);
         const result = await deleteSellEntryAction(sellEntryToDelete.id);
         if (result.success) {
@@ -387,51 +395,61 @@ export default function StockReportsPage() {
     }
 
     return (
-        <div className="px-0 py-2 sm:p-6 lg:p-8 pt-2 sm:pt-2 lg:pt-2 sm:bg-white/60 sm:backdrop-blur-md sm:rounded-3xl sm:border sm:border-border/40 sm:shadow-sm">
+        <div className="space-y-4">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="products" className="flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Products
-                    </TabsTrigger>
-                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
-                        <TabsTrigger value="history" className="flex items-center gap-2">
-                            <History className="h-4 w-4" />
-                            Stock History
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <TabsList>
+                        <TabsTrigger value="products" className="flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            Products
                         </TabsTrigger>
+                        {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
+                            <TabsTrigger value="history" className="flex items-center gap-2">
+                                <History className="h-4 w-4" />
+                                Stock History
+                            </TabsTrigger>
+                        )}
+                        {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
+                            <TabsTrigger value="statistics" className="flex items-center gap-2">
+                                <BarChart3 className="h-4 w-4" />
+                                Statics
+                            </TabsTrigger>
+                        )}
+                    </TabsList>
+
+                    {activeTab === 'products' && (
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                            <div className="relative flex-1 sm:w-64 sm:flex-none">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search products..."
+                                    className="pl-9 h-10"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
+                                <Button onClick={openAddDialog} className="shrink-0 gap-2 h-10">
+                                    <PlusCircle className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Add Product</span>
+                                    <span className="sm:hidden">Add</span>
+                                </Button>
+                            )}
+                        </div>
                     )}
-                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
-                        <TabsTrigger value="statistics" className="flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4" />
-                            Statics
-                        </TabsTrigger>
+
+                    {activeTab === 'history' && (
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                            <Button onClick={openAddSellEntryDialog} className="shrink-0 gap-2 h-10">
+                                <PlusCircle className="h-4 w-4" />
+                                <span>Add Sell Entry</span>
+                            </Button>
+                        </div>
                     )}
-                </TabsList>
+                </div>
 
                 <TabsContent value="products" className="space-y-4">
                     <Card className="shadow-none border-none bg-transparent rounded-lg overflow-hidden">
-                        <CardHeader className="bg-transparent p-0 pb-4">
-                            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-2 rounded-xl border border-border/50 shadow-sm">
-                                <div className="flex items-center gap-3 w-full sm:w-auto">
-                                    <div className="relative flex-1 sm:w-64 sm:flex-none">
-                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder="Search products..."
-                                            className="pl-9 h-10"
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                        />
-                                    </div>
-                                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
-                                        <Button onClick={openAddDialog} className="shrink-0 gap-2 h-10">
-                                            <PlusCircle className="h-4 w-4" />
-                                            <span className="hidden sm:inline">Add Product</span>
-                                            <span className="sm:hidden">Add</span>
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                        </CardHeader>
                         <CardContent className="p-0 border-none bg-transparent">
                             {/* Mobile View: Modern Cards */}
                             <div className="md:hidden px-0 py-4 space-y-4 bg-transparent">
@@ -542,7 +560,7 @@ export default function StockReportsPage() {
                             </div>
 
                             {/* Desktop View: Table (Strictly unchanged layout, only updated text labels) */}
-                            <div className="hidden md:block overflow-x-auto">
+                            <div className="hidden md:block overflow-x-auto bg-card rounded-xl border border-border/50 shadow-sm">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -630,14 +648,6 @@ export default function StockReportsPage() {
                 {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'LR') && (
                     <TabsContent value="history" className="space-y-4">
                         <Card className="shadow-none border-none bg-transparent rounded-lg overflow-hidden">
-                            <CardHeader className="bg-transparent p-0 pb-4">
-                                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 bg-white p-2 rounded-xl border border-border/50 shadow-sm">
-                                    <Button onClick={openAddSellEntryDialog} className="shrink-0 gap-2 h-10">
-                                        <PlusCircle className="h-4 w-4" />
-                                        <span>Add Sell Entry</span>
-                                    </Button>
-                                </div>
-                            </CardHeader>
                             <CardContent className="p-0">
                                 {/* Mobile View: Cards */}
                                 <div className="md:hidden px-0 py-4 space-y-4 bg-transparent">
@@ -726,15 +736,17 @@ export default function StockReportsPage() {
                                                             </Button>
                                                         </>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => { setSellEntryToDelete(entry); setIsDeleteSellEntryDialogOpen(true); }}
-                                                        disabled={isSubmitting}
-                                                        className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => { setSellEntryToDelete(entry); setIsDeleteSellEntryDialogOpen(true); }}
+                                                            disabled={isSubmitting}
+                                                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))
@@ -742,7 +754,7 @@ export default function StockReportsPage() {
                                 </div>
 
                                 {/* Desktop View: Table */}
-                                <div className="hidden md:block overflow-x-auto">
+                                <div className="hidden md:block overflow-x-auto bg-card rounded-xl border border-border/50 shadow-sm">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -819,15 +831,17 @@ export default function StockReportsPage() {
                                                                         </Button>
                                                                     </>
                                                                 )}
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => { setSellEntryToDelete(entry); setIsDeleteSellEntryDialogOpen(true); }}
-                                                                    disabled={isSubmitting}
-                                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
+                                                                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => { setSellEntryToDelete(entry); setIsDeleteSellEntryDialogOpen(true); }}
+                                                                        disabled={isSubmitting}
+                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>

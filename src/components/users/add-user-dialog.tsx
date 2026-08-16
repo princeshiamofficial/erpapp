@@ -261,7 +261,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       weeklyOrderTarget: 0,  
       isBanned: false, 
       fcmToken: null, 
-      isLeader: (role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE') ? isLeader : undefined,
+      isLeader: (role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE' || role === 'LR') ? isLeader : undefined,
     };
 
     try {
@@ -376,7 +376,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
               </Select>
             </div>
             
-            {(role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE') && (
+            {(role === 'CRM' || role === 'DESIGNER_REPRESENTATIVE' || role === 'LR') && (
               <div className="flex items-center space-x-2 pt-2">
                   <Switch
                     id="leader-switch"
