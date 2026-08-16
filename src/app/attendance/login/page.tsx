@@ -22,7 +22,7 @@ export default function AttendanceLoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthLoading && currentUser) {
+    if (!isAuthLoading && currentUser && !currentUser.isBanned) {
       router.replace('/attendance');
     }
   }, [currentUser, isAuthLoading, router]);
@@ -40,13 +40,22 @@ export default function AttendanceLoginPage() {
     setIsSubmitting(true);
     const success = await login(email, password);
     if (success) {
-      router.push('/attendance');
+      if (currentUser?.isBanned) {
+        toast({
+          title: "Account Banned",
+          description: "Your account is banned. Attendance access is restricted.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+      } else {
+        router.push('/attendance');
+      }
     } else {
       setIsSubmitting(false);
     }
   };
   
-  if (isAuthLoading || currentUser) {
+  if (isAuthLoading || (currentUser && !currentUser.isBanned)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

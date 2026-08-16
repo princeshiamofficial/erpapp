@@ -12,6 +12,9 @@ export async function saveAttendanceAction(
   if (!currentUser?.id) {
     return { success: false, error: "User not authenticated." };
   }
+  if (currentUser?.isBanned) {
+    return { success: false, error: "Your account is banned. Attendance access denied." };
+  }
 
   const fullRecordData: Omit<AttendanceRecord, 'id'> = {
     employeeId: currentUser.id,

@@ -247,6 +247,9 @@ export const saveAttendanceAction = async (
   if (!currentUser?.id) {
     return { success: false, error: "User not authenticated." };
   }
+  if (currentUser?.isBanned) {
+    return { success: false, error: "Your account is banned. Attendance access denied." };
+  }
 
   if (!recordData.checkInTime) {
     return { success: false, error: "Check-in time is missing." };
