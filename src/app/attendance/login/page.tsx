@@ -29,12 +29,7 @@ export default function AttendanceLoginPage() {
 
   useEffect(() => {
     if (!isAuthLoading && currentUser && !currentUser.isBanned) {
-      const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
-      if (!systemRoles.includes(currentUser.role)) {
-        router.replace('/attendance');
-      } else {
-        router.replace('/dashboard');
-      }
+      router.replace('/attendance');
     }
   }, [currentUser, isAuthLoading, router]);
 
@@ -49,7 +44,7 @@ export default function AttendanceLoginPage() {
       return;
     }
     setIsSubmitting(true);
-    const res = await login(email, password);
+    const res = await login(email, password, '/attendance');
     if (res.require2FA && res.pendingUser) {
       setPendingUser(res.pendingUser);
       setShow2FAScreen(true);
@@ -64,7 +59,7 @@ export default function AttendanceLoginPage() {
   const handleAutoSubmit = async (code: string) => {
     if (!pendingUser || !code.trim() || isSubmitting) return;
     setIsSubmitting(true);
-    const success = await complete2FALogin(pendingUser, code.trim());
+    const success = await complete2FALogin(pendingUser, code.trim(), '/attendance');
     if (!success) {
       setIsSubmitting(false);
       setTwoFactorCode('');

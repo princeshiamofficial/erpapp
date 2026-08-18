@@ -10,8 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; require2FA?: boolean; pendingUser?: User }>;
-  complete2FALogin: (pendingUser: User, code: string) => Promise<boolean>;
+  login: (email: string, password: string, customRedirect?: string) => Promise<{ success: boolean; require2FA?: boolean; pendingUser?: User }>;
+  complete2FALogin: (pendingUser: User, code: string, customRedirect?: string) => Promise<boolean>;
   logout: () => void;
   updateUserAvatar: (avatarUrl: string | null) => Promise<boolean>;
   refreshCurrentUser: () => Promise<void>;
@@ -149,14 +149,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const login = async (email: string, pass: string): Promise<{ success: boolean; require2FA?: boolean; pendingUser?: User }> => {
-    console.log(`AuthContext: Login attempt for email: ${email}`);
+  const login = async (email: string, pass: string, customRedirect?: string): Promise<{ success: boolean; require2FA?: boolean; pendingUser?: User }> => {
     try {
+      console.log(`AuthContext: Initiating login for email: ${email}`);
+
       const authenticatedUser = await verifyUserPassword(email, pass);
 
       if (authenticatedUser) {
-        console.log(`AuthContext: User authenticated:`, { id: authenticatedUser.id, role: authenticatedUser.role, isBanned: authenticatedUser.isBanned, hasTwoFactor: authenticatedUser.hasTwoFactor });
-        
         if (authenticatedUser.isBanned) {
           console.log("AuthContext: Login attempt by banned user. Setting state for suspension dialog.");
           setCurrentUser(authenticatedUser);
@@ -176,6 +175,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(authenticatedUser);
         localStorage.setItem('colorhut-user', JSON.stringify(authenticatedUser));
         setAuthCookie(authenticatedUser);
+
+        if (customRedirect) {
+          window.location.href = customRedirect;
+          return { success: true };
+        }
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/attendance')) {
+          window.location.href = '/attendance';
+          return { success: true };
+        }
 
         // Redirect logic based on role using fresh window navigation
         const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
@@ -206,7 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: false };
   };
 
-  const complete2FALogin = async (pendingUser: User, code: string): Promise<boolean> => {
+  const complete2FALogin = async (pendingUser: User, code: string, customRedirect?: string): Promise<boolean> => {
     try {
       const res = await serverVerifyTwoFactorCode(pendingUser.id, code);
       if (res.success) {
@@ -219,6 +227,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(pendingUser);
         localStorage.setItem('colorhut-user', JSON.stringify(pendingUser));
         setAuthCookie(pendingUser);
+
+        if (customRedirect) {
+          window.location.href = customRedirect;
+          return true;
+        }
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/attendance')) {
+          window.location.href = '/attendance';
+          return true;
+        }
 
         const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
         let targetPath = '/dashboard';
