@@ -135,7 +135,7 @@ export function UserNav() {
           <TwoFactorSettingsDialog>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
               <ShieldCheck className="mr-2 h-4 w-4" />
-              <span>2FA Authentication</span>
+              <span>Two-Factor Auth</span>
             </DropdownMenuItem>
           </TwoFactorSettingsDialog>
           {isSystemAdmin && (
