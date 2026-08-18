@@ -13,6 +13,7 @@ import { GlobalSettings, User } from '@/types';
 import { Construction } from 'lucide-react';
 
 const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog), { ssr: false });
+const PinLockDialog = dynamic(() => import('@/components/auth/PinLockDialog').then(mod => mod.PinLockDialog), { ssr: false });
 
 const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => {
   return (
@@ -161,6 +162,7 @@ function AppShell({
         {currentUser && !isSuspendedDialogOpen ? children : null}
       </motion.div>
       {isSuspendedDialogOpen && <AccountSuspendedDialog isOpen={isSuspendedDialogOpen} onConfirmLogout={logout} />}
+      <PinLockDialog />
     </SidebarProvider>
   );
 }

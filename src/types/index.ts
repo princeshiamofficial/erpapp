@@ -19,6 +19,9 @@ export interface User {
   address?: string | null; // Added for Vendors
   category?: string | null;
   password?: string;
+  pinCode?: string | null;
+  hasPinCode?: boolean;
+  pinLockedUntil?: string | null;
   avatarUrl?: string | null;
   monthlyOrderTarget?: number | null;
   weeklyOrderTarget?: number | null;

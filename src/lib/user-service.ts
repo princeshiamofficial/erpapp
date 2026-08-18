@@ -20,6 +20,126 @@ const ensureAvatarColumnCapacity = async () => {
   }
 };
 
+let pinCodeColumnEnsured = false;
+const ensurePinCodeColumnExists = async () => {
+  if (pinCodeColumnEnsured) return;
+  try {
+    const columns = await query<any[]>(`SHOW COLUMNS FROM ${USERS_TABLE} LIKE 'pin_code'`);
+    if (columns.length === 0) {
+      console.log(`Column 'pin_code' not found in table '${USERS_TABLE}'. Creating it...`);
+      await query(`ALTER TABLE ${USERS_TABLE} ADD COLUMN pin_code VARCHAR(255) DEFAULT NULL`);
+    }
+    const lockCol = await query<any[]>(`SHOW COLUMNS FROM ${USERS_TABLE} LIKE 'pin_locked_until'`);
+    if (lockCol.length === 0) {
+      await query(`ALTER TABLE ${USERS_TABLE} ADD COLUMN pin_locked_until DATETIME DEFAULT NULL`);
+    }
+    pinCodeColumnEnsured = true;
+  } catch (e) {
+    console.error(`Error ensuring PIN columns exist:`, e);
+  }
+};
+ensurePinCodeColumnExists();
+
+export interface PinVerificationResult {
+  success: boolean;
+  isLocked: boolean;
+  lockedUntil?: string | null;
+  message?: string;
+}
+
+// Lock user account for 72 hours in DB after 3 wrong attempts
+export const lockUserAccount72h = async (userId: string): Promise<{ success: boolean; lockedUntil: string }> => {
+  try {
+    await ensurePinCodeColumnExists();
+    const lockedUntilDate = new Date(Date.now() + 72 * 60 * 60 * 1000);
+    await query(
+      `UPDATE ${USERS_TABLE} SET pin_locked_until = ?, is_banned = 1 WHERE id = ?`,
+      [lockedUntilDate, userId]
+    );
+    return { success: true, lockedUntil: lockedUntilDate.toISOString() };
+  } catch (error) {
+    console.error(`Error locking user account for ${userId}:`, error);
+    return { success: false, lockedUntil: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString() };
+  }
+};
+
+// Update user's PIN code in MySQL (hashed)
+export const updateUserPinCode = async (userId: string, pinCode: string | null): Promise<boolean> => {
+  try {
+    await ensurePinCodeColumnExists();
+    let hashedPin: string | null = null;
+    if (pinCode && pinCode.trim().length > 0) {
+      hashedPin = await bcrypt.hash(pinCode.trim(), 10);
+    }
+    await query(`UPDATE ${USERS_TABLE} SET pin_code = ?, pin_locked_until = NULL WHERE id = ?`, [hashedPin, userId]);
+    return true;
+  } catch (error) {
+    console.error("Error updating user PIN code in MySQL:", error);
+    return false;
+  }
+};
+
+// Verify user PIN code
+export const verifyUserPinCodeWithLock = async (userId: string, pinInput: string): Promise<PinVerificationResult> => {
+  try {
+    await ensurePinCodeColumnExists();
+    const results = await query<any[]>(`SELECT pin_code, pin_locked_until FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
+    if (results.length === 0) {
+      return { success: false, isLocked: false, message: "User not found." };
+    }
+
+    const row = results[0];
+    const now = new Date();
+
+    // Check if account is currently locked for 72 hours
+    if (row.pin_locked_until) {
+      const lockedUntilDate = new Date(row.pin_locked_until);
+      if (lockedUntilDate > now) {
+        return {
+          success: false,
+          isLocked: true,
+          lockedUntil: lockedUntilDate.toISOString(),
+          message: `Account is locked for 72 hours due to 3 consecutive wrong PIN attempts.`
+        };
+      } else {
+        // Lock period expired -> auto unlock
+        await query(`UPDATE ${USERS_TABLE} SET pin_locked_until = NULL, is_banned = 0 WHERE id = ?`, [userId]);
+        row.pin_locked_until = null;
+      }
+    }
+
+    const storedPin = row.pin_code;
+    if (!storedPin) {
+      return { success: false, isLocked: false, message: "No PIN code configured." };
+    }
+
+    let isMatch = false;
+    if (storedPin.startsWith('$2a$') || storedPin.startsWith('$2b$')) {
+      isMatch = await bcrypt.compare(pinInput.trim(), storedPin);
+    } else {
+      isMatch = pinInput.trim() === storedPin;
+    }
+
+    if (isMatch) {
+      if (row.pin_locked_until) {
+        await query(`UPDATE ${USERS_TABLE} SET pin_locked_until = NULL WHERE id = ?`, [userId]);
+      }
+      return { success: true, isLocked: false };
+    } else {
+      return { success: false, isLocked: false, message: "Incorrect PIN code. Please try again." };
+    }
+  } catch (error) {
+    console.error(`Error verifying PIN code for user "${userId}":`, error);
+    return { success: false, isLocked: false, message: "Server error verifying PIN code." };
+  }
+};
+
+// Simple verifyUserPinCode wrapper for backward compatibility
+export const verifyUserPinCode = async (userId: string, pinInput: string): Promise<boolean> => {
+  const result = await verifyUserPinCodeWithLock(userId, pinInput);
+  return result.success;
+};
+
 
 // Add a new user to MySQL
 export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Promise<User | null> => {
@@ -115,39 +235,25 @@ export const addUser = async (userData: Omit<User, 'id'> & { id?: string }): Pro
   }
 };
 
-// Get all users from MySQL
-export const getUsers = async (): Promise<User[]> => {
+// Admin unlock user PIN account
+export const unlockUserPinAccount = async (userId: string): Promise<boolean> => {
   try {
-    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} ORDER BY name ASC`);
-    return results.map(row => ({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      role: row.role,
-      companyName: row.company_name,
-      phone: row.phone,
-      address: row.address,
-      password: row.password,
-      avatarUrl: row.avatar_url,
-      monthlyOrderTarget: row.monthly_order_target,
-      weeklyOrderTarget: row.weekly_order_target,
-      isBanned: Boolean(row.is_banned),
-      fcmToken: row.fcm_token,
-      isLeader: Boolean(row.is_leader)
-    } as User));
+    await ensurePinCodeColumnExists();
+    await query(`UPDATE ${USERS_TABLE} SET pin_locked_until = NULL, is_banned = 0 WHERE id = ?`, [userId]);
+    return true;
   } catch (error) {
-    console.error("Error fetching users from MySQL:", error);
-    return [];
+    console.error(`Error unlocking user PIN account for ${userId}:`, error);
+    return false;
   }
 };
 
-// Get a single user by ID from MySQL
-export const getUserById = async (userId: string): Promise<User | null> => {
-  if (!userId) return null;
+// Get all users from MySQL
+export const getUsers = async (): Promise<User[]> => {
   try {
-    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
-    if (results.length > 0) {
-      const row = results[0];
+    await ensurePinCodeColumnExists();
+    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} ORDER BY name ASC`);
+    return results.map(row => {
+      const isLocked = Boolean(row.pin_locked_until && new Date(row.pin_locked_until) > new Date());
       return {
         id: row.id,
         name: row.name,
@@ -160,9 +266,45 @@ export const getUserById = async (userId: string): Promise<User | null> => {
         avatarUrl: row.avatar_url,
         monthlyOrderTarget: row.monthly_order_target,
         weeklyOrderTarget: row.weekly_order_target,
-        isBanned: Boolean(row.is_banned),
+        isBanned: Boolean(row.is_banned) || isLocked,
         fcmToken: row.fcm_token,
-        isLeader: Boolean(row.is_leader)
+        isLeader: Boolean(row.is_leader),
+        hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
+        pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
+      } as User;
+    });
+  } catch (error) {
+    console.error("Error fetching users from MySQL:", error);
+    return [];
+  }
+};
+
+// Get a single user by ID from MySQL
+export const getUserById = async (userId: string): Promise<User | null> => {
+  if (!userId) return null;
+  try {
+    await ensurePinCodeColumnExists();
+    const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
+    if (results.length > 0) {
+      const row = results[0];
+      const isLocked = Boolean(row.pin_locked_until && new Date(row.pin_locked_until) > new Date());
+      return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        companyName: row.company_name,
+        phone: row.phone,
+        address: row.address,
+        password: row.password,
+        avatarUrl: row.avatar_url,
+        monthlyOrderTarget: row.monthly_order_target,
+        weeklyOrderTarget: row.weekly_order_target,
+        isBanned: Boolean(row.is_banned) || isLocked,
+        fcmToken: row.fcm_token,
+        isLeader: Boolean(row.is_leader),
+        hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
+        pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
       } as User;
     }
     return null;
@@ -175,9 +317,11 @@ export const getUserById = async (userId: string): Promise<User | null> => {
 // Get user by email from MySQL
 export const getUserByEmail = async (email: string): Promise<User | null> => {
   try {
+    await ensurePinCodeColumnExists();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE email = ?`, [email]);
     if (results.length > 0) {
       const row = results[0];
+      const isLocked = Boolean(row.pin_locked_until && new Date(row.pin_locked_until) > new Date());
       return {
         id: row.id,
         name: row.name,
@@ -190,9 +334,11 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
         avatarUrl: row.avatar_url,
         monthlyOrderTarget: row.monthly_order_target,
         weeklyOrderTarget: row.weekly_order_target,
-        isBanned: Boolean(row.is_banned),
+        isBanned: Boolean(row.is_banned) || isLocked,
         fcmToken: row.fcm_token,
-        isLeader: Boolean(row.is_leader)
+        isLeader: Boolean(row.is_leader),
+        hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
+        pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
       } as User;
     }
     return null;
@@ -228,6 +374,7 @@ export const updateUserPassword = async (userId: string, newPasswordPlainText: s
 // Verify user password
 export const verifyUserPassword = async (email: string, passwordPlainText: string): Promise<User | null> => {
   try {
+    await ensurePinCodeColumnExists();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE email = ?`, [email]);
     if (results.length > 0) {
       const row = results[0];
@@ -246,7 +393,8 @@ export const verifyUserPassword = async (email: string, passwordPlainText: strin
           weeklyOrderTarget: row.weekly_order_target,
           isBanned: Boolean(row.is_banned),
           fcm_token: row.fcm_token,
-          isLeader: Boolean(row.is_leader)
+          isLeader: Boolean(row.is_leader),
+          hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0)
         } as User;
       }
     }
@@ -283,9 +431,29 @@ export const updateUserTargets = async (userId: string, monthlyTarget: number | 
   }
 };
 
-// Delete a user from MySQL
+// Delete a user from MySQL with safety checks
 export const deleteUser = async (userId: string): Promise<boolean> => {
   try {
+    const targetUser = await getUserById(userId);
+    if (!targetUser) {
+      console.warn(`[deleteUser] User ${userId} not found.`);
+      return false;
+    }
+
+    if (targetUser.role === 'SYSTEM_ADMIN') {
+      console.error(`[deleteUser] Blocked attempt to delete SYSTEM_ADMIN user: ${userId} (${targetUser.email})`);
+      return false;
+    }
+
+    console.log(`[deleteUser] Deleting user ${userId} (${targetUser.name} - ${targetUser.email})`);
+
+    // Clean up related user documents
+    try {
+      await query(`DELETE FROM user_documents WHERE user_id = ?`, [userId]);
+    } catch (docErr) {
+      console.warn(`[deleteUser] Non-critical error deleting user documents for ${userId}:`, docErr);
+    }
+
     await query(`DELETE FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
     return true;
   } catch (error) {

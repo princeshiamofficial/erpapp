@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { Eye, Truck } from 'lucide-react';
+import { Eye, Truck, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { DateRangePicker, type DateRange } from '@/components/dashboard/date-range-picker';
@@ -17,6 +17,7 @@ import { getContrastTextColor } from '@/lib/color-utils';
 import { useToast } from '@/hooks/use-toast';
 import { startOfMonth, endOfMonth, parseISO, format as formatDateFns } from 'date-fns';
 import { cn } from "@/lib/utils";
+import Papa from 'papaparse';
 import {
   Pagination,
   PaginationContent,
@@ -44,15 +45,17 @@ const getInitials = (name: string | undefined): string => {
   return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
+const ITEMS_PER_PAGE = 25;
+
 export default function DeliveriesPage() {
   const { toast } = useToast();
   const [orders, setOrders] = useState<TrackingLink[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [deliveredStatusId, setDeliveredStatusId] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 25;
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const now = new Date();
@@ -77,6 +80,9 @@ export default function DeliveriesPage() {
       }
       setDeliveredStatusId(delivStatus.id);
 
+      let startStr: string | undefined = undefined;
+      let endStr: string | undefined = undefined;
+
       if (range?.from && range?.to) {
         const start = new Date(range.from);
         start.setHours(0, 0, 0, 0);
@@ -84,25 +90,22 @@ export default function DeliveriesPage() {
         end.setHours(23, 59, 59, 999);
 
         // Format dates to MySQL compatible datetime format
-        const startStr = formatDateFns(start, 'yyyy-MM-dd HH:mm:ss');
-        const endStr = formatDateFns(end, 'yyyy-MM-dd HH:mm:ss');
-
-        const limit = ITEMS_PER_PAGE;
-        const offset = (page - 1) * ITEMS_PER_PAGE;
-
-        const { orders: fetchedOrders, total } = await getDeliveredOrdersByDateRange(
-          startStr,
-          endStr,
-          delivStatus.id,
-          limit,
-          offset
-        );
-        setOrders(fetchedOrders);
-        setTotalOrders(total);
-      } else {
-        setOrders([]);
-        setTotalOrders(0);
+        startStr = formatDateFns(start, 'yyyy-MM-dd HH:mm:ss');
+        endStr = formatDateFns(end, 'yyyy-MM-dd HH:mm:ss');
       }
+
+      const limit = ITEMS_PER_PAGE;
+      const offset = (page - 1) * ITEMS_PER_PAGE;
+
+      const { orders: fetchedOrders, total } = await getDeliveredOrdersByDateRange(
+        startStr,
+        endStr,
+        delivStatus.id,
+        limit,
+        offset
+      );
+      setOrders(fetchedOrders);
+      setTotalOrders(total);
     } catch (error) {
       console.error("Failed to fetch deliveries data:", error);
       toast({ title: "Error", description: "Could not load deliveries.", variant: "destructive" });
@@ -125,6 +128,70 @@ export default function DeliveriesPage() {
     return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
 
+  const handleExport = async () => {
+    if (!deliveredStatusId) return;
+    setIsExporting(true);
+    try {
+      let startStr: string | undefined = undefined;
+      let endStr: string | undefined = undefined;
+
+      if (dateRange?.from && dateRange?.to) {
+        const start = new Date(dateRange.from);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(dateRange.to);
+        end.setHours(23, 59, 59, 999);
+
+        startStr = formatDateFns(start, 'yyyy-MM-dd HH:mm:ss');
+        endStr = formatDateFns(end, 'yyyy-MM-dd HH:mm:ss');
+      }
+
+      // Fetch all records for current filter up to 10000
+      const { orders: exportData } = await getDeliveredOrdersByDateRange(
+        startStr,
+        endStr,
+        deliveredStatusId,
+        10000,
+        0
+      );
+
+      if (exportData.length === 0) {
+        toast({ title: "No Data", description: "No delivery records found to export." });
+        setIsExporting(false);
+        return;
+      }
+
+      const rows = exportData.map((order, idx) => {
+        const deliveryLog = [...order.statusHistory].reverse().find(log => log.status === deliveredStatusId);
+        return {
+          'SL': idx + 1,
+          'Company': order.companyName || '',
+          'Phone': order.phoneNumber || '',
+          'Address': order.address || '',
+          'CRM Contact': order.crmUserName || 'Unassigned',
+          'DR Assigned': order.designerRepresentativeName || 'Unassigned',
+          'Ordered On': formatDateForDisplay(order.createdAt),
+          'Delivered On': deliveryLog ? formatDateForDisplay(deliveryLog.timestamp) : 'N/A',
+        };
+      });
+
+      const csv = Papa.unparse(rows);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `deliveries_${formatDateFns(new Date(), 'yyyy-MM-dd')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: "Export Successful", description: `${exportData.length} delivery records exported to CSV.` });
+    } catch (error) {
+      console.error("Failed to export deliveries:", error);
+      toast({ title: "Export Error", description: "Failed to export delivery records.", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 p-1 sm:p-0">
       <DeliveryCard 
@@ -135,14 +202,20 @@ export default function DeliveriesPage() {
         deliveredStatusId={deliveredStatusId}
         emptyText="No orders delivered in this period."
         headerAction={
-          <DateRangePicker 
-            initialRange={dateRange}
-            onDateRangeChange={(range, label) => {
-              setDateRange(range);
-              setDateRangeLabel(label);
-              setCurrentPage(1);
-            }}
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <DateRangePicker 
+              initialRange={dateRange}
+              onDateRangeChange={(range, label) => {
+                setDateRange(range);
+                setDateRangeLabel(label);
+                setCurrentPage(1);
+              }}
+            />
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || isExporting || totalOrders === 0} className="h-9">
+              {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Export
+            </Button>
+          </div>
         }
         currentPage={currentPage}
         totalPages={totalPages}
@@ -222,40 +295,40 @@ function DeliveryCard({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6">Order ID</TableHead>
+                <TableHead className="pl-6 w-[50px]">SL</TableHead>
                 <TableHead>Company</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Address</TableHead>
                 <TableHead>CRM Contact</TableHead>
                 <TableHead>DR Assigned</TableHead>
                 <TableHead className="text-right">Ordered On</TableHead>
-                <TableHead className="text-right">Delivered On</TableHead>
-                <TableHead className="pr-6 text-right">Current Status</TableHead>
+                <TableHead className="pr-6 text-right">Delivered On</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={`skel-${i}`}>
-                    <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell className="pl-6 font-mono text-muted-foreground"><Skeleton className="h-5 w-6" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-36" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-5 w-24 inline-block" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-5 w-24 inline-block" /></TableCell>
-                    <TableCell className="pr-6 text-right"><Skeleton className="h-6 w-28 rounded-full inline-block" /></TableCell>
+                    <TableCell className="pr-6 text-right"><Skeleton className="h-5 w-24 inline-block" /></TableCell>
                   </TableRow>
                 ))
               ) : orders.length > 0 ? (
-                orders.map((order) => {
-                  const statusInfo = getStatusDisplayInfo(order.currentStatus);
+                orders.map((order, index) => {
                   const deliveryLog = [...order.statusHistory].reverse().find(log => log.status === deliveredStatusId);
+                  const sl = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                   return (
                     <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="pl-6">
-                        <Link href={`/track/${order.id}`} className="font-medium text-primary hover:underline">
-                          {order.id}
-                        </Link>
-                      </TableCell>
+                      <TableCell className="pl-6 font-mono text-muted-foreground">{sl}</TableCell>
                       <TableCell className="text-card-foreground font-medium">{order.companyName}</TableCell>
+                      <TableCell className="text-card-foreground font-mono text-xs">{order.phoneNumber || 'N/A'}</TableCell>
+                      <TableCell className="text-card-foreground text-xs max-w-[200px] truncate" title={order.address || undefined}>{order.address || 'N/A'}</TableCell>
                       <TableCell className="text-card-foreground">
                         <div className="flex items-center gap-2">
                           {order.crmUserName ? (
@@ -293,20 +366,15 @@ function DeliveryCard({
                       <TableCell className="text-right text-muted-foreground font-mono">
                         {formatDateForDisplay(order.createdAt)}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground font-mono">
+                      <TableCell className="pr-6 text-right text-muted-foreground font-mono">
                         {deliveryLog ? formatDateForDisplay(deliveryLog.timestamp) : 'N/A'}
-                      </TableCell>
-                      <TableCell className="pr-6 text-right">
-                        <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent shadow-sm">
-                          {statusInfo.name}
-                        </Badge>
                       </TableCell>
                     </TableRow>
                   );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-16 h-[320px]">
+                  <TableCell colSpan={8} className="text-center py-16 h-[320px]">
                     <Truck className="mx-auto h-12 w-12 opacity-30 mb-4 text-muted-foreground" />
                     <p className="text-lg text-muted-foreground font-semibold">{emptyText}</p>
                     <p className="text-sm text-muted-foreground/75 mt-1">Check back later or verify your delivery records.</p>

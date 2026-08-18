@@ -14,8 +14,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, User as UserIcon, Settings, Edit3, Calculator, Hash, BadgeCheck } from "lucide-react";
+import { LogOut, User as UserIcon, Settings, Edit3, Calculator, Hash, BadgeCheck, KeyRound } from "lucide-react";
 import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
+import { PinSettingsDialog } from "@/components/users/PinSettingsDialog";
 import { getRoles } from "@/lib/user-role-service";
 
 const GyroscopeIcon = ({ className }: { className?: string }) => (
@@ -124,6 +125,12 @@ export function UserNav() {
               <span>Edit Profile</span>
             </DropdownMenuItem>
           </EditProfileDialog>
+          <PinSettingsDialog>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
+              <KeyRound className="mr-2 h-4 w-4" />
+              <span>{currentUser.hasPinCode ? "Security PIN" : "Set PIN Code"}</span>
+            </DropdownMenuItem>
+          </PinSettingsDialog>
           {isSystemAdmin && (
             <DropdownMenuItem 
               onDoubleClick={toggleDisplayMode} 

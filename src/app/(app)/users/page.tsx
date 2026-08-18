@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter, LogIn, Eye, BadgeCheck } from "lucide-react";
+import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter, LogIn, Eye, BadgeCheck, Unlock } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole, UserRoleDefinition } from "@/types";
@@ -30,7 +30,7 @@ import {
   updateUserTargets,
 } from '@/lib/user-service';
 import { getRoles } from '@/lib/user-role-service';
-import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction } from './actions';
+import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction, unlockUserPinAccountAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,7 @@ const ChangePasswordDialog = dynamic(() => import('@/components/users/change-pas
 const SetUserAvatarDialog = dynamic(() => import('@/components/users/set-user-avatar-dialog').then(mod => mod.SetUserAvatarDialog));
 const SetUserSalesTargetDialog = dynamic(() => import('@/components/users/set-user-sales-target-dialog').then(mod => mod.SetUserSalesTargetDialog));
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
+const AdminSetUserPinDialog = dynamic(() => import('@/components/users/admin-set-user-pin-dialog').then(mod => mod.AdminSetUserPinDialog));
 
 
 export default function UsersPage() {
@@ -56,7 +57,7 @@ export default function UsersPage() {
   const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Banned'>('Active');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Locked' | 'Banned'>('Active');
 
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
@@ -81,6 +82,9 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+
+  const [userToManagePin, setUserToManagePin] = useState<User | null>(null);
+  const [isAdminSetPinDialogOpen, setIsAdminSetPinDialogOpen] = useState(false);
 
 
   const fetchUsers = useCallback(async () => {
@@ -239,8 +243,13 @@ export default function UsersPage() {
 
     // Filter by status
     if (statusFilter !== 'all') {
-      const isBannedFilter = statusFilter === 'Banned';
-      filtered = filtered.filter(user => (user.isBanned || false) === isBannedFilter);
+      filtered = filtered.filter(user => {
+        const isLocked = Boolean(user.pinLockedUntil && new Date(user.pinLockedUntil) > new Date());
+        if (statusFilter === 'Locked') return isLocked;
+        if (statusFilter === 'Banned') return user.isBanned && !isLocked;
+        if (statusFilter === 'Active') return !user.isBanned && !isLocked;
+        return true;
+      });
     }
 
     // Filter by search term
@@ -271,7 +280,7 @@ export default function UsersPage() {
 
       return a.name.localeCompare(b.name);
     });
-  }, [usersToDisplay, searchTerm, statusFilter, availableRoles]);
+  }, [usersToDisplay, searchTerm, statusFilter, availableRoles, roleDefinitionsMap]);
 
   const canCurrentUserEditRoleOf = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
@@ -335,7 +344,7 @@ export default function UsersPage() {
                 />
               </div>
               {showBanStatusColumn && (
-                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Banned')}>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'Active' | 'Locked' | 'Banned')}>
                   <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-md bg-background">
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4 text-muted-foreground" />
@@ -344,6 +353,7 @@ export default function UsersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Locked">Locked</SelectItem>
                     <SelectItem value="Banned">Banned</SelectItem>
                     <SelectItem value="all">All Users</SelectItem>
                   </SelectContent>
@@ -399,6 +409,7 @@ export default function UsersPage() {
                   const roleDef = roleDefinitionsMap.get(user.role);
                   const badgeColor = roleDef?.color || '#6b7280';
                   const textColor = getContrastTextColor(badgeColor);
+                  const isUserLocked = Boolean(user.pinLockedUntil && new Date(user.pinLockedUntil) > new Date());
 
                   return (
                     <TableRow key={user.id || `user-${index}`} className="hover:bg-muted/50 transition-colors">
@@ -428,7 +439,9 @@ export default function UsersPage() {
                       </TableCell>
                       {showBanStatusColumn && (
                         <TableCell>
-                          {user.isBanned ? (
+                          {isUserLocked ? (
+                            <Badge variant="outline" className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/40 font-semibold">Locked</Badge>
+                          ) : user.isBanned ? (
                             <Badge variant="destructive" className="bg-red-500/20 text-red-700 border-red-500/30">Banned</Badge>
                           ) : (
                             <Badge variant="default" className="bg-green-500/20 text-green-700 border-green-500/30">Active</Badge>
@@ -455,6 +468,22 @@ export default function UsersPage() {
                                   <Eye className="mr-2 h-4 w-4" /> View as
                                 </DropdownMenuItem>
                               )}
+
+                              {isUserLocked && (
+                                <DropdownMenuItem
+                                  onSelect={async () => {
+                                    const res = await unlockUserPinAccountAction(user.id);
+                                    if (res.success) {
+                                      toast({ title: "Account Unlocked", description: `PIN lock on ${user.name}'s account has been unlocked.` });
+                                      fetchUsers();
+                                    }
+                                  }}
+                                  className="cursor-pointer text-amber-600 focus:text-amber-700 font-semibold"
+                                >
+                                  <Unlock className="mr-2 h-4 w-4" /> Unlock PIN Account
+                                </DropdownMenuItem>
+                              )}
+
                               <DropdownMenuItem
                                 onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
                                 disabled={!canAdminModifyTargetUser(user)}
@@ -462,6 +491,15 @@ export default function UsersPage() {
                               >
                                 <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
                               </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onSelect={() => { setUserToManagePin(user); setIsAdminSetPinDialogOpen(true); }}
+                                disabled={!canAdminModifyTargetUser(user)}
+                                className="cursor-pointer"
+                              >
+                                <KeyRound className="mr-2 h-4 w-4" /> Manage PIN Code
+                              </DropdownMenuItem>
+
                               {currentUser?.role === 'SYSTEM_ADMIN' && (
                                 <DropdownMenuItem
                                   onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
@@ -680,6 +718,18 @@ export default function UsersPage() {
               if (!open) setUserToDelete(null);
             }
           }}
+        />
+      )}
+
+      {isAdminSetPinDialogOpen && userToManagePin && (
+        <AdminSetUserPinDialog
+          user={userToManagePin}
+          isOpen={isAdminSetPinDialogOpen}
+          onOpenChange={(open) => {
+            setIsAdminSetPinDialogOpen(open);
+            if (!open) setUserToManagePin(null);
+          }}
+          onPinUpdated={fetchUsers}
         />
       )}
     </div>

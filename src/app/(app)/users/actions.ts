@@ -8,7 +8,9 @@ import {
   updateUserBanStatus,
   updateUserInfo as updateUserInfoInDb,
   deleteUser as deleteUserFromDbService,
-  updateUserFCMToken
+  updateUserFCMToken,
+  unlockUserPinAccount,
+  updateUserPinCode
 } from "@/lib/user-service";
 import { User } from "@/types";
 
@@ -77,9 +79,37 @@ export async function deleteUserAction(userId: string): Promise<{ success: boole
       revalidatePath("/(app)/vendors");
       return { success: true };
     }
-    return { success: false, error: "Failed to delete user from database." };
+    return { success: false, error: "Failed to delete user. System Admin accounts cannot be deleted or user was not found." };
   } catch (error) {
     console.error("Error in deleteUserAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function unlockUserPinAccountAction(userId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await unlockUserPinAccount(userId);
+    if (success) {
+      revalidatePath("/(app)/users");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to unlock user PIN account." };
+  } catch (error) {
+    console.error("Error in unlockUserPinAccountAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function adminSetUserPinAction(userId: string, pinCode: string | null): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updateUserPinCode(userId, pinCode);
+    if (success) {
+      revalidatePath("/(app)/users");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to set user PIN code." };
+  } catch (error) {
+    console.error("Error in adminSetUserPinAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
@@ -94,9 +124,7 @@ export async function storeUserFCMTokenAction(
   try {
     const success = await updateUserFCMToken(userId, fcmToken);
     if (success) {
-      // Optionally revalidate users path if you display tokens on the users page or admin page
-      // revalidatePath("/(app)/users");
-      revalidatePath("/(app)/admin/settings"); // Revalidate settings page where tokens might be displayed
+      revalidatePath("/(app)/admin/settings");
       return { success: true };
     }
     return { success: false, error: "Failed to store FCM token in database." };
