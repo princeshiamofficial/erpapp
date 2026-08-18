@@ -326,7 +326,16 @@ function DeliveryCard({
                   return (
                     <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="pl-6 font-mono text-muted-foreground">{sl}</TableCell>
-                      <TableCell className="text-card-foreground font-medium">{order.companyName}</TableCell>
+                      <TableCell className="text-card-foreground font-medium">
+                        <Link 
+                          href={`/track/${order.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline hover:text-primary transition-colors inline-block"
+                        >
+                          {order.companyName}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-card-foreground font-mono text-xs">{order.phoneNumber || 'N/A'}</TableCell>
                       <TableCell className="text-card-foreground text-xs max-w-[200px] truncate" title={order.address || undefined}>{order.address || 'N/A'}</TableCell>
                       <TableCell className="text-card-foreground">
