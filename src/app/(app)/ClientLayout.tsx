@@ -18,6 +18,8 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
+import { useAuth } from '@/contexts/auth-context';
+
 interface ClientLayoutProps {
     children: React.ReactNode;
     initialUser: User | null;
@@ -25,6 +27,7 @@ interface ClientLayoutProps {
 }
 
 export function ClientLayout({ children, initialUser, initialGlobalSettings }: ClientLayoutProps) {
+    const { logout } = useAuth();
     const isMobile = useIsMobile();
     const pathname = usePathname();
     const showBottomNav = isMobile;
@@ -61,8 +64,8 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
                     <SidebarFooter className="p-3.5 border-t border-sidebar-border/70">
                         <Button
                             variant="ghost"
-                            className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 rounded-md text-sm py-2.5 px-3"
-                            data-logout-button
+                            onClick={logout}
+                            className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 rounded-md text-sm py-2.5 px-3 cursor-pointer"
                         >
                             <LogOut className="mr-3 h-5 w-5 shrink-0 group-data-[collapsible=icon]:mr-0" />
                             <span className="truncate group-data-[collapsible=icon]:hidden font-medium">Logout</span>

@@ -63,17 +63,6 @@ function AppShell({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
 
-
-  // This effect handles the logout button which is now part of a server component layout
-  useEffect(() => {
-    const logoutButton = document.querySelector('[data-logout-button]');
-    if (logoutButton) {
-      const handleLogoutClick = () => logout();
-      logoutButton.addEventListener('click', handleLogoutClick);
-      return () => logoutButton.removeEventListener('click', handleLogoutClick);
-    }
-  }, [logout]);
-
   useEffect(() => {
     if (isLoading) {
       setShowLoadingScreen(true);

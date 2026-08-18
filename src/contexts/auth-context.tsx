@@ -40,8 +40,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('colorhut-original-user');
     if (typeof window !== 'undefined') {
       document.cookie = 'colorhut-user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      window.location.href = '/login';
+    } else {
+      router.push('/login');
     }
-    router.push('/login');
   }, [router]);
 
   const refreshCurrentUser = useCallback(async () => {
