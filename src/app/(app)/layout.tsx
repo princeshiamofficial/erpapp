@@ -16,10 +16,15 @@ export default async function AuthenticatedLayout({
   let currentUser: User | null = null;
   if (userCookie && userCookie.value) {
     try {
-      currentUser = JSON.parse(userCookie.value);
+      const rawVal = userCookie.value.startsWith('%7B') ? decodeURIComponent(userCookie.value) : userCookie.value;
+      currentUser = JSON.parse(rawVal);
     } catch (e) {
-      console.error("Failed to parse user cookie in layout, it might be corrupted:", e);
-      currentUser = null;
+      try {
+        currentUser = JSON.parse(decodeURIComponent(userCookie.value));
+      } catch (e2) {
+        console.error("Failed to parse user cookie in layout, it might be corrupted:", e2);
+        currentUser = null;
+      }
     }
   }
 

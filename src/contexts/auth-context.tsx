@@ -4,13 +4,14 @@
 import type { User } from '@/types';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
-import { serverSeedInitialAdminUser as seedInitialAdminUser, serverGetUserById as getUserById, serverVerifyUserPassword as verifyUserPassword, serverUpdateUserAvatar as updateUserAvatarService } from '@/app/actions/auth';
+import { serverSeedInitialAdminUser as seedInitialAdminUser, serverGetUserById as getUserById, serverVerifyUserPassword as verifyUserPassword, serverUpdateUserAvatar as updateUserAvatarService, serverVerifyTwoFactorCode } from '@/app/actions/auth';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; require2FA?: boolean; pendingUser?: User }>;
+  complete2FALogin: (pendingUser: User, code: string) => Promise<boolean>;
   logout: () => void;
   updateUserAvatar: (avatarUrl: string | null) => Promise<boolean>;
   refreshCurrentUser: () => Promise<void>;
@@ -37,6 +38,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsSuspendedDialogOpen(false);
     localStorage.removeItem('colorhut-user');
     localStorage.removeItem('colorhut-original-user');
+    if (typeof window !== 'undefined') {
+      document.cookie = 'colorhut-user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    }
     router.push('/login');
   }, [router]);
 
@@ -87,16 +91,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const storedUser = JSON.parse(storedUserJson);
             if (storedUser && typeof storedUser === 'object' && storedUser.id && typeof storedUser.id === 'string') {
               console.log(`AuthContext: Validating stored user ID: ${storedUser.id} against MySQL.`);
-              const dbUser = await getUserById(storedUser.id);
-              if (dbUser) {
-                setCurrentUser(dbUser as User);
-                if (dbUser.isBanned) {
-                  console.log("AuthContext: Stored user is banned. Will trigger suspension dialog.");
-                  setIsSuspendedDialogOpen(true);
+              try {
+                const dbUser = await getUserById(storedUser.id);
+                if (dbUser) {
+                  setCurrentUser(dbUser as User);
+                  if (dbUser.isBanned) {
+                    console.log("AuthContext: Stored user is banned. Will trigger suspension dialog.");
+                    setIsSuspendedDialogOpen(true);
+                  }
+                } else {
+                  console.log("AuthContext: Stored user NOT found in MySQL. Clearing localStorage.");
+                  localStorage.removeItem('colorhut-user');
                 }
-              } else {
-                console.log("AuthContext: Stored user NOT found in MySQL. Clearing localStorage.");
-                localStorage.removeItem('colorhut-user');
+              } catch (dbErr) {
+                console.warn("AuthContext: DB validation failed, using stored user state:", dbErr);
+                setCurrentUser(storedUser as User);
               }
             } else {
               console.log("AuthContext: Invalid or corrupted user object in localStorage. Clearing.");
@@ -131,39 +140,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
   }, []);
 
-  const login = async (email: string, pass: string): Promise<boolean> => {
+  const setAuthCookie = (user: User) => {
+    if (typeof window !== 'undefined') {
+      const value = JSON.stringify(user);
+      const date = new Date();
+      date.setTime(date.getTime() + (7 * 24 * 60 * 60 * 1000));
+      document.cookie = `colorhut-user=${encodeURIComponent(value)}; expires=${date.toUTCString()}; path=/; SameSite=Lax`;
+    }
+  };
+
+  const login = async (email: string, pass: string): Promise<{ success: boolean; require2FA?: boolean; pendingUser?: User }> => {
     console.log(`AuthContext: Login attempt for email: ${email}`);
-    setIsLoading(true);
     try {
       const authenticatedUser = await verifyUserPassword(email, pass);
 
       if (authenticatedUser) {
-        console.log(`AuthContext: User authenticated:`, { id: authenticatedUser.id, role: authenticatedUser.role, isBanned: authenticatedUser.isBanned });
+        console.log(`AuthContext: User authenticated:`, { id: authenticatedUser.id, role: authenticatedUser.role, isBanned: authenticatedUser.isBanned, hasTwoFactor: authenticatedUser.hasTwoFactor });
+        
         if (authenticatedUser.isBanned) {
           console.log("AuthContext: Login attempt by banned user. Setting state for suspension dialog.");
           setCurrentUser(authenticatedUser);
           localStorage.setItem('colorhut-user', JSON.stringify(authenticatedUser));
+          setAuthCookie(authenticatedUser);
           setIsSuspendedDialogOpen(true);
-          setIsLoading(false);
           router.push('/dashboard');
-          return true;
-        } else {
-          console.log("AuthContext: Authentication successful.");
-          setCurrentUser(authenticatedUser);
-          localStorage.setItem('colorhut-user', JSON.stringify(authenticatedUser));
-          setIsLoading(false);
-
-          // Redirect logic based on role
-          const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
-          if (!systemRoles.includes(authenticatedUser.role)) {
-            router.push('/attendance');
-          } else if (authenticatedUser.role === 'LR') {
-            router.push('/projects');
-          } else {
-            router.push('/dashboard');
-          }
-          return true;
+          return { success: true };
         }
+
+        if (authenticatedUser.hasTwoFactor) {
+          console.log("AuthContext: User requires 2FA verification.");
+          return { success: false, require2FA: true, pendingUser: authenticatedUser };
+        }
+
+        console.log("AuthContext: Authentication successful.");
+        setCurrentUser(authenticatedUser);
+        localStorage.setItem('colorhut-user', JSON.stringify(authenticatedUser));
+        setAuthCookie(authenticatedUser);
+
+        // Redirect logic based on role using fresh window navigation
+        const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
+        let targetPath = '/dashboard';
+        if (!systemRoles.includes(authenticatedUser.role)) {
+          targetPath = '/attendance';
+        } else if (authenticatedUser.role === 'LR') {
+          targetPath = '/projects';
+        }
+        window.location.href = targetPath;
+        return { success: true };
       } else {
         console.log(`AuthContext: Authentication failed for email ${email}.`);
         toast({
@@ -180,7 +203,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive",
       });
     }
-    setIsLoading(false);
+    return { success: false };
+  };
+
+  const complete2FALogin = async (pendingUser: User, code: string): Promise<boolean> => {
+    try {
+      const res = await serverVerifyTwoFactorCode(pendingUser.id, code);
+      if (res.success) {
+        if (res.isBackupCode) {
+          toast({
+            title: "Backup Code Used",
+            description: `Login verified using recovery backup code. (${res.remainingBackupCodes} remaining backup codes)`,
+          });
+        }
+        setCurrentUser(pendingUser);
+        localStorage.setItem('colorhut-user', JSON.stringify(pendingUser));
+        setAuthCookie(pendingUser);
+
+        const systemRoles = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO", "HRM", "ACCOUNTANT", "MANAGER"];
+        let targetPath = '/dashboard';
+        if (!systemRoles.includes(pendingUser.role)) {
+          targetPath = '/attendance';
+        } else if (pendingUser.role === 'LR') {
+          targetPath = '/projects';
+        }
+        window.location.href = targetPath;
+        return true;
+      } else {
+        toast({
+          title: "2FA Verification Failed",
+          description: res.message || "Invalid 6-digit code or backup code.",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to verify 2FA code.", variant: "destructive" });
+    }
     return false;
   };
 
@@ -264,7 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [currentUser]);
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUserAvatar, refreshCurrentUser, impersonate, stopImpersonating, originalUser, isSuspendedDialogOpen }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, login, complete2FALogin, logout, updateUserAvatar, refreshCurrentUser, impersonate, stopImpersonating, originalUser, isSuspendedDialogOpen }}>
       {children}
     </AuthContext.Provider>
   );

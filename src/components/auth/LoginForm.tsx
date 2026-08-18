@@ -8,15 +8,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Loader2, LogIn, ShieldCheck, Eye, EyeOff, KeyRound, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { PinInput } from '@/components/ui/pin-input';
+import type { User } from '@/types';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+
+  // 2FA state
+  const [show2FAScreen, setShow2FAScreen] = useState(false);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [isUsingBackupCode, setIsUsingBackupCode] = useState(false);
+
+  const { login, complete2FALogin } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,14 +39,143 @@ export function LoginForm() {
       return;
     }
     setIsLoading(true);
-    const success = await login(email, password);
-    if (!success) {
-      // Toast is already handled by login function for specific errors
+    const res = await login(email, password);
+    if (res.require2FA && res.pendingUser) {
+      setPendingUser(res.pendingUser);
+      setShow2FAScreen(true);
+      setIsLoading(false);
+      return;
+    }
+    if (!res.success) {
       setIsLoading(false);
     }
-    // If login is successful, navigation will unmount this component,
-    // so we don't need to set isLoading back to false.
   };
+
+  const handleAutoSubmit = async (code: string) => {
+    if (!pendingUser || !code.trim() || isLoading) return;
+    setIsLoading(true);
+    const success = await complete2FALogin(pendingUser, code.trim());
+    if (!success) {
+      setIsLoading(false);
+      setTwoFactorCode('');
+    }
+  };
+
+  const handle2FASubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!pendingUser || !twoFactorCode.trim() || isLoading) return;
+    handleAutoSubmit(twoFactorCode);
+  };
+
+  if (show2FAScreen && pendingUser) {
+    return (
+      <Card className="w-full max-w-[380px] shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl transform hover:scale-[1.01] transition-transform duration-300">
+        <CardHeader className="text-center pt-5 pb-1 px-6">
+          <div className="flex items-center justify-center gap-2 mb-0.5">
+            <Image
+              src="/gp.webp"
+              alt="Authenticator"
+              width={26}
+              height={26}
+              priority
+              className="object-contain drop-shadow-sm"
+            />
+            <CardTitle className="text-lg font-medium tracking-tight text-foreground">
+              Authenticator
+            </CardTitle>
+          </div>
+          <CardDescription className="text-[11px] text-muted-foreground">
+            {isUsingBackupCode
+              ? "Enter one of your 8-character recovery backup codes."
+              : "Enter the 6-digit verification code from your Authenticator app."}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="py-2.5 px-6">
+          <form onSubmit={handle2FASubmit} className="space-y-3">
+            <div className="space-y-1.5 text-center">
+              {isUsingBackupCode ? (
+                <Input
+                  type="text"
+                  placeholder="e.g. 3F65-1BDE"
+                  value={twoFactorCode}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setTwoFactorCode(val);
+                    if (val.replace(/[^A-Z0-9]/g, '').length === 8) {
+                      handleAutoSubmit(val);
+                    }
+                  }}
+                  autoFocus
+                  disabled={isLoading}
+                  className="h-10 text-center text-base font-mono font-bold tracking-widest uppercase bg-background/80 border-border/50 rounded-lg shadow-sm"
+                />
+              ) : (
+                <div className="flex justify-center">
+                  <PinInput
+                    value={twoFactorCode}
+                    onChange={(val) => {
+                      setTwoFactorCode(val);
+                      if (val.length === 6) {
+                        handleAutoSubmit(val);
+                      }
+                    }}
+                    length={6}
+                    mask={false}
+                    size="sm"
+                    disabled={isLoading}
+                    autoFocus
+                    className="py-0.5"
+                  />
+                </div>
+              )}
+
+              {isLoading && (
+                <div className="flex items-center justify-center py-1 text-muted-foreground gap-1.5 text-xs">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span>Verifying...</span>
+                </div>
+              )}
+              
+              <div className="pt-0.5">
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  disabled={isLoading}
+                  className="text-[11px] text-primary hover:underline h-auto p-0"
+                  onClick={() => {
+                    setIsUsingBackupCode(!isUsingBackupCode);
+                    setTwoFactorCode('');
+                  }}
+                >
+                  {isUsingBackupCode
+                    ? "Switch to 6-digit Authenticator code"
+                    : "Use a single-use backup recovery code instead"}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+
+        <CardFooter className="flex justify-center py-2 px-6 bg-secondary/50 dark:bg-card-foreground/5 rounded-b-xl border-t border-border/30">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[11px] h-7 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setShow2FAScreen(false);
+              setPendingUser(null);
+              setTwoFactorCode('');
+              setIsUsingBackupCode(false);
+            }}
+          >
+            <ArrowLeft className="mr-1 h-3 w-3" /> Back to Login
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl transform hover:scale-[1.01] transition-transform duration-300">

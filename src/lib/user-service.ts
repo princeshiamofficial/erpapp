@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
 import { getRoles } from './user-role-service';
+import { generateBase32Secret, generateBackupCodes, generateOtpAuthUrl, verifyTOTP } from './totp';
 
 const USERS_TABLE = 'users';
 
@@ -39,6 +40,29 @@ const ensurePinCodeColumnExists = async () => {
   }
 };
 ensurePinCodeColumnExists();
+
+let twoFactorColumnsEnsured = false;
+const ensureTwoFactorColumnsExist = async () => {
+  if (twoFactorColumnsEnsured) return;
+  try {
+    const colSecret = await query<any[]>(`SHOW COLUMNS FROM ${USERS_TABLE} LIKE 'two_factor_secret'`);
+    if (colSecret.length === 0) {
+      await query(`ALTER TABLE ${USERS_TABLE} ADD COLUMN two_factor_secret VARCHAR(255) DEFAULT NULL`);
+    }
+    const colEnabled = await query<any[]>(`SHOW COLUMNS FROM ${USERS_TABLE} LIKE 'two_factor_enabled'`);
+    if (colEnabled.length === 0) {
+      await query(`ALTER TABLE ${USERS_TABLE} ADD COLUMN two_factor_enabled TINYINT(1) DEFAULT 0`);
+    }
+    const colBackup = await query<any[]>(`SHOW COLUMNS FROM ${USERS_TABLE} LIKE 'two_factor_backup_codes'`);
+    if (colBackup.length === 0) {
+      await query(`ALTER TABLE ${USERS_TABLE} ADD COLUMN two_factor_backup_codes TEXT DEFAULT NULL`);
+    }
+    twoFactorColumnsEnsured = true;
+  } catch (e) {
+    console.error(`Error ensuring 2FA columns exist:`, e);
+  }
+};
+ensureTwoFactorColumnsExist();
 
 export interface PinVerificationResult {
   success: boolean;
@@ -251,6 +275,7 @@ export const unlockUserPinAccount = async (userId: string): Promise<boolean> => 
 export const getUsers = async (): Promise<User[]> => {
   try {
     await ensurePinCodeColumnExists();
+    await ensureTwoFactorColumnsExist();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} ORDER BY name ASC`);
     return results.map(row => {
       const isLocked = Boolean(row.pin_locked_until && new Date(row.pin_locked_until) > new Date());
@@ -271,6 +296,7 @@ export const getUsers = async (): Promise<User[]> => {
         isLeader: Boolean(row.is_leader),
         hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
         pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
+        hasTwoFactor: Boolean(Number(row.two_factor_enabled) === 1 && row.two_factor_secret && String(row.two_factor_secret).trim().length > 0),
       } as User;
     });
   } catch (error) {
@@ -284,6 +310,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   if (!userId) return null;
   try {
     await ensurePinCodeColumnExists();
+    await ensureTwoFactorColumnsExist();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
     if (results.length > 0) {
       const row = results[0];
@@ -305,6 +332,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
         isLeader: Boolean(row.is_leader),
         hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
         pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
+        hasTwoFactor: Boolean(Number(row.two_factor_enabled) === 1 && row.two_factor_secret && String(row.two_factor_secret).trim().length > 0),
       } as User;
     }
     return null;
@@ -318,6 +346,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
 export const getUserByEmail = async (email: string): Promise<User | null> => {
   try {
     await ensurePinCodeColumnExists();
+    await ensureTwoFactorColumnsExist();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE email = ?`, [email]);
     if (results.length > 0) {
       const row = results[0];
@@ -339,6 +368,7 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
         isLeader: Boolean(row.is_leader),
         hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
         pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
+        hasTwoFactor: Boolean(Number(row.two_factor_enabled) === 1 && row.two_factor_secret && String(row.two_factor_secret).trim().length > 0),
       } as User;
     }
     return null;
@@ -375,11 +405,13 @@ export const updateUserPassword = async (userId: string, newPasswordPlainText: s
 export const verifyUserPassword = async (email: string, passwordPlainText: string): Promise<User | null> => {
   try {
     await ensurePinCodeColumnExists();
+    await ensureTwoFactorColumnsExist();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE email = ?`, [email]);
     if (results.length > 0) {
       const row = results[0];
       const isMatch = await bcrypt.compare(passwordPlainText, row.password);
       if (isMatch) {
+        const isLocked = Boolean(row.pin_locked_until && new Date(row.pin_locked_until) > new Date());
         return {
           id: row.id,
           name: row.name,
@@ -391,10 +423,12 @@ export const verifyUserPassword = async (email: string, passwordPlainText: strin
           avatarUrl: row.avatar_url,
           monthlyOrderTarget: row.monthly_order_target,
           weeklyOrderTarget: row.weekly_order_target,
-          isBanned: Boolean(row.is_banned),
-          fcm_token: row.fcm_token,
+          isBanned: Boolean(row.is_banned) || isLocked,
+          fcmToken: row.fcm_token,
           isLeader: Boolean(row.is_leader),
-          hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0)
+          hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
+          pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
+          hasTwoFactor: Boolean(Number(row.two_factor_enabled) === 1 && row.two_factor_secret && String(row.two_factor_secret).trim().length > 0),
         } as User;
       }
     }
@@ -535,5 +569,146 @@ export const seedInitialAdminUser = async () => {
     }
   } catch (error) {
     console.error("Error seeding admin user in MySQL:", error);
+  }
+};
+
+// -------------------------------------------------------------
+// TWO FACTOR AUTHENTICATION (2FA) SERVICE FUNCTIONS
+// -------------------------------------------------------------
+
+export interface SetupTwoFactorResult {
+  secret: string;
+  otpAuthUrl: string;
+  backupCodes: string[];
+  qrCodeUrl: string;
+}
+
+export const setupTwoFactorSecret = async (userId: string): Promise<SetupTwoFactorResult | null> => {
+  try {
+    await ensureTwoFactorColumnsExist();
+    const user = await getUserById(userId);
+    if (!user) return null;
+
+    const secret = generateBase32Secret(32);
+    const backupCodes = generateBackupCodes(8);
+    const otpAuthUrl = generateOtpAuthUrl(secret, user.email, 'ERPApp');
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(otpAuthUrl)}`;
+
+    return { secret, otpAuthUrl, backupCodes, qrCodeUrl };
+  } catch (error) {
+    console.error(`Error setting up 2FA secret for user ${userId}:`, error);
+    return null;
+  }
+};
+
+export const enableTwoFactor = async (
+  userId: string,
+  token: string,
+  secret: string,
+  backupCodes: string[]
+): Promise<{ success: boolean; message?: string }> => {
+  try {
+    await ensureTwoFactorColumnsExist();
+    const isValid = verifyTOTP(secret, token);
+    if (!isValid) {
+      return { success: false, message: 'Invalid 6-digit authenticator code. Please check your app and try again.' };
+    }
+
+    await query(
+      `UPDATE ${USERS_TABLE} SET two_factor_secret = ?, two_factor_enabled = 1, two_factor_backup_codes = ? WHERE id = ?`,
+      [secret, JSON.stringify(backupCodes), userId]
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error enabling 2FA for user ${userId}:`, error);
+    return { success: false, message: error?.message || 'Failed to enable 2FA.' };
+  }
+};
+
+export const disableTwoFactor = async (userId: string): Promise<{ success: boolean; message?: string }> => {
+  try {
+    await ensureTwoFactorColumnsExist();
+    await query(
+      `UPDATE ${USERS_TABLE} SET two_factor_secret = NULL, two_factor_enabled = 0, two_factor_backup_codes = NULL WHERE id = ?`,
+      [userId]
+    );
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error disabling 2FA for user ${userId}:`, error);
+    return { success: false, message: error?.message || 'Failed to disable 2FA.' };
+  }
+};
+
+export const verifyTwoFactorCode = async (
+  userId: string,
+  tokenInput: string
+): Promise<{ success: boolean; isBackupCode?: boolean; remainingBackupCodes?: number; message?: string }> => {
+  try {
+    await ensureTwoFactorColumnsExist();
+    const results = await query<any[]>(
+      `SELECT two_factor_secret, two_factor_enabled, two_factor_backup_codes FROM ${USERS_TABLE} WHERE id = ?`,
+      [userId]
+    );
+
+    if (results.length === 0 || !results[0].two_factor_enabled || !results[0].two_factor_secret) {
+      return { success: false, message: '2FA is not enabled for this account.' };
+    }
+
+    const { two_factor_secret: secret, two_factor_backup_codes: rawBackupCodes } = results[0];
+    const cleanToken = tokenInput.trim();
+
+    // 1. Try TOTP code
+    if (cleanToken.length === 6 && verifyTOTP(secret, cleanToken)) {
+      return { success: true };
+    }
+
+    // 2. Try single-use Backup Code
+    let backupCodes: string[] = [];
+    if (rawBackupCodes) {
+      try {
+        backupCodes = typeof rawBackupCodes === 'string' ? JSON.parse(rawBackupCodes) : rawBackupCodes;
+      } catch (e) {
+        backupCodes = [];
+      }
+    }
+
+    const uppercaseInput = cleanToken.toUpperCase().replace(/\s+/g, '');
+    const codeIndex = backupCodes.findIndex(code => code.replace('-', '') === uppercaseInput.replace('-', ''));
+
+    if (codeIndex !== -1) {
+      // Consume backup code
+      backupCodes.splice(codeIndex, 1);
+      await query(
+        `UPDATE ${USERS_TABLE} SET two_factor_backup_codes = ? WHERE id = ?`,
+        [JSON.stringify(backupCodes), userId]
+      );
+
+      return {
+        success: true,
+        isBackupCode: true,
+        remainingBackupCodes: backupCodes.length,
+      };
+    }
+
+    return { success: false, message: 'Invalid 6-digit 2FA code or backup code. Please try again.' };
+  } catch (error: any) {
+    console.error(`Error verifying 2FA code for user ${userId}:`, error);
+    return { success: false, message: 'Server error verifying 2FA code.' };
+  }
+};
+
+export const getUserBackupCodes = async (userId: string): Promise<string[]> => {
+  try {
+    await ensureTwoFactorColumnsExist();
+    const results = await query<any[]>(`SELECT two_factor_backup_codes FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
+    if (results.length > 0 && results[0].two_factor_backup_codes) {
+      const raw = results[0].two_factor_backup_codes;
+      return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    }
+    return [];
+  } catch (error) {
+    console.error(`Error fetching backup codes for ${userId}:`, error);
+    return [];
   }
 };

@@ -22,6 +22,10 @@ export interface User {
   pinCode?: string | null;
   hasPinCode?: boolean;
   pinLockedUntil?: string | null;
+  hasTwoFactor?: boolean;
+  twoFactorEnabled?: boolean;
+  twoFactorSecret?: string | null;
+  twoFactorBackupCodes?: string[] | null;
   avatarUrl?: string | null;
   monthlyOrderTarget?: number | null;
   weeklyOrderTarget?: number | null;

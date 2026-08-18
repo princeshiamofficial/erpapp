@@ -1,7 +1,24 @@
 
 "use server";
 
-import { getUserByEmail, seedInitialAdminUser, getUserById, verifyUserPassword, updateUserAvatar as updateUserAvatarService, updateUserPinCode as updateUserPinCodeService, verifyUserPinCode as verifyUserPinCodeService, verifyUserPinCodeWithLock as verifyUserPinCodeWithLockService, lockUserAccount72h as lockUserAccount72hService, type PinVerificationResult } from '@/lib/user-service';
+import {
+  getUserByEmail,
+  seedInitialAdminUser,
+  getUserById,
+  verifyUserPassword,
+  updateUserAvatar as updateUserAvatarService,
+  updateUserPinCode as updateUserPinCodeService,
+  verifyUserPinCode as verifyUserPinCodeService,
+  verifyUserPinCodeWithLock as verifyUserPinCodeWithLockService,
+  lockUserAccount72h as lockUserAccount72hService,
+  setupTwoFactorSecret as setupTwoFactorSecretService,
+  enableTwoFactor as enableTwoFactorService,
+  disableTwoFactor as disableTwoFactorService,
+  verifyTwoFactorCode as verifyTwoFactorCodeService,
+  getUserBackupCodes as getUserBackupCodesService,
+  type PinVerificationResult,
+  type SetupTwoFactorResult
+} from '@/lib/user-service';
 import type { User } from '@/types';
 
 export async function serverSeedInitialAdminUser() {
@@ -37,4 +54,24 @@ export async function serverVerifyUserPinCodeWithLock(userId: string, pinInput: 
 
 export async function serverLockUserAccount72h(userId: string): Promise<{ success: boolean; lockedUntil: string }> {
   return await lockUserAccount72hService(userId);
+}
+
+export async function serverSetupTwoFactor(userId: string): Promise<SetupTwoFactorResult | null> {
+  return await setupTwoFactorSecretService(userId);
+}
+
+export async function serverEnableTwoFactor(userId: string, token: string, secret: string, backupCodes: string[]): Promise<{ success: boolean; message?: string }> {
+  return await enableTwoFactorService(userId, token, secret, backupCodes);
+}
+
+export async function serverDisableTwoFactor(userId: string): Promise<{ success: boolean; message?: string }> {
+  return await disableTwoFactorService(userId);
+}
+
+export async function serverVerifyTwoFactorCode(userId: string, tokenInput: string): Promise<{ success: boolean; isBackupCode?: boolean; remainingBackupCodes?: number; message?: string }> {
+  return await verifyTwoFactorCodeService(userId, tokenInput);
+}
+
+export async function serverGetUserBackupCodes(userId: string): Promise<string[]> {
+  return await getUserBackupCodesService(userId);
 }

@@ -21,11 +21,16 @@ export async function generateViewport(): Promise<Viewport> {
   const cookieStore = await cookies();
   const userCookie = cookieStore.get('colorhut-user');
   let currentUser: User | null = null;
-  if (userCookie) {
+  if (userCookie && userCookie.value) {
     try {
-      currentUser = JSON.parse(userCookie.value);
+      const rawVal = userCookie.value.startsWith('%7B') ? decodeURIComponent(userCookie.value) : userCookie.value;
+      currentUser = JSON.parse(rawVal);
     } catch (e) {
-      // ignore
+      try {
+        currentUser = JSON.parse(decodeURIComponent(userCookie.value));
+      } catch (e2) {
+        currentUser = null;
+      }
     }
   }
 
