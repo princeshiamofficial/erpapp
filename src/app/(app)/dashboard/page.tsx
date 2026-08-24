@@ -369,8 +369,8 @@ function DashboardContent() {
     const role = currentUser?.role;
     const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id;
     try {
-      const [fetchedOrders, fetchedYearOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
-        getOrders(startStr, endStr, role, userId), getOrders(yearStartStr, yearEndStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
+      const [fetchedOrders, fetchedYearOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTodayScheduledLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
+        getOrders(startStr, endStr, role, userId), getOrders(yearStartStr, yearEndStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getLeads(undefined, undefined, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -386,7 +386,7 @@ function DashboardContent() {
 
       return {
         allOrders: fetchedOrders, allYearOrders: fetchedYearOrders, allModels: fetchedModels, allUsers: fetchedUsers,
-        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, 
+        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, allTodayScheduledLeads: fetchedTodayScheduledLeads,
         allTasks: [...fetchedTasks, ...crmWorkflowTasks], 
         allFeedback: fetchedFeedback,
         allTransactions: fetchedTransactions
@@ -408,7 +408,7 @@ function DashboardContent() {
     retry: 1,
   });
 
-  const { allOrders = [], allYearOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
+  const { allOrders = [], allYearOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTodayScheduledLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -447,11 +447,19 @@ function DashboardContent() {
 
   const todayScheduledLeads = useMemo(() => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    return filteredLeads.filter(lead => {
+    let leadsToFilter = [...allTodayScheduledLeads];
+
+    if (currentUser?.role === 'CRM') {
+      leadsToFilter = leadsToFilter.filter(l => l.crmId === currentUser.id);
+    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+      leadsToFilter = leadsToFilter.filter(l => l.crmId === selectedCrmId);
+    }
+
+    return leadsToFilter.filter(lead => {
       if (!lead.schedule) return false;
       try {
-        const sched = parseISO(lead.schedule);
-        return isValid(sched) && format(sched, 'yyyy-MM-dd') === todayStr;
+        const dt = parseISO(lead.schedule);
+        return isValid(dt) && format(dt, 'yyyy-MM-dd') === todayStr;
       } catch {
         return false;
       }
@@ -462,7 +470,7 @@ function DashboardContent() {
         return 0;
       }
     });
-  }, [filteredLeads]);
+  }, [allTodayScheduledLeads, currentUser, selectedCrmId]);
 
   const filteredProjects = useMemo(() => {
     let projectsToFilter = [...allProjects];
