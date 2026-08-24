@@ -1495,7 +1495,7 @@ function DashboardContent() {
                             </p>
                           )}
 
-                          <div className="flex items-center gap-2.5 text-[11px] opacity-90 pt-1 flex-wrap font-semibold">
+                          <div className="flex flex-col gap-1 text-[11px] opacity-90 pt-1 font-semibold">
                             {lead.phone && (
                               <span className="flex items-center gap-1">
                                 <Phone className="h-3 w-3 opacity-70 shrink-0" />
