@@ -337,6 +337,7 @@ export interface GlobalSettings {
   pipelineAccess?: PipelineAccessSettings; // New setting
   telegramBotToken?: string | null;
   telegramChatIds?: string[] | null;
+  telegramScheduleChannelId?: string | null;
   telegramRedirectDomain?: string | null;
   transactionCategories?: TransactionCategory[]; // New field
   isCourierNoteVisible?: boolean;

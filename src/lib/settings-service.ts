@@ -83,6 +83,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   pipelineAccess: { canViewAllLeads: [] },
   transactionCategories: DEFAULT_TRANSACTION_CATEGORIES,
   telegramRedirectDomain: 'https://app.colorhutbd.xyz',
+  telegramScheduleChannelId: '-1004447610171',
   isCourierNoteVisible: true,
   designApprovalStatusIds: [],
   docsApprovalStatusIds: [],
@@ -214,8 +215,8 @@ export async function setRoleBasedTargets(targets: RoleBasedTarget): Promise<boo
   return updateSettings({ roleBasedTargets: targets });
 }
 
-export async function setTelegramSettings(botToken: string | null, chatIds: string[] | null, redirectDomain: string | null): Promise<boolean> {
-  return updateSettings({ telegramBotToken: botToken, telegramChatIds: chatIds ?? [], telegramRedirectDomain: redirectDomain });
+export async function setTelegramSettings(botToken: string | null, chatIds: string[] | null, redirectDomain: string | null, scheduleChannelId?: string | null): Promise<boolean> {
+  return updateSettings({ telegramBotToken: botToken, telegramChatIds: chatIds ?? [], telegramRedirectDomain: redirectDomain, telegramScheduleChannelId: scheduleChannelId ?? null });
 }
 
 export async function setTransactionCategories(categories: any[]): Promise<boolean> {

@@ -12,7 +12,7 @@ import { useSocket } from '@/contexts/socket-context';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { cn, formatDisplayName } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-service';
@@ -464,7 +464,7 @@ export default function CheckInOutPage() {
     return 'Good evening';
   }, [currentTime, isClient]);
 
-  const name = currentUser?.name.split(' ')[0] || 'User';
+  const name = formatDisplayName(currentUser?.name);
   const ActionIcon = status === 'Checked Out' ? Lock : Power;
 
   const isActionDisabled = !canPerformAction;

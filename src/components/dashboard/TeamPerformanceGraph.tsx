@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer, User as UserIcon, Download, CheckCircle } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { User as UserType, UserRole } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatDisplayName } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -403,7 +403,7 @@ export function TeamPerformanceGraph({
     const headers = ["Date"];
     users.forEach(user => {
       const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
-      const firstName = user.name.split(' ')[0];
+      const firstName = formatDisplayName(user.name);
       headers.push(`${firstName} (Target: ${userMonthlyTarget})`);
     });
 
@@ -411,7 +411,7 @@ export function TeamPerformanceGraph({
       const rowData: Record<string, any> = { 'Date': format(parseISO(row.date), 'd-MMM-yy') };
       users.forEach(user => {
         const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
-        const firstName = user.name.split(' ')[0];
+        const firstName = formatDisplayName(user.name);
         const userTasks = (row as any)[user.id] || { tasks: 0 };
         rowData[`${firstName} (Target: ${userMonthlyTarget})`] = `tasks: ${userTasks.tasks}`;
       });
@@ -421,7 +421,7 @@ export function TeamPerformanceGraph({
     const totalsRow: Record<string, any> = { 'Date': 'Total' };
     users.forEach(user => {
       const userTotal = totals.find(t => t.userId === user.id) || { totalTasks: 0, monthlyTarget: 0 };
-      const firstName = user.name.split(' ')[0];
+      const firstName = formatDisplayName(user.name);
       totalsRow[`${firstName} (Target: ${userTotal.monthlyTarget})`] = `tasks: ${userTotal.totalTasks}`;
     });
     rows.push(totalsRow);
@@ -667,7 +667,7 @@ export function TeamPerformanceGraph({
                 <Target className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <CardTitle className="text-xl sm:text-2xl font-black tracking-tighter flex items-center gap-2">
+                <CardTitle className="text-xl sm:text-2xl font-medium tracking-tight flex items-center gap-2">
                   <span className="hidden sm:inline"><Target className="h-5 w-5 text-primary" /></span>
                   {performanceTitle}
                 </CardTitle>
@@ -689,7 +689,7 @@ export function TeamPerformanceGraph({
                   <span className="text-[9px] sm:text-[10px] font-bold text-green-600/70 dark:text-green-400/70 uppercase tracking-tight leading-none truncate max-w-[60px] sm:max-w-none">{selectedTeam === 'CRM' ? "Sales" : selectedTeam === 'DESIGNER_REPRESENTATIVE' ? "Designed" : selectedTeam === 'CO' ? "Docs" : "Done"}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <p className="text-lg sm:text-2xl font-black text-foreground tabular-nums tracking-tighter leading-none">
+                  <p className="text-lg sm:text-2xl font-medium text-foreground tabular-nums tracking-tight leading-none">
                     {totals.totalDone.toLocaleString()}
                   </p>
                   <span className="text-[8px] text-muted-foreground font-medium uppercase tracking-tighter opacity-50">Total</span>
@@ -707,7 +707,7 @@ export function TeamPerformanceGraph({
                   <span className="text-[9px] sm:text-[10px] font-bold text-amber-600/70 dark:text-amber-400/70 uppercase tracking-tight leading-none">Goal</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <p className="text-lg sm:text-2xl font-black text-foreground tabular-nums tracking-tighter leading-none">
+                  <p className="text-lg sm:text-2xl font-medium text-foreground tabular-nums tracking-tight leading-none">
                     {totalPerformanceTarget.toLocaleString()}
                   </p>
                   <span className="text-[8px] text-muted-foreground font-medium uppercase tracking-tighter opacity-50">Target</span>

@@ -10,6 +10,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { addTaskEntry } from '@/lib/team-performance-service';
 import { format } from 'date-fns';
 
+import { getLeads } from '@/lib/lead-service';
+import { sendTelegramMessage } from '@/lib/notification-utils';
+import { formatDisplayName } from '@/lib/utils';
+import { getGlobalSettings } from '@/lib/settings-service';
+
 // This function is no longer used for setting targets, it might be removed in the future.
 // The logic is kept for historical purposes or if it needs to be reinstated.
 async function updateTargetInDb(targetType: 'monthly' | 'weekly', newTarget: number): Promise<boolean> {
@@ -146,5 +151,93 @@ export async function addTaskEntryAction(
   } catch (error) {
     console.error("Error in addTaskEntryAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function remindActiveCrmSchedulesAction(): Promise<{
+  success: boolean;
+  totalRemindersSent: number;
+  details: Array<{ crmName: string; scheduledCount: number; message: string }>;
+  error?: string;
+}> {
+  try {
+    const settings = await getGlobalSettings();
+    const scheduleChannelId = process.env.TELEGRAM_SCHEDULE_CHANNEL_ID || settings.telegramScheduleChannelId || '-1004447610171';
+
+    const allUsers = await getUsers();
+    // Filter active CRM users only (role === 'CRM' and not banned)
+    const activeCrmUsers = allUsers.filter(u => u.role === 'CRM' && !u.isBanned);
+
+    if (activeCrmUsers.length === 0) {
+      console.log("[Schedule Cron] No active CRM users found.");
+      return { success: true, totalRemindersSent: 0, details: [] };
+    }
+
+    // Get current date string in Bangladesh (UTC+6) YYYY-MM-DD
+    const now = new Date();
+    const bdDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" }); // Format: "YYYY-MM-DD"
+
+    const details: Array<{ crmName: string; scheduledCount: number; message: string }> = [];
+    const userBlocks: string[] = [];
+
+    for (const crmUser of activeCrmUsers) {
+      // Fetch leads for this specific CRM user
+      const leads = await getLeads(undefined, undefined, 'CRM', crmUser.id);
+
+      // Filter scheduled leads for today (comparing YYYY-MM-DD in BD time)
+      const todaysScheduledLeads = leads.filter(lead => {
+        if (!lead.schedule) return false;
+        try {
+          const leadDate = new Date(lead.schedule);
+          const leadBdDateStr = leadDate.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+          return leadBdDateStr === bdDateStr;
+        } catch {
+          return false;
+        }
+      });
+
+      const scheduledCount = todaysScheduledLeads.length;
+      const displayName = formatDisplayName(crmUser.name);
+
+      let userMsg = '';
+      if (scheduledCount > 0) {
+        userMsg = `<b>👤 ${displayName}</b>, you have <b>${scheduledCount}</b> schedule${scheduledCount === 1 ? '' : 's'} today`;
+      } else {
+        userMsg = `<b>👤 ${displayName}</b>, you don't have schedules today`;
+      }
+
+      userBlocks.push(userMsg);
+      details.push({
+        crmName: crmUser.name,
+        scheduledCount,
+        message: `${displayName}, ${scheduledCount > 0 ? `you have ${scheduledCount} schedule(s) today` : `you don't have schedules today`}`,
+      });
+    }
+
+    if (userBlocks.length > 0) {
+      const separator = '\n━━━━━━━━━━━━━━━━━━━━\n';
+      const headerBlock = `<blockquote><b>📅 TODAY SCHEDULE</b></blockquote>`;
+      const fullTelegramMessage = `${headerBlock}\n${separator}${userBlocks.join(separator)}`;
+
+      const inlineKeyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: '📊 Open Dashboard',
+              url: `${settings.telegramRedirectDomain || 'https://app.colorhutbd.xyz'}/dashboard`
+            }
+          ]
+        ]
+      };
+
+      console.log(`[Schedule Cron] Sending consolidated TODAY SCHEDULE notification to Telegram channel...`);
+      await sendTelegramMessage(fullTelegramMessage, inlineKeyboard, scheduleChannelId);
+    }
+
+    console.log(`[Schedule Cron] Completed schedule reminder cron job for ${activeCrmUsers.length} CR users.`);
+    return { success: true, totalRemindersSent: activeCrmUsers.length, details };
+  } catch (error) {
+    console.error("Error in remindActiveCrmSchedulesAction:", error);
+    return { success: false, totalRemindersSent: 0, details: [], error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

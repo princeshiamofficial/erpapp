@@ -45,8 +45,12 @@ import {
   TrendingUp, // For Assets icon
   Target, // For Target icon
   LineChart as LineChartIcon,
-  Gift
+  Gift,
+  Clock,
+  ChevronRight,
+  Phone
 } from 'lucide-react';
+import Link from 'next/link';
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -77,7 +81,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"; // Added AlertDialog
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { cn, formatDisplayName } from '@/lib/utils';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { divisions } from '@/lib/district-data'; // Import divisions data
 import type { DateRange, PredefinedRange } from "@/components/dashboard/date-range-picker";
@@ -440,6 +444,25 @@ function DashboardContent() {
     }
     return leadsToFilter;
   }, [allLeads, currentUser, selectedCrmId]);
+
+  const todayScheduledLeads = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    return filteredLeads.filter(lead => {
+      if (!lead.schedule) return false;
+      try {
+        const sched = parseISO(lead.schedule);
+        return isValid(sched) && format(sched, 'yyyy-MM-dd') === todayStr;
+      } catch {
+        return false;
+      }
+    }).sort((a, b) => {
+      try {
+        return new Date(a.schedule!).getTime() - new Date(b.schedule!).getTime();
+      } catch {
+        return 0;
+      }
+    });
+  }, [filteredLeads]);
 
   const filteredProjects = useMemo(() => {
     let projectsToFilter = [...allProjects];
@@ -1353,6 +1376,256 @@ function DashboardContent() {
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
+  const NOTE_STYLES = [
+    { bg: "bg-[#94b9e9] text-[#0f3460] border-[#7aa5e2] dark:bg-[#1e293b] dark:text-[#93c5fd] dark:border-blue-800", torn: "text-[#94b9e9] dark:text-[#1e293b]" },
+    { bg: "bg-[#a8e6cf] text-[#054a29] border-[#8edbbd] dark:bg-[#064e3b] dark:text-[#6ee7b7] dark:border-emerald-800", torn: "text-[#a8e6cf] dark:text-[#064e3b]" },
+    { bg: "bg-[#fce1d6] text-[#632c1c] border-[#f9cabb] dark:bg-[#7c2d12] dark:text-[#fdba74] dark:border-amber-800", torn: "text-[#fce1d6] dark:text-[#7c2d12]" },
+    { bg: "bg-[#fca370] text-[#4a1c03] border-[#f88f54] dark:bg-[#7c2d12] dark:text-[#fed7aa] dark:border-amber-900", torn: "text-[#fca370] dark:text-[#7c2d12]" },
+    { bg: "bg-[#ff8b94] text-[#4a0a10] border-[#ff7580] dark:bg-[#881337] dark:text-[#fecdd3] dark:border-rose-900", torn: "text-[#ff8b94] dark:text-[#881337]" },
+    { bg: "bg-[#b8a7ea] text-[#2c1854] border-[#a592e3] dark:bg-[#4c1d95] dark:text-[#ddd6fe] dark:border-purple-900", torn: "text-[#b8a7ea] dark:text-[#4c1d95]" },
+  ];
+
+  const renderTodayScheduleCard = () => {
+    return (
+      <Card className="bg-card border shadow-xl rounded-2xl overflow-hidden group relative flex flex-col h-full min-h-[380px] sm:min-h-[420px] w-full">
+        {/* SVG Graph Paper Background */}
+        <div className="absolute inset-0 opacity-25 pointer-events-none z-0">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="mindmap-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.6" className="text-muted-foreground/60" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#mindmap-grid)" />
+          </svg>
+        </div>
+
+        <CardContent className="p-3 sm:p-4 pt-5 pb-3 sm:pb-4 relative z-10 flex-1 flex flex-col justify-start">
+          {/* Permanent Top Header: Mind Map Center Yellow Node */}
+          <div className="flex justify-center mb-1 relative z-10">
+            <div className="relative">
+              {/* Top Tape */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-4 bg-white/85 dark:bg-white/40 border border-black/10 shadow-xs transform rotate-2 z-30 pointer-events-none rounded-xs" />
+              
+              {/* Main Yellow Center Node */}
+              <div className="bg-[#fef08a] dark:bg-[#713f12] text-[#854d0e] dark:text-[#fef08a] border-t border-x border-[#fde047] dark:border-[#a16207] px-6 py-2.5 rounded-t-lg shadow-md text-center transform -rotate-1 relative z-20">
+                <h3 className="font-extrabold text-sm sm:text-base tracking-widest uppercase font-serif">
+                  TODAY SCHEDULE
+                </h3>
+                <p className="text-[11px] font-bold opacity-80 mt-0.5">
+                  {todayScheduledLeads.length} Scheduled Appointment{todayScheduledLeads.length === 1 ? '' : 's'}
+                </p>
+              </div>
+
+              {/* SVG Torn Edge Bottom */}
+              <svg className="w-full h-3 shrink-0 -mt-0.5 relative z-20 block transform -rotate-1" viewBox="0 0 100 12" preserveAspectRatio="none">
+                <path d="M0,0 L0,4 Q4,9 8,3 Q12,0 16,5 Q20,10 24,4 Q28,0 32,5 Q36,10 40,3 Q44,0 48,5 Q52,10 56,4 Q60,0 64,5 Q68,10 72,3 Q76,0 80,5 Q84,10 88,4 Q92,0 96,5 Q100,10 100,0 Z" fill="currentColor" className="text-[#fef08a] dark:text-[#713f12]" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Hand-drawn Connecting SVG Arrows */}
+          <div className="flex justify-center -mt-1 mb-2 relative z-10 pointer-events-none">
+            <svg className="w-full max-w-[500px] h-9 text-foreground/80" viewBox="0 0 300 35" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <defs>
+                <marker id="mindmap-arrowhead" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" className="text-foreground/80" />
+                </marker>
+              </defs>
+              <path d="M 150 2 Q 100 15 45 28" markerEnd="url(#mindmap-arrowhead)" />
+              <path d="M 150 2 L 150 28" markerEnd="url(#mindmap-arrowhead)" />
+              <path d="M 150 2 Q 200 15 255 28" markerEnd="url(#mindmap-arrowhead)" />
+            </svg>
+          </div>
+
+          {isLoadingData ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : todayScheduledLeads.length > 0 ? (
+            <ScrollArea className="h-[280px] sm:h-[320px] w-full pr-2 -mr-2 sm:mr-0 sm:pr-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 pt-1 pb-1">
+                {todayScheduledLeads.map((lead, index) => {
+                  let formattedDate = '';
+                  try {
+                    const dt = parseISO(lead.schedule!);
+                    if (isValid(dt)) {
+                      formattedDate = format(dt, 'd MMM, yyyy');
+                    }
+                  } catch {}
+
+                  const style = NOTE_STYLES[index % NOTE_STYLES.length];
+
+                  return (
+                    <motion.div
+                      key={lead.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.2, delay: index * 0.05 }}
+                      className="relative group/note flex flex-col transition-all duration-200 hover:-translate-y-1 drop-shadow-sm hover:drop-shadow-md"
+                    >
+                      {/* Top Tape Strip */}
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-14 sm:w-16 h-4 bg-white/75 dark:bg-white/35 border border-black/10 shadow-xs transform -rotate-1 z-30 pointer-events-none rounded-xs backdrop-blur-2xs opacity-90" />
+
+                      {/* Sticky Note Body */}
+                      <div className={cn("p-3.5 sm:p-4 rounded-t-xl border-t border-x flex-1 flex flex-col justify-between relative z-10", style.bg)}>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-extrabold text-xs sm:text-sm uppercase tracking-wide truncate">
+                              {lead.contactName}
+                            </h4>
+                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-black/10 shrink-0">
+                              #{String(index + 1).padStart(2, '0')}
+                            </span>
+                          </div>
+
+                          {lead.businessName && (
+                            <p className="text-[11px] font-bold opacity-85 truncate">
+                              ({lead.businessName})
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-2.5 text-[11px] opacity-90 pt-1 flex-wrap font-semibold">
+                            {lead.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3 opacity-70 shrink-0" />
+                                {lead.phone}
+                              </span>
+                            )}
+                            {formattedDate && (
+                              <span className="flex items-center gap-1 font-bold">
+                                <CalendarDays className="h-3 w-3 opacity-70 shrink-0" />
+                                {formattedDate}
+                              </span>
+                            )}
+                          </div>
+
+                          {lead.notes && (
+                            <p className="text-[11px] italic opacity-85 line-clamp-2 pt-1.5 border-t border-black/10 mt-1.5">
+                              "{lead.notes}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* SVG Torn Edge Bottom (Snug Overlap -mt-1) */}
+                      <svg className="w-full h-3 shrink-0 -mt-1 relative z-10 block" viewBox="0 0 100 12" preserveAspectRatio="none">
+                        <path d="M0,0 L0,4 Q4,9 8,3 Q12,0 16,5 Q20,10 24,4 Q28,0 32,5 Q36,10 40,3 Q44,0 48,5 Q52,10 56,4 Q60,0 64,5 Q68,10 72,3 Q76,0 80,5 Q84,10 88,4 Q92,0 96,5 Q100,10 100,0 Z" fill="currentColor" className={style.torn} />
+                      </svg>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground/60 text-center my-auto relative z-10">
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded-2xl mb-2.5 border border-amber-300 dark:border-amber-700 shadow-xs">
+                <CalendarDays className="h-8 w-8 opacity-80" />
+              </div>
+              <p className="font-bold text-sm text-foreground">No appointments scheduled for today</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
+                Add schedules to leads in your Pipeline to pin them here.
+              </p>
+              <Button asChild size="sm" variant="outline" className="mt-3 text-xs rounded-lg shadow-xs border-border/60 hover:bg-primary hover:text-primary-foreground">
+                <Link href="/pipeline">
+                  Go to Pipeline
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderTrafficSourcesCard = () => {
+    return (
+      <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden flex flex-col h-full min-h-[380px] sm:min-h-[420px] w-full">
+        <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4 shrink-0">
+          <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
+            <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
+              <PieChartIcon className="h-5 w-5 text-primary" />
+            </div>
+            <span className="hidden sm:inline-flex items-center">
+              <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
+            </span>
+            Traffic Sources
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={cn("p-2 sm:p-4 flex-1 flex flex-col justify-center min-h-0", isCrm ? "h-[300px] sm:h-[340px]" : "h-[220px] sm:h-[250px]")}>
+          {isLoadingContent ? (
+            <div className="flex items-center justify-center h-full">
+              <Skeleton className={cn(isCrm ? "h-64 w-64" : "h-36 w-36", "rounded-full")} />
+            </div>
+          ) : trafficSourcesData.length > 0 ? (
+            <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
+                  <Pie 
+                    data={trafficSourcesData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={isCrm ? 70 : 50} 
+                    outerRadius={isCrm ? 90 : 65} 
+                    paddingAngle={4}
+                    cornerRadius={6}
+                    strokeWidth={0}
+                  >
+                    <RechartsLabel
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          const totalLeads = trafficSourcesData.reduce((acc, curr) => acc + curr.value, 0);
+                          return (
+                            <text
+                              x={viewBox.cx}
+                              y={viewBox.cy}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                            >
+                              <tspan
+                                x={viewBox.cx}
+                                y={(viewBox.cy || 0) - (isCrm ? 8 : 4)}
+                                className={cn("fill-foreground font-bold font-mono tracking-tight", isCrm ? "text-2xl" : "text-xl")}
+                              >
+                                {totalLeads}
+                              </tspan>
+                              <tspan
+                                x={viewBox.cx}
+                                y={(viewBox.cy || 0) + (isCrm ? 14 : 12)}
+                                className={cn("fill-muted-foreground uppercase tracking-widest font-semibold", isCrm ? "text-[10px]" : "text-[9px]")}
+                              >
+                                Total Leads
+                              </tspan>
+                            </text>
+                          );
+                        }
+                        return null;
+                      }}
+                      position="center"
+                    />
+                    {trafficSourcesData.map((entry) => (
+                      <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              No lead source data available.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   const renderRecentFeedbackCard = () => {
     return (
       <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
@@ -1454,7 +1727,7 @@ function DashboardContent() {
       <div className="space-y-6 px-1.5 py-4 sm:p-6 lg:p-8 custom-scrollbar-hidden print:p-0">
         <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-5 sm:p-8 rounded-2xl sm:rounded-xl shadow-xl print:hidden">
           <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
-            Welcome {currentUser?.name.split(' ')[0] || 'User'}
+            Welcome {formatDisplayName(currentUser?.name)}
             <Hand className="ml-2 h-8 w-8 transform rotate-[20deg] text-yellow-300" />
           </h1>
           <p className="text-md sm:text-lg text-primary-foreground/90 mt-1">
@@ -1527,209 +1800,138 @@ function DashboardContent() {
               ))}
             </div>
 
+            {currentUser?.role === 'CRM' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start print:hidden">
+                {renderTrafficSourcesCard()}
+                {renderTodayScheduleCard()}
+              </div>
+            )}
+
 
             <div className="flex flex-col gap-6 print:hidden">
-              <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden w-full">
-                <CardHeader className="border-b bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
-                  <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                    <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
-                      <BarChartBig className="h-5 w-5 text-primary" />
-                    </div>
-                    <span className="hidden sm:inline-flex items-center">
-                      <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-                    </span>
-                    Sales ({currentDateRangeLabel})
-                    {currentUser?.role === 'CRM' && <span className="ml-2 text-xs sm:text-sm font-normal text-muted-foreground">(Your Sales)</span>}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="h-[280px] sm:h-[350px] p-1.5 sm:p-4 mt-2">
-                  {isLoadingContent ? (
-                    <div className="flex items-center justify-center h-full">
-                      <Skeleton className="h-full w-full" />
-                    </div>
-                  ) : (
-                    <ChartContainer config={chartConfig} className="w-full h-full">
-                      <RechartsLineChart
-                        data={salesChartData}
-                        margin={{
-                          top: 5,
-                          right: 20,
-                          left: -10,
-                          bottom: 0,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
-                        <XAxis
-                          dataKey="date"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => {
-                            if (chartGranularity === 'hourly') {
-                              const hour = parseInt(value);
-                              if (isNaN(hour)) return value;
-                              if (hour === 0) return '12 AM';
-                              if (hour === 12) return '12 PM';
-                              if (hour < 12) return `${hour} AM`;
-                              return `${hour - 12} PM`;
-                            }
-                            if (chartGranularity === 'monthly') {
+              {currentUser?.role !== 'CRM' && (
+                <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden w-full">
+                  <CardHeader className="border-b bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
+                    <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                      <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
+                        <BarChartBig className="h-5 w-5 text-primary" />
+                      </div>
+                      <span className="hidden sm:inline-flex items-center">
+                        <BarChartBig className="mr-2 h-6 w-6 text-primary" />
+                      </span>
+                      Sales ({currentDateRangeLabel})
+                      {currentUser?.role === 'CRM' && <span className="ml-2 text-xs sm:text-sm font-normal text-muted-foreground">(Your Sales)</span>}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[280px] sm:h-[350px] p-1.5 sm:p-4 mt-2">
+                    {isLoadingContent ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                    ) : (
+                      <ChartContainer config={chartConfig} className="w-full h-full">
+                        <RechartsLineChart
+                          data={salesChartData}
+                          margin={{
+                            top: 5,
+                            right: 20,
+                            left: -10,
+                            bottom: 0,
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
+                          <XAxis
+                            dataKey="date"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tickFormatter={(value) => {
+                              if (chartGranularity === 'hourly') {
+                                const hour = parseInt(value);
+                                if (isNaN(hour)) return value;
+                                if (hour === 0) return '12 AM';
+                                if (hour === 12) return '12 PM';
+                                if (hour < 12) return `${hour} AM`;
+                                return `${hour - 12} PM`;
+                              }
+                              if (chartGranularity === 'monthly') {
+                                try {
+                                  const dateStr = value.length === 7 ? `${value}-01` : value;
+                                  const date = parseISO(dateStr);
+                                  if (!isValid(date)) return value;
+                                  return format(date, 'MMM');
+                                } catch (e) { return value; }
+                              }
                               try {
-                                const dateStr = value.length === 7 ? `${value}-01` : value;
-                                const date = parseISO(dateStr);
+                                const date = parseISO(value);
                                 if (!isValid(date)) return value;
-                                return format(date, 'MMM');
+                                return format(date, 'd MMM');
                               } catch (e) { return value; }
-                            }
-                            try {
-                              const date = parseISO(value);
-                              if (!isValid(date)) return value;
-                              return format(date, 'd MMM');
-                            } catch (e) { return value; }
-                          }}
-                          className="text-xs"
-                          interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined}
-                        />
-                        <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => showAmount ? `৳${Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : value}
-                          className="text-xs"
-                        />
-                        <ChartTooltip
-                          cursor={false}
-                          content={<CustomTooltipContent />}
-                        />
-                        <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ padding: '10px' }} />
-                        <Line
-                          dataKey={chartDataKey}
-                          name={chartDataKey === 'sales' ? 'Sales (BDT)' : 'orders'}
-                          type="monotone"
-                          stroke="var(--color-sales)"
-                          strokeWidth={2}
-                          dot={{
-                            r: 4,
-                            fill: "var(--color-sales)",
-                            strokeWidth: 2,
-                            stroke: "hsl(var(--background))",
-                          }}
-                          activeDot={{
-                            r: 6,
-                            fill: "var(--color-sales)",
-                            strokeWidth: 2,
-                            stroke: "hsl(var(--background))",
-                          }}
-                        />
-                        {!showAmount && (
+                            }}
+                            className="text-xs"
+                            interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined}
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tickFormatter={(value) => showAmount ? `৳${Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : value}
+                            className="text-xs"
+                          />
+                          <ChartTooltip
+                            cursor={false}
+                            content={<CustomTooltipContent />}
+                          />
+                          <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ padding: '10px' }} />
                           <Line
-                            dataKey="deliveries"
-                            name="deliveries"
+                            dataKey={chartDataKey}
+                            name={chartDataKey === 'sales' ? 'Sales (BDT)' : 'orders'}
                             type="monotone"
-                            stroke="var(--color-deliveries)"
+                            stroke="var(--color-sales)"
                             strokeWidth={2}
                             dot={{
                               r: 4,
-                              fill: "var(--color-deliveries)",
+                              fill: "var(--color-sales)",
                               strokeWidth: 2,
                               stroke: "hsl(var(--background))",
                             }}
                             activeDot={{
                               r: 6,
-                              fill: "var(--color-deliveries)",
+                              fill: "var(--color-sales)",
                               strokeWidth: 2,
                               stroke: "hsl(var(--background))",
                             }}
                           />
-                        )}
-                      </RechartsLineChart>
-                    </ChartContainer>
-                  )}
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
-                  <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4">
-                    <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                      <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
-                        <PieChartIcon className="h-5 w-5 text-primary" />
-                      </div>
-                      <span className="hidden sm:inline-flex items-center">
-                        <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
-                      </span>
-                      Traffic Sources
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className={cn("p-2 sm:p-4", isCrm ? "h-[380px] sm:h-[400px]" : "h-[220px] sm:h-[250px]")}>
-                    {isLoadingContent ? (
-                      <div className="flex items-center justify-center h-full">
-                        <Skeleton className={cn(isCrm ? "h-64 w-64" : "h-36 w-36", "rounded-full")} />
-                      </div>
-                    ) : trafficSourcesData.length > 0 ? (
-                      <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsPieChart>
-                            <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-                            <Pie 
-                              data={trafficSourcesData} 
-                              dataKey="value" 
-                              nameKey="name" 
-                              cx="50%" 
-                              cy="50%" 
-                              innerRadius={isCrm ? 70 : 50} 
-                              outerRadius={isCrm ? 90 : 65} 
-                              paddingAngle={4}
-                              cornerRadius={6}
-                              strokeWidth={0}
-                            >
-                              <RechartsLabel
-                                content={({ viewBox }) => {
-                                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                                    const totalLeads = trafficSourcesData.reduce((acc, curr) => acc + curr.value, 0);
-                                    return (
-                                      <text
-                                        x={viewBox.cx}
-                                        y={viewBox.cy}
-                                        textAnchor="middle"
-                                        dominantBaseline="middle"
-                                      >
-                                        <tspan
-                                          x={viewBox.cx}
-                                          y={(viewBox.cy || 0) - (isCrm ? 8 : 4)}
-                                          className={cn("fill-foreground font-bold font-mono tracking-tight", isCrm ? "text-2xl" : "text-xl")}
-                                        >
-                                          {totalLeads}
-                                        </tspan>
-                                        <tspan
-                                          x={viewBox.cx}
-                                          y={(viewBox.cy || 0) + (isCrm ? 14 : 12)}
-                                          className={cn("fill-muted-foreground uppercase tracking-widest font-semibold", isCrm ? "text-[10px]" : "text-[9px]")}
-                                        >
-                                          Total Leads
-                                        </tspan>
-                                      </text>
-                                    );
-                                  }
-                                  return null;
-                                }}
-                                position="center"
-                              />
-                              {trafficSourcesData.map((entry) => (
-                                <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                              ))}
-                            </Pie>
-                            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                          </RechartsPieChart>
-                        </ResponsiveContainer>
+                          {!showAmount && (
+                            <Line
+                              dataKey="deliveries"
+                              name="deliveries"
+                              type="monotone"
+                              stroke="var(--color-deliveries)"
+                              strokeWidth={2}
+                              dot={{
+                                r: 4,
+                                fill: "var(--color-deliveries)",
+                                strokeWidth: 2,
+                                stroke: "hsl(var(--background))",
+                              }}
+                              activeDot={{
+                                r: 6,
+                                fill: "var(--color-deliveries)",
+                                strokeWidth: 2,
+                                stroke: "hsl(var(--background))",
+                              }}
+                            />
+                          )}
+                        </RechartsLineChart>
                       </ChartContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground">
-                        No lead source data available.
-                      </div>
                     )}
                   </CardContent>
                 </Card>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                {currentUser?.role !== 'CRM' && renderTrafficSourcesCard()}
 
                 {canSeeSystemAdminCharts && (
                   <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden">
@@ -1792,7 +1994,7 @@ function DashboardContent() {
                   </Card>
                 )}
 
-                {currentUser?.role === 'CRM' && renderRecentFeedbackCard()}
+                {currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
               </div>
             </div>
           </>
