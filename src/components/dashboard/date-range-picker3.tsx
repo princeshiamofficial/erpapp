@@ -50,6 +50,7 @@ interface DateRangePicker3Props {
   onDateRangeChange: (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => void;
   align?: "start" | "center" | "end";
   className?: string;
+  compactOnMobile?: boolean;
 }
 
 const PREDEFINED_RANGES_CONFIG: { label: string; value: PredefinedRange }[] = [
@@ -92,6 +93,7 @@ export function DateRangePicker3({
   onDateRangeChange,
   align = "end",
   className,
+  compactOnMobile = false,
 }: DateRangePicker3Props) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(
     initialRange
@@ -187,11 +189,16 @@ export function DateRangePicker3({
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className={cn("w-full justify-start text-left font-normal sm:w-auto h-9 sm:h-10 min-w-0 max-w-full overflow-hidden", className)}
+          className={cn(
+            "w-full justify-start text-left font-normal sm:w-auto h-9 sm:h-10 min-w-0 max-w-full overflow-hidden",
+            compactOnMobile && "w-10 sm:w-auto p-0 sm:px-4 justify-center sm:justify-start shrink-0",
+            className
+          )}
+          title={triggerButtonDisplayLabel}
         >
-          <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
-          <span className="truncate flex-1 min-w-0">{triggerButtonDisplayLabel}</span>
-          <ChevronDown className="ml-auto h-4 w-4 opacity-70 shrink-0" />
+          <CalendarDays className={cn("h-4 w-4 shrink-0", !compactOnMobile ? "mr-2" : "sm:mr-2")} />
+          <span className={cn("truncate flex-1 min-w-0", compactOnMobile && "hidden sm:inline")}>{triggerButtonDisplayLabel}</span>
+          <ChevronDown className={cn("ml-auto h-4 w-4 opacity-70 shrink-0", compactOnMobile && "hidden sm:inline")} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">

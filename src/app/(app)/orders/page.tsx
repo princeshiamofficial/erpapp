@@ -411,9 +411,9 @@ export default function OrdersPage() {
   );
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-0 sm:p-0 w-full max-w-full min-w-0 overflow-x-hidden">
-      <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-full page-header min-w-0">
-        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end min-w-0">
+    <div className="space-y-4 sm:space-y-6 p-0 sm:p-0 w-full max-w-full min-w-0">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full page-header min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           {(currentUser.role === 'SYSTEM_ADMIN') && (
             <Button 
               variant="outline" 
@@ -434,6 +434,9 @@ export default function OrdersPage() {
               </Button>
             </Link>
           )}
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 justify-end min-w-0">
           {canCreateOrder && (
             <CreateOrderDialog
               currentUser={currentUser}
@@ -497,61 +500,60 @@ export default function OrdersPage() {
             {!(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
               <div className="flex-grow" />
             )}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
-                  /* Mobile Filter Icon Button */
-                  <div className="sm:hidden">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant={viewType !== 'orders' ? 'default' : 'outline'}
-                          size="icon"
-                          className="h-10 w-10 shrink-0 relative rounded-md shadow-sm"
-                          title="Filter view"
-                        >
-                          <Filter className="h-4 w-4" />
-                          {viewType !== 'orders' && (
-                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                            </span>
-                          )}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48">
-                        <DropdownMenuItem
-                          onClick={() => setViewType('orders')}
-                          className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'orders' && "bg-accent text-accent-foreground font-semibold")}
-                        >
-                          <PackageIcon className="h-4 w-4 text-primary" />
-                          <span>Orders</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setViewType('reorders')}
-                          className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'reorders' && "bg-accent text-accent-foreground font-semibold")}
-                        >
-                          <Repeat className="h-4 w-4 text-primary" />
-                          <span>Reorders</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setViewType('pending_payment')}
-                          className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'pending_payment' && "bg-accent text-accent-foreground font-semibold")}
-                        >
-                          <CreditCard className="h-4 w-4 text-primary" />
-                          <span>Pending Payment</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-                <DateRangePicker3
-                  initialRange={selectedDateRange}
-                  onDateRangeChange={handleDateRangeChange}
-                  className="h-10 flex-1 sm:flex-initial sm:w-auto"
-                />
-              </div>
-              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                /* Mobile Filter Icon Button */
+                <div className="sm:hidden">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant={viewType !== 'orders' ? 'default' : 'outline'}
+                        size="icon"
+                        className="h-10 w-10 shrink-0 relative rounded-md shadow-sm"
+                        title="Filter view"
+                      >
+                        <Filter className="h-4 w-4" />
+                        {viewType !== 'orders' && (
+                          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuItem
+                        onClick={() => setViewType('orders')}
+                        className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'orders' && "bg-accent text-accent-foreground font-semibold")}
+                      >
+                        <PackageIcon className="h-4 w-4 text-primary" />
+                        <span>Orders</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setViewType('reorders')}
+                        className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'reorders' && "bg-accent text-accent-foreground font-semibold")}
+                      >
+                        <Repeat className="h-4 w-4 text-primary" />
+                        <span>Reorders</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setViewType('pending_payment')}
+                        className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'pending_payment' && "bg-accent text-accent-foreground font-semibold")}
+                      >
+                        <CreditCard className="h-4 w-4 text-primary" />
+                        <span>Pending Payment</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+              <DateRangePicker3
+                initialRange={selectedDateRange}
+                onDateRangeChange={handleDateRangeChange}
+                compactOnMobile={true}
+                className="h-10"
+              />
+              <div className="relative flex-1 sm:w-64 sm:flex-initial">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search orders..."
