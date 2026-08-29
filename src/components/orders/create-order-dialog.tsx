@@ -445,12 +445,26 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   };
 
+  const lastTapRef = useRef<{ [key: string]: number }>({});
+
   const handleToggleGift = (itemId: string) => {
     setOrderItems(prevItems =>
       prevItems.map(item =>
         item.id === itemId ? { ...item, isGift: !item.isGift } : item
       )
     );
+  };
+
+  const handleItemTouchEnd = (itemId: string, e: React.TouchEvent) => {
+    const now = Date.now();
+    const lastTap = lastTapRef.current[itemId] || 0;
+    if (now - lastTap < 350) {
+      e.preventDefault();
+      handleToggleGift(itemId);
+      lastTapRef.current[itemId] = 0;
+    } else {
+      lastTapRef.current[itemId] = now;
+    }
   };
 
   const togglePopover = (itemId: string, open?: boolean) => {
@@ -884,6 +898,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                         <TableCell 
                           className="p-2 align-middle text-right pr-4 font-semibold text-sm whitespace-nowrap cursor-pointer select-none"
                           onDoubleClick={() => handleToggleGift(item.id)}
+                          onTouchEnd={(e) => handleItemTouchEnd(item.id, e)}
                         >
                           <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
                             {formatCurrencyBdt(item.lineItemTotalPrice)}

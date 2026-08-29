@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { format, isWithinInterval, parseISO, subDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay, addDays, subMonths, isValid } from "date-fns";
@@ -116,6 +117,21 @@ const StatusTimeline = dynamic(() => import('./StatusTimeline').then(mod => mod.
   loading: () => <Skeleton className="h-24 w-full" />
 });
 
+const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
+
+const matchableDistricts = divisions.flatMap(div => 
+  div.districts.map(dist => {
+    const namesToMatch = [dist.name, ...(dist.aliases || [])];
+    const simplifiedNames = namesToMatch
+      .map(name => simplifyString(name))
+      .filter(name => name.length > 0);
+    return {
+      name: dist.name,
+      division: div.division,
+      simplifiedNames
+    };
+  })
+);
 
 const chartConfig = {
   sales: {
@@ -144,6 +160,10 @@ const topSalesAreaChartConfig: ChartConfig = {
   sales: {
     label: "Sales",
     color: "hsl(var(--chart-1))",
+  },
+  count: {
+    label: "Orders",
+    color: "hsl(var(--chart-2))",
   },
 };
 
@@ -530,6 +550,76 @@ function DashboardContent() {
       }))
       .sort((a, b) => b.sales - a.sales);
 
+  }, [filteredOrders]);
+
+  const areaLeaderboardData = useMemo(() => {
+    const ALL_BANGLADESH_DIVISIONS = [
+      "Dhaka",
+      "Chattogram",
+      "Rajshahi",
+      "Khulna",
+      "Barishal",
+      "Sylhet",
+      "Rangpur",
+      "Mymensingh",
+      "Others"
+    ];
+
+    const divisionStats: Record<string, { name: string; orderCount: number; totalSales: number; districts: Set<string> }> = {};
+
+    ALL_BANGLADESH_DIVISIONS.forEach(divName => {
+      divisionStats[divName] = {
+        name: divName,
+        orderCount: 0,
+        totalSales: 0,
+        districts: new Set<string>(),
+      };
+    });
+
+    let totalOrdersCount = 0;
+
+    filteredOrders.forEach(order => {
+      let longestMatch: { name: string; division: string } | null = null;
+      let longestMatchLength = 0;
+      const textToMatch = `${order.address || ''} ${order.shippingArea || ''}`;
+      const simplifiedText = simplifyString(textToMatch);
+
+      for (const dist of matchableDistricts) {
+        for (const simplifiedName of dist.simplifiedNames) {
+          if (simplifiedText.includes(simplifiedName)) {
+            if (simplifiedName.length > longestMatchLength) {
+              longestMatchLength = simplifiedName.length;
+              longestMatch = { name: dist.name, division: dist.division };
+            }
+          }
+        }
+      }
+
+      const rawDivisionName = longestMatch ? longestMatch.division : "Others";
+      const cleanDivisionName = rawDivisionName.replace(/\s*Division\s*/i, '').trim();
+      const districtName = longestMatch ? longestMatch.name : (order.shippingArea?.trim() || "");
+      const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
+
+      const targetDivKey = divisionStats[cleanDivisionName] ? cleanDivisionName : "Others";
+
+      divisionStats[targetDivKey].orderCount += 1;
+      divisionStats[targetDivKey].totalSales += orderTotal;
+      if (districtName) {
+        divisionStats[targetDivKey].districts.add(districtName);
+      }
+      totalOrdersCount += 1;
+    });
+
+    return Object.values(divisionStats)
+      .map(item => ({
+        name: item.name,
+        division: item.name,
+        orderCount: item.orderCount,
+        totalSales: item.totalSales,
+        districtCount: item.districts.size,
+        percentage: totalOrdersCount > 0 ? (item.orderCount / totalOrdersCount) * 100 : 0,
+      }))
+      .sort((a, b) => b.orderCount - a.orderCount || b.totalSales - a.totalSales || a.name.localeCompare(b.name));
   }, [filteredOrders]);
 
   const paymentMethodData = useMemo(() => {
@@ -1550,7 +1640,7 @@ function DashboardContent() {
 
   const renderTrafficSourcesCard = () => {
     return (
-      <Card className="shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden flex flex-col h-full min-h-[380px] sm:min-h-[420px] w-full">
+      <Card className={cn("shadow-xl bg-card rounded-2xl sm:rounded-lg border-none sm:border overflow-hidden flex flex-col w-full", isCrm && "h-full min-h-[380px] sm:min-h-[420px]")}>
         <CardHeader className="bg-muted/5 sm:bg-transparent px-4 py-3 sm:px-6 sm:py-4 shrink-0">
           <CardTitle className="flex items-center text-lg sm:text-xl font-bold tracking-tight text-foreground">
             <div className="p-2 bg-primary/10 rounded-lg mr-3 sm:hidden">
@@ -1562,7 +1652,7 @@ function DashboardContent() {
             Traffic Sources
           </CardTitle>
         </CardHeader>
-        <CardContent className={cn("p-2 sm:p-4 flex-1 flex flex-col justify-center min-h-0", isCrm ? "h-[300px] sm:h-[340px]" : "h-[220px] sm:h-[250px]")}>
+        <CardContent className={cn("p-2 sm:p-4 flex flex-col justify-center min-h-0", isCrm ? "flex-1 h-[300px] sm:h-[340px]" : "h-[220px] sm:h-[250px]")}>
           {isLoadingContent ? (
             <div className="flex items-center justify-center h-full">
               <Skeleton className={cn(isCrm ? "h-64 w-64" : "h-36 w-36", "rounded-full")} />
@@ -1726,6 +1816,83 @@ function DashboardContent() {
         <div className="absolute -right-8 -bottom-8 opacity-[0.03] sm:hidden pointer-events-none transform rotate-12 scale-150">
           <MessageSquare className="h-32 w-32 text-primary" />
         </div>
+      </Card>
+    );
+  };
+
+  const renderAreaLeaderboardCard = () => {
+    return (
+      <Card className="bg-card/95 border-none sm:border border-border/30 shadow-xl sm:shadow-lg rounded-2xl sm:rounded-lg overflow-hidden group relative">
+        <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-6 relative z-10 flex flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="p-2 bg-primary/10 rounded-lg sm:hidden">
+              <MapPin className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                <span className="hidden sm:inline"><MapPin className="mr-2 h-5 w-5 text-primary" /></span>
+                Division Leaderboard
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Order distribution across divisions
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="h-[400px] p-2 sm:p-4">
+          {isLoadingContent ? (
+            <Skeleton className="h-[360px] w-full" />
+          ) : areaLeaderboardData.length > 0 ? (
+            <ChartContainer config={topSalesAreaChartConfig} className="w-full h-full">
+              <RechartsBarChart data={areaLeaderboardData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                <YAxis dataKey="name" type="category" tick={<LeftAlignedTick />} width={145} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                <XAxis type="number" hide />
+                <ChartTooltip
+                  cursor={{ fill: 'hsl(var(--muted))' }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg border bg-background p-2.5 shadow-sm">
+                          <div className="grid grid-cols-1 gap-1">
+                            <span className="text-sm font-bold text-foreground">{data.name} Division</span>
+                            <span className="text-xs text-muted-foreground">
+                              Orders: {data.orderCount} ({data.percentage.toFixed(1)}%)
+                            </span>
+                            {showAmount && data.totalSales > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                Sales: {formatCurrency(data.totalSales)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 8, 8, 0]} barSize={16}>
+                  <LabelList
+                    dataKey="percentage"
+                    position="right"
+                    offset={8}
+                    className="fill-foreground text-xs font-medium"
+                    formatter={(value: number) => `${value.toFixed(1)}%`}
+                  />
+                </Bar>
+              </RechartsBarChart>
+            </ChartContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex flex-col items-center">
+                <div className="p-3.5 bg-muted/20 rounded-full mb-3">
+                  <MapPin className="h-8 w-8 opacity-25" />
+                </div>
+                <p className="text-sm font-medium">No division order data available.</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
       </Card>
     );
   };
@@ -2003,6 +2170,7 @@ function DashboardContent() {
                 )}
 
                 {currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
+                {currentUser?.role !== 'CRM' && renderAreaLeaderboardCard()}
               </div>
             </div>
           </>
@@ -2041,21 +2209,6 @@ function DashboardContent() {
           )}
           {canSeeAdminCharts && (
             <OrderAnalysisClient allOrders={allYearOrders.length > 0 ? allYearOrders : allOrders} />
-          )}
-          {!isDesignerRepOrLrOrCo && currentUser?.role !== 'CRM' && renderRecentFeedbackCard()}
-          {canSeeSystemAdminCharts && (
-            <Card className="shadow-xl bg-card rounded-lg min-h-[480px] hidden sm:block">
-              <CardHeader>
-                <CardTitle className="flex items-center text-xl text-foreground">
-                  <LineChartIcon className="mr-2 h-6 w-6 text-primary" />
-                  Sales KPI
-                </CardTitle>
-                <CardDescription>Key Performance Indicators for sales activity.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* Content for the new card will go here */}
-              </CardContent>
-            </Card>
           )}
         </div>
 

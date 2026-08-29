@@ -10,12 +10,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import {
@@ -66,27 +64,30 @@ const PREDEFINED_RANGES_CONFIG: { label: string; value: PredefinedRange }[] = [
   { label: "Last Year", value: "lastYear" },
 ];
 
-// Helper function to generate display label, can be outside component or memoized
-const getDisplayLabel = (
-  range: DateRange | undefined,
-  predefinedValue: PredefinedRange | "custom" | null
-): string => {
-  if (predefinedValue === "custom") {
-    if (range?.from) {
-      if (range.to) {
-        if (isSameDay(range.from, range.to)) {
-          return format(range.from, "MMM d, yyyy");
-        }
-        if (getYear(range.from) !== getYear(range.to)) {
-          return `${format(range.from, "MMM d, yyyy")} - ${format(range.to, "MMM d, yyyy")}`;
-        }
-        return `${format(range.from, "MMM d")} - ${format(range.to, "MMM d, yyyy")}`;
-      }
-      return `${format(range.from, "MMM d")} - Select end date`;
-    }
-    return "Custom Range";
+const getDisplayLabel = (range: DateRange | undefined, predefined: PredefinedRange | "custom" | null): string => {
+  if (predefined && predefined !== "custom") {
+    return PREDEFINED_RANGES_CONFIG.find(r => r.value === predefined)?.label || "Select Date";
   }
-  return PREDEFINED_RANGES_CONFIG.find(r => r.value === predefinedValue)?.label || "Select Date Range";
+  if (!range || !range.from) {
+    return "Select Date";
+  }
+  if (range.from && !range.to) {
+    return format(range.from, "LLL dd, y");
+  }
+  if (range.from && range.to) {
+    if (isSameDay(range.from, range.to)) {
+      return format(range.from, "LLL dd, y");
+    }
+    const currentYear = getYear(new Date());
+    const fromYear = getYear(range.from);
+    const toYear = getYear(range.to);
+
+    if (fromYear === toYear && fromYear === currentYear) {
+      return `${format(range.from, "LLL dd")} - ${format(range.to, "LLL dd, y")}`;
+    }
+    return `${format(range.from, "LLL dd, y")} - ${format(range.to, "LLL dd, y")}`;
+  }
+  return "Custom Range";
 };
 
 
@@ -120,6 +121,7 @@ export function DateRangePicker({
       return "last30Days";
     }
   );
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCustomPopoverOpen, setIsCustomPopoverOpen] = useState(false);
 
   // This label is for the trigger button's display and updates reactively
@@ -163,6 +165,7 @@ export function DateRangePicker({
     const newDisplayLabel = PREDEFINED_RANGES_CONFIG.find(r => r.value === value)?.label || "Error";
     onDateRangeChange(newRange, newDisplayLabel, value); // Notify parent immediately for predefined
     setIsCustomPopoverOpen(false); // Ensure custom popover is closed
+    setIsDropdownOpen(false);
   };
 
   const handleCustomDateSelectInCalendar = (range: DateRange | undefined) => {
@@ -174,6 +177,7 @@ export function DateRangePicker({
 
   const handleApplyCustomRange = () => {
     setIsCustomPopoverOpen(false);
+    setIsDropdownOpen(false);
     let finalRange = selectedRange;
     if (selectedRange?.from && !selectedRange?.to) {
       finalRange = { from: selectedRange.from, to: selectedRange.from };
@@ -185,7 +189,7 @@ export function DateRangePicker({
 
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
@@ -209,20 +213,13 @@ export function DateRangePicker({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <Popover open={isCustomPopoverOpen} onOpenChange={setIsCustomPopoverOpen}>
-          <PopoverTrigger asChild>
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                setSelectedPredefined("custom");
-                setIsCustomPopoverOpen(true);
-              }}
-              className={selectedPredefined === "custom" ? "bg-accent text-accent-foreground" : ""}
-            >
-              Custom Range
-            </DropdownMenuItem>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align={align === "center" ? "center" : "start"} side={align === "end" ? "left" : "right"} sideOffset={5}>
+        <DropdownMenuSub open={isCustomPopoverOpen} onOpenChange={setIsCustomPopoverOpen}>
+          <DropdownMenuSubTrigger
+            className={cn(selectedPredefined === "custom" ? "bg-accent text-accent-foreground" : "")}
+          >
+            Custom Range
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-auto p-0" sideOffset={8}>
             <Calendar
               initialFocus
               mode="range"
@@ -239,8 +236,8 @@ export function DateRangePicker({
                 Apply
               </Button>
             </div>
-          </PopoverContent>
-        </Popover>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -88,20 +88,20 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10 border-2 border-primary">
+        <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full p-0 shrink-0 focus-visible:ring-1 focus-visible:ring-primary">
+          <Avatar className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 border-2 border-primary">
             <AvatarImage 
               src={currentUser.avatarUrl || undefined} 
               alt={currentUser.name} 
               data-ai-hint={currentUser.avatarUrl ? "user uploaded" : "abstract lettermark"} 
             />
-            <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm md:text-base font-semibold">
               {getInitials(currentUser.name)}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent className="w-56 sm:w-60 max-w-[calc(100vw-2rem)]" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <div className="flex items-center gap-1.5">

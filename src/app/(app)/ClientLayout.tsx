@@ -41,7 +41,7 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
                     collapsible="icon"
                     className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl print:hidden"
                 >
-                    <SidebarHeader className="p-4 flex flex-row items-center justify-center gap-2 h-[4.5rem] border-b border-sidebar-border/70 bg-black text-white">
+                    <SidebarHeader className="p-3 sm:p-4 flex flex-row items-center justify-center gap-2 h-14 sm:h-16 md:h-[4.5rem] border-b border-sidebar-border/70 bg-black text-white">
                         <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:hidden">
                             <Image
                                 src="/w-logo.png"
@@ -49,7 +49,7 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
                                 width={160}
                                 height={40}
                                 priority
-                                className="object-contain"
+                                className="object-contain max-h-7 sm:max-h-8 md:max-h-9 w-auto"
                             />
                         </Link>
                         <div className="group-data-[collapsible=icon]:mx-auto">

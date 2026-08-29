@@ -63,32 +63,32 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
       {originalUser && (
-        <div className="bg-primary/10 border-b border-primary/20 py-2 px-4 flex justify-center items-center gap-4">
-          <p className="text-sm font-medium text-primary flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
+        <div className="bg-primary/10 border-b border-primary/20 py-1.5 sm:py-2 px-3 sm:px-4 flex flex-col sm:flex-row justify-center items-center gap-1.5 sm:gap-4 text-center">
+          <p className="text-xs sm:text-sm font-medium text-primary flex items-center justify-center flex-wrap gap-1.5 sm:gap-2">
+            <span className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            Currently viewing as <span className="font-bold underline">{currentUser?.name}</span> ({currentUser?.role?.replace(/_/g, ' ') || 'User'})
+            <span>Currently viewing as <span className="font-bold underline">{currentUser?.name}</span> ({currentUser?.role?.replace(/_/g, ' ') || 'User'})</span>
           </p>
           <Button 
             size="sm" 
             variant="outline" 
-            className="h-7 bg-primary text-primary-foreground hover:bg-primary/90 border-none px-3"
+            className="h-6 sm:h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/90 border-none px-2.5 sm:px-3 rounded shrink-0"
             onClick={stopImpersonating}
           >
             Return to My Account ({originalUser.name})
           </Button>
         </div>
       )}
-      <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
+      <div className="container flex h-14 sm:h-16 md:h-[4.5rem] items-center justify-between max-w-full px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex items-center">
-          <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md md:hidden" />
+          <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-1 sm:-ml-2 p-1.5 rounded-md md:hidden h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0" />
           <Link
             href="/dashboard"
             className={cn(
-              "flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2",
-              isSidebarExpanded && "hidden"
+              "flex items-center space-x-1.5 sm:space-x-2 text-primary hover:text-primary/80 transition-colors ml-1.5 sm:ml-2",
+              !isMobile && isSidebarExpanded && "hidden"
             )}
           >
             <Image
@@ -98,21 +98,22 @@ export function AppHeader() {
               height={60}
               priority
               unoptimized
-              className="object-contain w-auto h-6 sm:h-8 md:h-10"
+              className="object-contain w-auto h-6 sm:h-7 md:h-8 lg:h-9 max-w-[120px] sm:max-w-[160px] md:max-w-[200px]"
             />
           </Link>
         </div>
 
-        <div className="flex items-center space-x-1 sm:space-x-2">
+        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
           {currentUser?.role !== 'VENDOR' && (
             <>
               <FaqDialog>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+                  className="text-foreground hover:bg-accent hover:text-accent-foreground h-8 sm:h-9 md:h-10 px-2 sm:px-2.5 md:px-3 text-xs sm:text-sm"
+                  title="Dialogue"
                 >
-                  <HelpCircle className="h-5 w-5 sm:mr-2" />
+                  <HelpCircle className="h-4 w-4 sm:h-4.5 sm:w-4.5 sm:mr-1.5 shrink-0" />
                   <span className="hidden sm:inline">Dialogue</span>
                 </Button>
               </FaqDialog>
@@ -120,9 +121,10 @@ export function AppHeader() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+                  className="text-foreground hover:bg-accent hover:text-accent-foreground h-8 sm:h-9 md:h-10 px-2 sm:px-2.5 md:px-3 text-xs sm:text-sm"
+                  title="Case Study"
                 >
-                  <BookText className="h-5 w-5 sm:mr-2" />
+                  <BookText className="h-4 w-4 sm:h-4.5 sm:w-4.5 sm:mr-1.5 shrink-0" />
                   <span className="hidden sm:inline">Case Study</span>
                 </Button>
               </CaseStudyDialog>
@@ -133,12 +135,12 @@ export function AppHeader() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10"
+              className="text-foreground hover:bg-accent hover:text-accent-foreground h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 shrink-0"
               title="Sync Data"
               onClick={handleSyncClick}
               disabled={isSyncing}
             >
-              <RefreshCw className={cn("h-5 w-5", isSyncing && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4 sm:h-4.5 sm:w-4.5", isSyncing && "animate-spin")} />
               <span className="sr-only">Sync Data</span>
             </Button>
           )}

@@ -471,6 +471,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }));
   };
 
+  const lastTapRef = useRef<{ [key: string]: number }>({});
   const handleAddItem = () => setOrderItems(prev => [...prev, { id: uuidv4(), model: '', quantity: '1', lamination: '', unitPrice: null, lineItemTotalPrice: null, isGift: false }]);
   const handleRemoveItem = (id: string) => { if (orderItems.length > 1) setOrderItems(prev => prev.filter(item => item.id !== id)); };
   const handleToggleGift = (itemId: string) => {
@@ -479,6 +480,17 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         item.id === itemId ? { ...item, isGift: !item.isGift } : item
       )
     );
+  };
+  const handleItemTouchEnd = (itemId: string, e: React.TouchEvent) => {
+    const now = Date.now();
+    const lastTap = lastTapRef.current[itemId] || 0;
+    if (now - lastTap < 350) {
+      e.preventDefault();
+      handleToggleGift(itemId);
+      lastTapRef.current[itemId] = 0;
+    } else {
+      lastTapRef.current[itemId] = now;
+    }
   };
   const togglePopover = (itemId: string, open?: boolean) => setPopoverOpenStates(prev => ({ ...prev, [itemId]: open === undefined ? !prev[itemId] : open }));
 
@@ -936,6 +948,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                           <TableCell 
                             className="p-2 align-middle text-right pr-4 font-semibold text-sm whitespace-nowrap cursor-pointer select-none"
                             onDoubleClick={() => handleToggleGift(item.id)}
+                            onTouchEnd={(e) => handleItemTouchEnd(item.id, e)}
                           >
                             <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
                               {formatCurrencyBdt(item.lineItemTotalPrice)}

@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -324,6 +324,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
     }));
   };
 
+  const lastTapRef = useRef<{ [key: string]: number }>({});
   const handleAddItem = () => setOrderItems(prev => [...prev, { id: uuidv4(), model: '', quantity: '1', lamination: '', unitPrice: null, lineItemTotalPrice: null, isGift: false }]);
   const handleRemoveItem = (id: string) => { if (orderItems.length > 1) setOrderItems(prev => prev.filter(item => item.id !== id)); };
   const handleToggleGift = (itemId: string) => {
@@ -332,6 +333,17 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
         item.id === itemId ? { ...item, isGift: !item.isGift } : item
       )
     );
+  };
+  const handleItemTouchEnd = (itemId: string, e: React.TouchEvent) => {
+    const now = Date.now();
+    const lastTap = lastTapRef.current[itemId] || 0;
+    if (now - lastTap < 350) {
+      e.preventDefault();
+      handleToggleGift(itemId);
+      lastTapRef.current[itemId] = 0;
+    } else {
+      lastTapRef.current[itemId] = now;
+    }
   };
   const togglePopover = (itemId: string, open?: boolean) => setPopoverOpenStates(prev => ({ ...prev, [itemId]: open === undefined ? !prev[itemId] : open }));
 
@@ -461,19 +473,20 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Edit Quotation: <span className="font-normal">{quotation?.companyName}</span></DialogTitle>
-          <DialogDescription>Modify details for quotation ID: <span className="font-mono">{quotation?.id}</span>.</DialogDescription>
+      <DialogContent className="w-[95vw] sm:w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl max-h-[92vh] sm:max-h-[90vh] p-3.5 sm:p-6 overflow-hidden flex flex-col">
+        <DialogHeader className="pb-1 sm:pb-2">
+          <DialogTitle className="text-base sm:text-lg">Edit Quotation: <span className="font-normal">{quotation?.companyName}</span></DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">Modify details for quotation ID: <span className="font-mono">{quotation?.id}</span>.</DialogDescription>
         </DialogHeader>
         {isLoadingOptions ? (<div className="flex justify-center items-center h-60"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>)
-          : (<form onSubmit={handleSubmit}><div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          : (<form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <div className="grid gap-3 sm:gap-4 py-2 sm:py-4 max-h-[68vh] sm:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1"><Label htmlFor="edit-jobId">Contact Person</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} /></div>
               <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => setCompanyNameInput(e.target.value)} required disabled={isSubmitting} /></div>
             </div>
             <div className="space-y-1"><Label htmlFor="edit-address">Address</Label><Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} /></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <Label htmlFor="edit-phoneNumber">Phone Number</Label>
                 <Input
@@ -497,9 +510,9 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
               <div className="space-y-1"><Label htmlFor="edit-orderDate">Date Created</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !createdAt && "text-muted-foreground")} disabled={isSubmitting}><CalendarDays className="mr-2 h-4 w-4" />{createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} /></PopoverContent></Popover></div>
             </div>
             <div className="space-y-1"><Label htmlFor="edit-orderNotes">Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting} /></div>
-            <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Quotation Items</Label>
+            <div className="space-y-3 mt-3 sm:mt-4 border-t border-border pt-3 sm:pt-4"><Label className="text-base sm:text-lg font-semibold">Quotation Items</Label>
               <div className="border rounded-md bg-background overflow-x-auto">
-                <Table>
+                <Table className="min-w-[620px] sm:min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[45%]">Model *</TableHead>
@@ -540,7 +553,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
                                   <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0" portal={false}>
+                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-[90vw] sm:w-max max-w-lg p-0" portal={false}>
                                 <Command className="max-h-96 overflow-hidden flex flex-col">
                                   <CommandInput placeholder="Search model..." />
                                   <CommandList className="max-h-80 overflow-y-auto">
@@ -608,6 +621,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
                         <TableCell 
                           className="p-2 align-middle text-right pr-4 font-semibold text-sm whitespace-nowrap cursor-pointer select-none"
                           onDoubleClick={() => handleToggleGift(item.id)}
+                          onTouchEnd={(e) => handleItemTouchEnd(item.id, e)}
                         >
                           <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
                             {formatCurrencyBdt(item.lineItemTotalPrice)}
@@ -624,16 +638,16 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
               </div>
               <Button type="button" variant="outline" onClick={handleAddItem} className="mt-2" disabled={isSubmitting || isLoadingOptions}><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
             </div>
-            <Separator className="my-4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+            <Separator className="my-3 sm:my-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start">
               <div className="space-y-1"><Label htmlFor="edit-specialClientDiscount">Special Client Discount</Label><div className="relative"><Input id="edit-specialClientDiscount" type="text" value={specialClientDiscount} onChange={(e) => handleDiscountChangeEdit(e.target.value)} placeholder="e.g., 100 or 10%" disabled={isSubmitting} className="pl-7" /><Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /></div></div>
             </div>
 
             {existingAdvancePayments.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <Label className="text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payment History</Label>
-                <div className="max-h-40 overflow-y-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
-                  <Table><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead>
+              <div className="mt-3 sm:mt-4 space-y-2">
+                <Label className="text-sm sm:text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary/80" />Payment History</Label>
+                <div className="max-h-40 overflow-y-auto overflow-x-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
+                  <Table className="min-w-[450px] sm:min-w-full"><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead>
                     {isAdmin && <TableHead className="h-8 text-right text-xs">Actions</TableHead>}
                   </TableRow></TableHeader>
                     <TableBody>
@@ -699,7 +713,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
               </div>
             )}
 
-            <div className="mt-4 border-t border-border pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+            <div className="mt-3 sm:mt-4 border-t border-border pt-3 sm:pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start">
               <div className="space-y-1">
                 <Label htmlFor="newAdvanceAmount">
                   {existingAdvancePayments.length > 0 ? "Adjustment Payment" : "Advance Payment"}
@@ -716,26 +730,26 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
               {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e => setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting} /></div>)}
             </div>
 
-            <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
-              <h4 className="text-md font-semibold text-foreground mb-2">Quotation Summary</h4>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Items Total:</span><span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span></div>
+            <div className="mt-3 sm:mt-4 p-3 sm:p-4 border rounded-md bg-muted/30 space-y-2">
+              <h4 className="text-sm sm:text-md font-semibold text-foreground mb-2">Quotation Summary</h4>
+              <div className="flex justify-between text-xs sm:text-sm"><span className="text-muted-foreground">Items Total:</span><span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span></div>
               {giftTotal > 0 && (
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground flex items-center">
-                    <Gift className="h-4 w-4 mr-1 text-yellow-500" />
+                    <Gift className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 text-yellow-500" />
                     Gift Value:
                   </span>
                   <span className="font-medium text-yellow-500">{formatCurrencyBdt(giftTotal)}</span>
                 </div>
               )}
-              {(calculatedDiscountAmount || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Discount:</span><span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span></div>)}
-              <div className="flex justify-between text-sm font-semibold"><span className="text-foreground">Net Payable:</span><span className="text-foreground">{formatCurrencyBdt(netPayable)}</span></div>
-              {(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0)) > 0 && (<div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border"><span className="text-muted-foreground">Total Paid:</span><span className="font-medium text-green-600">- {formatCurrencyBdt(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0))}</span></div>)}
-              <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border"><span className="text-primary">Amount Due:</span><span className="text-primary">{formatCurrencyBdt(amountDue)}</span></div>
+              {(calculatedDiscountAmount || 0) > 0 && (<div className="flex justify-between text-xs sm:text-sm"><span className="text-muted-foreground">Discount:</span><span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span></div>)}
+              <div className="flex justify-between text-xs sm:text-sm font-semibold"><span className="text-foreground">Net Payable:</span><span className="text-foreground">{formatCurrencyBdt(netPayable)}</span></div>
+              {(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0)) > 0 && (<div className="flex justify-between text-xs sm:text-sm mt-1 pt-1 border-t border-dashed border-border"><span className="text-muted-foreground">Total Paid:</span><span className="font-medium text-green-600">- {formatCurrencyBdt(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0))}</span></div>)}
+              <div className="flex justify-between text-base sm:text-lg font-bold mt-1 pt-1 border-t border-border"><span className="text-primary">Amount Due:</span><span className="text-primary">{formatCurrencyBdt(amountDue)}</span></div>
             </div>
 
           </div>
-            <DialogFooter className="pt-4 border-t"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={!canSubmit}>{isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}</Button></DialogFooter>
+            <DialogFooter className="pt-3 sm:pt-4 border-t flex flex-col-reverse sm:flex-row gap-2 sm:gap-0"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={!canSubmit}>{isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}</Button></DialogFooter>
           </form>)}
       </DialogContent>
     </Dialog>

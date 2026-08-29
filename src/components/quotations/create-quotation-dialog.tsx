@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -102,7 +101,6 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
   const [netPayable, setNetPayable] = useState<number>(0);
   const [amountDue, setAmountDue] = useState<number>(0);
 
-
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
   const [variationOptions, setVariationOptions] = useState<ServiceVariationItem[]>([]);
@@ -163,27 +161,27 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
     if (isOpen) {
       fetchOptions();
       setCurrentOrderDate(new Date());
-      setJobId(''); // Ensure Job ID is cleared on open
+      setJobId('');
     } else {
-        resetForm();
+      resetForm();
     }
   }, [isOpen, fetchOptions, resetForm]);
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
-        const isCurrentStatusInAvailable = initialStatusId && availableStatuses.some(s => s.id === initialStatusId);
-        if (!initialStatusId || !isCurrentStatusInAvailable) {
-            const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
-            if (orderSubmittedStatus) {
-                setInitialStatusId(orderSubmittedStatus.id);
-            } else if (availableStatuses.length > 0 && availableStatuses[0]) {
-                setInitialStatusId(availableStatuses[0].id);
-            } else {
-                setInitialStatusId('');
-            }
+      const isCurrentStatusInAvailable = initialStatusId && availableStatuses.some(s => s.id === initialStatusId);
+      if (!initialStatusId || !isCurrentStatusInAvailable) {
+        const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
+        if (orderSubmittedStatus) {
+          setInitialStatusId(orderSubmittedStatus.id);
+        } else if (availableStatuses.length > 0 && availableStatuses[0]) {
+          setInitialStatusId(availableStatuses[0].id);
+        } else {
+          setInitialStatusId('');
         }
+      }
     } else if (isOpen && availableStatuses.length === 0) {
-        setInitialStatusId('');
+      setInitialStatusId('');
     }
   }, [isOpen, availableStatuses, initialStatusId]);
 
@@ -194,15 +192,15 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
     let discountNum = 0;
     const discountStr = specialClientDiscount.trim();
     if (discountStr.endsWith('%')) {
-        const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-        if (!isNaN(percentage) && percentage >= 0) {
-            discountNum = (percentage / 100) * currentItemsTotal;
-        }
+      const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+      if (!isNaN(percentage) && percentage >= 0) {
+        discountNum = (percentage / 100) * currentItemsTotal;
+      }
     } else {
-        const fixedAmount = parseFloat(discountStr);
-        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
-            discountNum = fixedAmount;
-        }
+      const fixedAmount = parseFloat(discountStr);
+      if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+        discountNum = fixedAmount;
+      }
     }
     discountNum = Math.min(discountNum, currentItemsTotal);
     setCalculatedDiscountAmount(discountNum);
@@ -220,9 +218,9 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
 
   useEffect(() => {
     if (!isAdvancePaymentEntered) {
-        setAdvancePaymentMethod('');
-        setCustomPaymentMethodText('');
-        setShowCustomPaymentInput(false);
+      setAdvancePaymentMethod('');
+      setCustomPaymentMethodText('');
+      setShowCustomPaymentInput(false);
     }
   }, [isAdvancePaymentEntered]);
 
@@ -295,7 +293,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       })
     );
   };
-  
+
   const handleJobIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newJobId = e.target.value;
     setJobId(newJobId);
@@ -308,7 +306,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
     const handler = setTimeout(() => {
       const trimmedJobId = jobId.trim();
       if (!trimmedJobId || !allQuotations.length) {
-        if(isAutoFilled) {
+        if (isAutoFilled) {
           setCompanyName('');
           setAddress('');
           setPhoneNumber('');
@@ -324,18 +322,18 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
 
       if (existingQuotation) {
         if (!isAutoFilled) {
-            const nameParts = (existingQuotation.companyName || '').split(' • ');
-            const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : existingQuotation.companyName;
+          const nameParts = (existingQuotation.companyName || '').split(' • ');
+          const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : existingQuotation.companyName;
 
-            setCompanyName(actualCompanyName);
-            setAddress(existingQuotation.address);
-            setPhoneNumber(existingQuotation.phoneNumber);
-            setIsAutoFilled(true);
+          setCompanyName(actualCompanyName);
+          setAddress(existingQuotation.address);
+          setPhoneNumber(existingQuotation.phoneNumber);
+          setIsAutoFilled(true);
 
-            toast({
-              title: "Existing Contact Person Found",
-              description: `Details for "${trimmedJobId}" have been auto-filled.`,
-            });
+          toast({
+            title: "Existing Contact Person Found",
+            description: `Details for "${trimmedJobId}" have been auto-filled.`,
+          });
         }
       } else if (isAutoFilled) {
         setCompanyName('');
@@ -358,12 +356,26 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
     }
   };
 
+  const lastTapRef = useRef<{ [key: string]: number }>({});
+
   const handleToggleGift = (itemId: string) => {
     setOrderItems(prevItems =>
       prevItems.map(item =>
         item.id === itemId ? { ...item, isGift: !item.isGift } : item
       )
     );
+  };
+
+  const handleItemTouchEnd = (itemId: string, e: React.TouchEvent) => {
+    const now = Date.now();
+    const lastTap = lastTapRef.current[itemId] || 0;
+    if (now - lastTap < 350) {
+      e.preventDefault();
+      handleToggleGift(itemId);
+      lastTapRef.current[itemId] = 0;
+    } else {
+      lastTapRef.current[itemId] = now;
+    }
   };
 
   const togglePopover = (itemId: string, open?: boolean) => {
@@ -380,7 +392,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       setCustomPaymentMethodText('');
     }
   };
-  
+
   const handleAdvancePaymentAmountChange = (value: string) => {
     setAdvancePaymentAmount(value);
     const numericValue = parseFloat(value);
@@ -399,23 +411,23 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
     let discountVal = 0;
     const discountStr = value.trim();
     if (discountStr.endsWith('%')) {
-        const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-        if (!isNaN(percentage) && percentage >= 0) {
-            discountVal = (percentage / 100) * orderItemsTotal;
-        }
+      const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+      if (!isNaN(percentage) && percentage >= 0) {
+        discountVal = (percentage / 100) * orderItemsTotal;
+      }
     } else {
-        const fixedAmount = parseFloat(discountStr);
-        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
-            discountVal = fixedAmount;
-        }
+      const fixedAmount = parseFloat(discountStr);
+      if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+        discountVal = fixedAmount;
+      }
     }
 
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
-        toast({
-            title: "Validation Warning",
-            description: `Special Client Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
-            variant: "destructive"
-        });
+      toast({
+        title: "Validation Warning",
+        description: `Special Client Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
+        variant: "destructive"
+      });
     }
   };
 
@@ -455,50 +467,50 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       setIsSubmitting(false); return;
     }
     if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
-       toast({ title: "Validation Error", description: "All quotation items must be complete with Model, Quantity, Lamination, and valid pricing.", variant: "destructive" });
-       setIsSubmitting(false); return;
+      toast({ title: "Validation Error", description: "All quotation items must be complete with Model, Quantity, Lamination, and valid pricing.", variant: "destructive" });
+      setIsSubmitting(false); return;
     }
 
     const currentIsAdvancePaymentEnteredLogic = (parseFloat(advancePaymentAmount) || 0) > 0;
     let finalAdvancePaymentMethod = advancePaymentMethod.trim() || null;
     if (currentIsAdvancePaymentEnteredLogic) {
-        if (!advancePaymentMethod.trim()) {
-            toast({ title: "Validation Error", description: "Payment Method is required when Advance Payment is entered.", variant: "destructive" });
-            setIsSubmitting(false); return;
+      if (!advancePaymentMethod.trim()) {
+        toast({ title: "Validation Error", description: "Payment Method is required when Advance Payment is entered.", variant: "destructive" });
+        setIsSubmitting(false); return;
+      }
+      if (advancePaymentMethod.toLowerCase() === 'other') {
+        if (!customPaymentMethodText.trim()) {
+          toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
+          setIsSubmitting(false); return;
         }
-        if (advancePaymentMethod.toLowerCase() === 'other') {
-          if (!customPaymentMethodText.trim()) {
-            toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
-            setIsSubmitting(false); return;
-          }
-          finalAdvancePaymentMethod = customPaymentMethodText.trim();
-        }
+        finalAdvancePaymentMethod = customPaymentMethodText.trim();
+      }
     } else {
-        finalAdvancePaymentMethod = null;
+      finalAdvancePaymentMethod = null;
     }
 
     const parsedAdvPayment = parseFloat(advancePaymentAmount) || 0;
     const grandTotal = netPayable;
 
     if (parsedAdvPayment > grandTotal && grandTotal > 0) {
-        toast({ title: "Validation Error", description: `Advance payment (${formatCurrencyBdt(parsedAdvPayment)}) cannot exceed grand total of ${formatCurrencyBdt(grandTotal)}.`, variant: "destructive"});
-        setIsSubmitting(false); return;
+      toast({ title: "Validation Error", description: `Advance payment (${formatCurrencyBdt(parsedAdvPayment)}) cannot exceed grand total of ${formatCurrencyBdt(grandTotal)}.`, variant: "destructive" });
+      setIsSubmitting(false); return;
     }
     if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Special Client Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
-        setIsSubmitting(false); return;
+      toast({ title: "Validation Error", description: `Special Client Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive" });
+      setIsSubmitting(false); return;
     }
 
     const parsedOrderItems: OrderItem[] = orderItems.map(item => ({
-        id: item.id,
-        model: item.model,
-        quantity: parseInt(item.quantity, 10),
-        lamination: item.lamination,
-        variation: item.variation?.trim() || undefined,
-        unit: item.unit?.trim() || undefined,
-        unitPrice: item.unitPrice!,
-        lineItemTotalPrice: item.lineItemTotalPrice!,
-        isGift: item.isGift || false,
+      id: item.id,
+      model: item.model,
+      quantity: parseInt(item.quantity, 10),
+      lamination: item.lamination,
+      variation: item.variation?.trim() || undefined,
+      unit: item.unit?.trim() || undefined,
+      unitPrice: item.unitPrice!,
+      lineItemTotalPrice: item.lineItemTotalPrice!,
+      isGift: item.isGift || false,
     }));
 
     const quotationDataForAction = {
@@ -536,14 +548,14 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Create New Quotation</DialogTitle>
-          <DialogDescription>Enter company details and add quotation items. Required fields are marked with a visual hint.</DialogDescription>
+      <DialogContent className="w-[95vw] sm:w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl max-h-[92vh] sm:max-h-[90vh] p-3.5 sm:p-6 overflow-hidden flex flex-col">
+        <DialogHeader className="pb-1 sm:pb-2">
+          <DialogTitle className="text-base sm:text-lg">Create New Quotation</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">Enter company details and add quotation items. Required fields are marked with a visual hint.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="grid gap-3 sm:gap-4 py-2 sm:py-4 max-h-[68vh] sm:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <Label htmlFor="jobId">Contact Person</Label>
                 <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., Mr. Awal Khan" />
@@ -557,7 +569,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
               <Label htmlFor="address">Address</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <Label htmlFor="phoneNumber">Phone Number</Label>
                 <Input
@@ -614,15 +626,15 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                 id="orderNotes"
                 value={orderNotes}
                 onChange={(e) => setOrderNotes(e.target.value)}
-                placeholder="Add any specific instructions or notes for this quotation..."
+                placeholder="Add any specific instructions or requirements..."
                 rows={3}
               />
             </div>
 
-            <div className="space-y-3 mt-4 border-t border-border pt-4">
-              <Label className="text-lg font-semibold">Quotation Items</Label>
+            <div className="space-y-3 mt-3 sm:mt-4 border-t border-border pt-3 sm:pt-4">
+              <Label className="text-base sm:text-lg font-semibold">Quotation Items</Label>
               <div className="border rounded-md bg-background overflow-x-auto">
-                <Table>
+                <Table className="min-w-[620px] sm:min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[45%]">Model *</TableHead>
@@ -662,7 +674,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                                   <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0" portal={false}>
+                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-[90vw] sm:w-max max-w-lg p-0" portal={false}>
                                 <Command className="max-h-96 overflow-hidden flex flex-col">
                                   <CommandInput placeholder="Search model..." />
                                   <CommandList className="max-h-80 overflow-y-auto">
@@ -696,12 +708,11 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                                 </SelectTrigger>
                                 <SelectContent>
                                   {(() => {
-                                    const selectedM = modelOptions.find(m => m.name === item.model);
-                                    const modelVars = selectedM?.customVariations || (selectedM?.laminationPrices ? Object.entries(selectedM.laminationPrices).map(([id, p]) => ({ id, name: (p as any).name || id })) : []);
+                                    const selectedModel = modelOptions.find(m => m.name === item.model);
+                                    if (!selectedModel) return null;
+                                    const modelVars = selectedModel.customVariations || (selectedModel.laminationPrices ? Object.entries(selectedModel.laminationPrices).map(([id, p]) => ({ id, name: (p as any).name || id })) : []);
                                     return modelVars.map((v: any) => (
-                                      <SelectItem key={v.id} value={v.name} className="text-xs">
-                                        {v.name}
-                                      </SelectItem>
+                                      <SelectItem key={v.id} value={v.name} className="text-xs">{v.name}</SelectItem>
                                     ));
                                   })()}
                                 </SelectContent>
@@ -721,6 +732,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                         <TableCell 
                           className="p-2 align-middle text-right pr-4 font-semibold text-sm whitespace-nowrap cursor-pointer select-none"
                           onDoubleClick={() => handleToggleGift(item.id)}
+                          onTouchEnd={(e) => handleItemTouchEnd(item.id, e)}
                         >
                           <span style={item.isGift ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', color: '#6b7280' } : undefined}>
                             {formatCurrencyBdt(item.lineItemTotalPrice)}
@@ -746,54 +758,53 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
               </Button>
             </div>
 
-            <Separator className="my-4" />
+            <Separator className="my-3 sm:my-4" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start">
               <div className="space-y-1">
                 <Label htmlFor="specialClientDiscount">Special Client Discount</Label>
                 <div className="relative">
-                   <Input
+                  <Input
                     id="specialClientDiscount"
                     type="text"
                     value={specialClientDiscount}
                     onChange={(e) => handleDiscountChange(e.target.value)}
                     placeholder="e.g., 100 or 10%"
+                    disabled={isSubmitting}
                     className="pl-7"
                   />
                   <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="advancePaymentAmount">Advance Payment</Label>
+                <Label htmlFor="advancePaymentAmount">Advance Payment (Optional)</Label>
                 <Input
                   id="advancePaymentAmount"
                   type="number"
                   value={advancePaymentAmount}
                   onChange={(e) => handleAdvancePaymentAmountChange(e.target.value)}
-                  placeholder="e.g., 500.00"
+                  placeholder="Amount (BDT)"
                   min="0"
                   step="0.01"
                 />
               </div>
+
               {isAdvancePaymentEntered && (
                 <div className="space-y-1">
-                  <Label htmlFor="advancePaymentMethod">
-                    Payment Method
-                  </Label>
-                   <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
+                  <Label htmlFor="advancePaymentMethod">Payment Method <span className="text-destructive">*</span></Label>
+                  <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={isPaymentMethodPopoverOpen}
                         className="w-full justify-between bg-background"
                         disabled={isLoadingOptions || paymentMethodOptions.length === 0}
                       >
-                         <span className="flex-1 text-left whitespace-nowrap">
+                        <span className="flex-1 text-left whitespace-nowrap">
                           {advancePaymentMethod
-                            ? paymentMethodOptions.find((option) => option.name === advancePaymentMethod)?.name
+                            ? paymentMethodOptions.find(opt => opt.name === advancePaymentMethod)?.name || advancePaymentMethod
                             : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
-                         </span>
+                        </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -801,24 +812,24 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                       <Command>
                         <CommandInput placeholder="Search method..." />
                         <CommandList>
-                          <CommandEmpty>No payment method found.</CommandEmpty>
+                          <CommandEmpty>No method found.</CommandEmpty>
                           <CommandGroup>
-                            {paymentMethodOptions.map((option) => (
+                            {paymentMethodOptions.map((opt) => (
                               <CommandItem
-                                key={option.id}
-                                value={option.name}
-                                onSelect={(currentValue) => {
-                                  handleAdvancePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
+                                key={opt.id}
+                                value={opt.name}
+                                onSelect={(val) => {
+                                  handleAdvancePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === val.toLowerCase())?.name || val);
                                   setIsPaymentMethodPopoverOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    advancePaymentMethod === option.name ? "opacity-100" : "opacity-0"
+                                    advancePaymentMethod === opt.name ? "opacity-100" : "opacity-0"
                                   )}
                                 />
-                                 <span className="whitespace-nowrap">{option.name}</span>
+                                <span className="whitespace-nowrap">{opt.name}</span>
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -826,16 +837,15 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                       </Command>
                     </PopoverContent>
                   </Popover>
+
                   {showCustomPaymentInput && (
                     <div className="mt-2 space-y-1">
-                      <Label htmlFor="customPaymentMethodText">
-                        Specify Other Payment Method
-                      </Label>
+                      <Label htmlFor="customPaymentText">Specify Other Method <span className="text-destructive">*</span></Label>
                       <Input
-                        id="customPaymentMethodText"
+                        id="customPaymentText"
                         value={customPaymentMethodText}
                         onChange={(e) => setCustomPaymentMethodText(e.target.value)}
-                        placeholder="e.g., Specific Mobile Wallet"
+                        placeholder="e.g., City Bank Transfer"
                         required={advancePaymentMethod.toLowerCase() === 'other'}
                       />
                     </div>
@@ -844,45 +854,45 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
               )}
             </div>
 
-            <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
-                <h4 className="text-md font-semibold text-foreground mb-2">Quotation Summary</h4>
-                <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Items Total:</span>
-                    <span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span>
+            <div className="mt-3 sm:mt-4 p-3 sm:p-4 border rounded-md bg-muted/30 space-y-2">
+              <h4 className="text-sm sm:text-md font-semibold text-foreground mb-2">Quotation Summary</h4>
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-muted-foreground">Items Total:</span>
+                <span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span>
+              </div>
+              {giftTotal > 0 && (
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-muted-foreground flex items-center">
+                    <Gift className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 text-yellow-500" />
+                    Gift Value:
+                  </span>
+                  <span className="font-medium text-yellow-500">{formatCurrencyBdt(giftTotal)}</span>
                 </div>
-                {giftTotal > 0 && (
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground flex items-center">
-                            <Gift className="h-4 w-4 mr-1 text-yellow-500" />
-                            Gift Value:
-                        </span>
-                        <span className="font-medium text-yellow-500">{formatCurrencyBdt(giftTotal)}</span>
-                    </div>
-                )}
-                {(calculatedDiscountAmount || 0) > 0 && (
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Discount:</span>
-                        <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span>
-                    </div>
-                )}
-                <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-foreground">Net Payable:</span>
-                    <span className="text-foreground">{formatCurrencyBdt(netPayable)}</span>
+              )}
+              {(calculatedDiscountAmount || 0) > 0 && (
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-muted-foreground">Discount:</span>
+                  <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span>
                 </div>
-                {isAdvancePaymentEntered && (
-                    <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Advance Paid:</span>
-                        <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePaymentAmount))}</span>
-                    </div>
-                )}
-                 <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
-                    <span className="text-primary">Amount Due:</span>
-                    <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
+              )}
+              <div className="flex justify-between text-xs sm:text-sm font-semibold">
+                <span className="text-foreground">Net Payable:</span>
+                <span className="text-foreground">{formatCurrencyBdt(netPayable)}</span>
+              </div>
+              {isAdvancePaymentEntered && (
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-muted-foreground">Advance Paid:</span>
+                  <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePaymentAmount))}</span>
                 </div>
+              )}
+              <div className="flex justify-between text-base sm:text-lg font-bold mt-1 pt-1 border-t border-border">
+                <span className="text-primary">Amount Due:</span>
+                <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
+              </div>
             </div>
 
           </div>
-          <DialogFooter className="pt-4 border-t">
+          <DialogFooter className="pt-3 sm:pt-4 border-t flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => { setIsOpen(false); }} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Quotation"}

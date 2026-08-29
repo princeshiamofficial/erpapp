@@ -143,7 +143,7 @@ export function SidebarNavigation() {
   const { currentUser } = useAuth();
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
-  const { state: sidebarState, isMobile, openMobile } = useSidebar();
+  const { state: sidebarState, isMobile, openMobile, setOpenMobile } = useSidebar();
 
   useEffect(() => {
     async function fetchSettings() {
@@ -284,7 +284,12 @@ export function SidebarNavigation() {
                             isActive={isSubActive}
                             disabled={subItem.disabled}
                           >
-                            <Link href={subItem.href} className="flex items-center w-full" {...linkProps}>
+                            <Link 
+                              href={subItem.href} 
+                              className="flex items-center w-full" 
+                              onClick={() => { if (isMobile) setOpenMobile(false); }}
+                              {...linkProps}
+                            >
                               <subItem.icon className="mr-3 h-4 w-4 shrink-0" />
                               <span className="truncate text-sm">{subItem.label}</span>
                             </Link>
@@ -307,7 +312,10 @@ export function SidebarNavigation() {
           <SidebarMenuButton
             asChild
             isActive={isActive}
-            onClick={() => setOpenMenus({})}
+            onClick={() => {
+              setOpenMenus({});
+              if (isMobile) setOpenMobile(false);
+            }}
             tooltip={{
               children: item.label,
               side: 'right',
