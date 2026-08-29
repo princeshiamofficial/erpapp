@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { format } from 'date-fns';
 export function PinLockDialog() {
   const { currentUser, logout } = useAuth();
   const { toast } = useToast();
+  const pathname = usePathname();
   const [pinInput, setPinInput] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -22,8 +24,12 @@ export function PinLockDialog() {
   const [isAccountLocked72h, setIsAccountLocked72h] = useState(false);
   const [lockedUntilTime, setLockedUntilTime] = useState<string | null>(null);
 
+  const isInvoiceDetailsPage = Boolean(
+    pathname && pathname.startsWith('/invoice/')
+  );
+
   const checkPinLockState = useCallback(() => {
-    if (!currentUser || !currentUser.hasPinCode) {
+    if (!currentUser || !currentUser.hasPinCode || isInvoiceDetailsPage) {
       setIsUnlocked(true);
       return;
     }
@@ -34,7 +40,7 @@ export function PinLockDialog() {
     } else {
       setIsUnlocked(false);
     }
-  }, [currentUser]);
+  }, [currentUser, isInvoiceDetailsPage]);
 
   useEffect(() => {
     checkPinLockState();
@@ -122,7 +128,7 @@ export function PinLockDialog() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isUnlocked, isAccountLocked72h, handleKeyPress, pinInput, handleVerifyPin]);
 
-  if (!currentUser || !currentUser.hasPinCode || isUnlocked) {
+  if (!currentUser || !currentUser.hasPinCode || isUnlocked || isInvoiceDetailsPage) {
     return null;
   }
 
