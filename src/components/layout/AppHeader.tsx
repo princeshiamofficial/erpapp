@@ -81,7 +81,7 @@ export function AppHeader() {
           </Button>
         </div>
       )}
-      <div className="container flex h-14 sm:h-16 md:h-[4.5rem] items-center justify-between max-w-full px-3 sm:px-4 md:px-6 lg:px-8">
+      <div className="w-full flex h-14 sm:h-16 md:h-[4.5rem] items-center justify-between max-w-full px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex items-center">
           <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-1 sm:-ml-2 p-1.5 rounded-md md:hidden h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0" />
           <Link

@@ -36,7 +36,7 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
 
     return (
         <AppProviders initialUser={initialUser} initialGlobalSettings={initialGlobalSettings}>
-            <div className="flex min-h-svh w-full">
+            <div className="flex min-h-svh w-full max-w-full min-w-0">
                 <Sidebar
                     collapsible="icon"
                     className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl print:hidden"
@@ -72,12 +72,12 @@ export function ClientLayout({ children, initialUser, initialGlobalSettings }: C
                         </Button>
                     </SidebarFooter>
                 </Sidebar>
-                <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex-1 flex flex-col min-w-0 max-w-full">
                     <AppHeader />
                     <main
                         className={cn(
-                            "flex-1 bg-background selection:bg-primary/20 selection:text-primary",
-                            isNoPaddingPage ? "p-0" : "p-4 sm:p-6 lg:p-8",
+                            "flex-1 bg-background selection:bg-primary/20 selection:text-primary min-w-0 max-w-full",
+                            isNoPaddingPage ? "p-0" : "p-3 sm:p-6 lg:p-8",
                             pathname === '/dashboard' && "pt-0 sm:pt-0 lg:pt-0",
                             showBottomNav && "pb-24" // Add more padding to avoid overlap
                         )}

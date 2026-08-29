@@ -549,29 +549,29 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
         {children}
       </DialogTrigger>
       <DialogContent className="w-[95vw] sm:w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl max-h-[92vh] sm:max-h-[90vh] p-3.5 sm:p-6 overflow-hidden flex flex-col">
-        <DialogHeader className="pb-1 sm:pb-2">
+        <DialogHeader className="pb-1 sm:pb-2 pr-8 sm:pr-0">
           <DialogTitle className="text-base sm:text-lg">Create New Quotation</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">Enter company details and add quotation items. Required fields are marked with a visual hint.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="grid gap-3 sm:gap-4 py-2 sm:py-4 max-h-[68vh] sm:max-h-[70vh] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="jobId">Contact Person</Label>
-                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., Mr. Awal Khan" />
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden w-full max-w-full min-w-0">
+          <div className="grid gap-3 sm:gap-4 py-2 sm:py-4 max-h-[68vh] sm:max-h-[70vh] overflow-y-auto overflow-x-hidden w-full max-w-full min-w-0 pr-1 sm:pr-2 custom-scrollbar">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full min-w-0">
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="jobId" className="text-xs sm:text-sm truncate block">Contact Person</Label>
+                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., Mr. Awal" className="w-full text-xs sm:text-sm h-9" />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Color Hut" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="companyName" className="text-xs sm:text-sm truncate block">Company Name</Label>
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Color Hut" readOnly={isAutoFilled} className={cn("w-full text-xs sm:text-sm h-9", isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
               </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="address">Address</Label>
-              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
+            <div className="space-y-1 min-w-0">
+              <Label htmlFor="address" className="text-xs sm:text-sm">Address</Label>
+              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={cn("w-full text-xs sm:text-sm min-h-[60px]", isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="phoneNumber">Phone Number</Label>
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full min-w-0">
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="phoneNumber" className="text-xs sm:text-sm h-5 flex items-center truncate">Phone Number</Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -588,23 +588,23 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                   title="Phone number must be an 11-digit number starting with 0."
                   placeholder="01xxxxxxxxx"
                   readOnly={isAutoFilled}
-                  className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")}
+                  className={cn("w-full text-xs sm:text-sm h-9", isAutoFilled && "bg-muted/50 cursor-not-allowed")}
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="orderDate">Quotation Date</Label>
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="orderDate" className="text-xs sm:text-sm h-5 flex items-center truncate">Quotation Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal min-w-0 text-xs sm:text-sm h-9 px-2.5",
                         !currentOrderDate && "text-muted-foreground"
                       )}
                       disabled={isSubmitting}
                     >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      {currentOrderDate ? format(currentOrderDate, "PPP") : <span>Pick a date</span>}
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{currentOrderDate ? format(currentOrderDate, "PP") : "Pick a date"}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -620,7 +620,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <Label htmlFor="orderNotes">Notes (Optional)</Label>
               <Textarea
                 id="orderNotes"
@@ -628,13 +628,14 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                 onChange={(e) => setOrderNotes(e.target.value)}
                 placeholder="Add any specific instructions or requirements..."
                 rows={3}
+                className="w-full"
               />
             </div>
 
-            <div className="space-y-3 mt-3 sm:mt-4 border-t border-border pt-3 sm:pt-4">
+            <div className="space-y-3 mt-3 sm:mt-4 border-t border-border pt-3 sm:pt-4 w-full min-w-0">
               <Label className="text-base sm:text-lg font-semibold">Quotation Items</Label>
-              <div className="border rounded-md bg-background overflow-x-auto">
-                <Table className="min-w-[620px] sm:min-w-full">
+              <div className="w-full max-w-full overflow-x-auto rounded-md border bg-background custom-scrollbar">
+                <Table className="w-full min-w-[620px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[45%]">Model *</TableHead>

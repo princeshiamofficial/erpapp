@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -183,17 +182,16 @@ export function DateRangePicker3({
     onDateRangeChange(finalRange, currentCustomDisplayLabel, "custom");
   };
 
-
   return (
     <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className={cn("w-full justify-start text-left font-normal sm:w-auto h-9 sm:h-10", className)}
+          className={cn("w-full justify-start text-left font-normal sm:w-auto h-9 sm:h-10 min-w-0 max-w-full overflow-hidden", className)}
         >
-          <CalendarDays className="mr-2 h-4 w-4" />
-          <span className="truncate">{triggerButtonDisplayLabel}</span>
-          <ChevronDown className="ml-auto h-4 w-4 opacity-70" />
+          <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
+          <span className="truncate flex-1 min-w-0">{triggerButtonDisplayLabel}</span>
+          <ChevronDown className="ml-auto h-4 w-4 opacity-70 shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">

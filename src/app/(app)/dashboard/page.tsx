@@ -1900,13 +1900,13 @@ function DashboardContent() {
   return (
     <>
       <div className="space-y-6 px-1.5 py-4 sm:p-6 lg:p-8 custom-scrollbar-hidden print:p-0">
-        <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-5 sm:p-8 rounded-2xl sm:rounded-xl shadow-xl print:hidden">
-          <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
+        <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl shadow-xl print:hidden">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold flex items-center tracking-tight">
             Welcome {formatDisplayName(currentUser?.name)}
-            <Hand className="ml-2 h-8 w-8 transform rotate-[20deg] text-yellow-300" />
+            <Hand className="ml-1.5 sm:ml-2 h-5 w-5 sm:h-7 sm:w-7 md:h-8 md:w-8 transform rotate-[20deg] text-yellow-300 shrink-0" />
           </h1>
-          <p className="text-md sm:text-lg text-primary-foreground/90 mt-1">
-            Here's an overview of your business activity.
+          <p className="text-xs sm:text-sm md:text-base lg:text-lg text-primary-foreground/90 mt-0.5 sm:mt-1">
+            Here&apos;s an overview of your business activity.
           </p>
         </div>
 

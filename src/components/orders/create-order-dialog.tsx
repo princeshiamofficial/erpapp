@@ -641,30 +641,30 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter company details and add order items. Required fields are marked with *.</DialogDescription>
+      <DialogContent className="w-[95vw] sm:w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl max-h-[92vh] sm:max-h-[90vh] p-3.5 sm:p-6 overflow-hidden flex flex-col">
+        <DialogHeader className="pb-1 sm:pb-2 pr-8 sm:pr-0">
+          <DialogTitle className="text-base sm:text-lg">Create New Order</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">Enter company details and add order items. Required fields are marked with *.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="jobId">Job ID</Label>
-                <Input id="jobId" ref={jobIdInputRef} value={jobId} onChange={handleJobIdChange} placeholder="Leave blank for new client" />
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden w-full max-w-full min-w-0">
+          <div className="grid gap-3 sm:gap-4 py-2 sm:py-4 max-h-[68vh] sm:max-h-[70vh] overflow-y-auto overflow-x-hidden w-full max-w-full min-w-0 pr-1 sm:pr-2 custom-scrollbar">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full min-w-0">
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="jobId" className="text-xs sm:text-sm truncate block">Job ID</Label>
+                <Input id="jobId" ref={jobIdInputRef} value={jobId} onChange={handleJobIdChange} placeholder="Leave blank" className="w-full text-xs sm:text-sm h-9" />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="companyName">Company Name *</Label>
-                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Color Hut" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="companyName" className="text-xs sm:text-sm truncate block">Company Name *</Label>
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Color Hut" readOnly={isAutoFilled} className={cn("w-full text-xs sm:text-sm h-9", isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
               </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="address">Address *</Label>
-              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
+            <div className="space-y-1 min-w-0">
+              <Label htmlFor="address" className="text-xs sm:text-sm">Address *</Label>
+              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={cn("w-full text-xs sm:text-sm min-h-[60px]", isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="phoneNumber" className="h-5 flex items-center">Phone Number *</Label>
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full min-w-0">
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="phoneNumber" className="text-xs sm:text-sm h-5 flex items-center truncate">Phone Number *</Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -681,23 +681,23 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   title="Phone number must be an 11-digit number starting with 0."
                   placeholder="01xxxxxxxxx"
                   readOnly={isAutoFilled}
-                  className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")}
+                  className={cn("w-full text-xs sm:text-sm h-9", isAutoFilled && "bg-muted/50 cursor-not-allowed")}
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="orderDate" className="h-5 flex items-center">Order Date *</Label>
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="orderDate" className="text-xs sm:text-sm h-5 flex items-center truncate">Order Date *</Label>
                 <Popover open={isOrderDatePopoverOpen} onOpenChange={setIsOrderDatePopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal min-w-0 text-xs sm:text-sm h-9 px-2.5",
                         !currentOrderDate && "text-muted-foreground"
                       )}
                       disabled={isSubmitting}
                     >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      {currentOrderDate ? format(currentOrderDate, "PPP") : <span>Pick a date</span>}
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{currentOrderDate ? format(currentOrderDate, "PP") : "Pick a date"}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -711,20 +711,20 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="acceptedDeliveryDate" className="h-5 flex items-center">Delivery Date (Optional)</Label>
+              <div className="space-y-1 min-w-0">
+                <Label htmlFor="acceptedDeliveryDate" className="text-xs sm:text-sm h-5 flex items-center truncate">Delivery Date</Label>
                 <Popover open={isDeliveryDatePopoverOpen} onOpenChange={setIsDeliveryDatePopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal min-w-0 text-xs sm:text-sm h-9 px-2.5",
                         !acceptedDeliveryDate && "text-muted-foreground"
                       )}
                       disabled={isSubmitting}
                     >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      {acceptedDeliveryDate ? format(acceptedDeliveryDate, "PPP") : <span>Pick a date</span>}
+                      <CalendarDays className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{acceptedDeliveryDate ? format(acceptedDeliveryDate, "PP") : "Pick a date"}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -738,12 +738,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="space-y-1">
-                <Label className="flex items-center gap-1.5 h-5 cursor-pointer">
-                  <Star className={cn("h-4 w-4 transition-all", isStarred > 0 ? "fill-amber-500 text-amber-500 scale-110" : "text-muted-foreground")} />
-                  Priority Star Rating
+              <div className="space-y-1 min-w-0">
+                <Label className="flex items-center gap-1.5 h-5 cursor-pointer text-xs sm:text-sm truncate">
+                  <Star className={cn("h-3.5 w-3.5 shrink-0 transition-all", isStarred > 0 ? "fill-amber-500 text-amber-500 scale-110" : "text-muted-foreground")} />
+                  <span className="truncate">Priority Star</span>
                 </Label>
-                <div className="flex items-center justify-between h-10 px-3 border rounded-md bg-background">
+                <div className="flex items-center justify-between h-9 px-2 sm:px-3 border rounded-md bg-background">
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((starIndex) => {
                       const isFull = isStarred >= starIndex;
@@ -795,10 +795,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               />
             </div>
 
-            <div className="space-y-3 mt-4 border-t border-border pt-4">
+            <div className="space-y-3 mt-4 border-t border-border pt-4 w-full min-w-0">
               <Label className="text-lg font-semibold">Order Items *</Label>
-              <div className="border rounded-md bg-background overflow-x-auto">
-                <Table>
+              <div className="w-full max-w-full overflow-x-auto rounded-md border bg-background custom-scrollbar">
+                <Table className="w-full min-w-[620px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[45%]">Model *</TableHead>
@@ -1066,7 +1066,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             </div>
 
           </div>
-          <DialogFooter className="pt-4 border-t">
+          <DialogFooter className="pt-3 sm:pt-4 border-t flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
               {isSubmitting || isUploadingProof ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isUploadingProof ? "Uploading..." : "Creating..."}</> : "Create Order"}

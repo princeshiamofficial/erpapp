@@ -144,12 +144,12 @@ function AppShell({
   }
 
   return (
-    <SidebarProvider>
-      <motion.div
-        className="flex-grow w-full min-h-svh"
+    <SidebarProvider className="w-full max-w-full min-w-0">
+      <div
+        className="flex-grow w-full max-w-full min-w-0 min-h-svh"
       >
         {currentUser && !isSuspendedDialogOpen ? children : null}
-      </motion.div>
+      </div>
       {isSuspendedDialogOpen && <AccountSuspendedDialog isOpen={isSuspendedDialogOpen} onConfirmLogout={logout} />}
       <PinLockDialog />
     </SidebarProvider>

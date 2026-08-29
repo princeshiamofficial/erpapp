@@ -725,21 +725,21 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Edit Order: <span className="font-normal">{order?.companyName}</span></DialogTitle>
-            <DialogDescription>Modify details for order ID: <span className="font-mono">{order?.id}</span>.</DialogDescription>
+        <DialogContent className="w-[95vw] sm:w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl max-h-[92vh] sm:max-h-[90vh] p-3.5 sm:p-6 overflow-hidden flex flex-col">
+          <DialogHeader className="pb-1 sm:pb-2 pr-8 sm:pr-0">
+            <DialogTitle className="text-base sm:text-lg">Edit Order: <span className="font-normal">{order?.companyName}</span></DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">Modify details for order ID: <span className="font-mono">{order?.id}</span>.</DialogDescription>
           </DialogHeader>
           {isLoadingOptions ? (<div className="flex justify-center items-center h-60"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>)
-            : (<form onSubmit={handleSubmit}><div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1"><Label htmlFor="edit-jobId">Job ID *</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} /></div>
-                <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => { setCompanyNameInput(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} /></div>
+            : (<form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden w-full max-w-full min-w-0"><div className="grid gap-3 sm:gap-4 py-2 sm:py-4 max-h-[68vh] sm:max-h-[70vh] overflow-y-auto overflow-x-hidden w-full max-w-full min-w-0 pr-1 sm:pr-2 custom-scrollbar">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full min-w-0">
+                <div className="space-y-1 min-w-0"><Label htmlFor="edit-jobId" className="text-xs sm:text-sm truncate block">Job ID *</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} className="w-full text-xs sm:text-sm h-9" /></div>
+                <div className="space-y-1 min-w-0"><Label htmlFor="edit-companyNamePart" className="text-xs sm:text-sm truncate block">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => { setCompanyNameInput(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} className="w-full text-xs sm:text-sm h-9" /></div>
               </div>
-              <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => { setAddress(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-phoneNumber" className="h-5 flex items-center">Phone Number *</Label>
+              <div className="space-y-1 min-w-0"><Label htmlFor="edit-address" className="text-xs sm:text-sm">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => { setAddress(e.target.value); setIsAutoFilled(false); }} required disabled={isSubmitting} className="w-full text-xs sm:text-sm min-h-[60px]" /></div>
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-4 w-full min-w-0">
+                <div className="space-y-1 min-w-0">
+                  <Label htmlFor="edit-phoneNumber" className="text-xs sm:text-sm h-5 flex items-center truncate">Phone Number *</Label>
                   <Input
                     id="edit-phoneNumber"
                     type="tel"
@@ -757,15 +757,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     maxLength={11}
                     title="Phone number must be 11 digits and start with 0."
                     placeholder="01xxxxxxxxx"
+                    className="w-full text-xs sm:text-sm h-9"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="edit-orderDate" className="h-5 flex items-center">Date Created *</Label>
+                <div className="space-y-1 min-w-0">
+                  <Label htmlFor="edit-orderDate" className="text-xs sm:text-sm h-5 flex items-center truncate">Date Created *</Label>
                   <Popover open={isOrderDatePopoverOpen} onOpenChange={setIsOrderDatePopoverOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !createdAt && "text-muted-foreground")} disabled={isSubmitting}>
-                        <CalendarDays className="mr-2 h-4 w-4" />
-                        {createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}
+                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal min-w-0 text-xs sm:text-sm h-9 px-2.5", !createdAt && "text-muted-foreground")} disabled={isSubmitting}>
+                        <CalendarDays className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{createdAt ? formatDateForDialogInput(createdAt) : "Pick a date"}</span>
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -774,13 +775,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   </Popover>
                 </div>
                 {order.currentStatus !== 'delivered' && (
-                  <div className="space-y-1">
-                    <Label htmlFor="edit-acceptedDeliveryDate" className="h-5 flex items-center">Delivery Date (Optional)</Label>
+                  <div className="space-y-1 min-w-0">
+                    <Label htmlFor="edit-acceptedDeliveryDate" className="text-xs sm:text-sm h-5 flex items-center truncate">Delivery Date</Label>
                     <Popover open={isDeliveryDatePopoverOpen} onOpenChange={setIsDeliveryDatePopoverOpen}>
                       <PopoverTrigger asChild>
-                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !acceptedDeliveryDate && "text-muted-foreground")} disabled={isSubmitting}>
-                          <CalendarDays className="mr-2 h-4 w-4" />
-                          {acceptedDeliveryDate ? formatDateForDialogInput(acceptedDeliveryDate) : <span>Pick a date</span>}
+                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal min-w-0 text-xs sm:text-sm h-9 px-2.5", !acceptedDeliveryDate && "text-muted-foreground")} disabled={isSubmitting}>
+                          <CalendarDays className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{acceptedDeliveryDate ? formatDateForDialogInput(acceptedDeliveryDate) : "Pick a date"}</span>
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -789,12 +790,12 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     </Popover>
                   </div>
                 )}
-                <div className="space-y-1">
-                  <Label className="flex items-center gap-1.5 h-5 cursor-pointer">
-                    <Star className={cn("h-4 w-4 transition-all", isStarred > 0 ? "fill-amber-500 text-amber-500 scale-110" : "text-muted-foreground")} />
-                    Priority Star Rating
+                <div className="space-y-1 min-w-0">
+                  <Label className="flex items-center gap-1.5 h-5 cursor-pointer text-xs sm:text-sm truncate">
+                    <Star className={cn("h-3.5 w-3.5 shrink-0 transition-all", isStarred > 0 ? "fill-amber-500 text-amber-500 scale-110" : "text-muted-foreground")} />
+                    <span className="truncate">Priority Star</span>
                   </Label>
-                  <div className="flex items-center justify-between h-10 px-3 border rounded-md bg-background">
+                  <div className="flex items-center justify-between h-9 px-2 sm:px-3 border rounded-md bg-background">
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((starIndex) => {
                         const isFull = isStarred >= starIndex;
@@ -838,8 +839,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting} /></div>
               <div className="space-y-3 mt-4 border-t border-border pt-4">
                 <Label className="text-lg font-semibold">Order Items *</Label>
-                <div className="border rounded-md bg-background overflow-x-auto">
-                  <Table>
+                <div className="w-full max-w-full overflow-x-auto rounded-md border bg-background custom-scrollbar">
+                  <Table className="w-full min-w-[620px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[45%]">Model *</TableHead>
@@ -972,10 +973,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               </div>
 
               {existingAdvancePayments.length > 0 && (
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 space-y-2 w-full min-w-0">
                   <Label className="text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Payment History</Label>
-                  <div className="max-h-40 overflow-y-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
-                    <Table><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Reference/Notes</TableHead>
+                  <div className="w-full max-w-full max-h-40 overflow-y-auto overflow-x-auto rounded-md border bg-muted/20 p-2 custom-scrollbar">
+                    <Table className="w-full min-w-[450px]"><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Reference/Notes</TableHead>
                       {isAdmin && <TableHead className="h-8 text-right text-xs">Actions</TableHead>}
                     </TableRow></TableHeader>
                       <TableBody>
@@ -1050,13 +1051,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               )}
 
               {clientPayments.length > 0 && (
-                <div className="mt-4 space-y-2 border-t border-border pt-4">
+                <div className="mt-4 space-y-2 border-t border-border pt-4 w-full min-w-0">
                   <Label className="text-md font-semibold flex items-center text-amber-600 dark:text-amber-400">
                     <ReceiptText className="mr-2 h-5 w-5 text-amber-500 animate-pulse" />
                     Client Payments
                   </Label>
-                  <div className="max-h-40 overflow-y-auto border border-amber-200 dark:border-amber-900/50 rounded-md bg-amber-500/5 p-2 custom-scrollbar">
-                    <Table>
+                  <div className="w-full max-w-full max-h-40 overflow-y-auto overflow-x-auto border border-amber-200 dark:border-amber-900/50 rounded-md bg-amber-500/5 p-2 custom-scrollbar">
+                    <Table className="w-full min-w-[500px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="h-8 text-xs text-amber-800 dark:text-amber-300">Date</TableHead>
@@ -1197,7 +1198,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               </div>
 
             </div>
-              <DialogFooter className="pt-4 border-t"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={!canSubmit}>{isSubmitting || isUploadingProof ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isUploadingProof ? "Uploading..." : "Saving..."}</> : "Save Changes"}</Button></DialogFooter>
+              <DialogFooter className="pt-3 sm:pt-4 border-t flex flex-col-reverse sm:flex-row gap-2 sm:gap-0"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={!canSubmit}>{isSubmitting || isUploadingProof ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isUploadingProof ? "Uploading..." : "Saving..."}</> : "Save Changes"}</Button></DialogFooter>
             </form>)}
         </DialogContent>
       </Dialog>

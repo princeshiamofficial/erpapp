@@ -7,13 +7,14 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard, Star, Download } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard, Star, Download, Filter, CalendarDays } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useSocket } from "@/contexts/socket-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStatuses } from '@/lib/status-service';
 import { getContrastTextColor } from '@/lib/color-utils';
 import { getOrders, getOrdersWithTotal } from '@/lib/order-service';
@@ -410,29 +411,26 @@ export default function OrdersPage() {
   );
 
   return (
-    <div className="space-y-6 p-1 sm:p-0">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-        <div>
-          <h1 className="page-title">Order Management</h1>
-          <p className="page-description">
-            View, track, and manage all customer orders.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+    <div className="space-y-4 sm:space-y-6 p-0 sm:p-0 w-full max-w-full min-w-0 overflow-x-hidden">
+      <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-full page-header min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end min-w-0">
           {(currentUser.role === 'SYSTEM_ADMIN') && (
             <Button 
               variant="outline" 
-              size="lg" 
-              className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow text-destructive hover:text-destructive hover:bg-destructive/10"
+              size="sm" 
+              className="h-9 sm:h-10 px-2.5 sm:px-4 rounded-md shadow-md hover:shadow-lg transition-shadow text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
               onClick={() => setIsTrashDialogOpen(true)}
+              title="Trash"
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Trash
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Trash</span>
             </Button>
           )}
           {(currentUser.role === 'ADMIN') && (
             <Link href="/admin/model-management" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
-                <Layers className="mr-2 h-4 w-4" /> Configure Models
+              <Button variant="outline" size="sm" className="h-9 sm:h-10 px-2.5 sm:px-4 rounded-md shadow-md hover:shadow-lg transition-shadow shrink-0" title="Configure Models">
+                <Layers className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Configure Models</span>
               </Button>
             </Link>
           )}
@@ -448,27 +446,28 @@ export default function OrdersPage() {
               onOpenChange={setIsCreateOrderDialogOpen}
             >
               <Button
-                size="lg"
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold h-10"
+                size="default"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm shrink-0"
                 disabled={isLoading || (allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0)}
               >
                 {(isLoading && allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0) ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <Loader2 className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                 ) : (
-                  <PlusCircle className="mr-2 h-5 w-5" />
+                  <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 )}
-                {(isLoading && allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0) ? "Loading Data..." : "Create New Order"}
+                <span>{(isLoading && allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0) ? "Loading..." : "Create Order"}</span>
               </Button>
             </CreateOrderDialog>
           )}
         </div>
       </div>
 
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full max-w-full min-w-0">
+        <CardHeader className="border-b p-3.5 sm:p-5 min-w-0">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 min-w-0">
             {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
-              <div className="flex-grow flex items-center gap-2">
+              /* Desktop Button Group */
+              <div className="hidden sm:flex flex-grow items-center gap-2">
                 <Button
                   variant={viewType === 'orders' ? 'default' : 'outline'}
                   onClick={() => setViewType('orders')}
@@ -498,12 +497,60 @@ export default function OrdersPage() {
             {!(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
               <div className="flex-grow" />
             )}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <DateRangePicker3
-                initialRange={selectedDateRange}
-                onDateRangeChange={handleDateRangeChange}
-                className="h-10"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                  /* Mobile Filter Icon Button */
+                  <div className="sm:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant={viewType !== 'orders' ? 'default' : 'outline'}
+                          size="icon"
+                          className="h-10 w-10 shrink-0 relative rounded-md shadow-sm"
+                          title="Filter view"
+                        >
+                          <Filter className="h-4 w-4" />
+                          {viewType !== 'orders' && (
+                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                            </span>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-48">
+                        <DropdownMenuItem
+                          onClick={() => setViewType('orders')}
+                          className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'orders' && "bg-accent text-accent-foreground font-semibold")}
+                        >
+                          <PackageIcon className="h-4 w-4 text-primary" />
+                          <span>Orders</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setViewType('reorders')}
+                          className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'reorders' && "bg-accent text-accent-foreground font-semibold")}
+                        >
+                          <Repeat className="h-4 w-4 text-primary" />
+                          <span>Reorders</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setViewType('pending_payment')}
+                          className={cn("flex items-center gap-2 cursor-pointer font-medium", viewType === 'pending_payment' && "bg-accent text-accent-foreground font-semibold")}
+                        >
+                          <CreditCard className="h-4 w-4 text-primary" />
+                          <span>Pending Payment</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+                <DateRangePicker3
+                  initialRange={selectedDateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                  className="h-10 flex-1 sm:flex-initial sm:w-auto"
+                />
+              </div>
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -516,9 +563,9 @@ export default function OrdersPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+        <CardContent className="p-0 w-full max-w-full min-w-0 overflow-hidden">
+          <div className="w-full max-w-full overflow-x-auto custom-scrollbar">
+            <Table containerClassName="w-full max-w-full overflow-x-auto" className="w-full min-w-[700px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Order ID</TableHead>
@@ -701,11 +748,17 @@ export default function OrdersPage() {
               </TableBody>
             </Table>
           </div>
+
+
         </CardContent>
-        <CardFooter className="py-4 border-t">
+        <CardFooter className="py-4 border-t flex-col sm:flex-row items-center justify-between gap-4 min-w-0">
+          <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left min-w-0">
+            Showing <span className="font-medium text-foreground">1</span> to <span className="font-medium text-foreground">25</span> of{" "}
+            <span className="font-medium text-foreground">{totalOrders}</span> orders
+          </div>
           {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
+            <Pagination className="flex-wrap">
+              <PaginationContent className="flex-wrap justify-center">
                 <PaginationItem>
                   <PaginationPrevious
                     href="#"

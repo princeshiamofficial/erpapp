@@ -221,7 +221,11 @@
     @apply border-border;
   }
 
+  html,
   body {
+    width: 100%;
+    max-width: 100%;
+    position: relative;
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -238,34 +242,6 @@
 
   *::-webkit-scrollbar {
     display: none;
-  }
-
-  /* Custom scrollbar for webkit browsers when explicitly requested */
-  .custom-scrollbar {
-    -ms-overflow-style: auto;
-    scrollbar-width: auto;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar {
-    display: block;
-    width: 10px;
-    height: 10px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-muted/30;
-    border-radius: 10px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-primary/60;
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary/80;
   }
 
   /* Hide number input arrows */
@@ -388,7 +364,8 @@
 
   /* From Uiverse.io by akshat-patel28 */
   .uiverse-toast-card {
-    width: 380px;
+    width: 100%;
+    max-width: 380px;
     height: 85px;
     border-radius: 12px;
     box-sizing: border-box;
@@ -514,5 +491,21 @@
   [cmdk-list] {
     max-height: 320px !important;
     overflow-y: auto !important;
+  }
+
+  /* Hide scrollbar across all browsers while retaining scrolling */
+  .no-scrollbar::-webkit-scrollbar,
+  .custom-scrollbar::-webkit-scrollbar,
+  .scrollbar-none::-webkit-scrollbar {
+    display: none !important;
+    width: 0px !important;
+    height: 0px !important;
+  }
+
+  .no-scrollbar,
+  .custom-scrollbar,
+  .scrollbar-none {
+    -ms-overflow-style: none !important; /* IE and Edge */
+    scrollbar-width: none !important; /* Firefox */
   }
 }
