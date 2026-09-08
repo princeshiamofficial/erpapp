@@ -447,7 +447,7 @@ export default function UsersPage() {
                         {user.role === 'CR' || user.role === 'CRM' ? (
                           user.assignedDivisions && user.assignedDivisions.length > 0 ? (
                             <span
-                              className="inline-flex items-center justify-center font-medium text-center rounded-[6px] min-w-[32px] h-[23px] px-[6px] py-[5px] text-[12px] leading-[12px] cursor-default border-b-[2px] border-b-[#0e9384] bg-[#ebf2f1] text-[#0e9384] select-none box-border dark:bg-[#0e9384]/15 dark:text-[#14b8a6] dark:border-b-[#14b8a6]"
+                              className="inline-flex items-center justify-center font-medium text-center rounded-[6px] min-w-fit h-[23px] px-[8px] py-[5px] text-[12px] leading-[12px] cursor-default border-b-[2px] border-b-[#0e9384] bg-[#ebf2f1] text-[#0e9384] select-none box-border whitespace-nowrap dark:bg-[#0e9384]/15 dark:text-[#14b8a6] dark:border-b-[#14b8a6]"
                               style={{
                                 fontFamily: '"Golos Text", sans-serif',
                                 color: 'rgb(14, 147, 132)',
@@ -456,7 +456,7 @@ export default function UsersPage() {
                               }}
                               title={`Assigned Zones: ${user.assignedDivisions.join(', ')}`}
                             >
-                              {user.assignedDivisions.length}
+                              {user.assignedDivisions.length} zone{user.assignedDivisions.length > 1 ? 's' : ''}
                             </span>
                           ) : (
                             <span className="text-muted-foreground/50 text-xs font-mono">-</span>
