@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Package as PackageIcon, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical, Calendar as CalendarIcon, X } from "lucide-react";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { useAuth } from "@/contexts/auth-context";
+import { useSocket } from "@/contexts/socket-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -122,6 +123,21 @@ export default function AllOrdersPage() {
   const fetchData = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ['allOrders'] });
   }, [queryClient]);
+
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("order-updated", (data: any) => {
+      console.log("AllOrdersPage: Order updated remotely:", data);
+      queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+    });
+
+    return () => {
+      socket.off("order-updated");
+    };
+  }, [socket, queryClient]);
 
   const getStatusDisplayInfoCallback = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);

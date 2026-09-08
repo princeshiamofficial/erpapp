@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
+import { useSocket } from '@/contexts/socket-context';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,7 +84,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatDisplayName } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { divisions } from '@/lib/district-data'; // Import divisions data
 import type { DateRange, PredefinedRange } from "@/components/dashboard/date-range-picker";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -320,6 +321,21 @@ const getInitials = (name: string | undefined): string => {
 function DashboardContent() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("order-updated", (data: any) => {
+      console.log("Dashboard: Order updated remotely, refreshing queries:", data);
+      queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
+    });
+
+    return () => {
+      socket.off("order-updated");
+    };
+  }, [socket, queryClient]);
 
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
     if (typeof window === 'undefined') {
