@@ -169,6 +169,19 @@ export default function OrdersPage() {
     await queryClient.invalidateQueries({ queryKey: ['orders'] });
   }, [queryClient]);
 
+  const fetchDeletedOrders = useCallback(async () => {
+    setIsTrashLoading(true);
+    try {
+      const fetched = await getDeletedOrdersAction();
+      setDeletedOrders(fetched);
+    } catch (error) {
+      console.error("Failed to fetch deleted orders:", error);
+      toast({ title: "Error", description: "Could not load deleted orders.", variant: "destructive" });
+    } finally {
+      setIsTrashLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -181,12 +194,15 @@ export default function OrdersPage() {
     socket.on("order-updated", (data: any) => {
       console.log("Order updated remotely:", data);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      if (isTrashDialogOpen) {
+        fetchDeletedOrders();
+      }
     });
 
     return () => {
       socket.off("order-updated");
     };
-  }, [socket, queryClient]);
+  }, [socket, queryClient, isTrashDialogOpen, fetchDeletedOrders]);
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => s.isVisible !== false);
@@ -321,18 +337,6 @@ export default function OrdersPage() {
     setIsEditOrderDialogOpen(true);
   };
 
-  const fetchDeletedOrders = useCallback(async () => {
-    setIsTrashLoading(true);
-    try {
-      const fetched = await getDeletedOrdersAction();
-      setDeletedOrders(fetched);
-    } catch (error) {
-      console.error("Failed to fetch deleted orders:", error);
-      toast({ title: "Error", description: "Could not load deleted orders.", variant: "destructive" });
-    } finally {
-      setIsTrashLoading(false);
-    }
-  }, [toast]);
 
   useEffect(() => {
     if (isTrashDialogOpen) {

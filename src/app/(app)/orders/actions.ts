@@ -667,6 +667,20 @@ export async function restoreOrderAction(orderId: string): Promise<{ success: bo
   const success = await restoreOrderFromDb(orderId);
   if (success) {
     revalidatePath("/(app)/orders");
+    revalidatePath("/(app)/dashboard");
+    revalidatePath("/(app)/all-orders");
+    revalidatePath("/(app)/active-orders");
+    revalidatePath("/(app)/orders/monthly");
+    revalidatePath("/(app)/deliveries");
+    revalidatePath("/(app)/projects");
+
+    // Emit socket events for real-time updates across all connected users
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'restored' });
+      io.emit("project-updated", { id: orderId });
+    }
+
     return { success: true };
   }
   return { success: false, error: "Failed to restore order." };
@@ -676,6 +690,20 @@ export async function permanentlyDeleteOrderAction(orderId: string): Promise<{ s
   const success = await permanentlyDeleteOrderFromDb(orderId);
   if (success) {
     revalidatePath("/(app)/orders");
+    revalidatePath("/(app)/dashboard");
+    revalidatePath("/(app)/all-orders");
+    revalidatePath("/(app)/active-orders");
+    revalidatePath("/(app)/orders/monthly");
+    revalidatePath("/(app)/deliveries");
+    revalidatePath("/(app)/projects");
+
+    // Emit socket events for real-time updates across all connected users
+    const io = getIO();
+    if (io) {
+      io.emit("order-updated", { id: orderId, action: 'permanently-deleted' });
+      io.emit("project-updated", { id: orderId });
+    }
+
     return { success: true };
   }
   return { success: false, error: "Failed to permanently delete order." };
