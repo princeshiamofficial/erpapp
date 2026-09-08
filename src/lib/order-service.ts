@@ -30,6 +30,24 @@ const ensureStarredColumnExists = async () => {
 };
 ensureStarredColumnExists();
 
+let performanceIndexesEnsured = false;
+const ensurePerformanceIndexesExist = async () => {
+  if (performanceIndexesEnsured) return;
+  try {
+    const existing = await query<any[]>(`SHOW INDEX FROM \`${ORDERS_TABLE}\` WHERE Key_name = 'idx_orders_deleted_created'`);
+    if (existing.length === 0) {
+      await query(`ALTER TABLE \`${ORDERS_TABLE}\` ADD INDEX \`idx_orders_deleted_created\` (\`is_deleted\`, \`created_at\` DESC)`);
+      await query(`ALTER TABLE \`${ORDERS_TABLE}\` ADD INDEX \`idx_orders_status\` (\`current_status\`)`);
+      await query(`ALTER TABLE \`${ORDERS_TABLE}\` ADD INDEX \`idx_orders_crm_user\` (\`crm_user_id\`)`);
+      await query(`ALTER TABLE \`${ORDERS_TABLE}\` ADD INDEX \`idx_orders_designer_rep\` (\`designer_representative_id\`)`);
+    }
+    performanceIndexesEnsured = true;
+  } catch (e) {
+    // Ignore if table doesn't exist yet or already indexed
+  }
+};
+ensurePerformanceIndexesExist();
+
 const mapRowToOrder = (row: any): TrackingLink => ({
   id: row.id,
   projectIdDisplay: row.id,

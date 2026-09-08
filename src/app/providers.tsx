@@ -4,8 +4,9 @@
 import { AuthProvider } from '@/contexts/auth-context';
 import { SocketProvider } from '@/contexts/socket-context';
 import { Toaster } from "@/components/ui/toaster";
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const ROUTE_TITLE_MAP: Record<string, string> = {
   '/': 'Home',
@@ -93,6 +94,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const pageTitle = getPageTitle(pathname || '');
   const displayTitle = pageTitle && pageTitle !== 'Home' ? `${pageTitle} | Color Hut` : 'Color Hut';
 
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute fresh
+        gcTime: 5 * 60 * 1000, // 5 minutes in memory cache
+        refetchOnWindowFocus: false,
+        retry: 1,
+      },
+    },
+  }));
+
   const isSpecialPage = pathname ? (
     pathname.startsWith('/track/') || 
     pathname.startsWith('/feedback/') || 
@@ -125,13 +137,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [displayTitle, isSpecialPage]);
 
   return (
-    <SocketProvider>
-      <AuthProvider>
-        {!isSpecialPage && <title>{displayTitle}</title>}
-        {children}
-        <Toaster />
-      </AuthProvider>
-    </SocketProvider>
+    <QueryClientProvider client={queryClient}>
+      <SocketProvider>
+        <AuthProvider>
+          {!isSpecialPage && <title>{displayTitle}</title>}
+          {children}
+          <Toaster />
+        </AuthProvider>
+      </SocketProvider>
+    </QueryClientProvider>
   );
 }
 

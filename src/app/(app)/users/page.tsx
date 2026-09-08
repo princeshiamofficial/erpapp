@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,10 +54,24 @@ export default function UsersPage() {
   const { currentUser, refreshCurrentUser, impersonate } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<UserRoleDefinition[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const { data: users = [], isLoading: isLoadingUsersList, refetch: refetchUsers } = useQuery<User[]>({
+    queryKey: ['users'],
+    queryFn: () => getUsers(),
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    enabled: Boolean(currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')),
+  });
+
+  const { data: availableRoles = [], refetch: refetchRoles } = useQuery<UserRoleDefinition[]>({
+    queryKey: ['user-roles'],
+    queryFn: () => getRoles(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const isLoadingUsers = isLoadingUsersList && users.length === 0;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Locked' | 'Banned'>('Active');
 
@@ -90,31 +105,18 @@ export default function UsersPage() {
   const [userToAssignZone, setUserToAssignZone] = useState<User | null>(null);
   const [isAssignZoneDialogOpen, setIsAssignZoneDialogOpen] = useState(false);
 
-
   const fetchUsers = useCallback(async () => {
-    setIsLoadingUsers(true);
-    try {
-      const [fetchedUsers, fetchedRoles] = await Promise.all([
-        getUsers(),
-        getRoles()
-      ]);
-      setUsers(fetchedUsers);
-      setAvailableRoles(fetchedRoles);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      toast({ title: "Error", description: "Could not load users from database.", variant: "destructive" });
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  }, [toast]);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['users'] }),
+      queryClient.invalidateQueries({ queryKey: ['user-roles'] }),
+    ]);
+  }, [queryClient]);
 
   useEffect(() => {
-    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
-      fetchUsers();
-    } else if (currentUser) {
+    if (currentUser && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
       router.replace('/dashboard');
     }
-  }, [currentUser, router, fetchUsers]);
+  }, [currentUser, router]);
 
   const handleUserAdded = async () => {
     toast({ title: "User Added", description: `New user has been added. Default password is 'password'.` });
