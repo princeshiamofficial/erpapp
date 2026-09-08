@@ -80,6 +80,7 @@ export default function PaymentHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [payments, setPayments] = useState<any[]>([]);
   const [totalPayments, setTotalPayments] = useState(0);
+  const [periodTotalAmount, setPeriodTotalAmount] = useState(0);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   useEffect(() => {
@@ -114,6 +115,7 @@ export default function PaymentHistoryPage() {
       );
       setPayments(res.payments);
       setTotalPayments(res.total);
+      setPeriodTotalAmount(res.totalAmount ?? 0);
     } catch (error) {
       toast({ title: "Error", description: "Could not load payment history.", variant: "destructive" });
     } finally {
@@ -317,8 +319,14 @@ export default function PaymentHistoryPage() {
           </div>
         </CardContent>
          <CardFooter className="py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm font-semibold">
-            Total Paid in this Period: <span className="text-primary">{formatCurrency(totalPayment)}</span>
+          <div className="text-sm font-semibold flex flex-wrap items-center gap-2">
+            <span>Total Paid in this Period:</span>
+            <span className="text-primary font-bold">{formatCurrency(periodTotalAmount)}</span>
+            {totalPages > 1 && (
+              <span className="text-xs text-muted-foreground font-normal">
+                (Page {currentPage}: {formatCurrency(totalPayment)})
+              </span>
+            )}
           </div>
           {totalPages > 1 && (
             <Pagination>

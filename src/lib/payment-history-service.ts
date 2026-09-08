@@ -94,7 +94,7 @@ export async function getPaymentHistoryPaginated(
     startDateStr?: string,
     endDateStr?: string,
     sortConfig?: { key: string; direction: 'asc' | 'desc' } | null
-): Promise<{ payments: PaymentHistoryEntry[]; total: number }> {
+): Promise<{ payments: PaymentHistoryEntry[]; total: number; totalAmount: number }> {
     const allPayments = await getAllPaymentHistory();
     let results = [...allPayments];
 
@@ -137,8 +137,9 @@ export async function getPaymentHistoryPaginated(
     }
 
     const total = results.length;
+    const totalAmount = results.reduce((sum, p) => sum + (Number(p.payment) || 0), 0);
     const startIndex = (page - 1) * limit;
     const payments = results.slice(startIndex, startIndex + limit);
 
-    return { payments, total };
+    return { payments, total, totalAmount };
 }
