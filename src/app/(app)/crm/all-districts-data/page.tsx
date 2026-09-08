@@ -347,17 +347,6 @@ export default function AllDistrictsDataPage() {
                     <CardDescription>
                       A comprehensive list of data for all divisions and their respective districts.
                     </CardDescription>
-                    {isCR && hasAssignedDivisions && (
-                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                        <span className="text-xs font-semibold text-muted-foreground">My Assigned Zones:</span>
-                        {currentUser?.assignedDivisions?.map(div => (
-                          <Badge key={div} variant="secondary" className="text-xs bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 font-medium">
-                            <MapPin className="w-3 h-3 mr-1 text-orange-500" />
-                            {div}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
