@@ -390,6 +390,7 @@ export default function UsersPage() {
                   <TableHead className="min-w-[150px]">Name</TableHead>
                   <TableHead className="min-w-[200px]">Email</TableHead>
                   <TableHead className="min-w-[120px]">Role</TableHead>
+                  <TableHead className="min-w-[120px]">Zone Assigned</TableHead>
                   {showBanStatusColumn && <TableHead className="min-w-[100px]">Status</TableHead>}
                   <TableHead className="min-w-[150px]">Company</TableHead>
                   <TableHead className="pr-6 text-right min-w-[80px]">Actions</TableHead>
@@ -398,13 +399,14 @@ export default function UsersPage() {
               <TableBody>
                 {isLoadingUsers && [...Array(10)].map((_, i) => (
                   <TableRow key={`skel-user-${i}`}>
-                    <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                    <TableCell className="pl-6"><Skeleton className="h-5 w-6" /></TableCell>
+                    <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-8 rounded-full" /></TableCell>
+                    {showBanStatusColumn && <TableCell><Skeleton className="h-5 w-16" /></TableCell>}
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    {showBanStatusColumn && <TableCell><Skeleton className="h-5 w-24" /></TableCell>}
                     <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-9 inline-block rounded-md" /></TableCell>
                   </TableRow>
                 ))}
@@ -434,20 +436,28 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1 items-start">
-                          <Badge
-                            style={{ backgroundColor: badgeColor, color: textColor }}
-                            className="border-none"
-                          >
-                            {roleDef?.name || user.role.replace(/_/g, ' ')}
-                          </Badge>
-                          {(user.role === 'CR' || user.role === 'CRM') && user.assignedDivisions && user.assignedDivisions.length > 0 && (
-                            <span className="text-[11px] text-orange-600 dark:text-orange-400 font-medium flex items-center gap-0.5">
-                              <MapPin className="w-3 h-3 text-orange-500 shrink-0" />
-                              {user.assignedDivisions.length} zone{user.assignedDivisions.length > 1 ? 's' : ''}
+                        <Badge
+                          style={{ backgroundColor: badgeColor, color: textColor }}
+                          className="border-none"
+                        >
+                          {roleDef?.name || user.role.replace(/_/g, ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.role === 'CR' || user.role === 'CRM' ? (
+                          user.assignedDivisions && user.assignedDivisions.length > 0 ? (
+                            <span
+                              className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 text-xs font-semibold rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800/60 cursor-default"
+                              title={`Assigned Zones: ${user.assignedDivisions.join(', ')}`}
+                            >
+                              {user.assignedDivisions.length}
                             </span>
-                          )}
-                        </div>
+                          ) : (
+                            <span className="text-muted-foreground/50 text-xs font-mono">-</span>
+                          )
+                        ) : (
+                          <span className="text-muted-foreground/40 text-xs font-mono">-</span>
+                        )}
                       </TableCell>
                       {showBanStatusColumn && (
                         <TableCell>
@@ -577,9 +587,9 @@ export default function UsersPage() {
                   );
                 })}
 
-                {!isLoadingUsers && filteredUsers.length === 0 && (
+                 {!isLoadingUsers && filteredUsers.length === 0 && (
                   <TableRow key="empty-users">
-                    <TableCell colSpan={showBanStatusColumn ? 8 : 7} className="text-center py-12 h-[300px]">
+                    <TableCell colSpan={showBanStatusColumn ? 9 : 8} className="text-center py-12 h-[300px]">
                       <svg
                         width="64"
                         height="64"
