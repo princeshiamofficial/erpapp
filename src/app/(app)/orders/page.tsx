@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -78,13 +79,9 @@ const ITEMS_PER_PAGE = 25;
 export default function OrdersPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [orders, setOrders] = useState<TrackingLink[]>([]);
-  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
-  const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
-  const [usersMap, setUsersMap] = useState<Record<string, User>>({});
 
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null);
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
@@ -111,21 +108,25 @@ export default function OrdersPage() {
   const [orderToDownload, setOrderToDownload] = useState<TrackingLink | null>(null);
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-  const [totalOrders, setTotalOrders] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const fetchOrderData = useCallback(async () => {
-    if (!currentUser) {
-      return;
-    }
-    if (orders.length === 0) {
-      setIsLoading(true);
-    }
-    try {
+  const { data: queryData, isLoading: isQueryLoading, refetch } = useQuery({
+    queryKey: [
+      'orders',
+      currentUser?.id,
+      currentUser?.role,
+      selectedDateRange?.from?.toISOString(),
+      selectedDateRange?.to?.toISOString(),
+      currentPage,
+      debouncedSearchTerm,
+      viewType,
+    ],
+    queryFn: async () => {
+      if (!currentUser) return null;
       const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
       const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
       const role = currentUser.role;
@@ -137,29 +138,40 @@ export default function OrdersPage() {
         getGlobalSettings(),
         getUsers()
       ]);
-      setOrders(fetchedResult.orders);
-      setTotalOrders(fetchedResult.total);
-      setAllStatuses(fetchedStatuses);
-      setGlobalAppSettings(fetchedSettings);
-      
+
       const uMap: Record<string, User> = {};
-      fetchedUsers.forEach(u => uMap[u.id] = u);
-      setUsersMap(uMap);
-    } catch (error) {
-      console.error("Failed to fetch orders, statuses, settings, or users:", error);
-      toast({ title: "Error", description: "Could not load data.", variant: "destructive" });
-      setOrders([]);
-      setAllStatuses([]);
-      setGlobalAppSettings(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser, toast, selectedDateRange, debouncedSearchTerm, currentPage, viewType]);
+      fetchedUsers.forEach(u => { uMap[u.id] = u; });
+
+      return {
+        orders: fetchedResult.orders,
+        totalOrders: fetchedResult.total,
+        allStatuses: fetchedStatuses,
+        globalAppSettings: fetchedSettings,
+        usersMap: uMap,
+      };
+    },
+    enabled: !!currentUser,
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const orders = queryData?.orders ?? [];
+  const totalOrders = queryData?.totalOrders ?? 0;
+  const allStatuses = queryData?.allStatuses ?? [];
+  const globalAppSettings = queryData?.globalAppSettings ?? null;
+  const usersMap = queryData?.usersMap ?? {};
+  const isLoading = isQueryLoading && !queryData;
+
+  const fetchOrderData = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['orders'] });
+  }, [queryClient]);
 
   useEffect(() => {
     setIsClient(true);
-    fetchOrderData();
-  }, [fetchOrderData]);
+  }, []);
 
   const { socket } = useSocket();
 
@@ -168,13 +180,13 @@ export default function OrdersPage() {
 
     socket.on("order-updated", (data: any) => {
       console.log("Order updated remotely:", data);
-      fetchOrderData();
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
     });
 
     return () => {
       socket.off("order-updated");
     };
-  }, [socket, fetchOrderData]);
+  }, [socket, queryClient]);
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => s.isVisible !== false);
@@ -248,21 +260,17 @@ export default function OrdersPage() {
 
 
   const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); // Consider a more specific loading state
     try {
       console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
       const freshStatuses = await getStatuses();
       if (!Array.isArray(freshStatuses)) {
         console.error("OrdersPage/handleOpenAssignDrDialog: getStatuses() did not return an array. Received:", freshStatuses);
         toast({ title: "Error", description: "Failed to load status configuration for DR assignment. Please try again.", variant: "destructive" });
-        setIsLoading(false);
         return;
       }
 
       const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
-      if (rfdCheck) {
-        // console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
-      } else {
+      if (!rfdCheck) {
         console.error("OrdersPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in freshStatuses from getStatuses().");
         toast({
           title: "Configuration Alert!",
@@ -270,29 +278,22 @@ export default function OrdersPage() {
           variant: "destructive",
           duration: 10000,
         });
-        setIsLoading(false);
         return;
       }
 
-      setAllStatuses(freshStatuses); // Update the main page's status list as well
       setStatusesForDialog(freshStatuses);
       setSelectedOrderForDrAssignment(orderToAssign);
       setIsAssignDrDialogOpen(true);
     } catch (error) {
       console.error("OrdersPage/handleOpenAssignDrDialog: Error preparing assign DR dialog:", error);
       toast({ title: "Error", description: "Could not prepare DR assignment dialog. Check console.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
     }
   }, [toast]);
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
-    setOrders(prevOrders =>
-      prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
-    );
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
     toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-    // await fetchOrderData(); // Potentially re-fetch for full reconciliation
-  }, [toast]);
+  }, [toast, queryClient]);
 
   const handleDeleteOrder = async () => {
     if (!orderToDelete || !canDeleteOrder || !currentUser) return;
@@ -361,13 +362,11 @@ export default function OrdersPage() {
   };
 
   const handleOrderUpdated = useCallback(async (updatedOrder: TrackingLink) => {
-    setOrders(prevOrders =>
-      prevOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
-    );
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
     toast({ title: "Order Updated", description: "Order details have been successfully updated." });
     setIsEditOrderDialogOpen(false);
     setOrderToEdit(null);
-  }, [toast]);
+  }, [toast, queryClient]);
 
   const renderPagination = () => {
     const pageNumbers = [];

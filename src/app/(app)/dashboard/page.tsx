@@ -83,7 +83,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatDisplayName } from '@/lib/utils';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { divisions } from '@/lib/district-data'; // Import divisions data
 import type { DateRange, PredefinedRange } from "@/components/dashboard/date-range-picker";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -266,8 +266,6 @@ const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory;
   { title: LEAD_CATEGORY_LABELS['ROD'], category: 'ROD', icon: ShoppingCart, color: '#ea580c', gradient: 'linear-gradient(to right, #ea580c, #f97316)', shadow: '0 4px 15px 0 rgba(234, 88, 12, 0.4)' },
 ];
 
-const queryClient = new QueryClient();
-
 const LeftAlignedTick = ({ y, payload }: any) => {
   return (
     <g>
@@ -308,15 +306,7 @@ export default function DashboardPage() {
     return null; // Redirect is handled by the useEffect above
   }
 
-  if (currentUser.role === 'VENDOR') {
-    return <div />; // Render a blank page for vendors
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <DashboardContent />
-    </QueryClientProvider>
-  );
+  return <DashboardContent />;
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -415,15 +405,19 @@ function DashboardContent() {
     }
   }, [currentUser, toast, selectedDateRange, selectedCrmId]);
 
-  const { data: queryData, isLoading: isLoadingData, refetch } = useQuery({
+  const { data: queryData, isLoading: isLoadingQuery, refetch } = useQuery({
     queryKey: ['dashboardData', currentUser?.id, selectedCrmId, selectedDateRange?.from?.toISOString(), selectedDateRange?.to?.toISOString()],
     queryFn: fetchDashboardData,
     enabled: !!currentUser,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchOnMount: true,
+    refetchOnMount: false,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
     retry: 1,
   });
+
+  const isLoadingData = isLoadingQuery && !queryData;
 
   const { allOrders = [], allYearOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTodayScheduledLeads = [], allTasks = [], allFeedback = [], allTransactions = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM' && !u.isBanned), [allUsers]);

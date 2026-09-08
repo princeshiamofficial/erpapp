@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -146,6 +147,7 @@ const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataE
 
 export default function AllDistrictsDataPage() {
   const { currentUser, refreshCurrentUser } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
@@ -162,10 +164,6 @@ export default function AllDistrictsDataPage() {
   }, [searchTerm]);
 
   const [districtData, setDistrictData] = useState<DivisionData[]>([]);
-  const [rawOrders, setRawOrders] = useState<TrackingLink[]>([]);
-  const [rawManualEntries, setRawManualEntries] = useState<DistrictDataEntry[]>([]);
-
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
@@ -201,42 +199,52 @@ export default function AllDistrictsDataPage() {
 
   const hasAssignedDivisions = isCR && assignedDivisions.length > 0;
 
+  const { data: queryData, isLoading: isQueryLoading } = useQuery({
+    queryKey: [
+      'crmAllDistrictsData',
+      currentUser?.id,
+      currentUser?.role,
+      assignedDivisions,
+      selectedDateRange?.from?.toISOString(),
+      selectedDateRange?.to?.toISOString(),
+      debouncedSearchTerm,
+    ],
+    queryFn: async () => {
+      const role = currentUser?.role;
+
+      if (!debouncedSearchTerm && !isSystemAdmin && !hasAssignedDivisions) {
+        return { rawOrders: [], rawManualEntries: [] };
+      }
+
+      const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? startOfDay(selectedDateRange.from).toISOString() : undefined;
+      const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? endOfDay(selectedDateRange.to).toISOString() : undefined;
+      
+      const [fetchedOrders, fetchedManualEntries] = await Promise.all([
+        getOrders(startStr, endStr, role, undefined, undefined, undefined, debouncedSearchTerm),
+        getManualDistrictData(startStr, endStr, role, undefined, undefined, undefined, debouncedSearchTerm)
+      ]);
+
+      return {
+        rawOrders: fetchedOrders,
+        rawManualEntries: fetchedManualEntries,
+      };
+    },
+    enabled: !!currentUser,
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const rawOrders = queryData?.rawOrders ?? [];
+  const rawManualEntries = queryData?.rawManualEntries ?? [];
+  const isLoading = isQueryLoading && !queryData;
+
   const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-        const role = currentUser?.role;
-
-        // Skip fetching if the user is neither an admin nor a CR with assigned divisions, and has not typed a search term
-        if (!debouncedSearchTerm && !isSystemAdmin && !hasAssignedDivisions) {
-            setRawOrders([]);
-            setRawManualEntries([]);
-            setIsLoading(false);
-            return;
-        }
-
-        const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? startOfDay(selectedDateRange.from).toISOString() : undefined;
-        const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? endOfDay(selectedDateRange.to).toISOString() : undefined;
-        
-        const [fetchedOrders, fetchedManualEntries] = await Promise.all([
-            getOrders(startStr, endStr, role, undefined, undefined, undefined, debouncedSearchTerm),
-            getManualDistrictData(startStr, endStr, role, undefined, undefined, undefined, debouncedSearchTerm)
-        ]);
-        
-        setRawOrders(fetchedOrders);
-        setRawManualEntries(fetchedManualEntries);
-    } catch (error) {
-        console.error("Failed to fetch order data for districts page:", error);
-        toast({ title: "Error", description: "Could not load district data.", variant: "destructive" });
-    } finally {
-        setIsLoading(false);
-    }
-  }, [toast, selectedDateRange, currentUser, debouncedSearchTerm, isSystemAdmin, hasAssignedDivisions]);
+    await queryClient.invalidateQueries({ queryKey: ['crmAllDistrictsData'] });
+  }, [queryClient]);
   
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDateRange, currentUser, debouncedSearchTerm, hasAssignedDivisions]);
-
   useEffect(() => {
     const formattedData = formatDistrictData(rawOrders, rawManualEntries);
     setDistrictData(formattedData);

@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -47,16 +48,12 @@ const ITEMS_PER_PAGE = 25;
 export default function AllOrdersPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>([]);
-  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
-  const [usersMap, setUsersMap] = useState<Record<string, User>>({});
-  const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
-  const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
@@ -64,7 +61,6 @@ export default function AllOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-  const [totalOrders, setTotalOrders] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -75,41 +71,57 @@ export default function AllOrdersPage() {
     setSelectedDateRange(range);
   };
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
+  const { data: queryData, isLoading: isQueryLoading, refetch } = useQuery({
+    queryKey: [
+      'allOrders',
+      currentUser?.role,
+      selectedDateRange?.from?.toISOString(),
+      selectedDateRange?.to?.toISOString(),
+      currentPage,
+      debouncedSearchTerm,
+    ],
+    queryFn: async () => {
       const startStr = (!debouncedSearchTerm && selectedDateRange?.from) ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
       const endStr = (!debouncedSearchTerm && selectedDateRange?.to) ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
       const role = currentUser?.role;
-      const userId = undefined; // No user ID based filtering on all-orders page
+      const userId = undefined;
 
       const [fetchedResult, fetchedStatuses, fetchedUsers, fetchedSettings] = await Promise.all([
-        getOrdersWithTotal(startStr, endStr, role, userId, currentPage, 25, debouncedSearchTerm), // using ITEMS_PER_PAGE=25 directly here to avoid circular dep if needed, but ITEMS_PER_PAGE is outside component
+        getOrdersWithTotal(startStr, endStr, role, userId, currentPage, ITEMS_PER_PAGE, debouncedSearchTerm),
         getStatuses(),
         getUsers(),
         getGlobalSettings()
       ]);
-      setTrackingLinks(fetchedResult.orders);
-      setTotalOrders(fetchedResult.total);
-      setAllStatuses(fetchedStatuses);
-      setGlobalAppSettings(fetchedSettings);
-      
-      const uMap: Record<string, User> = {};
-      fetchedUsers.forEach(u => uMap[u.id] = u);
-      setUsersMap(uMap);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast({ title: "Error", description: "Could not load data.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast, selectedDateRange, debouncedSearchTerm, currentUser, currentPage]);
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [fetchData, currentUser]);
+      const uMap: Record<string, User> = {};
+      fetchedUsers.forEach(u => { uMap[u.id] = u; });
+
+      return {
+        trackingLinks: fetchedResult.orders,
+        totalOrders: fetchedResult.total,
+        allStatuses: fetchedStatuses,
+        usersMap: uMap,
+        globalAppSettings: fetchedSettings,
+      };
+    },
+    enabled: !!currentUser,
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const trackingLinks = queryData?.trackingLinks ?? [];
+  const totalOrders = queryData?.totalOrders ?? 0;
+  const allStatuses = queryData?.allStatuses ?? [];
+  const usersMap = queryData?.usersMap ?? {};
+  const globalAppSettings = queryData?.globalAppSettings ?? null;
+  const isLoading = isQueryLoading && !queryData;
+
+  const fetchData = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['allOrders'] });
+  }, [queryClient]);
 
   const getStatusDisplayInfoCallback = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
@@ -132,7 +144,7 @@ export default function AllOrdersPage() {
   };
 
   const handleTrackingLinkUpdated = () => {
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['allOrders'] });
     setIsEditDialogOpen(false);
     setSelectedLink(null);
   };
