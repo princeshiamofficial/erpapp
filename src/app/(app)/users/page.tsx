@@ -447,7 +447,8 @@ export default function UsersPage() {
                         {user.role === 'CR' || user.role === 'CRM' ? (
                           user.assignedDivisions && user.assignedDivisions.length > 0 ? (
                             <span
-                              className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 text-xs font-semibold rounded-full bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800/60 cursor-default"
+                              className="inline-flex items-center justify-center font-medium text-center rounded-[6px] min-w-[28px] h-[23px] px-[6px] py-[5px] text-[12px] leading-[12px] cursor-default bg-[#e8f9e8] text-[#1abe17] dark:bg-[#1abe17]/15 dark:text-[#22c55e]"
+                              style={{ fontFamily: '"Golos Text", sans-serif' }}
                               title={`Assigned Zones: ${user.assignedDivisions.join(', ')}`}
                             >
                               {user.assignedDivisions.length}
