@@ -64,6 +64,34 @@ const ensureTwoFactorColumnsExist = async () => {
 };
 ensureTwoFactorColumnsExist();
 
+let assignedDivisionsColumnEnsured = false;
+export const ensureAssignedDivisionsColumnExists = async () => {
+  if (assignedDivisionsColumnEnsured) return;
+  try {
+    const columns = await query<any[]>(`SHOW COLUMNS FROM ${USERS_TABLE} LIKE 'assigned_divisions'`);
+    if (columns.length === 0) {
+      console.log(`Column 'assigned_divisions' not found in table '${USERS_TABLE}'. Creating it...`);
+      await query(`ALTER TABLE ${USERS_TABLE} ADD COLUMN assigned_divisions TEXT DEFAULT NULL`);
+    }
+    assignedDivisionsColumnEnsured = true;
+  } catch (e) {
+    console.error(`Error ensuring assigned_divisions column exists:`, e);
+  }
+};
+ensureAssignedDivisionsColumnExists();
+
+const parseAssignedDivisions = (val: any): string[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  try {
+    const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+    if (Array.isArray(parsed)) return parsed;
+  } catch (e) {
+    // fallback comma-separated string
+  }
+  return String(val).split(',').map((s: string) => s.trim()).filter(Boolean);
+};
+
 export interface PinVerificationResult {
   success: boolean;
   isLocked: boolean;
@@ -276,6 +304,7 @@ export const getUsers = async (): Promise<User[]> => {
   try {
     await ensurePinCodeColumnExists();
     await ensureTwoFactorColumnsExist();
+    await ensureAssignedDivisionsColumnExists();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} ORDER BY name ASC`);
     return results.map(row => {
       const isLocked = Boolean(row.pin_locked_until && new Date(row.pin_locked_until) > new Date());
@@ -297,6 +326,7 @@ export const getUsers = async (): Promise<User[]> => {
         hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
         pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
         hasTwoFactor: Boolean(Number(row.two_factor_enabled) === 1 && row.two_factor_secret && String(row.two_factor_secret).trim().length > 0),
+        assignedDivisions: parseAssignedDivisions(row.assigned_divisions),
       } as User;
     });
   } catch (error) {
@@ -311,6 +341,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   try {
     await ensurePinCodeColumnExists();
     await ensureTwoFactorColumnsExist();
+    await ensureAssignedDivisionsColumnExists();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE id = ?`, [userId]);
     if (results.length > 0) {
       const row = results[0];
@@ -333,6 +364,7 @@ export const getUserById = async (userId: string): Promise<User | null> => {
         hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
         pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
         hasTwoFactor: Boolean(Number(row.two_factor_enabled) === 1 && row.two_factor_secret && String(row.two_factor_secret).trim().length > 0),
+        assignedDivisions: parseAssignedDivisions(row.assigned_divisions),
       } as User;
     }
     return null;
@@ -347,6 +379,7 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
   try {
     await ensurePinCodeColumnExists();
     await ensureTwoFactorColumnsExist();
+    await ensureAssignedDivisionsColumnExists();
     const results = await query<any[]>(`SELECT * FROM ${USERS_TABLE} WHERE email = ?`, [email]);
     if (results.length > 0) {
       const row = results[0];
@@ -369,12 +402,29 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
         hasPinCode: Boolean(row.pin_code && String(row.pin_code).length > 0),
         pinLockedUntil: row.pin_locked_until ? new Date(row.pin_locked_until).toISOString() : null,
         hasTwoFactor: Boolean(Number(row.two_factor_enabled) === 1 && row.two_factor_secret && String(row.two_factor_secret).trim().length > 0),
+        assignedDivisions: parseAssignedDivisions(row.assigned_divisions),
       } as User;
     }
     return null;
   } catch (error) {
     console.error(`Error fetching user by email "${email}" from MySQL:`, error);
     return null;
+  }
+};
+
+// Update user's assigned divisions (zones) in MySQL
+export const updateUserAssignedDivisions = async (userId: string, divisions: string[]): Promise<boolean> => {
+  try {
+    await ensureAssignedDivisionsColumnExists();
+    const cleanDivisions = Array.isArray(divisions) ? divisions.map(d => String(d).trim()).filter(Boolean) : [];
+    await query(`UPDATE ${USERS_TABLE} SET assigned_divisions = ? WHERE id = ?`, [
+      JSON.stringify(cleanDivisions),
+      userId
+    ]);
+    return true;
+  } catch (error) {
+    console.error(`Error updating assigned divisions for user ${userId}:`, error);
+    return false;
   }
 };
 
@@ -591,7 +641,7 @@ export const setupTwoFactorSecret = async (userId: string): Promise<SetupTwoFact
 
     const secret = generateBase32Secret(32);
     const backupCodes = generateBackupCodes(8);
-    const otpAuthUrl = generateOtpAuthUrl(secret, user.email, 'ERPApp');
+    const otpAuthUrl = generateOtpAuthUrl(secret, user.email, 'Color Hut');
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(otpAuthUrl)}`;
 
     return { secret, otpAuthUrl, backupCodes, qrCodeUrl };

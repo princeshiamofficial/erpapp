@@ -3,7 +3,7 @@ import { getMenuverseRegistrations } from '@/lib/menuverse-service';
 import { MenuVerseContent } from './MenuVerseContent';
 
 export const metadata: Metadata = {
-  title: 'MenuVerse | ERP App',
+  title: 'MenuVerse | Color Hut',
   description: 'Manage MenuVerse configurations and data.',
 };
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Welcome to the **ERP App** repository. This project is a premium enterprise management system built with Next.js, Genkit AI, and MySQL.
+Welcome to the **Color Hut** repository. This project is a premium enterprise management system built with Next.js, Genkit AI, and MySQL.
 
 This file provides guidance for AI agents working on this codebase.
 

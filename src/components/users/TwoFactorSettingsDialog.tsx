@@ -151,7 +151,7 @@ export function TwoFactorSettingsDialog({ children }: TwoFactorSettingsDialogPro
   };
 
   const downloadBackupCodes = (codes: string[]) => {
-    const text = `ERPApp 2FA Backup Codes\nAccount: ${currentUser?.email}\nDate: ${new Date().toLocaleDateString()}\n\nCodes:\n${codes.join('\n')}\n\nKeep these single-use recovery codes in a safe place.`;
+    const text = `Color Hut 2FA Backup Codes\nAccount: ${currentUser?.email}\nDate: ${new Date().toLocaleDateString()}\n\nCodes:\n${codes.join('\n')}\n\nKeep these single-use recovery codes in a safe place.`;
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

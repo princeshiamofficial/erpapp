@@ -75,7 +75,7 @@ export function generateBackupCodes(count = 8): string[] {
 /**
  * Generate standard otpauth URL for Authenticator Apps
  */
-export function generateOtpAuthUrl(secret: string, email: string, issuer = 'ERPApp'): string {
+export function generateOtpAuthUrl(secret: string, email: string, issuer = 'Color Hut'): string {
   const encodedEmail = encodeURIComponent(email);
   const encodedIssuer = encodeURIComponent(issuer);
   return `otpauth://totp/${encodedIssuer}:${encodedEmail}?secret=${secret}&issuer=${encodedIssuer}`;

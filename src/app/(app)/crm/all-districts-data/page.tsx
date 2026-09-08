@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, FileSpreadsheet, PlusCircle, CalendarDays } from 'lucide-react';
+import { Search, FileSpreadsheet, PlusCircle, CalendarDays, MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
 import { getOrders } from '@/lib/order-service';
@@ -144,10 +145,17 @@ const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataE
 };
 
 export default function AllDistrictsDataPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, refreshCurrentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
+  // Refresh user data on mount to ensure latest assignedDivisions are reflected
+  useEffect(() => {
+    if (typeof refreshCurrentUser === 'function') {
+      refreshCurrentUser();
+    }
+  }, [refreshCurrentUser]);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
     return () => clearTimeout(timer);
@@ -182,13 +190,24 @@ export default function AllDistrictsDataPage() {
     setDateRangeLabel(displayLabel);
   };
 
+  const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
+  const isCR = currentUser?.role === 'CR' || currentUser?.role === 'CRM';
+
+  const assignedDivisions = useMemo(() => {
+    return (currentUser?.assignedDivisions || [])
+      .map(d => d.trim().toLowerCase())
+      .filter(Boolean);
+  }, [currentUser?.assignedDivisions]);
+
+  const hasAssignedDivisions = isCR && assignedDivisions.length > 0;
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
         const role = currentUser?.role;
 
-        // Skip fetching if the user is not a system admin and has not typed a search term (as the UI filters them out anyway)
-        if (!debouncedSearchTerm && role !== 'SYSTEM_ADMIN') {
+        // Skip fetching if the user is neither an admin nor a CR with assigned divisions, and has not typed a search term
+        if (!debouncedSearchTerm && !isSystemAdmin && !hasAssignedDivisions) {
             setRawOrders([]);
             setRawManualEntries([]);
             setIsLoading(false);
@@ -211,32 +230,36 @@ export default function AllDistrictsDataPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [toast, selectedDateRange, currentUser, debouncedSearchTerm]);
+  }, [toast, selectedDateRange, currentUser, debouncedSearchTerm, isSystemAdmin, hasAssignedDivisions]);
   
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDateRange, currentUser, debouncedSearchTerm]);
+  }, [selectedDateRange, currentUser, debouncedSearchTerm, hasAssignedDivisions]);
 
   useEffect(() => {
     const formattedData = formatDistrictData(rawOrders, rawManualEntries);
     setDistrictData(formattedData);
   }, [rawOrders, rawManualEntries]);
 
-  const isSystemAdmin = currentUser?.role === 'SYSTEM_ADMIN';
-
   const filteredData = useMemo(() => {
     const lowercasedSearchTerm = debouncedSearchTerm.trim().toLowerCase();
 
-    return districtData.map(division => {
+    // For CR role users: restrict strictly to assigned divisions
+    const scopedDivisions = isCR
+      ? districtData.filter(div => assignedDivisions.includes(div.division.toLowerCase()))
+      : districtData;
+
+    return scopedDivisions.map(division => {
       const divisionMatches = division.division.toLowerCase().includes(lowercasedSearchTerm);
 
       const filteredDistricts = division.districts.map(district => {
         const districtMatches = district.name.toLowerCase().includes(lowercasedSearchTerm);
 
         const filteredEntries = district.entries.filter(entry => {
-          // If no search term, only system admins can see the data by default
-          if (!debouncedSearchTerm && !isSystemAdmin) return false;
+          // If no search term:
+          // Admins and CR users with assigned divisions see data automatically without search!
+          if (!debouncedSearchTerm && !isSystemAdmin && !hasAssignedDivisions) return false;
           if (!debouncedSearchTerm) return true;
 
           // If division or district matches the search term, keep all their entries
@@ -256,7 +279,7 @@ export default function AllDistrictsDataPage() {
       return { ...division, districts: filteredDistricts };
     }).filter(division => division.districts.length > 0);
 
-  }, [districtData, debouncedSearchTerm, isSystemAdmin]);
+  }, [districtData, debouncedSearchTerm, isSystemAdmin, isCR, assignedDivisions, hasAssignedDivisions]);
 
   const handleExport = () => {
     if (filteredData.length === 0) {
@@ -324,6 +347,17 @@ export default function AllDistrictsDataPage() {
                     <CardDescription>
                       A comprehensive list of data for all divisions and their respective districts.
                     </CardDescription>
+                    {isCR && hasAssignedDivisions && (
+                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                        <span className="text-xs font-semibold text-muted-foreground">My Assigned Zones:</span>
+                        {currentUser?.assignedDivisions?.map(div => (
+                          <Badge key={div} variant="secondary" className="text-xs bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800 font-medium">
+                            <MapPin className="w-3 h-3 mr-1 text-orange-500" />
+                            {div}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
@@ -430,10 +464,20 @@ export default function AllDistrictsDataPage() {
                     });
                   }) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
-                        {!isSystemAdmin && !searchTerm.trim() 
-                          ? "Please enter a search term to view results." 
-                          : `No results found${searchTerm ? ` for "${searchTerm}"` : ''}.`}
+                      <TableCell colSpan={7} className="h-32 text-center">
+                        {isCR && !hasAssignedDivisions ? (
+                          <div className="py-4 flex flex-col items-center justify-center space-y-2">
+                            <MapPin className="h-8 w-8 text-orange-400/80" />
+                            <p className="font-semibold text-foreground text-sm">No Zones Assigned</p>
+                            <p className="text-xs text-muted-foreground max-w-sm">
+                              No divisions have been assigned to your account yet. Please contact an administrator to assign your division zones.
+                            </p>
+                          </div>
+                        ) : !isSystemAdmin && !hasAssignedDivisions && !searchTerm.trim() ? (
+                          "Please enter a search term to view results." 
+                        ) : (
+                          `No results found${searchTerm ? ` for "${searchTerm}"` : ''}.`
+                        )}
                       </TableCell>
                     </TableRow>
                   )}

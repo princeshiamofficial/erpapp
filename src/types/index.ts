@@ -33,6 +33,7 @@ export interface User {
   fcmToken?: string | null;
   feedback?: Feedback[];
   isLeader?: boolean; // Field for CRM, DR, and LR team leaders
+  assignedDivisions?: string[] | null; // Zone assignment for CR/CRM role (divisions)
 }
 
 export interface SalaryIncrement {

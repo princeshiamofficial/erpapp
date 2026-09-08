@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CANCELLED_STATUS_ID } from '@/lib/status-constants';
 
 interface SalesPerformanceClientProps {
   allOrders: TrackingLink[];
@@ -59,6 +60,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers, displayMode = '
     if (allOrders && allOrders.length > 0) {
       allOrders.forEach(order => {
         try {
+          if (order.currentStatus === CANCELLED_STATUS_ID) return;
           if (order.createdAt) {
             const yr = getYear(parseISO(order.createdAt));
             if (!isNaN(yr)) {
@@ -84,10 +86,12 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers, displayMode = '
 
     allOrders.forEach(order => {
       try {
+        if (order.currentStatus === CANCELLED_STATUS_ID) return;
         const orderDate = parseISO(order.createdAt);
         if (getYear(orderDate) === selectedYear && order.crmUserId) {
           const monthIndex = getMonth(orderDate);
-          const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
+          const rawTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
+          const orderTotal = Math.max(0, rawTotal - (Number(order.specialClientDiscount) || 0));
           months[monthIndex].sales += orderTotal;
           months[monthIndex].orders += 1;
 

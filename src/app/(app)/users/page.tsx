@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter, LogIn, Eye, BadgeCheck, Unlock } from "lucide-react";
+import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2, Filter, LogIn, Eye, BadgeCheck, Unlock, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole, UserRoleDefinition } from "@/types";
@@ -30,7 +30,7 @@ import {
   updateUserTargets,
 } from '@/lib/user-service';
 import { getRoles } from '@/lib/user-role-service';
-import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction, unlockUserPinAccountAction } from './actions';
+import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction, unlockUserPinAccountAction, updateUserAssignedDivisionsAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +46,7 @@ const SetUserAvatarDialog = dynamic(() => import('@/components/users/set-user-av
 const SetUserSalesTargetDialog = dynamic(() => import('@/components/users/set-user-sales-target-dialog').then(mod => mod.SetUserSalesTargetDialog));
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
 const AdminSetUserPinDialog = dynamic(() => import('@/components/users/admin-set-user-pin-dialog').then(mod => mod.AdminSetUserPinDialog));
+const AssignZoneDialog = dynamic(() => import('@/components/users/AssignZoneDialog').then(mod => mod.AssignZoneDialog));
 
 
 export default function UsersPage() {
@@ -85,6 +86,9 @@ export default function UsersPage() {
 
   const [userToManagePin, setUserToManagePin] = useState<User | null>(null);
   const [isAdminSetPinDialogOpen, setIsAdminSetPinDialogOpen] = useState(false);
+
+  const [userToAssignZone, setUserToAssignZone] = useState<User | null>(null);
+  const [isAssignZoneDialogOpen, setIsAssignZoneDialogOpen] = useState(false);
 
 
   const fetchUsers = useCallback(async () => {
@@ -430,12 +434,20 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
-                        <Badge
-                          style={{ backgroundColor: badgeColor, color: textColor }}
-                          className="border-none"
-                        >
-                          {roleDef?.name || user.role.replace(/_/g, ' ')}
-                        </Badge>
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge
+                            style={{ backgroundColor: badgeColor, color: textColor }}
+                            className="border-none"
+                          >
+                            {roleDef?.name || user.role.replace(/_/g, ' ')}
+                          </Badge>
+                          {(user.role === 'CR' || user.role === 'CRM') && user.assignedDivisions && user.assignedDivisions.length > 0 && (
+                            <span className="text-[11px] text-orange-600 dark:text-orange-400 font-medium flex items-center gap-0.5">
+                              <MapPin className="w-3 h-3 text-orange-500 shrink-0" />
+                              {user.assignedDivisions.length} zone{user.assignedDivisions.length > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       {showBanStatusColumn && (
                         <TableCell>
@@ -538,6 +550,15 @@ export default function UsersPage() {
                                   className="cursor-pointer"
                                 >
                                   <Target className="mr-2 h-4 w-4" /> Set Sales Targets
+                                </DropdownMenuItem>
+                              )}
+                              {(user.role === 'CR' || user.role === 'CRM') && (
+                                <DropdownMenuItem
+                                  onSelect={() => { setUserToAssignZone(user); setIsAssignZoneDialogOpen(true); }}
+                                  disabled={!canAdminModifyTargetUser(user)}
+                                  className="cursor-pointer text-orange-600 focus:text-orange-700"
+                                >
+                                  <MapPin className="mr-2 h-4 w-4" /> Zone Assign
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuGroup>
@@ -702,6 +723,38 @@ export default function UsersPage() {
           onOpenChange={(open) => {
             setIsSetTargetsDialogOpen(open);
             if (!open) setUserToSetTargets(null);
+          }}
+        />
+      )}
+
+      {isAssignZoneDialogOpen && userToAssignZone && (userToAssignZone.role === 'CR' || userToAssignZone.role === 'CRM') && (
+        <AssignZoneDialog
+          user={userToAssignZone}
+          onZonesAssigned={async (userId, divisions) => {
+            const res = await updateUserAssignedDivisionsAction(userId, divisions);
+            if (res.success) {
+              toast({
+                title: "Zones Assigned",
+                description: `Successfully assigned ${divisions.length} zone(s) to ${userToAssignZone.name}.`,
+              });
+              await fetchUsers();
+              if (currentUser && currentUser.id === userId && typeof refreshCurrentUser === 'function') {
+                await refreshCurrentUser();
+              }
+              return true;
+            } else {
+              toast({
+                title: "Zone Assignment Failed",
+                description: res.error || "Could not update assigned zones.",
+                variant: "destructive",
+              });
+              return false;
+            }
+          }}
+          isOpen={isAssignZoneDialogOpen}
+          onOpenChange={(open) => {
+            setIsAssignZoneDialogOpen(open);
+            if (!open) setUserToAssignZone(null);
           }}
         />
       )}

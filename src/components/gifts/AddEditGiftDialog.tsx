@@ -301,17 +301,17 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
                   ))}
                 </div>
               )}
-              <Popover open={isGiftPopoverOpen} onOpenChange={setIsGiftPopoverOpen}>
+              <Popover open={isGiftPopoverOpen} onOpenChange={setIsGiftPopoverOpen} modal={true}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={isGiftPopoverOpen} className="w-full justify-between">
                     <span className="truncate">{selectedGiftItems.length > 0 ? "Add/Remove items..." : "Select gifts..."}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" portal={false}>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60]" align="start" side="bottom" sideOffset={4}>
                   <Command>
                     <CommandInput placeholder="Search gift..." />
-                    <CommandList className="max-h-80 overflow-y-auto">
+                    <CommandList className="max-h-80 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
                       <CommandEmpty>No gift option found.</CommandEmpty>
                       <CommandGroup>
                         {combinedGiftOptions.map((option, idx) => (

@@ -10,7 +10,8 @@ import {
   deleteUser as deleteUserFromDbService,
   updateUserFCMToken,
   unlockUserPinAccount,
-  updateUserPinCode
+  updateUserPinCode,
+  updateUserAssignedDivisions
 } from "@/lib/user-service";
 import { User } from "@/types";
 
@@ -131,5 +132,23 @@ export async function storeUserFCMTokenAction(
   } catch (error) {
     console.error("Error in storeUserFCMTokenAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred while storing FCM token." };
+  }
+}
+
+export async function updateUserAssignedDivisionsAction(
+  userId: string,
+  divisions: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updateUserAssignedDivisions(userId, divisions);
+    if (success) {
+      revalidatePath("/(app)/users");
+      revalidatePath("/(app)/crm/all-districts-data");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update assigned divisions in database." };
+  } catch (error) {
+    console.error("Error in updateUserAssignedDivisionsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred while updating assigned divisions." };
   }
 }

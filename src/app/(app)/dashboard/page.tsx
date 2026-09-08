@@ -454,6 +454,10 @@ function DashboardContent() {
     return ordersToFilter;
   }, [allOrders, currentUser, selectedCrmId]);
 
+  const validFilteredOrders = useMemo(() => {
+    return filteredOrders.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
+  }, [filteredOrders]);
+
   const filteredLeads = useMemo(() => {
     let leadsToFilter = [...allLeads];
 
@@ -514,7 +518,7 @@ function DashboardContent() {
     const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
     let totalSalesAllDivisions = 0;
 
-    filteredOrders.forEach(order => {
+    validFilteredOrders.forEach(order => {
       let longestMatch: { name: string; division: string; } | null = null;
       let longestMatchLength = 0;
       const simplifiedAddress = simplifyString(order.address);
@@ -535,7 +539,7 @@ function DashboardContent() {
       }
 
       const divisionName = longestMatch ? longestMatch.division : "Unknown";
-      const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
+      const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0) - (Number(order.specialClientDiscount) || 0);
       salesByDivision[divisionName] = (salesByDivision[divisionName] || 0) + orderTotal;
       totalSalesAllDivisions += orderTotal;
     });
@@ -550,7 +554,7 @@ function DashboardContent() {
       }))
       .sort((a, b) => b.sales - a.sales);
 
-  }, [filteredOrders]);
+  }, [validFilteredOrders]);
 
   const areaLeaderboardData = useMemo(() => {
     const ALL_BANGLADESH_DIVISIONS = [
@@ -578,7 +582,7 @@ function DashboardContent() {
 
     let totalOrdersCount = 0;
 
-    filteredOrders.forEach(order => {
+    validFilteredOrders.forEach(order => {
       let longestMatch: { name: string; division: string } | null = null;
       let longestMatchLength = 0;
       const textToMatch = `${order.address || ''} ${order.shippingArea || ''}`;
@@ -598,7 +602,7 @@ function DashboardContent() {
       const rawDivisionName = longestMatch ? longestMatch.division : "Others";
       const cleanDivisionName = rawDivisionName.replace(/\s*Division\s*/i, '').trim();
       const districtName = longestMatch ? longestMatch.name : (order.shippingArea?.trim() || "");
-      const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
+      const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0) - (Number(order.specialClientDiscount) || 0);
 
       const targetDivKey = divisionStats[cleanDivisionName] ? cleanDivisionName : "Others";
 
@@ -620,7 +624,7 @@ function DashboardContent() {
         percentage: totalOrdersCount > 0 ? (item.orderCount / totalOrdersCount) * 100 : 0,
       }))
       .sort((a, b) => b.orderCount - a.orderCount || b.totalSales - a.totalSales || a.name.localeCompare(b.name));
-  }, [filteredOrders]);
+  }, [validFilteredOrders]);
 
   const paymentMethodData = useMemo(() => {
     const interval = getDateRangeInterval();
@@ -631,9 +635,13 @@ function DashboardContent() {
     let ordersForPayments = allOrders;
     if (currentUser?.role === 'CRM') {
       ordersForPayments = allOrders.filter(order => order.crmUserId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      ordersForPayments = allOrders.filter(order => order.designerRepresentativeId === currentUser.id);
     } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
       ordersForPayments = allOrders.filter(order => order.crmUserId === selectedCrmId);
     }
+
+    ordersForPayments = ordersForPayments.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
 
     ordersForPayments.forEach(order => {
       if (Array.isArray(order.advancePayments)) {
@@ -648,7 +656,7 @@ function DashboardContent() {
                 stats[methodName] = { count: 0, amount: 0 };
               }
               stats[methodName].count += 1;
-              stats[methodName].amount += payment.amount;
+              stats[methodName].amount += (Number(payment.amount) || 0);
             }
           }
         });
@@ -729,10 +737,11 @@ function DashboardContent() {
     let currentTotalSales = 0;
     let currentGiftValue = 0;
     let currentGiftCount = 0;
-    let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
     let currentTotalPurchaseItemQuantity = 0;
     let currentOrdersWithDueCount = 0;
+    let currentInvoiceDue = 0;
+    let currentInvoicePaid = 0;
     let currentInvoiceCodPaid = 0;
     let currentInvoiceCodPaidCount = 0;
     let currentInvoicePaidCount = 0;
@@ -748,8 +757,9 @@ function DashboardContent() {
     const advancePaidOrderIds = new Set<string>();
     const codPaidOrderIds = new Set<string>();
     
-    // Sort all non-cancelled orders by date to identify the first order for each customer
-    const sortedValidOrders = [...allOrders]
+    // Sort history of non-cancelled orders by date to identify repeat orders accurately
+    const historyOrders = allYearOrders.length > 0 ? allYearOrders : allOrders;
+    const sortedValidOrders = [...historyOrders]
       .filter(o => o.currentStatus !== CANCELLED_STATUS_ID)
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
@@ -764,23 +774,17 @@ function DashboardContent() {
       }
     });
 
-    let ordersForCalcs = allOrders;
-    if (currentUser?.role === 'CRM') {
-      ordersForCalcs = allOrders.filter(order => order.crmUserId === currentUser.id);
-    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
-      ordersForCalcs = allOrders.filter(order => order.crmUserId === selectedCrmId);
-    }
-
-    // Filter out canceled orders before calculations
-    ordersForCalcs = ordersForCalcs.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
+    const ordersForCalcs = validFilteredOrders;
 
     ordersForCalcs.forEach(order => {
       const orderCreatedAt = parseISO(order.createdAt);
       // Sales, Purchase, Due calculations based on orders *created* in the date range
       if (isWithinInterval(orderCreatedAt, interval)) {
-        const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0);
-        const effectiveDiscount = order.specialClientDiscount || 0;
+        const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0);
+        const effectiveDiscount = Number(order.specialClientDiscount) || 0;
+        const shipping = Number(order.shippingCharge) || 0;
         const netPayable = orderTotal - effectiveDiscount;
+        const grandTotal = netPayable + shipping;
         currentTotalSales += netPayable;
 
         if (Array.isArray(order.orderItems)) {
@@ -797,9 +801,9 @@ function DashboardContent() {
           });
         }
 
-        const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0);
-        currentTotalAdvance += orderAdvance;
-        const orderDue = netPayable - orderAdvance;
+        const totalOrderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        const orderDue = Math.max(0, grandTotal - totalOrderAdvance);
+        currentInvoiceDue += orderDue;
 
         if (orderDue > 0.01) {
           currentOrdersWithDueCount++;
@@ -811,19 +815,21 @@ function DashboardContent() {
         }
       }
 
-      // COD calculation based on payments *made* in the date range
+      // Payments made in the date range
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
           if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
-            currentInvoicePayment += payment.amount;
+            const paymentAmt = Number(payment.amount) || 0;
+            currentInvoicePayment += paymentAmt;
             currentInvoicePaymentCount++;
 
             const methodName = payment.paymentMethod?.toLowerCase() || '';
             const isCod = methodName === 'cod' || methodName === 'system auto-settled' || methodName === 'courier';
             if (isCod) {
-              currentInvoiceCodPaid += payment.amount;
+              currentInvoiceCodPaid += paymentAmt;
               codPaidOrderIds.add(order.id);
             } else {
+              currentInvoicePaid += paymentAmt;
               advancePaidOrderIds.add(order.id);
             }
           }
@@ -831,8 +837,8 @@ function DashboardContent() {
       }
     });
 
-    const currentInvoiceDue = currentTotalSales - currentTotalAdvance;
-    const currentInvoicePaid = currentTotalSales - currentInvoiceDue;
+    currentInvoicePaidCount = advancePaidOrderIds.size;
+    currentInvoiceCodPaidCount = codPaidOrderIds.size;
 
     let currentDeliveredCount = 0;
     let ordersForDeliveryCount = allOrders; // Start with all orders
@@ -843,6 +849,8 @@ function DashboardContent() {
     } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
       ordersForDeliveryCount = allOrders.filter(order => order.crmUserId === selectedCrmId);
     }
+
+    ordersForDeliveryCount = ordersForDeliveryCount.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
 
     const deliveredStatusId = globalSettings?.crmCompletionStatusIds?.find(id => id === 'delivered') || 'delivered';
 
@@ -862,11 +870,11 @@ function DashboardContent() {
       const hourlyData = new Map<number, { sales: number; orders: number; deliveries: number }>();
       for (let i = 0; i < 24; i++) hourlyData.set(i, { sales: 0, orders: 0, deliveries: 0 });
 
-      filteredOrders.forEach(order => {
+      validFilteredOrders.forEach(order => {
         if (order.createdAt) {
           try {
             const hour = getHours(parseISO(order.createdAt));
-            const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0) - (order.specialClientDiscount || 0);
+            const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0) - (Number(order.specialClientDiscount) || 0);
             const existing = hourlyData.get(hour) || { sales: 0, orders: 0, deliveries: 0 };
             hourlyData.set(hour, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
           } catch (e) { /* ignore */ }
@@ -904,12 +912,12 @@ function DashboardContent() {
           tempDate = addDays(endOfMonth(tempDate), 1);
         }
 
-        filteredOrders.forEach(order => {
+        validFilteredOrders.forEach(order => {
           if (order.createdAt) {
             try {
               const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM');
               if (monthlyData.has(orderDateStr)) {
-                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0) - (order.specialClientDiscount || 0);
+                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0) - (Number(order.specialClientDiscount) || 0);
                 const existing = monthlyData.get(orderDateStr) || { sales: 0, orders: 0, deliveries: 0 };
                 monthlyData.set(orderDateStr, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
               }
@@ -945,12 +953,12 @@ function DashboardContent() {
           tempDate = addDays(tempDate, 1);
         }
 
-        filteredOrders.forEach(order => {
+        validFilteredOrders.forEach(order => {
           if (order.createdAt) {
             try {
               const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
               if (dailyData.has(orderDateStr)) {
-                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (item.lineItemTotalPrice || 0)), 0) - (order.specialClientDiscount || 0);
+                const orderTotalForChart = (order.orderItems || []).reduce((sum, item) => sum + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0) - (Number(order.specialClientDiscount) || 0);
                 const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0, deliveries: 0 };
                 dailyData.set(orderDateStr, { ...existing, sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
               }
@@ -1002,9 +1010,6 @@ function DashboardContent() {
       }
     });
 
-    currentInvoicePaidCount = advancePaidOrderIds.size;
-    currentInvoiceCodPaidCount = codPaidOrderIds.size;
-
     return {
       totalSales: currentTotalSales,
       invoiceDue: currentInvoiceDue,
@@ -1018,7 +1023,7 @@ function DashboardContent() {
       invoicePaidCount: currentInvoicePaidCount,
       invoiceCodPaid: currentInvoiceCodPaid,
       invoiceCodPaidCount: currentInvoiceCodPaidCount,
-      salesCount: filteredOrders.length,
+      salesCount: validFilteredOrders.length,
       repeatSalesCount: currentRepeatSalesCount,
       repeatSalesAmount: currentRepeatSalesAmount,
       invoicePayment: currentInvoicePayment,
@@ -1028,7 +1033,7 @@ function DashboardContent() {
       giftValue: currentGiftValue,
       giftCount: currentGiftCount,
     };
-  }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity, allTransactions]);
+  }, [validFilteredOrders, allOrders, allYearOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity, allTransactions]);
 
   const [teamPerformanceDateRange, setTeamPerformanceDateRange] = useState<DateRange | undefined>(() => {
     const now = new Date();

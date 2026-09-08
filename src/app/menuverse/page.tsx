@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { MultiStepForm } from './MultiStepForm';
 
 export const metadata: Metadata = {
-  title: 'MenuVerse Registration | ERP App',
+  title: 'MenuVerse Registration | Color Hut',
   description: 'Register your restaurant on MenuVerse.',
 };
 

@@ -537,7 +537,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
                                 disabled={isSubmitting}
                               />
                             )}
-                            <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
+                            <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)} modal={true}>
                               <PopoverTrigger asChild>
                                 <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="flex-1 min-w-0 justify-between bg-background text-sm" disabled={isLoadingOptions || modelOptions.length === 0 || isSubmitting}>
                                   <span className="flex items-center gap-1.5 flex-1 text-left whitespace-nowrap overflow-hidden">
@@ -554,10 +554,10 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
                                   <ChevronsUpDown className="ml-1.5 h-3 w-3 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-[90vw] sm:w-max max-w-lg p-0" portal={false}>
+                              <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-[90vw] sm:w-max max-w-lg p-0 z-[60]" align="start" side="bottom" sideOffset={4}>
                                 <Command className="max-h-96 overflow-hidden flex flex-col">
                                   <CommandInput placeholder="Search model..." />
-                                  <CommandList className="max-h-80 overflow-y-auto">
+                                  <CommandList className="max-h-80 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
                                     <CommandEmpty>No model found.</CommandEmpty>
                                     <CommandGroup>
                                       {modelOptions.map((option) => (
