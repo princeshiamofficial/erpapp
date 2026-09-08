@@ -383,14 +383,11 @@ function DashboardContent() {
     }
     const startStr = selectedDateRange?.from ? format(startOfDay(selectedDateRange.from), 'yyyy-MM-dd HH:mm:ss') : undefined;
     const endStr = selectedDateRange?.to ? format(endOfDay(selectedDateRange.to), 'yyyy-MM-dd HH:mm:ss') : undefined;
-    const refDate = selectedDateRange?.from || new Date();
-    const yearStartStr = format(startOfYear(refDate), 'yyyy-MM-dd HH:mm:ss');
-    const yearEndStr = format(endOfYear(refDate), 'yyyy-MM-dd HH:mm:ss');
     const role = currentUser?.role;
     const userId = (role === 'SYSTEM_ADMIN' || role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id;
     try {
       const [fetchedOrders, fetchedYearOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTodayScheduledLeads, fetchedTasks, fetchedFeedback, fetchedCrWorkflowEntries, fetchedTransactions] = await Promise.all([
-        getOrders(startStr, endStr, role, userId), getOrders(yearStartStr, yearEndStr, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getLeads(undefined, undefined, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
+        getOrders(startStr, endStr, role, userId), getOrders(undefined, undefined, role, userId), getModels(), getUsers(), getProjects(startStr, endStr, role, userId), getGlobalSettings(), getLeads(startStr, endStr, role, userId), getLeads(undefined, undefined, role, userId), getTaskEntries(), getFeedback(), getDr2oEntries('CR'), getAllTransactionsAction(startStr, endStr, role, userId),
       ]);
 
       // Merge CR workflow sale counts into allTasks for CRM users
@@ -457,6 +454,21 @@ function DashboardContent() {
   const validFilteredOrders = useMemo(() => {
     return filteredOrders.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
   }, [filteredOrders]);
+
+  const validAllOrdersForPayments = useMemo(() => {
+    const ordersSource = allYearOrders && allYearOrders.length > 0 ? allYearOrders : allOrders;
+    let ordersToFilter = [...ordersSource];
+
+    if (currentUser?.role === 'CRM') {
+      ordersToFilter = ordersToFilter.filter(order => order.crmUserId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      ordersToFilter = ordersToFilter.filter(order => order.designerRepresentativeId === currentUser.id);
+    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+      ordersToFilter = ordersToFilter.filter(order => order.crmUserId === selectedCrmId);
+    }
+
+    return ordersToFilter.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
+  }, [allYearOrders, allOrders, currentUser, selectedCrmId]);
 
   const filteredLeads = useMemo(() => {
     let leadsToFilter = [...allLeads];
@@ -632,18 +644,7 @@ function DashboardContent() {
 
     const stats: Record<string, { count: number; amount: number }> = {};
 
-    let ordersForPayments = allOrders;
-    if (currentUser?.role === 'CRM') {
-      ordersForPayments = allOrders.filter(order => order.crmUserId === currentUser.id);
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-      ordersForPayments = allOrders.filter(order => order.designerRepresentativeId === currentUser.id);
-    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
-      ordersForPayments = allOrders.filter(order => order.crmUserId === selectedCrmId);
-    }
-
-    ordersForPayments = ordersForPayments.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
-
-    ordersForPayments.forEach(order => {
+    validAllOrdersForPayments.forEach(order => {
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
           if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
@@ -674,7 +675,7 @@ function DashboardContent() {
         percentage: (data.count / totalPaymentsCount) * 100,
       }))
       .sort((a, b) => b.count - a.count);
-  }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
+  }, [validAllOrdersForPayments, selectedDateRange]);
 
 
 
@@ -814,8 +815,10 @@ function DashboardContent() {
           currentRepeatSalesAmount += netPayable;
         }
       }
+    });
 
-      // Payments made in the date range
+    // Payments made in the date range (scanned across all valid historical orders)
+    validAllOrdersForPayments.forEach(order => {
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
           if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
@@ -1033,7 +1036,7 @@ function DashboardContent() {
       giftValue: currentGiftValue,
       giftCount: currentGiftCount,
     };
-  }, [validFilteredOrders, allOrders, allYearOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity, allTransactions]);
+  }, [validFilteredOrders, validAllOrdersForPayments, allOrders, allYearOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity, allTransactions]);
 
   const [teamPerformanceDateRange, setTeamPerformanceDateRange] = useState<DateRange | undefined>(() => {
     const now = new Date();
