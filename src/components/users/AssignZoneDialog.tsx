@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { MapPin, CheckSquare, Square, Layers, Loader2 } from 'lucide-react';
 import type { User } from "@/types";
 import { divisions as bangladeshDivisions } from "@/lib/district-data";
@@ -33,12 +32,12 @@ export function AssignZoneDialog({
   const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Initialize selected divisions from user data
+  // Initialize selected divisions from user data when dialog opens
   useEffect(() => {
     if (isOpen && user) {
-      setSelectedDivisions(user.assignedDivisions || []);
+      setSelectedDivisions(user.assignedDivisions ? [...user.assignedDivisions] : []);
     }
-  }, [isOpen, user]);
+  }, [isOpen, user?.id]);
 
   const allDivisionNames = bangladeshDivisions.map((d) => d.division);
 
@@ -61,8 +60,9 @@ export function AssignZoneDialog({
     setSelectedDivisions([]);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (isSaving) return;
     setIsSaving(true);
     try {
       const success = await onZonesAssigned(user.id, selectedDivisions);
@@ -87,7 +87,7 @@ export function AssignZoneDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden">
           <div className="py-3 space-y-4 flex-1 overflow-y-auto pr-1">
             {/* Action Bar: Select All / Clear All & Counter */}
             <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-lg border text-xs">
@@ -130,30 +130,34 @@ export function AssignZoneDialog({
                 return (
                   <div
                     key={div.division}
+                    role="checkbox"
+                    aria-checked={isSelected}
+                    tabIndex={0}
                     onClick={() => !isSaving && toggleDivision(div.division)}
+                    onKeyDown={(e) => {
+                      if ((e.key === ' ' || e.key === 'Enter') && !isSaving) {
+                        e.preventDefault();
+                        toggleDivision(div.division);
+                      }
+                    }}
                     className={`
                       flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all select-none
                       ${isSelected 
-                        ? 'border-orange-500/60 bg-orange-50/50 dark:bg-orange-950/20 shadow-xs' 
+                        ? 'border-orange-500/60 bg-orange-50/50 dark:bg-orange-950/20 shadow-xs ring-1 ring-orange-500/30' 
                         : 'border-border/70 hover:bg-muted/40'
                       }
                       ${isSaving ? 'opacity-60 cursor-not-allowed' : ''}
                     `}
                   >
                     <Checkbox
-                      id={`div-${div.division}`}
                       checked={isSelected}
-                      onCheckedChange={() => toggleDivision(div.division)}
                       disabled={isSaving}
-                      className="mt-0.5 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                      className="mt-0.5 pointer-events-none data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                     />
                     <div className="flex-1 min-w-0">
-                      <Label
-                        htmlFor={`div-${div.division}`}
-                        className="text-sm font-medium leading-none cursor-pointer text-foreground block"
-                      >
+                      <span className="text-sm font-medium leading-none text-foreground block">
                         {div.division}
-                      </Label>
+                      </span>
                       <span className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
                         <Layers className="w-3 h-3 text-muted-foreground/60" />
                         {div.districts.length} districts
@@ -181,7 +185,8 @@ export function AssignZoneDialog({
               Cancel
             </Button>
             <Button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={isSaving}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
@@ -198,7 +203,7 @@ export function AssignZoneDialog({
               )}
             </Button>
           </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
