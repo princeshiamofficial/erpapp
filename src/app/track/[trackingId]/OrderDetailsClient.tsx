@@ -34,6 +34,7 @@ import NextLink from 'next/link';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ClientInvoicePDF } from '@/components/invoices/ClientInvoicePDF';
+import { TornPaperTerms } from '@/components/invoices/TornPaperTerms';
 
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
@@ -1103,7 +1104,10 @@ export function OrderDetailsClient({
             )}
 
             {shouldShowFinancials && (
-              <div className="flex justify-end mt-6 pt-4 border-t border-border/30">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mt-6 pt-4 border-t border-border/30 print:mt-2 print:pt-2 print:break-inside-avoid">
+                {/* Order Terms & Policy via Torn Paper SVG */}
+                <TornPaperTerms />
+
                 <div className="w-full max-w-xs sm:max-w-sm relative">
                   <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
                   {giftTotal > 0 && (
@@ -1119,9 +1123,6 @@ export function OrderDetailsClient({
                   )}
                   {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
                   <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
-                  {shippingCharge <= 0 && (
-                    <p className="text-sm font-semibold text-muted-foreground mb-2 text-right">(Excluding delivery charge)</p>
-                  )}
                   {shippingCharge > 0 && (
                     <div className="flex justify-between mb-2">
                       <span className="text-md text-muted-foreground flex items-center"><Truck className="h-4 w-4 mr-1" />Shipping Charge:</span>

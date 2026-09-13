@@ -5,13 +5,14 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User, Gift } from "lucide-react";
+import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User, Gift, Info } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { CustomStatus, TrackingLink, User as UserType, AdvancePaymentRecord } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from '@/contexts/auth-context';
+import { TornPaperTerms } from '@/components/invoices/TornPaperTerms';
 
 const formatCurrency = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -236,7 +237,10 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
           </div>
         )}
 
-        <div className="flex justify-end mt-6 pt-4 border-t border-border/30 print:mt-2 print:pt-2 print:break-inside-avoid">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mt-6 pt-4 border-t border-border/30 print:mt-2 print:pt-2 print:break-inside-avoid">
+          {/* Order Terms & Policy via Torn Paper SVG */}
+          <TornPaperTerms />
+
           <div className="w-full max-w-xs sm:max-w-sm relative">
             <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
             {giftTotal > 0 && (
@@ -252,9 +256,6 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
             )}
             {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500" />Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
             <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
-            {shippingCharge <= 0 && (
-              <p className="text-sm font-semibold text-muted-foreground mb-2 text-right">(Excluding delivery charge)</p>
-            )}
 
             {shippingCharge > 0 && (
               <div className="flex justify-between mb-2">

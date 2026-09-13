@@ -239,8 +239,30 @@ const styles = StyleSheet.create({
   // Summary Section
   summarySection: {
     marginTop: 30,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingRight: 10,
+  },
+  termsBox: {
+    width: 250,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    padding: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  termsTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  termsItem: {
+    fontSize: 8,
+    color: '#475569',
+    marginBottom: 2.5,
+    lineHeight: 1.3,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -465,6 +487,15 @@ export const QuotationPDF = ({ quotation }: QuotationPDFProps) => {
 
           {/* Summary Section */}
           <View style={styles.summarySection}>
+            {/* Order Terms & Policy */}
+            <View style={styles.termsBox}>
+              <Text style={styles.termsTitle}>Terms & Conditions</Text>
+              <Text style={styles.termsItem}>• Minimum 50% advance required with work order.</Text>
+              <Text style={styles.termsItem}>• Delivery time: Max 1 month from confirmation.</Text>
+              <Text style={styles.termsItem}>• Tax, VAT & delivery charges excluded.</Text>
+              <Text style={styles.termsItem}>• Advance payment is strictly non-refundable.</Text>
+            </View>
+
             <View style={{ position: 'relative', width: 200 }}>
               {showCanceledStamp ? (
                 <Image src="/cancelled-stamp.png" style={styles.stamp} />

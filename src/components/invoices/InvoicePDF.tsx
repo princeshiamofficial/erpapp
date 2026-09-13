@@ -290,8 +290,30 @@ const styles = StyleSheet.create({
 
   summarySection: {
     marginTop: 20,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingRight: 10,
+  },
+  termsBox: {
+    width: 250,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    padding: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  termsTitle: {
+    fontSize: 8.5,
+    fontWeight: 'bold',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  termsItem: {
+    fontSize: 7.5,
+    color: '#475569',
+    marginBottom: 2.5,
+    lineHeight: 1.3,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -623,6 +645,15 @@ const InvoicePage = ({ order }: InvoicePageProps) => {
 
         {/* Summary Section */}
         <View style={[styles.summarySection, { marginTop: marginTopNormal }]}>
+          {/* Order Terms & Policy */}
+          <View style={styles.termsBox}>
+            <Text style={[styles.termsTitle, { fontSize: baseFontSize }]}>Terms & Conditions</Text>
+            <Text style={[styles.termsItem, { fontSize: baseFontSize - 1.5 }]}>• Minimum 50% advance required with work order.</Text>
+            <Text style={[styles.termsItem, { fontSize: baseFontSize - 1.5 }]}>• Delivery time: Max 1 month from confirmation.</Text>
+            <Text style={[styles.termsItem, { fontSize: baseFontSize - 1.5 }]}>• Tax, VAT & delivery charges excluded.</Text>
+            <Text style={[styles.termsItem, { fontSize: baseFontSize - 1.5 }]}>• Advance payment is strictly non-refundable.</Text>
+          </View>
+
           <View style={{ position: 'relative', width: 200 }}>
             {showPaidBadge && (
               <Image src="/paid-stamp.png" style={styles.stamp} />
@@ -659,14 +690,6 @@ const InvoicePage = ({ order }: InvoicePageProps) => {
               <Text style={[styles.summaryLabel, { fontWeight: 'bold', fontSize: baseFontSize }]}>Net Payable:</Text>
               <Text style={[styles.summaryValue, { fontSize: baseFontSize }]}>BDT {netPayable.toLocaleString('en-BD', { minimumFractionDigits: 2 })}</Text>
             </View>
-
-            {shippingCharge <= 0 && (
-              <View style={[styles.summaryRow, { marginTop: -2, marginBottom: 4 }]}>
-                <Text style={{ fontSize: baseFontSize - 2, fontWeight: 'semibold', color: '#94A3B8', width: '100%', textAlign: 'right' }}>
-                  (Excluding delivery charge)
-                </Text>
-              </View>
-            )}
 
             {shippingCharge > 0 && (
               <View style={styles.summaryRow}>
