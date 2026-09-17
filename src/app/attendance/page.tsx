@@ -141,9 +141,6 @@ export default function CheckInOutPage() {
   }, [isClient, weekendDays]);
 
   const canPerformAction = useMemo(() => {
-    if (isTodayWeekend) {
-      return false;
-    }
     if (checkOutTime && isToday(checkOutTime)) {
       return false;
     }
@@ -157,12 +154,9 @@ export default function CheckInOutPage() {
       return isLocationPermissionGranted;
     }
     return false;
-  }, [status, locationStatus, checkOutTime, isTodayWeekend]);
+  }, [status, locationStatus, checkOutTime]);
 
   const disabledReason = useMemo(() => {
-    if (isTodayWeekend) {
-      return 'Today is a weekend';
-    }
     if (checkOutTime && isToday(checkOutTime)) {
       return 'Attendance complete for today';
     }
@@ -175,7 +169,7 @@ export default function CheckInOutPage() {
     if (status === 'Checked Out') return 'Check-in unavailable';
     if (status === 'Checked In') return 'Check-out unavailable';
     return 'Action unavailable';
-  }, [status, locationStatus, checkOutTime, isTodayWeekend]);
+  }, [status, locationStatus, checkOutTime]);
 
 
   const saveStateToLocalStorage = (newState: any) => {
