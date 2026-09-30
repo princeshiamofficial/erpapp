@@ -346,6 +346,14 @@ export interface GlobalSettings {
   docsApprovalStatusIds?: string[];
   salaryTransferBankName?: string | null;
   salaryTransferBankAccountNo?: string | null;
+  paymentGatewayMerchantId?: string | null;
+  paymentGatewayPassword?: string | null;
+  paymentGatewayEnvironment?: 'sandbox' | 'production';
+  paymentGatewayCallbackUrl?: string | null;
+  paymentGatewayIpnUrl?: string | null;
+  paymentGatewayPayWithCharge?: boolean;
+  paymentGatewayEmi?: boolean;
+  paymentGatewayEnabled?: boolean;
 }
 
 export interface TransactionCategory {

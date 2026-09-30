@@ -106,9 +106,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }));
 
   const isSpecialPage = pathname ? (
-    pathname.startsWith('/track/') || 
-    pathname.startsWith('/feedback/') || 
-    pathname.startsWith('/invoice/')
+    pathname.startsWith('/track/') ||
+    pathname.startsWith('/feedback/') ||
+    pathname.startsWith('/invoice/') ||
+    pathname.startsWith('/pay/')
   ) : false;
 
   useEffect(() => {

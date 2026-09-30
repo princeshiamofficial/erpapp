@@ -241,3 +241,25 @@ export async function setSalaryTransferBankSettings(bankName: string | null, acc
     salaryTransferBankAccountNo: accountNo,
   });
 }
+
+export async function setPaymentGatewaySettings(settings: {
+  merchantId: string | null;
+  password: string | null;
+  environment: 'sandbox' | 'production';
+  callbackUrl: string | null;
+  ipnUrl: string | null;
+  payWithCharge: boolean;
+  emi: boolean;
+  enabled: boolean;
+}): Promise<boolean> {
+  return updateSettings({
+    paymentGatewayMerchantId: settings.merchantId,
+    paymentGatewayPassword: settings.password,
+    paymentGatewayEnvironment: settings.environment,
+    paymentGatewayCallbackUrl: settings.callbackUrl,
+    paymentGatewayIpnUrl: settings.ipnUrl,
+    paymentGatewayPayWithCharge: settings.payWithCharge,
+    paymentGatewayEmi: settings.emi,
+    paymentGatewayEnabled: settings.enabled,
+  });
+}

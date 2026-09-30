@@ -22,6 +22,7 @@ import {
   setLeaderboardRestriction,
   setCourierNoteVisibility,
   setSalaryTransferBankSettings,
+  setPaymentGatewaySettings,
 } from "@/lib/settings-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types";
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
@@ -349,6 +350,32 @@ export async function updateSalaryTransferBankSettingsAction(
     return { success: false, error: "Failed to update salary transfer bank settings in database." };
   } catch (error) {
     console.error("Error in updateSalaryTransferBankSettingsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updatePaymentGatewaySettingsAction(settings: {
+  merchantId: string | null;
+  password: string | null;
+  environment: 'sandbox' | 'production';
+  callbackUrl: string | null;
+  ipnUrl: string | null;
+  payWithCharge: boolean;
+  emi: boolean;
+  enabled: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (settings.enabled && (!settings.merchantId || !settings.password)) {
+      return { success: false, error: "Merchant ID and Password are required when gateway is enabled." };
+    }
+    const success = await setPaymentGatewaySettings(settings);
+    if (success) {
+      revalidatePath("/(app)/admin/settings");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update payment gateway settings in database." };
+  } catch (error) {
+    console.error("Error in updatePaymentGatewaySettingsAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

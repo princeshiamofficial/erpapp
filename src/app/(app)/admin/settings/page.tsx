@@ -30,10 +30,11 @@ import {
   updateTelegramSettingsAction,
   updateCourierNoteVisibilityAction,
   updateSalaryTransferBankSettingsAction,
+  updatePaymentGatewaySettingsAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, PowerOff, DraftingCompass, Target, Wallet } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, PowerOff, DraftingCompass, Target, Wallet, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -84,6 +85,15 @@ function CrmTargetSettingsPageInner() {
   const [telegramRedirectDomain, setTelegramRedirectDomain] = useState('');
   const [salaryTransferBankName, setSalaryTransferBankName] = useState('');
   const [salaryTransferBankAccountNo, setSalaryTransferBankAccountNo] = useState('');
+  const [pgMerchantId, setPgMerchantId] = useState('');
+  const [pgPassword, setPgPassword] = useState('');
+  const [pgEnvironment, setPgEnvironment] = useState<'sandbox' | 'production'>('sandbox');
+  const [pgCallbackUrl, setPgCallbackUrl] = useState('');
+  const [pgIpnUrl, setPgIpnUrl] = useState('');
+  const [pgPayWithCharge, setPgPayWithCharge] = useState(true);
+  const [pgEmi, setPgEmi] = useState(false);
+  const [pgEnabled, setPgEnabled] = useState(false);
+  const [pgShowPassword, setPgShowPassword] = useState(false);
 
 
   const [allTargetableUsersForExpensePerms, setAllTargetableUsersForExpensePerms] = useState<User[]>([]); // For expense perm user picker
@@ -103,6 +113,7 @@ function CrmTargetSettingsPageInner() {
   const [isSubmittingRoleTargets, setIsSubmittingRoleTargets] = useState(false);
   const [isSubmittingTelegram, setIsSubmittingTelegram] = useState(false);
   const [isSubmittingSalaryTransferBank, setIsSubmittingSalaryTransferBank] = useState(false);
+  const [isSubmittingPaymentGateway, setIsSubmittingPaymentGateway] = useState(false);
 
 
   const fetchData = useCallback(async () => {
@@ -130,6 +141,14 @@ function CrmTargetSettingsPageInner() {
       setTelegramRedirectDomain(globalSettings.telegramRedirectDomain || '');
       setSalaryTransferBankName(globalSettings.salaryTransferBankName || '');
       setSalaryTransferBankAccountNo(globalSettings.salaryTransferBankAccountNo || '');
+      setPgMerchantId(globalSettings.paymentGatewayMerchantId || '');
+      setPgPassword(globalSettings.paymentGatewayPassword || '');
+      setPgEnvironment(globalSettings.paymentGatewayEnvironment || 'sandbox');
+      setPgCallbackUrl(globalSettings.paymentGatewayCallbackUrl || '');
+      setPgIpnUrl(globalSettings.paymentGatewayIpnUrl || '');
+      setPgPayWithCharge(globalSettings.paymentGatewayPayWithCharge ?? true);
+      setPgEmi(globalSettings.paymentGatewayEmi ?? false);
+      setPgEnabled(globalSettings.paymentGatewayEnabled ?? false);
 
       setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
     } catch (error) {
@@ -324,6 +343,26 @@ function CrmTargetSettingsPageInner() {
   };
 
 
+  const handleSavePaymentGateway = async () => {
+    setIsSubmittingPaymentGateway(true);
+    const result = await updatePaymentGatewaySettingsAction({
+      merchantId: pgMerchantId.trim() || null,
+      password: pgPassword.trim() || null,
+      environment: pgEnvironment,
+      callbackUrl: pgCallbackUrl.trim() || null,
+      ipnUrl: pgIpnUrl.trim() || null,
+      payWithCharge: pgPayWithCharge,
+      emi: pgEmi,
+      enabled: pgEnabled,
+    });
+    if (result.success) {
+      toast({ title: "Settings Updated", description: "Payment gateway settings have been saved." });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not save payment gateway settings.", variant: "destructive" });
+    }
+    setIsSubmittingPaymentGateway(false);
+  };
+
   const selectedExpenseUsersDisplay = useMemo(() => {
     if (expenseLoggingPerms.allowedUserIds.length === 0) return "Select users...";
     if (expenseLoggingPerms.allowedUserIds.length > 2) return `${expenseLoggingPerms.allowedUserIds.length} users selected`;
@@ -353,6 +392,9 @@ function CrmTargetSettingsPageInner() {
           </TabsTrigger>
           <TabsTrigger value="integrations-notifications" className="text-sm font-semibold rounded-lg py-2 px-4 transition-all duration-200 text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:text-foreground hover:bg-background/40 flex items-center justify-center">
             <Send className="h-4 w-4 mr-1.5" /> Integrations & Media
+          </TabsTrigger>
+          <TabsTrigger value="payment-gateway" className="text-sm font-semibold rounded-lg py-2 px-4 transition-all duration-200 text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:text-foreground hover:bg-background/40 flex items-center justify-center">
+            <CreditCard className="h-4 w-4 mr-1.5" /> Payment Gateway
           </TabsTrigger>
         </TabsList>
 
@@ -791,6 +833,175 @@ function CrmTargetSettingsPageInner() {
               </CardFooter>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="payment-gateway" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
+          <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+                <CreditCard className="h-6 w-6 text-primary" /> PayStation Payment Gateway
+              </CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                Configure PayStation credentials for accepting cards, mobile wallets (bKash, Nagad, Rocket, Upay), and EMI payments.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {isLoading ? (
+                <div className="space-y-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}</div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                    <Label htmlFor="pgEnabledSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                      <span>Enable Payment Gateway</span>
+                      <span className="font-normal leading-snug text-muted-foreground text-xs">
+                        When enabled, online payment options will be available for customers.
+                      </span>
+                    </Label>
+                    <Switch
+                      id="pgEnabledSwitch"
+                      checked={pgEnabled}
+                      onCheckedChange={setPgEnabled}
+                      disabled={isSubmittingPaymentGateway}
+                      aria-label="Toggle payment gateway"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Environment</Label>
+                    <RadioGroup value={pgEnvironment} onValueChange={(v) => setPgEnvironment(v as 'sandbox' | 'production')} className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="sandbox" id="pg-env-sandbox" />
+                        <Label htmlFor="pg-env-sandbox" className="cursor-pointer">Sandbox (Test)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="production" id="pg-env-production" />
+                        <Label htmlFor="pg-env-production" className="cursor-pointer">Production (Live)</Label>
+                      </div>
+                    </RadioGroup>
+                    <p className="text-xs text-muted-foreground">
+                      {pgEnvironment === 'sandbox'
+                        ? 'Sandbox: https://sandbox.paystation.com.bd — for testing only.'
+                        : 'Production: https://api.paystation.com.bd — live customer payments.'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pg-merchant-id">Merchant ID *</Label>
+                      <Input
+                        id="pg-merchant-id"
+                        value={pgMerchantId}
+                        onChange={(e) => setPgMerchantId(e.target.value)}
+                        placeholder="e.g., 204-16537301811"
+                        disabled={isSubmittingPaymentGateway}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pg-password">Password *</Label>
+                      <div className="relative">
+                        <Input
+                          id="pg-password"
+                          type={pgShowPassword ? "text" : "password"}
+                          value={pgPassword}
+                          onChange={(e) => setPgPassword(e.target.value)}
+                          placeholder="Your PayStation password"
+                          disabled={isSubmittingPaymentGateway}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPgShowPassword(!pgShowPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          tabIndex={-1}
+                        >
+                          {pgShowPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pg-callback-url">Callback URL</Label>
+                      <Input
+                        id="pg-callback-url"
+                        value={pgCallbackUrl}
+                        onChange={(e) => setPgCallbackUrl(e.target.value)}
+                        placeholder="e.g., https://yourdomain.com/payment/callback"
+                        disabled={isSubmittingPaymentGateway}
+                      />
+                      <p className="text-xs text-muted-foreground">Customer is redirected here after payment.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pg-ipn-url">IPN URL (Webhook)</Label>
+                      <Input
+                        id="pg-ipn-url"
+                        value={pgIpnUrl}
+                        onChange={(e) => setPgIpnUrl(e.target.value)}
+                        placeholder="e.g., https://yourdomain.com/api/payment/ipn"
+                        disabled={isSubmittingPaymentGateway}
+                      />
+                      <p className="text-xs text-muted-foreground">Server-to-server notification URL for successful payments.</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                      <Label htmlFor="pgPayWithChargeSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                        <span>Customer Bears Charge</span>
+                        <span className="font-normal leading-snug text-muted-foreground text-xs">
+                          If enabled, payment processing charge is added to customer total. Otherwise merchant bears it.
+                        </span>
+                      </Label>
+                      <Switch
+                        id="pgPayWithChargeSwitch"
+                        checked={pgPayWithCharge}
+                        onCheckedChange={setPgPayWithCharge}
+                        disabled={isSubmittingPaymentGateway}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                      <Label htmlFor="pgEmiSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                        <span>EMI Support</span>
+                        <span className="font-normal leading-snug text-muted-foreground text-xs">
+                          Enable EMI (installment) option for orders above ৳5,000.
+                        </span>
+                      </Label>
+                      <Switch
+                        id="pgEmiSwitch"
+                        checked={pgEmi}
+                        onCheckedChange={setPgEmi}
+                        disabled={isSubmittingPaymentGateway}
+                      />
+                    </div>
+                  </div>
+
+                  {pgEnvironment === 'sandbox' && (
+                    <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Sandbox Test Credentials</p>
+                          <p className="text-xs text-muted-foreground mt-1">Merchant ID: <code className="bg-muted px-1 py-0.5 rounded">104-1653730183</code></p>
+                          <p className="text-xs text-muted-foreground">Password: <code className="bg-muted px-1 py-0.5 rounded">gamecoderstorepass</code></p>
+                          <p className="text-xs text-muted-foreground mt-1">Base URL: <code className="bg-muted px-1 py-0.5 rounded">https://sandbox.paystation.com.bd</code></p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+            <CardFooter className="border-t p-5 flex justify-end">
+              <Button onClick={handleSavePaymentGateway} disabled={isLoading || isSubmittingPaymentGateway}>
+                {isSubmittingPaymentGateway ? "Saving..." : "Save Gateway Settings"}
+              </Button>
+            </CardFooter>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

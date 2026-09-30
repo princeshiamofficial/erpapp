@@ -8,7 +8,7 @@ import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-quer
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard, Star, Download, Filter, CalendarDays } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, CreditCard, Star, Download, Filter, CalendarDays, Link2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useSocket } from "@/contexts/socket-context";
 import Link from "next/link";
@@ -687,6 +687,19 @@ export default function OrdersPage() {
                               className="cursor-pointer"
                             >
                               <Download className="mr-2 h-4 w-4" /> Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                const paymentLink = `${window.location.origin}/pay/${order.id}`;
+                                navigator.clipboard.writeText(paymentLink).then(() => {
+                                  toast({ title: "Payment Link Copied", description: `Link for ${order.id} copied to clipboard.` });
+                                }).catch(() => {
+                                  toast({ title: "Copy Failed", description: "Could not copy payment link.", variant: "destructive" });
+                                });
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Link2 className="mr-2 h-4 w-4" /> Payment Link
                             </DropdownMenuItem>
                             {canDeleteOrder && (
                               <>
