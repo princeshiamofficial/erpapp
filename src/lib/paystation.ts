@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
 import { getGlobalSettings } from "./settings-service";
 import { getOrderById, updateOrder } from "./order-service";
+import { sendTelegramMessage } from "./notification-utils";
+import { getAppUrl } from "./server-utils";
 import type { AdvancePaymentRecord } from "@/types";
 
 interface VerifiedTransaction {
@@ -100,5 +102,30 @@ async function settle(invoiceNumber: string, orderId: string, trxId?: string | n
 
   const ok = await updateOrder(orderId, { advancePayments: [...(order.advancePayments || []), payment] });
   console.log(`[PayStation] recorded ${verified.amount} BDT for ${orderId}, trx_id=${verified.trxId}, ok=${ok}`);
+  if (ok) void notifyTelegram(orderId, order.companyName, payment, (order.advancePayments || []).length > 0);
   return ok;
+}
+
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+async function notifyTelegram(orderId: string, companyName: string, payment: AdvancePaymentRecord, isAdjustment: boolean) {
+  const amount = new Intl.NumberFormat("en-BD", { style: "currency", currency: "BDT" }).format(payment.amount);
+  const title = isAdjustment ? "Adjustment Payment Received!" : "Advance Payment Received!";
+  const message = `
+<b>🎉 ${title}</b>
+
+<b>Order ID:</b> <code>${orderId}</code>
+<b>Company:</b> ${escapeHtml(companyName || "N/A")}
+<b>Amount:</b> ${amount}
+<b>Method:</b> ${escapeHtml(payment.paymentMethod || "PayStation")} (Online)
+<b>Reference:</b> <code>${escapeHtml(payment.notes || "N/A")}</code>
+<b>Recorded By:</b> PayStation
+  `;
+  const appUrl = await getAppUrl();
+  await sendTelegramMessage(message, {
+    inline_keyboard: [[
+      { text: "📄 View Order", url: `${appUrl}/track/${orderId}` },
+      { text: "💰 Payment History", url: `${appUrl}/admin/payment-history` },
+    ]],
+  }).catch(err => console.error("[PayStation] telegram error:", err));
 }
