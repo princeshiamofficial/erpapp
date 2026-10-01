@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrderById, updateOrder } from "@/lib/order-service";
+import { verifyPayment } from "@/lib/paystation";
 import { v4 as uuidv4 } from "uuid";
 import type { AdvancePaymentRecord } from "@/types";
 
@@ -45,7 +46,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "success" });
     }
 
-    let paymentAmount = Number(trx_amount) || 0;
+    const verified = await verifyPayment(invoice_number);
+    if (!verified.verified) {
+      console.warn(`[PayStation IPN] Verification failed for ${invoice_number}, trx_id=${trx_id} — payment NOT recorded`);
+      return NextResponse.json({ status: "error", message: "Verification failed" }, { status: 403 });
+    }
+
+    let paymentAmount = verified.amount || Number(trx_amount) || 0;
     if (paymentAmount <= 0) {
       paymentAmount = Math.max(0, Math.ceil(amountDue));
     }
@@ -53,12 +60,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "success" });
     }
 
+    const confirmedTrxId = verified.trxId || trx_id;
+
     const newPayment: AdvancePaymentRecord = {
       id: uuidv4(),
       amount: paymentAmount,
       date: new Date().toISOString(),
-      paymentMethod: payment_method || "PayStation",
-      notes: trx_id,
+      paymentMethod: verified.method || payment_method || "PayStation",
+      notes: confirmedTrxId,
       recordedByUserId: "system",
       recordedByUserName: "PayStation",
       status: "Approved",
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest) {
     const updatedPayments = [...(order.advancePayments || []), newPayment];
     await updateOrder(orderId, { advancePayments: updatedPayments });
 
-    console.log(`[PayStation IPN] Recorded payment for ${orderId}: ${trx_amount} BDT, TrxID: ${trx_id}`);
+    console.log(`[PayStation IPN] Recorded payment for ${orderId}: ${paymentAmount} BDT, TrxID: ${confirmedTrxId}`);
 
     return NextResponse.json({ status: "success" });
   } catch (error) {

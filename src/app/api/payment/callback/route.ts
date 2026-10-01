@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrderById, updateOrder } from "@/lib/order-service";
+import { verifyPayment } from "@/lib/paystation";
 import { v4 as uuidv4 } from "uuid";
 import type { AdvancePaymentRecord } from "@/types";
 
@@ -46,15 +47,22 @@ function extractParams(source: { get: (key: string) => string | null }): { invoi
 async function recordPaymentIfNeeded(invoiceNumber: string, trxId: string | undefined, amount: string | undefined, method?: string) {
   if (!trxId) return;
   try {
+    const verified = await verifyPayment(invoiceNumber);
+    if (!verified.verified) {
+      console.warn(`[PayStation] Verification failed for ${invoiceNumber}, trx_id=${trxId} — payment NOT recorded`);
+      return;
+    }
+
+    const confirmedTrxId = verified.trxId || trxId;
     const orderId = extractOrderId(invoiceNumber);
     const order = await getOrderById(orderId);
     if (!order) return;
 
     const alreadyRecorded = Array.isArray(order.advancePayments) &&
-      order.advancePayments.some(p => p.notes?.includes(trxId));
+      order.advancePayments.some(p => p.notes?.includes(confirmedTrxId));
     if (alreadyRecorded) return;
 
-    let paymentAmount = Number(amount) || 0;
+    let paymentAmount = verified.amount || Number(amount) || 0;
     if (paymentAmount <= 0) {
       const orderSubtotal = Array.isArray(order.orderItems)
         ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
@@ -73,8 +81,8 @@ async function recordPaymentIfNeeded(invoiceNumber: string, trxId: string | unde
       id: uuidv4(),
       amount: paymentAmount,
       date: new Date().toISOString(),
-      paymentMethod: method || "PayStation",
-      notes: trxId,
+      paymentMethod: verified.method || method || "PayStation",
+      notes: confirmedTrxId,
       recordedByUserId: "system",
       recordedByUserName: "PayStation",
       status: "Approved",
