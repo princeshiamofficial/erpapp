@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrderById } from "@/lib/order-service";
-import { getGlobalSettings } from "@/lib/settings-service";
+import { getOrderById, updateOrder } from "@/lib/order-service";
+import { v4 as uuidv4 } from "uuid";
+import type { AdvancePaymentRecord } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,8 +44,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "success" });
     }
 
-    // ponytail: log IPN for now, actual payment recording depends on addAdvancePayment signature
-    console.log(`[PayStation IPN] Order: ${invoice_number}, TrxID: ${trx_id}, Amount: ${trx_amount}, Method: ${payment_method}`);
+    const newPayment: AdvancePaymentRecord = {
+      id: uuidv4(),
+      amount: Number(trx_amount),
+      date: new Date().toISOString(),
+      paymentMethod: payment_method || "PayStation",
+      notes: trx_id,
+      recordedByUserId: "system",
+      recordedByUserName: "PayStation",
+      status: "Approved",
+    };
+
+    const updatedPayments = [...(order.advancePayments || []), newPayment];
+    await updateOrder(orderId, { advancePayments: updatedPayments });
+
+    console.log(`[PayStation IPN] Recorded payment for ${orderId}: ${trx_amount} BDT, TrxID: ${trx_id}`);
 
     return NextResponse.json({ status: "success" });
   } catch (error) {
