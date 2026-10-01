@@ -141,6 +141,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
           currentUser={currentUser}
           designApprovalStatusIds={plainGlobalSettings.designApprovalStatusIds ?? []}
           docsApprovalStatusIds={plainGlobalSettings.docsApprovalStatusIds ?? []}
+          isOnlinePaymentEnabled={Boolean(plainGlobalSettings.paymentGatewayEnabled && plainGlobalSettings.paymentGatewayMerchantId)}
         />
       </Suspense>
 

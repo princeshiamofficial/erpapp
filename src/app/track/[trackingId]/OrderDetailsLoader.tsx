@@ -49,6 +49,7 @@ interface OrderDetailsLoaderProps {
   hideStatusHeader?: boolean;
   designApprovalStatusIds?: string[];
   docsApprovalStatusIds?: string[];
+  isOnlinePaymentEnabled?: boolean;
 }
 
 export function OrderDetailsLoader({
@@ -61,6 +62,7 @@ export function OrderDetailsLoader({
   hideStatusHeader = false,
   designApprovalStatusIds = [],
   docsApprovalStatusIds = [],
+  isOnlinePaymentEnabled = false,
 }: OrderDetailsLoaderProps) {
   // Pass the currentUser to the client component
   // The AuthProvider will hydrate the true current user state on the client side, but passing it from the server
@@ -76,6 +78,7 @@ export function OrderDetailsLoader({
         hideStatusHeader={hideStatusHeader}
         designApprovalStatusIds={designApprovalStatusIds}
         docsApprovalStatusIds={docsApprovalStatusIds}
+        isOnlinePaymentEnabled={isOnlinePaymentEnabled}
     />
   );
 }

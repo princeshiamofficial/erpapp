@@ -78,6 +78,7 @@ interface OrderDetailsClientProps {
   hideStatusHeader?: boolean;
   designApprovalStatusIds?: string[];
   docsApprovalStatusIds?: string[];
+  isOnlinePaymentEnabled?: boolean;
 }
 
 export function OrderDetailsClient({
@@ -89,7 +90,8 @@ export function OrderDetailsClient({
   initialCurrentUser,
   hideStatusHeader = false,
   designApprovalStatusIds = [],
-  docsApprovalStatusIds = []
+  docsApprovalStatusIds = [],
+  isOnlinePaymentEnabled = false
 }: OrderDetailsClientProps) {
   const { currentUser: authContextUser } = useAuth();
   const { socket } = useSocket();
@@ -2131,12 +2133,17 @@ export function OrderDetailsClient({
                       </div>
                     </div>
                     <div className="pt-4 flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={() => setDialogStep('payment-methods')}
-                      >
-                        Pay {formatCurrency(remainingForApproval)}
-                      </Button>
+                      {isOnlinePaymentEnabled ? (
+                        <Button size="sm" asChild>
+                          <a href={`/api/payment/pay/${encodeURIComponent(order.id)}?amount=${Math.ceil(remainingForApproval)}`}>
+                            Pay {formatCurrency(remainingForApproval)}
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" disabled>
+                          Online payment unavailable
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </>
