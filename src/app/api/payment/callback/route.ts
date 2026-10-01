@@ -13,10 +13,14 @@ function getOrigin(request: NextRequest): string {
     : request.nextUrl.origin;
 }
 
+function isSuccessStatus(status: string): boolean {
+  const s = status.toLowerCase();
+  return s === "success" || s === "successful";
+}
+
 function buildRedirectUrl(origin: string, invoiceNumber: string, status: string, extra: Record<string, string> = {}): string {
   const orderId = extractOrderId(invoiceNumber);
-  const isSuccess = status.toLowerCase() === "success";
-  const path = isSuccess ? "success" : "failed";
+  const path = isSuccessStatus(status) ? "success" : "failed";
   const params = new URLSearchParams(extra);
   const qs = params.toString();
   return `${origin}/pay/${orderId}/${path}${qs ? `?${qs}` : ""}`;
@@ -74,7 +78,7 @@ export async function POST(request: NextRequest) {
     const { invoiceNumber, status, method, extra } = extractParams(getter);
 
     if (invoiceNumber) {
-      if (status.toLowerCase() === "success") {
+      if (isSuccessStatus(status)) {
         await recordPaymentIfNeeded(invoiceNumber, extra.trx_id, extra.amount, method || undefined);
       }
       return NextResponse.redirect(buildRedirectUrl(origin, invoiceNumber, status, extra));
@@ -91,7 +95,7 @@ export async function GET(request: NextRequest) {
   const { invoiceNumber, status, method, extra } = extractParams(getter);
 
   if (invoiceNumber) {
-    if (status.toLowerCase() === "success") {
+    if (isSuccessStatus(status)) {
       await recordPaymentIfNeeded(invoiceNumber, extra.trx_id, extra.amount, method || undefined);
     }
     return NextResponse.redirect(buildRedirectUrl(origin, invoiceNumber, status, extra));

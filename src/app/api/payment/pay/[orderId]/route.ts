@@ -58,6 +58,7 @@ export async function GET(
       : request.nextUrl.origin;
 
     const callbackUrl = settings.paymentGatewayCallbackUrl || `${origin}/api/payment/callback`;
+    const ipnUrl = settings.paymentGatewayIpnUrl || `${origin}/api/payment/ipn`;
 
     const body = new URLSearchParams({
       merchantId: settings.paymentGatewayMerchantId,
@@ -70,6 +71,7 @@ export async function GET(
       cust_phone: order.phoneNumber || "",
       cust_email: "",
       callback_url: callbackUrl,
+      ipn_url: ipnUrl,
       reference: orderId,
       ...(settings.paymentGatewayEmi ? { emi: "1" } : {}),
     });

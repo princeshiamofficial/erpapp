@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "error" }, { status: 404 });
     }
 
-    if (trx_status !== "Success") {
+    const statusLower = (trx_status || "").toLowerCase();
+    if (statusLower !== "success" && statusLower !== "successful") {
       return NextResponse.json({ status: "error" }, { status: 422 });
     }
 
