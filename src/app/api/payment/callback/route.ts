@@ -44,7 +44,7 @@ function extractParams(source: { get: (key: string) => string | null }): { invoi
 }
 
 async function recordPaymentIfNeeded(invoiceNumber: string, trxId: string | undefined, amount: string | undefined, method?: string) {
-  if (!trxId || !amount) return;
+  if (!trxId) return;
   try {
     const orderId = extractOrderId(invoiceNumber);
     const order = await getOrderById(orderId);
@@ -54,9 +54,24 @@ async function recordPaymentIfNeeded(invoiceNumber: string, trxId: string | unde
       order.advancePayments.some(p => p.notes?.includes(trxId));
     if (alreadyRecorded) return;
 
+    let paymentAmount = Number(amount) || 0;
+    if (paymentAmount <= 0) {
+      const orderSubtotal = Array.isArray(order.orderItems)
+        ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
+        : 0;
+      const discount = Number(order.specialClientDiscount) || 0;
+      const shipping = Number(order.shippingCharge) || 0;
+      const grandTotal = orderSubtotal - discount + shipping;
+      const totalPaid = Array.isArray(order.advancePayments)
+        ? order.advancePayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
+        : 0;
+      paymentAmount = Math.max(0, Math.ceil(grandTotal - totalPaid));
+    }
+    if (paymentAmount <= 0) return;
+
     const newPayment: AdvancePaymentRecord = {
       id: uuidv4(),
-      amount: Number(amount),
+      amount: paymentAmount,
       date: new Date().toISOString(),
       paymentMethod: method || "PayStation",
       notes: trxId,

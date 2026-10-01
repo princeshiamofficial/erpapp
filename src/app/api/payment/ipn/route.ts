@@ -45,9 +45,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "success" });
     }
 
+    let paymentAmount = Number(trx_amount) || 0;
+    if (paymentAmount <= 0) {
+      paymentAmount = Math.max(0, Math.ceil(amountDue));
+    }
+    if (paymentAmount <= 0) {
+      return NextResponse.json({ status: "success" });
+    }
+
     const newPayment: AdvancePaymentRecord = {
       id: uuidv4(),
-      amount: Number(trx_amount),
+      amount: paymentAmount,
       date: new Date().toISOString(),
       paymentMethod: payment_method || "PayStation",
       notes: trx_id,
