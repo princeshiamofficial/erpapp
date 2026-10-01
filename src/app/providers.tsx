@@ -41,6 +41,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
   '/admin/service-management': 'Service Management',
   '/admin/stock-reports': 'Stock Reports',
   '/admin/payment-history': 'Payment History',
+  '/online-payment': 'Online Payment',
   '/admin/model-management': 'Model Management',
   '/admin/custom-access': 'Custom Access',
   '/report': 'Reports',
