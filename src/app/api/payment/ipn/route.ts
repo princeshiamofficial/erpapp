@@ -1,84 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrderById, updateOrder } from "@/lib/order-service";
-import { verifyPayment } from "@/lib/paystation";
-import { v4 as uuidv4 } from "uuid";
-import type { AdvancePaymentRecord } from "@/types";
+import { settlePayment } from "@/lib/paystation";
+
+async function readBody(request: NextRequest): Promise<Record<string, any>> {
+  const raw = await request.text();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return Object.fromEntries(new URLSearchParams(raw));
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.json();
-    const { invoice_number, trx_status, trx_id, trx_amount, payment_method } = data;
-
-    if (!invoice_number) {
+    const data = await readBody(request);
+    const invoiceNumber = data.invoice_number;
+    if (!invoiceNumber) {
       return NextResponse.json({ status: "error" }, { status: 400 });
     }
 
-    const orderId = invoice_number.replace(/-P\d+$/, "");
-    const order = await getOrderById(orderId);
-    if (!order) {
-      return NextResponse.json({ status: "error" }, { status: 404 });
-    }
-
-    const statusLower = (trx_status || "").toLowerCase();
-    if (statusLower !== "success" && statusLower !== "successful") {
-      return NextResponse.json({ status: "error" }, { status: 422 });
-    }
-
-    const orderSubtotal = Array.isArray(order.orderItems)
-      ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
-      : 0;
-    const effectiveDiscount = Number(order.specialClientDiscount) || 0;
-    const netPayable = orderSubtotal - effectiveDiscount;
-    const shippingCharge = Number(order.shippingCharge) || 0;
-    const grandTotal = netPayable + shippingCharge;
-    const totalAdvancePaid = Array.isArray(order.advancePayments)
-      ? order.advancePayments.reduce((sum, record) => sum + (Number(record.amount) || 0), 0)
-      : 0;
-    const amountDue = Math.max(0, grandTotal - totalAdvancePaid);
-
-    if (Math.abs(Number(trx_amount) - Math.ceil(amountDue)) > 1) {
-      console.warn(`IPN amount mismatch for ${invoice_number}: expected ~${amountDue}, got ${trx_amount}`);
-    }
-
-    const alreadyRecorded = Array.isArray(order.advancePayments) &&
-      order.advancePayments.some(p => p.notes?.includes(trx_id));
-    if (alreadyRecorded) {
-      return NextResponse.json({ status: "success" });
-    }
-
-    const verified = await verifyPayment(invoice_number);
-    if (!verified.verified) {
-      console.warn(`[PayStation IPN] Verification failed for ${invoice_number}, trx_id=${trx_id} — payment NOT recorded`);
-      return NextResponse.json({ status: "error", message: "Verification failed" }, { status: 403 });
-    }
-
-    let paymentAmount = verified.amount || Number(trx_amount) || 0;
-    if (paymentAmount <= 0) {
-      paymentAmount = Math.max(0, Math.ceil(amountDue));
-    }
-    if (paymentAmount <= 0) {
-      return NextResponse.json({ status: "success" });
-    }
-
-    const confirmedTrxId = verified.trxId || trx_id;
-
-    const newPayment: AdvancePaymentRecord = {
-      id: uuidv4(),
-      amount: paymentAmount,
-      date: new Date().toISOString(),
-      paymentMethod: verified.method || payment_method || "PayStation",
-      notes: confirmedTrxId,
-      recordedByUserId: "system",
-      recordedByUserName: "PayStation",
-      status: "Approved",
-    };
-
-    const updatedPayments = [...(order.advancePayments || []), newPayment];
-    await updateOrder(orderId, { advancePayments: updatedPayments });
-
-    console.log(`[PayStation IPN] Recorded payment for ${orderId}: ${paymentAmount} BDT, TrxID: ${confirmedTrxId}`);
-
-    return NextResponse.json({ status: "success" });
+    const recorded = await settlePayment(String(invoiceNumber), data.trx_id || data.trxId || null);
+    return NextResponse.json({ status: recorded ? "success" : "error" }, { status: recorded ? 200 : 422 });
   } catch (error) {
     console.error("IPN handler error:", error);
     return NextResponse.json({ status: "error" }, { status: 500 });

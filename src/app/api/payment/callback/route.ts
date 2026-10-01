@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrderById, updateOrder } from "@/lib/order-service";
-import { verifyPayment } from "@/lib/paystation";
-import { v4 as uuidv4 } from "uuid";
-import type { AdvancePaymentRecord } from "@/types";
-
-function extractOrderId(invoiceNumber: string): string {
-  return invoiceNumber.replace(/-P\d+$/, "");
-}
+import { extractOrderId, settlePayment } from "@/lib/paystation";
 
 function getOrigin(request: NextRequest): string {
   const proto = (request.headers.get("x-forwarded-proto") || "https").split(",")[0].trim();
@@ -20,94 +13,35 @@ function isSuccessStatus(status: string): boolean {
   return s === "success" || s === "successful";
 }
 
-function buildRedirectUrl(origin: string, invoiceNumber: string, status: string, extra: Record<string, string> = {}): string {
-  const orderId = extractOrderId(invoiceNumber);
-  const path = isSuccessStatus(status) ? "success" : "failed";
-  const params = new URLSearchParams(extra);
-  const qs = params.toString();
-  return `${origin}/pay/${orderId}/${path}${qs ? `?${qs}` : ""}`;
-}
+async function handle(origin: string, get: (key: string) => string | null) {
+  const invoiceNumber = get("invoice_number");
+  if (!invoiceNumber) return NextResponse.redirect(`${origin}/orders`);
 
-function extractParams(source: { get: (key: string) => string | null }): { invoiceNumber: string | null; status: string; method: string | null; extra: Record<string, string> } {
-  const invoiceNumber = source.get("invoice_number");
-  const trxStatus = source.get("trx_status") || source.get("status") || "failed";
-  const trxId = source.get("trx_id");
-  const amount = source.get("payment_amount") || source.get("trx_amount");
-  const method = source.get("payment_method");
-  const message = source.get("message");
+  const status = get("trx_status") || get("status") || "failed";
+  const trxId = get("trx_id");
+  const orderId = extractOrderId(invoiceNumber);
 
   const extra: Record<string, string> = {};
   if (trxId) extra.trx_id = trxId;
-  if (amount) extra.amount = amount;
-  if (trxStatus.toLowerCase() !== "success" && message) extra.reason = message;
 
-  return { invoiceNumber, status: trxStatus, method, extra };
-}
-
-async function recordPaymentIfNeeded(invoiceNumber: string, trxId: string | undefined, amount: string | undefined, method?: string) {
-  if (!trxId) return;
-  try {
-    const verified = await verifyPayment(invoiceNumber);
-    if (!verified.verified) {
-      console.warn(`[PayStation] Verification failed for ${invoiceNumber}, trx_id=${trxId} — payment NOT recorded`);
-      return;
+  if (isSuccessStatus(status)) {
+    const recorded = await settlePayment(invoiceNumber, trxId).catch(() => false);
+    if (recorded) {
+      return NextResponse.redirect(`${origin}/pay/${orderId}/success?${new URLSearchParams(extra)}`);
     }
-
-    const confirmedTrxId = verified.trxId || trxId;
-    const orderId = extractOrderId(invoiceNumber);
-    const order = await getOrderById(orderId);
-    if (!order) return;
-
-    const alreadyRecorded = Array.isArray(order.advancePayments) &&
-      order.advancePayments.some(p => p.notes?.includes(confirmedTrxId));
-    if (alreadyRecorded) return;
-
-    let paymentAmount = verified.amount || Number(amount) || 0;
-    if (paymentAmount <= 0) {
-      const orderSubtotal = Array.isArray(order.orderItems)
-        ? order.orderItems.reduce((acc, item) => acc + (item.isGift ? 0 : (Number(item.lineItemTotalPrice) || 0)), 0)
-        : 0;
-      const discount = Number(order.specialClientDiscount) || 0;
-      const shipping = Number(order.shippingCharge) || 0;
-      const grandTotal = orderSubtotal - discount + shipping;
-      const totalPaid = Array.isArray(order.advancePayments)
-        ? order.advancePayments.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
-        : 0;
-      paymentAmount = Math.max(0, Math.ceil(grandTotal - totalPaid));
-    }
-    if (paymentAmount <= 0) return;
-
-    const newPayment: AdvancePaymentRecord = {
-      id: uuidv4(),
-      amount: paymentAmount,
-      date: new Date().toISOString(),
-      paymentMethod: verified.method || method || "PayStation",
-      notes: confirmedTrxId,
-      recordedByUserId: "system",
-      recordedByUserName: "PayStation",
-      status: "Approved",
-    };
-
-    await updateOrder(orderId, { advancePayments: [...(order.advancePayments || []), newPayment] });
-  } catch (error) {
-    console.error("Callback payment recording error:", error);
+    extra.reason = "We could not confirm your payment yet. If money was deducted, it will be added to your invoice automatically.";
+  } else {
+    const message = get("message");
+    if (message) extra.reason = message;
   }
+  return NextResponse.redirect(`${origin}/pay/${orderId}/failed?${new URLSearchParams(extra)}`);
 }
 
 export async function POST(request: NextRequest) {
   const origin = getOrigin(request);
   try {
     const formData = await request.formData();
-    const getter = { get: (key: string) => formData.get(key) as string | null };
-    const { invoiceNumber, status, method, extra } = extractParams(getter);
-
-    if (invoiceNumber) {
-      if (isSuccessStatus(status)) {
-        await recordPaymentIfNeeded(invoiceNumber, extra.trx_id, extra.amount, method || undefined);
-      }
-      return NextResponse.redirect(buildRedirectUrl(origin, invoiceNumber, status, extra));
-    }
-    return NextResponse.redirect(`${origin}/orders`);
+    return handle(origin, key => formData.get(key) as string | null);
   } catch {
     return NextResponse.redirect(`${origin}/orders`);
   }
@@ -115,14 +49,5 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const origin = getOrigin(request);
-  const getter = { get: (key: string) => request.nextUrl.searchParams.get(key) };
-  const { invoiceNumber, status, method, extra } = extractParams(getter);
-
-  if (invoiceNumber) {
-    if (isSuccessStatus(status)) {
-      await recordPaymentIfNeeded(invoiceNumber, extra.trx_id, extra.amount, method || undefined);
-    }
-    return NextResponse.redirect(buildRedirectUrl(origin, invoiceNumber, status, extra));
-  }
-  return NextResponse.redirect(`${origin}/orders`);
+  return handle(origin, key => request.nextUrl.searchParams.get(key));
 }

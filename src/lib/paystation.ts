@@ -1,50 +1,104 @@
+import { v4 as uuidv4 } from "uuid";
 import { getGlobalSettings } from "./settings-service";
+import { getOrderById, updateOrder } from "./order-service";
+import type { AdvancePaymentRecord } from "@/types";
 
-interface VerifyResult {
-  verified: boolean;
-  amount?: number;
-  method?: string;
-  trxId?: string;
+interface VerifiedTransaction {
+  invoiceNumber: string;
+  trxId: string;
+  amount: number;
+  method: string | null;
 }
 
-export async function verifyPayment(invoiceNumber: string): Promise<VerifyResult> {
+export function extractOrderId(invoiceNumber: string): string {
+  return invoiceNumber.replace(/-P\d+$/, "");
+}
+
+async function post(baseUrl: string, path: string, merchantId: string, body: string, contentType: string) {
+  const res = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": contentType, merchantId },
+    body,
+    cache: "no-store",
+  });
+  return res.json().catch(() => ({}));
+}
+
+function parse(json: any): VerifiedTransaction | null {
+  const data = json?.data;
+  if (String(json?.status_code) !== "200" || !data) return null;
+  const status = String(data.trx_status || "").toLowerCase();
+  if (status !== "success" && status !== "successful") return null;
+  const amount = Number(data.request_amount || data.payment_amount || data.trx_amount) || 0;
+  if (!data.trx_id || amount <= 0) return null;
+  return {
+    invoiceNumber: String(data.invoice_number || ""),
+    trxId: String(data.trx_id),
+    amount,
+    method: data.payment_method ? String(data.payment_method) : null,
+  };
+}
+
+export async function verifyPayment(invoiceNumber: string, trxId?: string | null): Promise<VerifiedTransaction | null> {
+  const settings = await getGlobalSettings();
+  const merchantId = settings.paymentGatewayMerchantId;
+  if (!merchantId) return null;
+
+  const baseUrl = settings.paymentGatewayEnvironment === "production"
+    ? "https://api.paystation.com.bd"
+    : "https://sandbox.paystation.com.bd";
+
   try {
-    const settings = await getGlobalSettings();
-    if (!settings.paymentGatewayMerchantId || !settings.paymentGatewayPassword) {
-      return { verified: false };
+    const v1 = parse(await post(baseUrl, "/transaction-status", merchantId,
+      new URLSearchParams({ invoice_number: invoiceNumber }).toString(), "application/x-www-form-urlencoded"));
+    if (v1) return v1;
+
+    if (trxId) {
+      const v2 = parse(await post(baseUrl, "/v2/transaction-status", merchantId,
+        JSON.stringify({ trxId }), "application/json"));
+      if (v2 && extractOrderId(v2.invoiceNumber) === extractOrderId(invoiceNumber)) return v2;
     }
-
-    const baseUrl = settings.paymentGatewayEnvironment === "production"
-      ? "https://api.paystation.com.bd"
-      : "https://sandbox.paystation.com.bd";
-
-    const body = new URLSearchParams({
-      merchantId: settings.paymentGatewayMerchantId,
-      password: settings.paymentGatewayPassword,
-      invoice_number: invoiceNumber,
-    });
-
-    const response = await fetch(`${baseUrl}/check-invoice`, {
-      method: "POST",
-      headers: { Accept: "application/json" },
-      body,
-    });
-
-    const data = await response.json();
-
-    const trxStatus = (data.trx_status || "").toLowerCase();
-    if (data.status_code === "200" && (trxStatus === "successful" || trxStatus === "success")) {
-      return {
-        verified: true,
-        amount: Number(data.trx_amount || data.payment_amount) || undefined,
-        method: data.payment_method || undefined,
-        trxId: data.trx_id || undefined,
-      };
-    }
-
-    return { verified: false };
   } catch (error) {
-    console.error("PayStation verify error:", error);
-    return { verified: false };
+    console.error("[PayStation] verify error:", error);
   }
+  return null;
+}
+
+// ponytail: in-process per-order lock, stops callback+IPN double-insert on one server; needs DB lock if app runs multi-instance
+const locks = new Map<string, Promise<unknown>>();
+
+export async function settlePayment(invoiceNumber: string, trxId?: string | null): Promise<boolean> {
+  const orderId = extractOrderId(invoiceNumber);
+  const prev = locks.get(orderId) ?? Promise.resolve();
+  const run = prev.then(() => settle(invoiceNumber, orderId, trxId));
+  locks.set(orderId, run.catch(() => {}));
+  return run;
+}
+
+async function settle(invoiceNumber: string, orderId: string, trxId?: string | null): Promise<boolean> {
+  const verified = await verifyPayment(invoiceNumber, trxId);
+  if (!verified) {
+    console.warn(`[PayStation] not verified: invoice=${invoiceNumber} trx_id=${trxId ?? "-"} — payment NOT recorded`);
+    return false;
+  }
+
+  const order = await getOrderById(orderId);
+  if (!order) return false;
+
+  if ((order.advancePayments || []).some(p => p.notes === verified.trxId)) return true;
+
+  const payment: AdvancePaymentRecord = {
+    id: uuidv4(),
+    amount: verified.amount,
+    date: new Date().toISOString(),
+    paymentMethod: verified.method || "PayStation",
+    notes: verified.trxId,
+    recordedByUserId: "system",
+    recordedByUserName: "PayStation",
+    status: "Approved",
+  };
+
+  const ok = await updateOrder(orderId, { advancePayments: [...(order.advancePayments || []), payment] });
+  console.log(`[PayStation] recorded ${verified.amount} BDT for ${orderId}, trx_id=${verified.trxId}, ok=${ok}`);
+  return ok;
 }
