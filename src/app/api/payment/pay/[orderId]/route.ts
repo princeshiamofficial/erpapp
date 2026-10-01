@@ -53,8 +53,9 @@ export async function GET(
       ? "https://api.paystation.com.bd"
       : "https://sandbox.paystation.com.bd";
 
+    const proto = (request.headers.get("x-forwarded-proto") || "https").split(",")[0].trim();
     const origin = request.headers.get("x-forwarded-host")
-      ? `${request.headers.get("x-forwarded-proto") || "https"}://${request.headers.get("x-forwarded-host")}`
+      ? `${proto}://${request.headers.get("x-forwarded-host")}`
       : request.nextUrl.origin;
 
     const callbackUrl = settings.paymentGatewayCallbackUrl || `${origin}/api/payment/callback`;

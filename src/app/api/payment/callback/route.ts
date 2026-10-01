@@ -8,8 +8,9 @@ function extractOrderId(invoiceNumber: string): string {
 }
 
 function getOrigin(request: NextRequest): string {
+  const proto = (request.headers.get("x-forwarded-proto") || "https").split(",")[0].trim();
   return request.headers.get("x-forwarded-host")
-    ? `${request.headers.get("x-forwarded-proto") || "https"}://${request.headers.get("x-forwarded-host")}`
+    ? `${proto}://${request.headers.get("x-forwarded-host")}`
     : request.nextUrl.origin;
 }
 
