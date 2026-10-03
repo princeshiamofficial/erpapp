@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
+import { employeeWeekendDays } from '@/lib/payroll-days';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -250,7 +251,8 @@ export default function AttendancePage() {
         const targetDate = new Date(parseInt(attendanceYear), parseInt(attendanceMonth));
         const daysInMonth = getDaysInMonth(targetDate);
         const dailyData: any[] = [];
-        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
+        const selectedEmployeeRecord = employees.find(e => e.userId === selectedUserId);
+        const weekendDayIndexes = employeeWeekendDays(selectedEmployeeRecord ?? {}, selectedWeekends).map(day => WEEK_DAYS.indexOf(day));
 
         const selectedUser = allUsers.find(u => u.id === selectedUserId);
         const selectedUserName = selectedUser?.name;
@@ -308,7 +310,7 @@ export default function AttendancePage() {
 
         // Final sort to ensure sequential date order (Descending: latest first)
         return dailyData.sort((a, b) => (b.date as Date).getTime() - (a.date as Date).getTime());
-    }, [attendanceData, attendanceMonth, attendanceYear, selectedUserId, selectedWeekends, allUsers, attendanceDateFilter]);
+    }, [attendanceData, attendanceMonth, attendanceYear, selectedUserId, selectedWeekends, allUsers, attendanceDateFilter, employees]);
 
 
     const attendanceSummary = useMemo(() => {
@@ -320,22 +322,7 @@ export default function AttendancePage() {
         if (!selectedEmployee) return null;
 
         const targetDate = new Date(parseInt(attendanceYear), parseInt(attendanceMonth));
-        const daysInMonth = getDaysInMonth(targetDate);
-        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
-
-        let totalWorkingDays = 0;
-
-        for (let i = 1; i <= daysInMonth; i++) {
-            const currentDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), i);
-            if (isAfter(currentDate, new Date())) {
-                continue;
-            }
-            const dayOfWeek = getDay(currentDate);
-
-            if (!weekendDayIndexes.includes(dayOfWeek)) {
-                totalWorkingDays++;
-            }
-        }
+        const weekendDayIndexes = employeeWeekendDays(selectedEmployee, selectedWeekends).map(day => WEEK_DAYS.indexOf(day));
 
         const presentDays = individualAttendanceHistoryData.filter(
             (entry) => entry.status === 'On Time' || entry.status === 'Late'
@@ -345,12 +332,13 @@ export default function AttendancePage() {
             isSameMonth(parseISO(leave.date), targetDate)
         ).reduce((sum, leave) => sum + leave.days, 0) || 0;
 
-        // Saved 'Weekend' records on working days are paid off-days, not absences (placeholder weekend rows have no check-in time).
-        const markedWeekendDays = individualAttendanceHistoryData.filter((entry: any) =>
-            entry.status === 'Weekend' && entry.checkInTime && !weekendDayIndexes.includes(getDay(entry.date as Date))
+        // Count exactly the Absent rows the table shows, on working days only.
+        // Today's empty placeholder is skipped: the day isn't over, so it isn't an absence yet.
+        const totalAbsent = individualAttendanceHistoryData.filter((entry: any) =>
+            entry.status === 'Absent' &&
+            !weekendDayIndexes.includes(getDay(entry.date as Date)) &&
+            !(isSameDay(entry.date as Date, new Date()) && !entry.checkInTime)
         ).length;
-
-        const totalAbsent = totalWorkingDays - presentDays - totalLeave - markedWeekendDays;
 
         const totalLate = individualAttendanceHistoryData.filter(entry => entry.status === 'Late').length;
 
@@ -376,9 +364,14 @@ export default function AttendancePage() {
         const remainingMinutes = totalMinutesWorked % 60;
         const totalWorkingHours = `${String(totalHours).padStart(2, '0')}:${String(remainingMinutes).padStart(2, '0')}`;
 
+        const totalWeekend = individualAttendanceHistoryData.filter(entry => entry.status === 'Weekend').length;
+        const absent = Math.max(0, totalAbsent);
+
         return {
-            totalPresent: presentDays,
-            totalAbsent: Math.max(0, totalAbsent),
+            presentDays,
+            totalWeekend,
+            totalPresent: Math.max(0, presentDays + totalWeekend + totalLeave - absent),
+            totalAbsent: absent,
             totalLeave,
             totalLate,
             totalWorkingHours,
@@ -727,62 +720,26 @@ export default function AttendancePage() {
             <CardContent className="p-6 pt-0">
                 {selectedUserId !== 'all' && attendanceSummary && (
                     <>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
-                                <CardContent className="p-4 flex items-center space-x-4">
-                                    <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/20">
-                                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-300" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">Total Present</p>
-                                        <p className="text-2xl font-bold text-green-600">{attendanceSummary.totalPresent}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
-                                <CardContent className="p-4 flex items-center space-x-4">
-                                    <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/20">
-                                        <UserRoundX className="h-6 w-6 text-red-600 dark:text-red-300" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">Total Absent</p>
-                                        <p className="text-2xl font-bold text-red-600">{attendanceSummary.totalAbsent}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
-                                <CardContent className="p-4 flex items-center space-x-4">
-                                    <div className="p-3 rounded-full bg-indigo-100 dark:bg-indigo-900/20">
-                                        <Briefcase className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">Total Leave</p>
-                                        <p className="text-2xl font-bold text-indigo-600">{attendanceSummary.totalLeave}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
-                                <CardContent className="p-4 flex items-center space-x-4">
-                                    <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/20">
-                                        <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-300" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">Total Late</p>
-                                        <p className="text-2xl font-bold text-yellow-600">{attendanceSummary.totalLate}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
-                                <CardContent className="p-4 flex items-center space-x-4">
-                                    <div className="p-3 rounded-full bg-sky-100 dark:bg-sky-900/20">
-                                        <Clock className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground">Working Hours</p>
-                                        <p className="text-2xl font-bold text-foreground">{attendanceSummary.totalWorkingHours}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 mb-6">
+                            {[
+                                { label: 'Present', value: attendanceSummary.presentDays, icon: CheckCircle, tone: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/20' },
+                                { label: 'Weekend', value: attendanceSummary.totalWeekend, icon: CalendarDays, tone: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/20' },
+                                { label: 'Leave', value: attendanceSummary.totalLeave, icon: Briefcase, tone: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-100 dark:bg-indigo-900/20' },
+                                { label: 'Absent', value: attendanceSummary.totalAbsent, icon: UserRoundX, tone: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/20' },
+                                { label: 'Total Present', value: attendanceSummary.totalPresent, icon: CheckCircle, tone: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/20' },
+                                { label: 'Total Late', value: attendanceSummary.totalLate, icon: AlertTriangle, tone: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/20' },
+                                { label: 'Working Hours', value: attendanceSummary.totalWorkingHours, icon: Clock, tone: 'text-foreground', bg: 'bg-sky-100 dark:bg-sky-900/20' },
+                            ].map(({ label, value, icon: Icon, tone, bg }) => (
+                                <Card key={label} className="shadow-md hover:shadow-lg transition-shadow bg-card rounded-lg">
+                                    <CardContent className="flex items-center gap-2 px-3 py-3">
+                                        <div className={cn("shrink-0 rounded-full p-1.5", bg)}>
+                                            <Icon className={cn("h-4 w-4", tone)} />
+                                        </div>
+                                        <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
+                                        <span className={cn("ml-auto text-lg font-bold tabular-nums", tone)}>{value}</span>
+                                    </CardContent>
+                                </Card>
+                            ))}
                         </div>
                         <Separator className="my-6" />
                     </>
