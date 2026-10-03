@@ -17,6 +17,7 @@ import {
 import { addOrUpdateAttendanceRecord, deleteAttendanceRecord } from "@/lib/attendance-service";
 import { updateProvidentFundRecord, getProvidentFundRecords } from "@/lib/provident-fund-service";
 import { query } from "@/lib/mysql";
+import { WEEK_DAYS } from "@/lib/payroll-days";
 
 export async function addEmployeeAction(
   employeeData: Omit<Employee, 'id' | 'employeeId'>
@@ -50,6 +51,9 @@ export async function updateEmployeeAction(
       if (!phoneRegex.test(updates.mobileNo)) {
         return { success: false, error: "Invalid mobile number. It must be an 11-digit number starting with 0." };
       }
+    }
+    if (updates.weekendDays && (!Array.isArray(updates.weekendDays) || updates.weekendDays.some(d => !WEEK_DAYS.includes(d)))) {
+      return { success: false, error: "Invalid weekend days." };
     }
     const success = await updateEmployeeService(employeeId, updates);
     if (success) {

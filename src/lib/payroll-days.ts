@@ -2,9 +2,14 @@ import { getDaysInMonth, isSameMonth, parseISO } from 'date-fns';
 
 export const PAYROLL_BASE_DAYS = 30;
 
-const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-// Weekends are paid off-days; a check-in on a weekend is an extra paid day on top of the 30-day base.
+// An employee's own weekend replaces the company weekend; empty/unset means "use company weekend".
+export function employeeWeekendDays(employee: { weekendDays?: string[] | null }, companyWeekendDays: string[]) {
+  return employee.weekendDays?.length ? employee.weekendDays : companyWeekendDays;
+}
+
+// Weekends are paid off-days; each weekend check-in adds one day on top of the 30-day base (e.g. 31).
 export function calculatePayrollDays(records: { date: string; status?: string }[], weekendDays: string[], month: Date) {
   const weekendIndexes = new Set((weekendDays || []).map(day => WEEK_DAYS.indexOf(day)));
 
@@ -25,8 +30,7 @@ export function calculatePayrollDays(records: { date: string; status?: string }[
 
   const absentDays = Math.max(0, workingDays - regularDates.size);
   return {
-    presentDays: Math.max(0, PAYROLL_BASE_DAYS - absentDays),
-    extraDays: weekendDates.size,
+    presentDays: Math.max(0, PAYROLL_BASE_DAYS - absentDays) + weekendDates.size,
     absentDays,
     lateDays,
   };

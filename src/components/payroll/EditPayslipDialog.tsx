@@ -26,7 +26,7 @@ const formatCurrency = (value?: number | null): string => {
 };
 
 interface EditPayslipDialogProps {
-  employee: Employee & { presentDays?: number; extraDays?: number; absentDays?: number; lateDays?: number; fine?: number; };
+  employee: Employee & { presentDays?: number; absentDays?: number; lateDays?: number; fine?: number; };
   onSave: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,7 +39,6 @@ const FIXED_WORKING_DAYS = 30;
 export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, existingPayslip }: EditPayslipDialogProps) {
   const [present, setPresent] = useState('30');
   const [absent, setAbsent] = useState('0');
-  const [extra, setExtra] = useState('0');
   const [late, setLate] = useState('0');
   const [fine, setFine] = useState('0');
   const [incentive, setIncentive] = useState('0');
@@ -75,7 +74,6 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       if (existingPayslip) {
         setPresent(existingPayslip.presentDays.toString());
         setAbsent(existingPayslip.absentDays.toString());
-        setExtra(String(existingPayslip.extraDays ?? 0));
         setLate(existingPayslip.lateDays.toString());
         setFine(existingPayslip.fine.toString());
         setIncentive(existingPayslip.incentive.toString());
@@ -85,11 +83,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       } else {
         const initialPresent = employee.presentDays?.toString() || FIXED_WORKING_DAYS.toString();
         const initialLate = employee.lateDays?.toString() || '0';
-        const initialAbsent = (FIXED_WORKING_DAYS - parseInt(initialPresent, 10)).toString();
+        const initialAbsent = String(employee.absentDays ?? Math.max(0, FIXED_WORKING_DAYS - parseInt(initialPresent, 10)));
 
         setPresent(initialPresent);
         setAbsent(initialAbsent);
-        setExtra(String(employee.extraDays ?? 0));
         setLate(initialLate);
 
         const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * perDaySalaryForFine;
@@ -144,14 +141,13 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const incentiveNum = parseFloat(incentive) || 0;
     const fineNum = parseFloat(fine) || 0;
     const presentDays = parseInt(present, 10) || 0;
-    const extraDays = Math.max(0, parseInt(extra, 10) || 0);
     const trainingFeeNum = isNewEmployee ? (parseFloat(trainingFee) || 0) : 0;
     const advanceNum = parseFloat(advance) || 0;
 
-    const salaryForDaysWorked = dailySalary * (presentDays + extraDays);
+    const salaryForDaysWorked = dailySalary * presentDays;
 
     return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum - advanceNum;
-  }, [incentive, fine, providentFund, present, extra, dailySalary, trainingFee, isNewEmployee, advance]);
+  }, [incentive, fine, providentFund, present, dailySalary, trainingFee, isNewEmployee, advance]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,7 +156,6 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
     const payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'> = {
       presentDays: parseInt(present, 10),
-      extraDays: Math.max(0, parseInt(extra, 10) || 0),
       absentDays: parseInt(absent, 10),
       lateDays: parseInt(late, 10),
       fine: parseFloat(fine),
@@ -232,10 +227,6 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="extra-days">Extra (Weekend)</Label>
-              <Input id="extra-days" type="number" min={0} value={extra} onChange={e => setExtra(e.target.value)} />
-            </div>
             <div className="space-y-1">
               <Label htmlFor="advance">Advance</Label>
               <Input id="advance" type="number" value={advance} onChange={e => setAdvance(e.target.value)} placeholder="Enter advance amount" />

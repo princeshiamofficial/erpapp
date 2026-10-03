@@ -22,7 +22,7 @@ const PDFDownloadLink = dynamic(() => import('@react-pdf/renderer').then(mod => 
 });
 import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
-import { calculatePayrollDays, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
+import { calculatePayrollDays, employeeWeekendDays, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import Papa from 'papaparse';
 import {
@@ -142,7 +142,7 @@ export default function SalaryTransferPage() {
                 att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
             );
             
-            const { presentDays, extraDays, lateDays } = calculatePayrollDays(userAttendanceInRange, weekendDays, selectedDate);
+            const { presentDays, lateDays } = calculatePayrollDays(userAttendanceInRange, employeeWeekendDays(employee, weekendDays), selectedDate);
 
             const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
@@ -150,7 +150,7 @@ export default function SalaryTransferPage() {
 
             const perDaySalary = effectiveSalary / PAYROLL_BASE_DAYS;
             const automaticFine = Math.floor(lateDays / 3) * perDaySalary;
-            const salaryForDaysWorked = perDaySalary * (presentDays + extraDays);
+            const salaryForDaysWorked = perDaySalary * presentDays;
             const providentFund = employee.providentFundStatus === 'Active' ? effectiveSalary * 0.07 : 0;
             
             payableAmount = salaryForDaysWorked - automaticFine - providentFund;

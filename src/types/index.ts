@@ -57,7 +57,6 @@ export interface Payslip {
   id: string; // e.g., '2024-07-CRM-001'
   employeeId: string;
   presentDays: number;
-  extraDays?: number; // weekend days worked, paid on top of presentDays
   absentDays: number;
   lateDays: number;
   fine: number;
@@ -104,6 +103,7 @@ export interface Employee {
   accountNo?: string;  // New Field for Bank Account Number
   providentFundStatus?: 'Active' | 'Inactive';
   incentive?: number;
+  weekendDays?: string[] | null; // overrides company weekend when set
 }
 
 export interface Vendor {
