@@ -1288,26 +1288,26 @@ function DashboardContent() {
       { 
         title: "Total purchase", 
         value: showAmount ? formatCurrency(totalPurchase) : totalPurchaseCount.toString(), 
-        icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+        icon: Download, iconColorClass: "text-blue-600", circleBgClass: "bg-blue-100 dark:bg-blue-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Purchase due", 
         value: showAmount ? formatCurrency(0) : "0", 
-        icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+        icon: AlertTriangle, iconColorClass: "text-orange-600", circleBgClass: "bg-orange-100 dark:bg-orange-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
         title: "Discount",
         value: showAmount ? formatCurrency(discountAmount) : discountCount.toString(),
-        icon: BadgePercent, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
-      { 
-        title: "Expense", 
-        value: showAmount ? formatCurrency(totalExpenses) : totalExpensesCount.toString(), 
-        icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+        icon: BadgePercent, iconColorClass: "text-violet-600", circleBgClass: "bg-violet-100 dark:bg-violet-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
+      {
+        title: "Gift's Value",
+        value: showAmount ? formatCurrency(giftValue) : giftCount.toString(),
+        icon: Gift, iconColorClass: "text-fuchsia-600", circleBgClass: "bg-fuchsia-100 dark:bg-fuchsia-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials
       },
-      { 
-        title: "Gift's Value", 
-        value: showAmount ? formatCurrency(giftValue) : giftCount.toString(), 
-        icon: Gift, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
+      {
+        title: "Expense",
+        value: showAmount ? formatCurrency(totalExpenses) : totalExpensesCount.toString(),
+        icon: Receipt, iconColorClass: "text-red-600", circleBgClass: "bg-red-100 dark:bg-red-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials
       },
     ];
   }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount, giftValue, giftCount, discountAmount, discountCount, repeatSalesAmount, repeatSalesCount]);
