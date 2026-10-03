@@ -25,7 +25,7 @@ import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, endOfMonth, startOfMonth, parseISO, intervalToDuration } from 'date-fns';
-import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth, getLastAttendanceDatesAction } from '@/app/(app)/payroll/actions';
+import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth, getLastAttendanceDatesAction, updatePayslipAction } from '@/app/(app)/payroll/actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import {
@@ -109,6 +109,35 @@ export default function PayrollPage() {
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
   const [lastAttendanceMap, setLastAttendanceMap] = useState<Record<string, string>>({});
 
+
+  const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
+
+  const handlePaymentStatusChange = async (
+    row: Employee & { presentDays: number; absentDays: number; lateDays: number; fine?: number; incentive?: number; advance?: number; trainingFee?: number; providentFund: number; payableAmount: number },
+    status: 'Paid' | 'Unpaid'
+  ) => {
+    const monthStr = format(selectedDate, 'yyyy-MM');
+    setStatusSavingId(row.employeeId);
+    const result = await updatePayslipAction(`${monthStr}-${row.employeeId}`, {
+      presentDays: row.presentDays,
+      absentDays: row.absentDays,
+      lateDays: row.lateDays,
+      fine: row.fine || 0,
+      incentive: row.incentive || 0,
+      trainingFee: row.trainingFee || undefined,
+      advance: row.advance || 0,
+      providentFund: row.providentFund,
+      payableAmount: row.payableAmount,
+      paymentStatus: status,
+    });
+    if (result.success) {
+      setSalarySheetData(await getSalarySheetForMonth(monthStr));
+      toast({ title: `Marked as ${status}`, description: `${row.name}'s salary for ${format(selectedDate, 'MMMM yyyy')}.` });
+    } else {
+      toast({ title: "Error", description: result.error || "Could not update payment status.", variant: "destructive" });
+    }
+    setStatusSavingId(null);
+  };
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -815,7 +844,25 @@ export default function PayrollPage() {
                         <spoiler-span>{formatCurrency(data.payableAmount)}</spoiler-span>
                       </TableCell>
                       <TableCell>
-                        <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
+                        <Select
+                          value={data.paymentStatus}
+                          onValueChange={(v) => v !== data.paymentStatus && handlePaymentStatusChange(data, v as 'Paid' | 'Unpaid')}
+                          disabled={statusSavingId === data.employeeId}
+                        >
+                          <SelectTrigger
+                            aria-label={`Payment status for ${data.name}`}
+                            className={cn(
+                              "h-7 w-[92px] rounded-full border-0 px-3 text-xs font-semibold shadow-none focus:ring-1",
+                              data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            )}
+                          >
+                            {statusSavingId === data.employeeId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SelectValue />}
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Unpaid">Unpaid</SelectItem>
+                            <SelectItem value="Paid">Paid</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-center">
                         <Button
