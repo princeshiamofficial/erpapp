@@ -20,7 +20,7 @@ import {
   Undo2,
   Download,
   AlertTriangle,
-  Redo2,
+  BadgePercent,
   Receipt,
   BarChartBig,
   Users,
@@ -739,10 +739,10 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
 
-  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount, giftValue, giftCount } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, totalPurchaseCount, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, salesCount, repeatSalesCount, repeatSalesAmount, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount, giftValue, giftCount, discountAmount, discountCount } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0, invoicePayment: 0, invoicePaymentCount: 0, totalExpenses: 0, totalExpensesCount: 0, giftValue: 0, giftCount: 0 };
+      return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, totalPurchaseCount: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoicePaidCount: 0, invoiceCodPaid: 0, invoiceCodPaidCount: 0, salesCount: 0, repeatSalesCount: 0, repeatSalesAmount: 0, invoicePayment: 0, invoicePaymentCount: 0, totalExpenses: 0, totalExpensesCount: 0, giftValue: 0, giftCount: 0, discountAmount: 0, discountCount: 0 };
     }
 
     let currentTotalSales = 0;
@@ -762,6 +762,8 @@ function DashboardContent() {
     let currentInvoicePaymentCount = 0;
     let currentTotalExpenses = 0;
     let currentTotalExpensesCount = 0;
+    let currentDiscountAmount = 0;
+    let currentDiscountCount = 0;
 
     const customerOrderHistory = new Set<string>();
     const repeatOrderIds = new Set<string>();
@@ -797,6 +799,10 @@ function DashboardContent() {
         const netPayable = orderTotal - effectiveDiscount;
         const grandTotal = netPayable + shipping;
         currentTotalSales += netPayable;
+        if (effectiveDiscount > 0) {
+          currentDiscountAmount += effectiveDiscount;
+          currentDiscountCount++;
+        }
 
         if (Array.isArray(order.orderItems)) {
           order.orderItems.forEach((item: OrderItem) => {
@@ -1045,6 +1051,8 @@ function DashboardContent() {
       totalExpensesCount: currentTotalExpensesCount,
       giftValue: currentGiftValue,
       giftCount: currentGiftCount,
+      discountAmount: currentDiscountAmount,
+      discountCount: currentDiscountCount,
     };
   }, [validFilteredOrders, validAllOrdersForPayments, allOrders, allYearOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId, chartGranularity, allTransactions]);
 
@@ -1288,9 +1296,9 @@ function DashboardContent() {
         icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
       { 
-        title: "Total Purchase Return", 
-        value: showAmount ? formatCurrency(0) : "0", 
-        icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
+        title: "Discount",
+        value: showAmount ? formatCurrency(discountAmount) : discountCount.toString(),
+        icon: BadgePercent, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials },
       { 
         title: "Expense", 
         value: showAmount ? formatCurrency(totalExpenses) : totalExpensesCount.toString(), 
@@ -1302,7 +1310,7 @@ function DashboardContent() {
         icon: Gift, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'], currentUser, hideValue: hideFinancials 
       },
     ];
-  }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount, giftValue, giftCount]);
+  }, [isCrm, isSystemAdmin, displayMode, salesCount, totalSales, ordersWithDueCount, invoiceDue, invoicePaid, invoicePaidCount, invoiceCodPaid, invoiceCodPaidCount, deliveredCount, netValue, totalPurchase, totalPurchaseCount, isLoadingData, currentUser, hideFinancials, invoicePayment, invoicePaymentCount, totalExpenses, totalExpensesCount, giftValue, giftCount, discountAmount, discountCount, repeatSalesAmount, repeatSalesCount]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
