@@ -345,7 +345,12 @@ export default function AttendancePage() {
             isSameMonth(parseISO(leave.date), targetDate)
         ).reduce((sum, leave) => sum + leave.days, 0) || 0;
 
-        const totalAbsent = totalWorkingDays - presentDays - totalLeave;
+        // Saved 'Weekend' records on working days are paid off-days, not absences (placeholder weekend rows have no check-in time).
+        const markedWeekendDays = individualAttendanceHistoryData.filter((entry: any) =>
+            entry.status === 'Weekend' && entry.checkInTime && !weekendDayIndexes.includes(getDay(entry.date as Date))
+        ).length;
+
+        const totalAbsent = totalWorkingDays - presentDays - totalLeave - markedWeekendDays;
 
         const totalLate = individualAttendanceHistoryData.filter(entry => entry.status === 'Late').length;
 
@@ -846,15 +851,15 @@ export default function AttendancePage() {
                                                         {entry.status}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell>{entry.status === 'Paid Leave' ? '-' : ((entry as any).checkInTime ? format(new Date((entry as any).checkInTime), 'h:mm a') : '-')}</TableCell>
-                                                <TableCell>{entry.status === 'Paid Leave' ? '-' : ((entry as any).checkOutTime ? format(new Date((entry as any).checkOutTime), 'h:mm a') : '-')}</TableCell>
-                                                <TableCell>{entry.status === 'Paid Leave' ? '-' : ((entry as any).hoursWorked || '-')}</TableCell>
+                                                <TableCell>{(entry.status === 'Paid Leave' || entry.status === 'Weekend') ? '-' : ((entry as any).checkInTime ? format(new Date((entry as any).checkInTime), 'h:mm a') : '-')}</TableCell>
+                                                <TableCell>{(entry.status === 'Paid Leave' || entry.status === 'Weekend') ? '-' : ((entry as any).checkOutTime ? format(new Date((entry as any).checkOutTime), 'h:mm a') : '-')}</TableCell>
+                                                <TableCell>{(entry.status === 'Paid Leave' || entry.status === 'Weekend') ? '-' : ((entry as any).hoursWorked || '-')}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            disabled={entry.status === 'Paid Leave' || !(entry as any).checkInLocation?.lat || !(entry as any).checkInLocation?.lng}
+                                                            disabled={entry.status === 'Paid Leave' || entry.status === 'Weekend' || !(entry as any).checkInLocation?.lat || !(entry as any).checkInLocation?.lng}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 if ((entry as any).checkInLocation?.lat && (entry as any).checkInLocation?.lng) {
@@ -874,7 +879,7 @@ export default function AttendancePage() {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            disabled={entry.status === 'Paid Leave' || !(entry as any).checkOutLocation?.lat || !(entry as any).checkOutLocation?.lng}
+                                                            disabled={entry.status === 'Paid Leave' || entry.status === 'Weekend' || !(entry as any).checkOutLocation?.lat || !(entry as any).checkOutLocation?.lng}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 if ((entry as any).checkOutLocation?.lat && (entry as any).checkOutLocation?.lng) {

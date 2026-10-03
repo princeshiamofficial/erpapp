@@ -35,8 +35,8 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
 
   useEffect(() => {
     if (isOpen && attendance) {
-      // Default to On Time if it was a placeholder
-      const initialStatus = (attendance.status === 'Absent' || attendance.status === 'Weekend') ? 'On Time' : attendance.status;
+      // Placeholder rows (no saved record) have no check-in time; default them to On Time
+      const initialStatus = attendance.checkInTime ? attendance.status : 'On Time';
       setStatus(initialStatus as AttendanceStatus);
 
       if (attendance.checkInTime) {
@@ -140,6 +140,7 @@ export function EditAttendanceDialog({ isOpen, onOpenChange, onAttendanceSaved, 
                 <SelectItem value="Late">Late</SelectItem>
                 <SelectItem value="Absent">Absent</SelectItem>
                 <SelectItem value="Paid Leave">Paid Leave</SelectItem>
+                <SelectItem value="Weekend">Weekend</SelectItem>
               </SelectContent>
             </Select>
           </div>

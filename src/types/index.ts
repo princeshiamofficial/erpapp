@@ -753,7 +753,7 @@ export interface OfficeTime {
   applicableRoles?: UserRole[] | 'all';
 }
 
-export type AttendanceStatus = 'On Time' | 'Late' | 'Absent' | 'Paid Leave';
+export type AttendanceStatus = 'On Time' | 'Late' | 'Absent' | 'Paid Leave' | 'Weekend';
 
 export interface AttendanceRecord {
   id: string; // Composite key: `${employeeId}_${YYYY-MM-DD}`

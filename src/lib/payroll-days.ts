@@ -38,8 +38,8 @@ export function calculatePayrollDays(records: { date: string; status?: string }[
     const date = parseISO(record.date);
     if (!isSameMonth(date, month) || record.status === 'Absent') continue;
     if (weekendIndexes.has(date.getDay())) {
-      // Leave on a paid off-day is not extra work.
-      if (record.status !== 'Paid Leave') weekendDates.add(record.date);
+      // Leave or a marked weekend on a paid off-day is not extra work.
+      if (record.status !== 'Paid Leave' && record.status !== 'Weekend') weekendDates.add(record.date);
     } else {
       regularDates.add(record.date);
     }

@@ -210,6 +210,8 @@ export default function AttendanceHistoryPage() {
                     status = 'late';
                 } else if (record.status === 'Paid Leave') {
                     status = 'leave';
+                } else if (record.status === 'Weekend') {
+                    status = 'holiday';
                 } else {
                     status = 'present';
                 }
@@ -370,18 +372,19 @@ export default function AttendanceHistoryPage() {
                                                             record.status === 'On Time' && 'bg-green-100 text-green-800',
                                                             record.status === 'Late' && 'bg-yellow-100 text-yellow-800',
                                                             record.status === 'Absent' && 'bg-red-100 text-red-800',
-                                                            record.status === 'Paid Leave' && 'bg-indigo-100 text-indigo-800'
+                                                            record.status === 'Paid Leave' && 'bg-indigo-100 text-indigo-800',
+                                                            record.status === 'Weekend' && 'bg-blue-50 text-blue-700'
                                                         )}>{record.status}</Badge>
                                                     </div>
                                                     <div className="flex flex-col items-center justify-center">
                                                         <p className="font-semibold text-foreground">
-                                                            {record.status === 'Paid Leave' ? '-' : `${checkInTime} - ${checkOutTime}`}
+                                                            {(record.status === 'Paid Leave' || record.status === 'Weekend') ? '-' : `${checkInTime} - ${checkOutTime}`}
                                                         </p>
                                                         <p className="text-xs text-muted-foreground">Check-in/out</p>
                                                     </div>
                                                     <div className="flex flex-col items-center justify-center">
                                                         <p className="font-semibold text-foreground">
-                                                            {record.status === 'Paid Leave' ? '-' : `${totalHours}h`}
+                                                            {(record.status === 'Paid Leave' || record.status === 'Weekend') ? '-' : `${totalHours}h`}
                                                         </p>
                                                         <p className="text-xs text-muted-foreground">Working Hours</p>
                                                     </div>
