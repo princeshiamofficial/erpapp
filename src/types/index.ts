@@ -57,6 +57,7 @@ export interface Payslip {
   id: string; // e.g., '2024-07-CRM-001'
   employeeId: string;
   presentDays: number;
+  extraDays?: number; // weekend days worked, paid on top of presentDays
   absentDays: number;
   lateDays: number;
   fine: number;

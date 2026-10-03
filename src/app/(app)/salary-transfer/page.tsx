@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth, getUnpaidMonthsAction } from '@/app/(app)/payroll/actions';
 import type { Employee, Payslip, AttendanceRecord } from '@/types';
-import { format, subMonths, getDaysInMonth, getDay, parseISO, isSameMonth, isAfter, startOfMonth } from 'date-fns';
+import { format, subMonths, parseISO, isSameMonth, isAfter, startOfMonth } from 'date-fns';
 import { Download, FileText } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { SalaryTransferPDF } from '@/components/payroll/SalaryTransferPDF';
@@ -22,6 +22,7 @@ const PDFDownloadLink = dynamic(() => import('@react-pdf/renderer').then(mod => 
 });
 import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
+import { calculatePayrollDays, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import Papa from 'papaparse';
 import {
@@ -37,7 +38,6 @@ const formatCurrency = (value?: number | null): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 };
 
-const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function SalaryTransferPage() {
   const { toast } = useToast();
@@ -123,15 +123,6 @@ export default function SalaryTransferPage() {
   
   const unpaidEmployeesData = useMemo(() => {
     const activeEmployees = employees.filter(e => e.status === 'Active');
-    const daysInMonth = getDaysInMonth(selectedDate);
-    const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
-    let totalWorkingDays = 0;
-    for (let i = 1; i <= daysInMonth; i++) {
-        const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-        if (!weekendDayIndexes.includes(getDay(currentDate))) {
-            totalWorkingDays++;
-        }
-    }
 
     return activeEmployees
       .map(employee => {
@@ -151,19 +142,16 @@ export default function SalaryTransferPage() {
                 att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
             );
             
-            const presentDays = userAttendanceInRange.length;
-            const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
-            
+            const { presentDays, extraDays, lateDays } = calculatePayrollDays(userAttendanceInRange, weekendDays, selectedDate);
+
             const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
             const effectiveSalary = firstFutureIncrement ? firstFutureIncrement.previousSalary : (employee.salary || 0);
-            
-            const perDaySalaryForFine = effectiveSalary / 30;
-            const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
-            
-            const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-            const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
-            const providentFund = effectiveSalary * 0.07;
+
+            const perDaySalary = effectiveSalary / PAYROLL_BASE_DAYS;
+            const automaticFine = Math.floor(lateDays / 3) * perDaySalary;
+            const salaryForDaysWorked = perDaySalary * (presentDays + extraDays);
+            const providentFund = employee.providentFundStatus === 'Active' ? effectiveSalary * 0.07 : 0;
             
             payableAmount = salaryForDaysWorked - automaticFine - providentFund;
         }

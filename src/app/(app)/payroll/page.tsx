@@ -40,6 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { getProvidentFundRecords } from '@/lib/provident-fund-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
+import { calculatePayrollDays, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -88,7 +89,7 @@ export default function PayrollPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [payslipToEdit, setPayslipToEdit] = useState<(Employee & { presentDays?: number, absentDays?: number, lateDays?: number, fine?: number; }) | null>(null);
+  const [payslipToEdit, setPayslipToEdit] = useState<(Employee & { presentDays?: number, extraDays?: number, absentDays?: number, lateDays?: number, fine?: number; }) | null>(null);
   const [existingPayslipData, setExistingPayslipData] = useState<Payslip | undefined>(undefined);
   const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
 
@@ -212,10 +213,8 @@ export default function PayrollPage() {
         att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
       );
 
-      const presentDays = userAttendanceInRange.length;
-      const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
-      const onTimeDays = presentDays - lateDays;
-      const absentDays = (30 - presentDays);
+      const { presentDays, extraDays, absentDays, lateDays } = calculatePayrollDays(userAttendanceInRange, weekendDays, selectedDate);
+      const onTimeDays = userAttendanceInRange.length - lateDays;
 
       const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
@@ -226,6 +225,7 @@ export default function PayrollPage() {
           ...employee,
           salary: effectiveSalary,
           presentDays: payslip.presentDays,
+          extraDays: payslip.extraDays ?? 0,
           absentDays: payslip.absentDays,
           lateDays: payslip.lateDays,
           onTimeDays,
@@ -239,9 +239,9 @@ export default function PayrollPage() {
         };
       }
 
-      const perDaySalaryForFine = effectiveSalary / 30;
+      const perDaySalaryForFine = effectiveSalary / PAYROLL_BASE_DAYS;
       const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
-      const salaryForDaysWorked = (effectiveSalary / 30) * presentDays;
+      const salaryForDaysWorked = (effectiveSalary / PAYROLL_BASE_DAYS) * (presentDays + extraDays);
       const providentFund = employee.providentFundStatus === 'Active' ? (effectiveSalary * 0.07) : 0;
       const payableAmount = salaryForDaysWorked - automaticFine - providentFund;
 
@@ -249,7 +249,8 @@ export default function PayrollPage() {
         ...employee,
         salary: effectiveSalary,
         presentDays,
-        absentDays: Math.max(0, absentDays),
+        extraDays,
+        absentDays,
         lateDays,
         onTimeDays,
         providentFund,
@@ -803,7 +804,10 @@ export default function PayrollPage() {
                           <span>{data.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{data.presentDays}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {data.presentDays}
+                        {data.extraDays > 0 && <span className="ml-1 text-xs font-semibold text-emerald-600" title="Extra weekend days worked">+{data.extraDays}</span>}
+                      </TableCell>
                       <TableCell>{data.absentDays}</TableCell>
                       <TableCell>{data.lateDays}</TableCell>
                       <TableCell>{formatCurrency(data.providentFund)}</TableCell>
