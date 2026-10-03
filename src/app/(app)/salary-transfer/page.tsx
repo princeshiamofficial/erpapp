@@ -22,7 +22,7 @@ const PDFDownloadLink = dynamic(() => import('@react-pdf/renderer').then(mod => 
 });
 import Image from 'next/image';
 import { getWeekendSettings } from '@/lib/weekend-service';
-import { calculatePayrollDays, employeeWeekendDays, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
+import { calculatePayableAmount, calculatePayrollDays, employeeWeekendDays, LIVE_ATTENDANCE_FROM, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import Papa from 'papaparse';
 import {
@@ -129,31 +129,29 @@ export default function SalaryTransferPage() {
         const monthYearId = format(selectedDate, 'yyyy-MM');
         const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
         
+        if (payslip?.paymentStatus === 'Paid') return null;
+        if (payslip && monthYearId < LIVE_ATTENDANCE_FROM) {
+            return payslip.payableAmount > 0 ? { ...employee, payableAmount: payslip.payableAmount } : null;
+        }
+
+        const userAttendanceInRange = attendanceData.filter(att =>
+            att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
+        );
+        const { presentDays, lateDays } = calculatePayrollDays(userAttendanceInRange, employeeWeekendDays(employee, weekendDays), selectedDate);
+
+        const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
+        const effectiveSalary = firstFutureIncrement ? firstFutureIncrement.previousSalary : (employee.salary || 0);
+
         let payableAmount;
-
         if (payslip) {
-            if (payslip.paymentStatus === 'Unpaid' && payslip.payableAmount > 0) {
-                payableAmount = payslip.payableAmount;
-            } else {
-                return null;
-            }
+            // Unpaid saved payslip: keep admin adjustments, take days from attendance (same as salary sheet).
+            const providentFund = payslip.providentFund ?? (employee.providentFundStatus === 'Active' ? effectiveSalary * 0.07 : 0);
+            payableAmount = calculatePayableAmount(effectiveSalary, presentDays, providentFund, payslip);
         } else {
-            const userAttendanceInRange = attendanceData.filter(att => 
-                att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
-            );
-            
-            const { presentDays, lateDays } = calculatePayrollDays(userAttendanceInRange, employeeWeekendDays(employee, weekendDays), selectedDate);
-
-            const sortedHistory = [...(employee.salaryHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const firstFutureIncrement = sortedHistory.find(h => isAfter(startOfMonth(new Date(h.date)), selectedDate));
-            const effectiveSalary = firstFutureIncrement ? firstFutureIncrement.previousSalary : (employee.salary || 0);
-
-            const perDaySalary = effectiveSalary / PAYROLL_BASE_DAYS;
-            const automaticFine = Math.floor(lateDays / 3) * perDaySalary;
-            const salaryForDaysWorked = perDaySalary * presentDays;
+            const automaticFine = Math.floor(lateDays / 3) * (effectiveSalary / PAYROLL_BASE_DAYS);
             const providentFund = employee.providentFundStatus === 'Active' ? effectiveSalary * 0.07 : 0;
-            
-            payableAmount = salaryForDaysWorked - automaticFine - providentFund;
+            payableAmount = calculatePayableAmount(effectiveSalary, presentDays, providentFund, { fine: automaticFine });
         }
 
         if (payableAmount > 0) {

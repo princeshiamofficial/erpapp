@@ -40,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { getProvidentFundRecords } from '@/lib/provident-fund-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
-import { calculatePayrollDays, employeeWeekendDays, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
+import { calculatePayableAmount, calculatePayrollDays, employeeWeekendDays, LIVE_ATTENDANCE_FROM, PAYROLL_BASE_DAYS } from '@/lib/payroll-days';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -221,17 +221,20 @@ export default function PayrollPage() {
       const effectiveSalary = firstFutureIncrement ? firstFutureIncrement.previousSalary : (employee.salary || 0);
 
       if (payslip) {
+        // Paid months and months before LIVE_ATTENDANCE_FROM stay as saved; later unpaid payslips keep admin adjustments but take days from attendance.
+        const frozen = payslip.paymentStatus === 'Paid' || monthYearId < LIVE_ATTENDANCE_FROM;
+        const providentFund = payslip.providentFund ?? ((employee.providentFundStatus === 'Active') ? (effectiveSalary * 0.07) : 0);
         return {
           ...employee,
           salary: effectiveSalary,
-          presentDays: payslip.presentDays,
-          absentDays: payslip.absentDays,
-          lateDays: payslip.lateDays,
+          presentDays: frozen ? payslip.presentDays : presentDays,
+          absentDays: frozen ? payslip.absentDays : absentDays,
+          lateDays: frozen ? payslip.lateDays : lateDays,
           onTimeDays,
-          providentFund: payslip.providentFund ?? ((employee.providentFundStatus === 'Active') ? (effectiveSalary * 0.07) : 0),
+          providentFund,
           fine: payslip.fine,
           incentive: payslip.incentive,
-          payableAmount: payslip.payableAmount,
+          payableAmount: frozen ? payslip.payableAmount : calculatePayableAmount(effectiveSalary, presentDays, providentFund, payslip),
           paymentStatus: payslip.paymentStatus,
           trainingFee: payslip.trainingFee ?? 0,
           advance: payslip.advance ?? 0,
