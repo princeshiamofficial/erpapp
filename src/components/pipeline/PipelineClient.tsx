@@ -42,7 +42,7 @@ import { ViewLeadDialog } from './ViewLeadDialog';
 import {
   PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall,
   Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check,
-  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X, Activity, BarChart3, LucideIcon
+  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X, Activity, BarChart3, LucideIcon, Thermometer
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
@@ -51,7 +51,8 @@ import { LeadListView } from './LeadListView';
 import { LeadReportView } from './LeadReportView';
 import { LeadHistoryDialog } from './LeadHistoryDialog';
 
-import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
+import { LEAD_CATEGORY_LABELS, LEAD_TEMPERATURES } from '@/lib/pipeline-constants';
+import { TemperatureGauge } from './TemperatureGauge';
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
   loading: () => <Skeleton className="h-20 w-full rounded-md" />
@@ -134,6 +135,7 @@ export function PipelineClient() {
   });
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [activityFilter, setActivityFilter] = useState<string>('all');
+  const [temperatureFilter, setTemperatureFilter] = useState<string>('all');
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState(new Set<string>());
@@ -183,12 +185,13 @@ export function PipelineClient() {
           userId,
           categoryFilter,
           activityFilter,
-          debouncedSearchTerm
+          debouncedSearchTerm,
+          temperatureFilter
         );
         fetchedLeads = paginatedResult.leads;
         fetchedTotal = paginatedResult.total;
       } else {
-        fetchedLeads = await getLeads(startStr, endStr, role, userId, categoryFilter, activityFilter, debouncedSearchTerm);
+        fetchedLeads = await getLeads(startStr, endStr, role, userId, categoryFilter, activityFilter, debouncedSearchTerm, temperatureFilter);
         fetchedTotal = fetchedLeads.length;
       }
 
@@ -203,7 +206,7 @@ export function PipelineClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast, selectedDateRange, selectedCrmId, viewMode, currentPage, itemsPerPage, categoryFilter, activityFilter, debouncedSearchTerm]);
+  }, [currentUser, toast, selectedDateRange, selectedCrmId, viewMode, currentPage, itemsPerPage, categoryFilter, activityFilter, debouncedSearchTerm, temperatureFilter]);
 
   useEffect(() => {
     fetchLeadsAndUsers();
@@ -277,7 +280,7 @@ export function PipelineClient() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCrmId, viewMode, selectedDateRange, categoryFilter, activityFilter]);
+  }, [searchTerm, selectedCrmId, viewMode, selectedDateRange, categoryFilter, activityFilter, temperatureFilter]);
 
   const activeCrmUsers = useMemo(() => {
     return allUsers.filter(u => u.role === 'CRM' && !u.isBanned);
@@ -354,7 +357,8 @@ export function PipelineClient() {
     userId: (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') ? (selectedCrmId && selectedCrmId !== 'all' ? selectedCrmId : undefined) : currentUser?.id,
     activity: activityFilter,
     searchTerm: debouncedSearchTerm,
-  }), [selectedDateRange, currentUser?.role, currentUser?.id, selectedCrmId, activityFilter, debouncedSearchTerm]);
+    temperature: temperatureFilter,
+  }), [selectedDateRange, currentUser?.role, currentUser?.id, selectedCrmId, activityFilter, debouncedSearchTerm, temperatureFilter]);
 
   const handleOpenAddDialog = () => {
     setEditingLead(null);
@@ -658,15 +662,31 @@ export function PipelineClient() {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Activities</SelectItem>
+                <SelectItem value="all">Activity</SelectItem>
                 {ACTIVITY_TYPES.map(act => <SelectItem key={act} value={act}>{act}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Select value={temperatureFilter} onValueChange={setTemperatureFilter}>
+              <SelectTrigger className="w-full sm:w-[160px] bg-card border-border/50 focus:border-primary h-10">
+                <SelectValue placeholder="Filter by temperature..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <span className="flex items-center gap-2 whitespace-nowrap"><Thermometer className="h-4 w-4 text-muted-foreground" />Temp</span>
+                </SelectItem>
+                {LEAD_TEMPERATURES.map(t => (
+                  <SelectItem key={t} value={String(t)}>
+                    <span className="flex items-center gap-2 whitespace-nowrap"><TemperatureGauge value={t} />{t}%</span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
             {viewMode === 'list' && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/50 focus:border-primary h-10"><SelectValue placeholder="Filter by category..." /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All Categories</SelectItem>{LEAD_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{LEAD_CATEGORY_LABELS[cat]}</SelectItem>)}</SelectContent>
+                <SelectContent><SelectItem value="all">Category</SelectItem>{LEAD_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{LEAD_CATEGORY_LABELS[cat]}</SelectItem>)}</SelectContent>
               </Select>
             )}
             <div className="flex items-center bg-muted p-1 rounded-md ml-auto">
@@ -732,6 +752,7 @@ export function PipelineClient() {
               onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
               onUpdateLeadCategory={handleUpdateLeadCategory} allUsers={allUsers}
               onHistoryView={openHistoryDialog}
+              onEditLead={openEditDialogFromView}
               isSelectionMode={isSelectionMode}
               selectedLeadIds={selectedLeadIds}
               onSelectionChange={handleSelectionChange}

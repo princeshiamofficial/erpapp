@@ -18,7 +18,9 @@ import {
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { v4 as uuidv4 } from 'uuid';
 import { getIO } from "@/lib/socket-io";
-import { LEAD_CATEGORY_LABELS } from "@/lib/pipeline-constants";
+import { LEAD_CATEGORY_LABELS, LEAD_TEMPERATURES } from "@/lib/pipeline-constants";
+
+const isValidTemperature = (t: unknown) => t == null || (LEAD_TEMPERATURES as readonly unknown[]).includes(t);
 
 
 export async function getLeads(
@@ -28,10 +30,11 @@ export async function getLeads(
   userId?: string,
   category?: string,
   activity?: string,
-  searchTerm?: string
+  searchTerm?: string,
+  temperature?: string
 ): Promise<Lead[]> {
   try {
-    return await getLeadsFromDb(startDate, endDate, role, userId, category, activity, searchTerm);
+    return await getLeadsFromDb(startDate, endDate, role, userId, category, activity, searchTerm, temperature);
   } catch (error) {
     console.error("Error in getLeads server action:", error);
     return [];
@@ -47,10 +50,11 @@ export async function getLeadsPaginatedAction(
   userId?: string,
   category?: string,
   activity?: string,
-  searchTerm?: string
+  searchTerm?: string,
+  temperature?: string
 ): Promise<{ leads: Lead[]; total: number }> {
   try {
-    return await getLeadsPaginatedFromDb(page, limit, startDate, endDate, role, userId, category, activity, searchTerm);
+    return await getLeadsPaginatedFromDb(page, limit, startDate, endDate, role, userId, category, activity, searchTerm, temperature);
   } catch (error) {
     console.error("Error in getLeadsPaginatedAction server action:", error);
     return { leads: [], total: 0 };
@@ -89,6 +93,10 @@ export async function addLeadAction(
     const phoneRegex = /^(0\d{10}|\+\d{9,14})$/;
     if (!phoneRegex.test(leadData.phone)) {
       return { success: false, error: "Invalid phone number. Use 11 digits starting with 0, or an international number starting with + (up to 15 digits)." };
+    }
+
+    if (!isValidTemperature(leadData.temperature)) {
+      return { success: false, error: "Invalid temperature value." };
     }
 
     const existingLead = await getLeadByPhone(leadData.phone);
@@ -268,6 +276,10 @@ export async function updateLeadAction(
   currentUser?: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
+    if (!isValidTemperature(updates.temperature)) {
+      return { success: false, error: "Invalid temperature value." };
+    }
+
     if (updates.phone) {
       const phoneRegex = /^(0\d{10}|\+\d{9,14})$/;
       if (!phoneRegex.test(updates.phone)) {

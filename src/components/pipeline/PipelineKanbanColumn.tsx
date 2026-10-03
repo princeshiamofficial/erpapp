@@ -28,6 +28,7 @@ export interface KanbanServerFilters {
   userId?: string;
   activity?: string;
   searchTerm?: string;
+  temperature?: string;
 }
 
 interface PipelineKanbanColumnProps {
@@ -99,7 +100,8 @@ export function PipelineKanbanColumn({
           serverFilters.userId,
           id,
           serverFilters.activity,
-          serverFilters.searchTerm
+          serverFilters.searchTerm,
+          serverFilters.temperature
         );
         if (mounted) {
           if (res.leads.length > 0) {

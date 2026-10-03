@@ -24,6 +24,8 @@ import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from "date-fns";
 import { cn } from '@/lib/utils';
 import { divisions } from '@/lib/district-data';
+import { LEAD_TEMPERATURES } from '@/lib/pipeline-constants';
+import { TemperatureGauge } from './TemperatureGauge';
 
 interface AddEditLeadDialogProps {
   isOpen: boolean;
@@ -33,7 +35,7 @@ interface AddEditLeadDialogProps {
   currentUser: User;
 }
 
-const LEAD_SOURCES = ["Facebook", "WhatsApp", "Office Visit", "Phone Call", "Others"];
+const LEAD_SOURCES =["Facebook", "WhatsApp", "Office Visit", "Phone Call", "Others"];
 const CUSTOMER_TYPES: CustomerType[] = ["WARM", "COLD", "Order Lock"];
 
 export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, currentUser }: AddEditLeadDialogProps) {
@@ -49,6 +51,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [thana, setThana] = useState('');
   const [notes, setNotes] = useState('');
   const [customerType, setCustomerType] = useState<CustomerType | ''>('');
+  const [temperature, setTemperature] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
@@ -97,6 +100,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setThana(lead.thana || '');
         setNotes(lead.notes || '');
         setCustomerType(lead.customerType || '');
+        setTemperature(lead.temperature != null ? String(lead.temperature) : '');
         setPhoneError(null);
       } else {
         // Reset for add mode
@@ -111,6 +115,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setThana('');
         setNotes('');
         setCustomerType('');
+        setTemperature('');
         setPhoneError(null);
       }
       setTimeout(() => {
@@ -224,6 +229,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
       thana: thana || null,
       notes: notes || null,
       customerType: customerType || null,
+      temperature: temperature === '' ? null : Number(temperature) as Lead['temperature'],
     };
     
     let result;
@@ -270,7 +276,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-lg"
+        className="sm:max-w-xl"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -330,9 +336,29 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                 </Select>
               </div>
             </div>
-            <div className="space-y-0.5">
-              <Label htmlFor="businessName">Business Name</Label>
-              <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Color Hut"/>
+            <div className="grid grid-cols-1 sm:grid-cols-[1.1fr_0.9fr] gap-1">
+              <div className="space-y-0.5">
+                <Label htmlFor="businessName">Business Name</Label>
+                <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Color Hut"/>
+              </div>
+              <div className="space-y-0.5">
+                <Label htmlFor="temperature">Temperature</Label>
+                <Select value={temperature} onValueChange={setTemperature}>
+                  <SelectTrigger id="temperature">
+                    <SelectValue placeholder="Select temperature" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_TEMPERATURES.map(t => (
+                      <SelectItem key={t} value={String(t)}>
+                        <span className="flex items-center gap-2">
+                          <TemperatureGauge value={t} />
+                          {t}%
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
               <div className="space-y-0.5">

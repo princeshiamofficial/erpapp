@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LEAD_CATEGORY_LABELS } from '@/lib/pipeline-constants';
+import { TemperatureGauge } from './TemperatureGauge';
 
 interface LeadListViewProps {
     leads: Lead[];
@@ -33,6 +34,7 @@ interface LeadListViewProps {
     onTransferLead: (lead: Lead) => void;
     onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void;
     onHistoryView: (lead: Lead) => void;
+    onEditLead: (lead: Lead) => void;
     allUsers: User[];
     isSelectionMode?: boolean;
     selectedLeadIds?: Set<string>;
@@ -81,7 +83,7 @@ const getCategoryColorClass = (category: LeadCategory) => {
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'APPOINTMENT', 'PROSPECT', 'POG', 'OC', 'OD', 'ROD'];
 
-export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, onHistoryView, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => { }, onSelectAll = () => { } }: LeadListViewProps) {
+export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, onHistoryView, onEditLead, allUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => { }, onSelectAll = () => { } }: LeadListViewProps) {
     const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
     const canDelete = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
     const canTransfer = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
@@ -127,6 +129,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                             <TableHead>Phone</TableHead>
                             <TableHead>Source</TableHead>
                             <TableHead>Category</TableHead>
+                            <TableHead>Temperature</TableHead>
                             <TableHead>Assigned CRM</TableHead>
                             <TableHead>Last Modified</TableHead>
                             <TableHead>Schedule</TableHead>
@@ -142,6 +145,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                                 <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                 <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -185,6 +189,14 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="whitespace-nowrap">
+                                        {lead.temperature != null && (
+                                            <span className="flex items-center gap-1.5 text-sm font-medium">
+                                                <TemperatureGauge value={lead.temperature} />
+                                                {lead.temperature}%
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="whitespace-nowrap">
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8 text-xs">
                                                 <AvatarImage src={crmUser?.avatarUrl || undefined} alt={lead.crmName} />
@@ -217,6 +229,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onSelect={() => onViewLead(lead)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View</DropdownMenuItem>
                                                 <DropdownMenuItem onSelect={() => onHistoryView(lead)} className="cursor-pointer"><History className="mr-2 h-4 w-4" /> History</DropdownMenuItem>
+                                                {canEdit(lead) && <DropdownMenuItem onSelect={() => onEditLead(lead)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>}
 
                                                 {canEdit(lead) && (
                                                     <DropdownMenuSub>
@@ -250,7 +263,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
 
                         {!isLoading && leads.length === 0 && (
                             <TableRow key="empty-leads">
-                                <TableCell colSpan={isSelectionMode ? 10 : 9} className="h-48 text-center text-muted-foreground">
+                                <TableCell colSpan={isSelectionMode ? 11 : 10} className="h-48 text-center text-muted-foreground">
                                     <div className="flex flex-col items-center gap-2">
                                         <Briefcase className="h-10 w-10 opacity-50" />
                                         <span>No leads found.</span>

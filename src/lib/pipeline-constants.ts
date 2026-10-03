@@ -9,3 +9,5 @@ export const LEAD_CATEGORY_LABELS: Record<LeadCategory, string> = {
   'APPOINTMENT': 'Appointment',
   'PROSPECT': 'Prospect',
 };
+
+export const LEAD_TEMPERATURES = [0, 30, 50, 70, 100] as const;

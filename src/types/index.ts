@@ -499,6 +499,7 @@ export interface Lead {
   crmId: string;
   crmName: string;
   customerType?: CustomerType | null;
+  temperature?: 0 | 30 | 50 | 70 | 100 | null;
   activityHistory?: LeadActivity[];
   updatedAt?: string; // New field for last update timestamp
   categoryUpdatedAt?: string; // Specific field for last category update

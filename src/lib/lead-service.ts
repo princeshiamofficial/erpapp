@@ -7,6 +7,12 @@ import { v4 as uuidv4 } from 'uuid';
 
 const LEADS_TABLE = 'leads';
 
+const addTemperatureCondition = (conditions: string[], params: any[], temperature?: string) => {
+  if (!temperature || temperature === 'all') return;
+  conditions.push(`JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.temperature')) = ?`);
+  params.push(String(Number(temperature)));
+};
+
 export const getLeads = async (
   startDate?: string,
   endDate?: string,
@@ -14,11 +20,13 @@ export const getLeads = async (
   userId?: string,
   category?: string,
   activity?: string,
-  searchTerm?: string
+  searchTerm?: string,
+  temperature?: string
 ): Promise<Lead[]> => {
   try {
     const conditions: string[] = [];
     const params: any[] = [];
+    addTemperatureCondition(conditions, params, temperature);
     if (startDate && endDate) {
       conditions.push(`(
         (JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) >= ? AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) <= ?)
@@ -147,11 +155,13 @@ export const getLeadsPaginated = async (
   userId?: string,
   category?: string,
   activity?: string,
-  searchTerm?: string
+  searchTerm?: string,
+  temperature?: string
 ): Promise<{ leads: Lead[]; total: number }> => {
   try {
     const conditions: string[] = [];
     const params: any[] = [];
+    addTemperatureCondition(conditions, params, temperature);
     if (startDate && endDate) {
       conditions.push(`(
         (JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) >= ? AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.date')) <= ?)
