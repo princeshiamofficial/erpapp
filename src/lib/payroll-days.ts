@@ -9,14 +9,8 @@ export function employeeWeekendDays(employee: { weekendDays?: string[] | null },
   return employee.weekendDays?.length ? employee.weekendDays : companyWeekendDays;
 }
 
-type PayrollRecord = { date: string; status?: string; location?: string; checkInLocation?: unknown };
-
-// Only a real app check-in (with GPS) on a weekend is extra work; admin manual entries and leave are not.
-const isRealCheckIn = (r: PayrollRecord) =>
-  r.status !== 'Paid Leave' && r.location !== 'Manual Entry' && !!r.checkInLocation;
-
-// Weekends are paid off-days; each weekend check-in adds one day on top of the 30-day base (e.g. 31).
-export function calculatePayrollDays(records: PayrollRecord[], weekendDays: string[], month: Date) {
+// Weekends are paid off-days; each weekend check-in (app or manual) adds one day on top of the 30-day base (e.g. 31).
+export function calculatePayrollDays(records: { date: string; status?: string }[], weekendDays: string[], month: Date) {
   const weekendIndexes = new Set((weekendDays || []).map(day => WEEK_DAYS.indexOf(day)));
 
   let workingDays = 0;
@@ -31,7 +25,8 @@ export function calculatePayrollDays(records: PayrollRecord[], weekendDays: stri
     const date = parseISO(record.date);
     if (!isSameMonth(date, month) || record.status === 'Absent') continue;
     if (weekendIndexes.has(date.getDay())) {
-      if (isRealCheckIn(record)) weekendDates.add(record.date);
+      // Leave on a paid off-day is not extra work.
+      if (record.status !== 'Paid Leave') weekendDates.add(record.date);
     } else {
       regularDates.add(record.date);
     }
