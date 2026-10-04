@@ -256,7 +256,9 @@ export default function PayrollPage() {
         const providentFund = payslip.providentFund ?? ((employee.providentFundStatus === 'Active') ? (effectiveSalary * 0.07) : 0);
         const adjDays = payslip.adjustmentDays || 0;
         const effectivePresent = frozen ? payslip.presentDays : Math.max(0, presentDays + adjDays);
-        const effectiveAbsent = frozen ? payslip.absentDays : Math.max(0, absentDays - adjDays);
+        const effectiveAbsent = frozen
+          ? payslip.absentDays
+          : (effectivePresent >= PAYROLL_BASE_DAYS ? 0 : Math.max(0, PAYROLL_BASE_DAYS - effectivePresent));
         return {
           ...employee,
           salary: effectiveSalary,
@@ -282,13 +284,14 @@ export default function PayrollPage() {
       const salaryForDaysWorked = (effectiveSalary / PAYROLL_BASE_DAYS) * presentDays;
       const providentFund = employee.providentFundStatus === 'Active' ? (effectiveSalary * 0.07) : 0;
       const payableAmount = salaryForDaysWorked - automaticFine - providentFund;
+      const effectiveAbsent = presentDays >= PAYROLL_BASE_DAYS ? 0 : Math.max(0, PAYROLL_BASE_DAYS - presentDays);
 
       return {
         ...employee,
         salary: effectiveSalary,
         presentDays,
         rawPresentDays: presentDays,
-        absentDays,
+        absentDays: effectiveAbsent,
         rawAbsentDays: absentDays,
         lateDays,
         onTimeDays,

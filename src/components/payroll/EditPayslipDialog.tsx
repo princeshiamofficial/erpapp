@@ -104,10 +104,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         // The sheet row already holds live attendance days (or the frozen ones for a paid month).
         const currentPresent = isLiveAttendanceMonth
           ? Math.max(0, basePresentDays + initialAdj)
-          : (employee.presentDays ?? existingPayslip.presentDays);
-        const currentAbsent = isLiveAttendanceMonth
-          ? Math.max(0, baseAbsentDays - initialAdj)
-          : (employee.absentDays ?? existingPayslip.absentDays);
+          : (employee.presentDays !== undefined ? employee.presentDays : existingPayslip.presentDays);
+        const currentAbsent = currentPresent >= FIXED_WORKING_DAYS
+          ? 0
+          : Math.max(0, FIXED_WORKING_DAYS - currentPresent);
 
         setPresent(String(currentPresent));
         setAbsent(String(currentAbsent));
@@ -120,11 +120,11 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       } else {
         const currentPresent = isLiveAttendanceMonth
           ? Math.max(0, basePresentDays + initialAdj)
-          : (employee.presentDays?.toString() || FIXED_WORKING_DAYS.toString());
+          : (employee.presentDays !== undefined ? employee.presentDays : FIXED_WORKING_DAYS);
         const initialLate = employee.lateDays?.toString() || '0';
-        const currentAbsent = isLiveAttendanceMonth
-          ? Math.max(0, baseAbsentDays - initialAdj)
-          : String(employee.absentDays ?? Math.max(0, FIXED_WORKING_DAYS - parseInt(String(currentPresent), 10)));
+        const currentAbsent = currentPresent >= FIXED_WORKING_DAYS
+          ? 0
+          : Math.max(0, FIXED_WORKING_DAYS - currentPresent);
 
         setPresent(String(currentPresent));
         setAbsent(String(currentAbsent));
@@ -152,27 +152,19 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   const handleAdjustmentChange = (value: number) => {
     setAdjustmentDays(value);
-    if (isLiveAttendanceMonth) {
-      const updatedPresent = Math.max(0, basePresentDays + value);
-      const updatedAbsent = Math.max(0, baseAbsentDays - value);
-      setPresent(String(updatedPresent));
-      setAbsent(String(updatedAbsent));
-    } else {
-      const newPresent = Math.max(0, basePresentDays + value);
-      setPresent(String(newPresent));
-      if (newPresent >= 30) {
-        setAbsent('0');
-      } else {
-        setAbsent(String(FIXED_WORKING_DAYS - newPresent));
-      }
-    }
+    const updatedPresent = Math.max(0, basePresentDays + value);
+    const updatedAbsent = updatedPresent >= FIXED_WORKING_DAYS
+      ? 0
+      : Math.max(0, FIXED_WORKING_DAYS - updatedPresent);
+    setPresent(String(updatedPresent));
+    setAbsent(String(updatedAbsent));
   };
 
   const handlePresentChange = (value: string) => {
     const newPresent = parseInt(value, 10);
     if (!isNaN(newPresent)) {
       setPresent(newPresent.toString());
-      if (newPresent >= 30) {
+      if (newPresent >= FIXED_WORKING_DAYS) {
         setAbsent('0');
       } else {
         setAbsent((FIXED_WORKING_DAYS - newPresent).toString());
