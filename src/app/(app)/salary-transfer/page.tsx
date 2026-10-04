@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth, getUnpaidMonthsAction } from '@/app/(app)/payroll/actions';
 import type { Employee, Payslip, AttendanceRecord } from '@/types';
-import { format, subMonths, parseISO, isSameMonth, isAfter, startOfMonth } from 'date-fns';
+import { format, subMonths, parseISO, isSameMonth, isAfter, startOfMonth, endOfMonth } from 'date-fns';
 import { Download, FileText } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { SalaryTransferPDF } from '@/components/payroll/SalaryTransferPDF';
@@ -122,7 +122,17 @@ export default function SalaryTransferPage() {
   }, [months, unpaidMonths, selectedDate]);
   
   const unpaidEmployeesData = useMemo(() => {
-    const activeEmployees = employees.filter(e => e.status === 'Active');
+    const endOfSelectedMonth = endOfMonth(selectedDate);
+    const activeEmployees = employees.filter(e => {
+      if (e.status !== 'Active') return false;
+      if (!e.joiningDate) return true;
+      try {
+        const joiningDate = parseISO(e.joiningDate);
+        return !isAfter(joiningDate, endOfSelectedMonth);
+      } catch (err) {
+        return true;
+      }
+    });
 
     return activeEmployees
       .map(employee => {
