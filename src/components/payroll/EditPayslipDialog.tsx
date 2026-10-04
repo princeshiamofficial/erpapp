@@ -31,7 +31,15 @@ const formatCurrency = (value?: number | null): string => {
 };
 
 interface EditPayslipDialogProps {
-  employee: Employee & { presentDays?: number; absentDays?: number; lateDays?: number; fine?: number; };
+  employee: Employee & {
+    presentDays?: number;
+    absentDays?: number;
+    lateDays?: number;
+    fine?: number;
+    rawPresentDays?: number;
+    rawAbsentDays?: number;
+    adjustmentDays?: number;
+  };
   onSave: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +58,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const [trainingFee, setTrainingFee] = useState('0');
   const [advance, setAdvance] = useState('0');
   const [paymentStatus, setPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
+  const [adjustmentDays, setAdjustmentDays] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -63,7 +72,6 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return baseSalary / FIXED_WORKING_DAYS;
   }, [employee.salary]);
 
-
   const isNewEmployee = useMemo(() => {
     if (!employee?.joiningDate) return false;
     const joiningDate = new Date(employee.joiningDate);
@@ -71,12 +79,38 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return joiningDate >= selectedMonthStart;
   }, [employee.joiningDate, selectedDate]);
 
+  const basePresentDays = useMemo(() => {
+    if (employee.rawPresentDays !== undefined) return employee.rawPresentDays;
+    if (existingPayslip) {
+      return existingPayslip.presentDays - (existingPayslip.adjustmentDays || 0);
+    }
+    return employee.presentDays !== undefined ? employee.presentDays : FIXED_WORKING_DAYS;
+  }, [employee.rawPresentDays, employee.presentDays, existingPayslip]);
+
+  const baseAbsentDays = useMemo(() => {
+    if (employee.rawAbsentDays !== undefined) return employee.rawAbsentDays;
+    if (existingPayslip) {
+      return existingPayslip.absentDays + (existingPayslip.adjustmentDays || 0);
+    }
+    return employee.absentDays !== undefined ? employee.absentDays : Math.max(0, FIXED_WORKING_DAYS - basePresentDays);
+  }, [employee.rawAbsentDays, employee.absentDays, existingPayslip, basePresentDays]);
+
   useEffect(() => {
     if (isOpen) {
+      const initialAdj = existingPayslip?.adjustmentDays ?? employee.adjustmentDays ?? 0;
+      setAdjustmentDays(initialAdj);
+
       if (existingPayslip) {
         // The sheet row already holds live attendance days (or the frozen ones for a paid month).
-        setPresent(String(employee.presentDays ?? existingPayslip.presentDays));
-        setAbsent(String(employee.absentDays ?? existingPayslip.absentDays));
+        const currentPresent = isLiveAttendanceMonth
+          ? Math.max(0, basePresentDays + initialAdj)
+          : (employee.presentDays ?? existingPayslip.presentDays);
+        const currentAbsent = isLiveAttendanceMonth
+          ? Math.max(0, baseAbsentDays - initialAdj)
+          : (employee.absentDays ?? existingPayslip.absentDays);
+
+        setPresent(String(currentPresent));
+        setAbsent(String(currentAbsent));
         setLate(String(employee.lateDays ?? existingPayslip.lateDays));
         setFine(existingPayslip.fine.toString());
         setIncentive(existingPayslip.incentive.toString());
@@ -84,12 +118,16 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         setAdvance(existingPayslip.advance?.toString() || '0');
         setPaymentStatus(existingPayslip.paymentStatus);
       } else {
-        const initialPresent = employee.presentDays?.toString() || FIXED_WORKING_DAYS.toString();
+        const currentPresent = isLiveAttendanceMonth
+          ? Math.max(0, basePresentDays + initialAdj)
+          : (employee.presentDays?.toString() || FIXED_WORKING_DAYS.toString());
         const initialLate = employee.lateDays?.toString() || '0';
-        const initialAbsent = String(employee.absentDays ?? Math.max(0, FIXED_WORKING_DAYS - parseInt(initialPresent, 10)));
+        const currentAbsent = isLiveAttendanceMonth
+          ? Math.max(0, baseAbsentDays - initialAdj)
+          : String(employee.absentDays ?? Math.max(0, FIXED_WORKING_DAYS - parseInt(String(currentPresent), 10)));
 
-        setPresent(initialPresent);
-        setAbsent(initialAbsent);
+        setPresent(String(currentPresent));
+        setAbsent(String(currentAbsent));
         setLate(initialLate);
 
         const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * perDaySalaryForFine;
@@ -102,7 +140,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, existingPayslip, perDaySalaryForFine]);
+  }, [isOpen, employee, existingPayslip, perDaySalaryForFine, isLiveAttendanceMonth, basePresentDays, baseAbsentDays]);
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
@@ -111,6 +149,24 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       setFine(calculatedFine.toFixed(2));
     }
   }, [late, perDaySalaryForFine]);
+
+  const handleAdjustmentChange = (value: number) => {
+    setAdjustmentDays(value);
+    if (isLiveAttendanceMonth) {
+      const updatedPresent = Math.max(0, basePresentDays + value);
+      const updatedAbsent = Math.max(0, baseAbsentDays - value);
+      setPresent(String(updatedPresent));
+      setAbsent(String(updatedAbsent));
+    } else {
+      const newPresent = Math.max(0, basePresentDays + value);
+      setPresent(String(newPresent));
+      if (newPresent >= 30) {
+        setAbsent('0');
+      } else {
+        setAbsent(String(FIXED_WORKING_DAYS - newPresent));
+      }
+    }
+  };
 
   const handlePresentChange = (value: string) => {
     const newPresent = parseInt(value, 10);
@@ -158,13 +214,14 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       presentDays: parseInt(present, 10),
       absentDays: parseInt(absent, 10),
       lateDays: parseInt(late, 10),
-      fine: parseFloat(fine),
-      incentive: parseFloat(incentive),
-      trainingFee: isNewEmployee ? parseFloat(trainingFee) : undefined,
+      fine: parseFloat(fine) || 0,
+      incentive: parseFloat(incentive) || 0,
+      trainingFee: isNewEmployee ? parseFloat(trainingFee) || 0 : undefined,
       advance: parseFloat(advance) || 0,
       providentFund: providentFund, // Save calculated PF amount
       payableAmount: payableAmount,
       paymentStatus: paymentStatus,
+      adjustmentDays: adjustmentDays,
     };
 
     const docId = `${monthYearId}-${employee.employeeId}`;
@@ -282,6 +339,42 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="adjustment-days">Adjust Days</Label>
+                      <div className="flex items-center">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0 rounded-r-none hover:bg-muted"
+                          onClick={() => handleAdjustmentChange(adjustmentDays - 1)}
+                          title="Deduct 1 day"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <Input
+                          id="adjustment-days"
+                          type="number"
+                          value={adjustmentDays}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            handleAdjustmentChange(isNaN(val) ? 0 : val);
+                          }}
+                          className="text-center rounded-none font-semibold tabular-nums"
+                          placeholder="0"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0 rounded-l-none hover:bg-muted"
+                          onClick={() => handleAdjustmentChange(adjustmentDays + 1)}
+                          title="Add 1 extra day"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </PayslipSection>
               </div>
@@ -374,7 +467,17 @@ const TILE_TONES = {
   amber: "text-amber-600 dark:text-amber-400",
 };
 
-function StatTile({ label, value, icon: Icon, tone }: { label: string; value: string; icon: React.ElementType; tone: keyof typeof TILE_TONES }) {
+function StatTile({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  tone: keyof typeof TILE_TONES;
+}) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 shadow-md dark:bg-card">
       <span className="flex items-center gap-1.5 text-sm text-muted-foreground">

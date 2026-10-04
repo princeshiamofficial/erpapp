@@ -66,6 +66,7 @@ export interface Payslip {
   providentFund: number; // New field to store PF amount
   payableAmount: number; // Storing the calculated amount for record-keeping
   paymentStatus: 'Paid' | 'Unpaid'; // New field
+  adjustmentDays?: number; // Days adjusted (+ or -) by admin
   updatedAt: string; // ISO string
 }
 

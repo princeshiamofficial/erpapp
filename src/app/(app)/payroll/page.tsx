@@ -113,7 +113,7 @@ export default function PayrollPage() {
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
 
   const handlePaymentStatusChange = async (
-    row: Employee & { presentDays: number; absentDays: number; lateDays: number; fine?: number; incentive?: number; advance?: number; trainingFee?: number; providentFund: number; payableAmount: number },
+    row: Employee & { presentDays: number; absentDays: number; lateDays: number; fine?: number; incentive?: number; advance?: number; trainingFee?: number; providentFund: number; payableAmount: number; adjustmentDays?: number },
     status: 'Paid' | 'Unpaid'
   ) => {
     const monthStr = format(selectedDate, 'yyyy-MM');
@@ -129,6 +129,7 @@ export default function PayrollPage() {
       providentFund: row.providentFund,
       payableAmount: row.payableAmount,
       paymentStatus: status,
+      adjustmentDays: row.adjustmentDays || 0,
     });
     if (result.success) {
       setSalarySheetData(await getSalarySheetForMonth(monthStr));
@@ -253,20 +254,26 @@ export default function PayrollPage() {
         // Paid months and months before LIVE_ATTENDANCE_FROM stay as saved; later unpaid payslips keep admin adjustments but take days from attendance.
         const frozen = payslip.paymentStatus === 'Paid' || monthYearId < LIVE_ATTENDANCE_FROM;
         const providentFund = payslip.providentFund ?? ((employee.providentFundStatus === 'Active') ? (effectiveSalary * 0.07) : 0);
+        const adjDays = payslip.adjustmentDays || 0;
+        const effectivePresent = frozen ? payslip.presentDays : Math.max(0, presentDays + adjDays);
+        const effectiveAbsent = frozen ? payslip.absentDays : Math.max(0, absentDays - adjDays);
         return {
           ...employee,
           salary: effectiveSalary,
-          presentDays: frozen ? payslip.presentDays : presentDays,
-          absentDays: frozen ? payslip.absentDays : absentDays,
+          presentDays: effectivePresent,
+          rawPresentDays: presentDays,
+          absentDays: effectiveAbsent,
+          rawAbsentDays: absentDays,
           lateDays: frozen ? payslip.lateDays : lateDays,
           onTimeDays,
           providentFund,
           fine: payslip.fine,
           incentive: payslip.incentive,
-          payableAmount: frozen ? payslip.payableAmount : calculatePayableAmount(effectiveSalary, presentDays, providentFund, payslip),
+          payableAmount: frozen ? payslip.payableAmount : calculatePayableAmount(effectiveSalary, effectivePresent, providentFund, payslip),
           paymentStatus: payslip.paymentStatus,
           trainingFee: payslip.trainingFee ?? 0,
           advance: payslip.advance ?? 0,
+          adjustmentDays: adjDays,
         };
       }
 
@@ -280,7 +287,9 @@ export default function PayrollPage() {
         ...employee,
         salary: effectiveSalary,
         presentDays,
+        rawPresentDays: presentDays,
         absentDays,
+        rawAbsentDays: absentDays,
         lateDays,
         onTimeDays,
         providentFund,
@@ -290,6 +299,7 @@ export default function PayrollPage() {
         paymentStatus: 'Unpaid' as 'Paid' | 'Unpaid',
         trainingFee: 0,
         advance: 0,
+        adjustmentDays: 0,
       };
     });
 

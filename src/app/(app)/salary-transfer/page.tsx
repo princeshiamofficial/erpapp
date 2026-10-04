@@ -147,7 +147,8 @@ export default function SalaryTransferPage() {
         if (payslip) {
             // Unpaid saved payslip: keep admin adjustments, take days from attendance (same as salary sheet).
             const providentFund = payslip.providentFund ?? (employee.providentFundStatus === 'Active' ? effectiveSalary * 0.07 : 0);
-            payableAmount = calculatePayableAmount(effectiveSalary, presentDays, providentFund, payslip);
+            const effectivePresent = Math.max(0, presentDays + (payslip.adjustmentDays || 0));
+            payableAmount = calculatePayableAmount(effectiveSalary, effectivePresent, providentFund, payslip);
         } else {
             const automaticFine = Math.floor(lateDays / 3) * (effectiveSalary / PAYROLL_BASE_DAYS);
             const providentFund = employee.providentFundStatus === 'Active' ? effectiveSalary * 0.07 : 0;
